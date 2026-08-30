@@ -1,5 +1,6 @@
 .svelte-kit
 build
 node_modules
+release-authority
 package-lock.json
 static

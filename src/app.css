@@ -435,33 +435,38 @@ nav a:hover {
 }
 
 .constellation__product--2 {
-  top: 19%;
-  left: 82%;
+  top: 14%;
+  left: 77%;
 }
 
 .constellation__product--3 {
-  top: 58%;
+  top: 50%;
   left: 91%;
 }
 
 .constellation__product--4 {
-  top: 88%;
-  left: 68%;
+  top: 86%;
+  left: 77%;
 }
 
 .constellation__product--5 {
-  top: 86%;
-  left: 29%;
+  top: 97%;
+  left: 50%;
 }
 
 .constellation__product--6 {
-  top: 57%;
-  left: 8%;
+  top: 86%;
+  left: 23%;
 }
 
 .constellation__product--7 {
-  top: 18%;
-  left: 18%;
+  top: 50%;
+  left: 9%;
+}
+
+.constellation__product--8 {
+  top: 14%;
+  left: 23%;
 }
 
 .section {
@@ -642,6 +647,18 @@ nav a:hover {
 
 .integration-section__copy h2 {
   max-width: 12ch;
+}
+
+.integration-section__archive {
+  grid-column: 1 / -1;
+  max-width: 70ch;
+  margin: 0;
+  color: var(--parchment-muted);
+  line-height: 1.72;
+}
+
+.integration-section__archive .text-link {
+  margin-left: 0.4rem;
 }
 
 .text-link {
