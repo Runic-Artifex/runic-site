@@ -9,10 +9,12 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "npm run release-status:check && vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check . && eslint .",
+    "release-status:check": "node scripts/release-status.mjs --check",
+    "release-status:sync": "node scripts/release-status.mjs",
     "test": "npm run build && node --test tests/*.test.mjs"
   },
   "dependencies": {

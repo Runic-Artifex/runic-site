@@ -2,13 +2,14 @@
   import FamilyConstellation from '$lib/components/FamilyConstellation.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { products } from '$lib/products';
+  import { releaseStatus } from '$lib/release-status';
 </script>
 
 <svelte:head>
   <title>Independent open-source .NET tools · Runic Artifex</title>
   <meta
     name="description"
-    content="Runic Artifex is a family of independent open-source .NET tools for desktop and browser UI, application hosting, workflows, assets, localization, and command-line apps."
+    content="Runic Artifex is a family of independent open-source .NET tools for desktop and browser UI, application hosting, assets, localization, and command-line apps."
   />
   <link rel="canonical" href="https://runic-artifex.eu/" />
   <link rel="icon" href="/icon.png" />
@@ -44,9 +45,9 @@
     <h1>Build the application you need. Keep the tools independent.</h1>
     <p class="hero__lede">
       Runic Artifex is a family of focused tools for desktop and browser UI,
-      application hosting, workflows, assets, localization, and command-line
-      apps. Each product works on its own and connects through documented
-      integrations when needed.
+      application hosting, assets, localization, and command-line apps. Each
+      product works on its own and connects through documented integrations when
+      needed.
     </p>
     <div class="hero__actions">
       <a class="button button--primary" href="#products"
@@ -57,7 +58,11 @@
       >
     </div>
     <ul class="hero__facts" aria-label="Project facts">
-      <li><strong>Public preview</strong><span>NuGet and npm</span></li>
+      <li>
+        <strong>{releaseStatus.train.id} not published</strong><span
+          >No packages or distributions assigned</span
+        >
+      </li>
       <li><strong>MIT licensed</strong><span>Built in the open</span></li>
       <li>
         <strong>NativeAOT-minded</strong><span>From contracts to hosts</span>
@@ -81,8 +86,8 @@
       <span class="principle-number">01</span>
       <h3>Focused by design</h3>
       <p>
-        Adopt a localization compiler, asset pipeline, workflow engine, or
-        native host without adopting an all-in-one framework.
+        Adopt a localization compiler, asset pipeline, or native host without
+        adopting an all-in-one framework.
       </p>
     </article>
     <article>
@@ -109,7 +114,7 @@
     <div class="section-heading section-heading--wide">
       <div>
         <p class="eyebrow"><span></span> The product family</p>
-        <h2>Seven clear jobs. One shared grammar.</h2>
+        <h2>Seven maintained tools. One historical archive.</h2>
       </div>
       <p>
         Start from the capability your application needs. Each guide explains
@@ -138,36 +143,48 @@
       >Explore the architecture <span aria-hidden="true">→</span></a
     >
   </div>
-  <div class="seam-diagram" aria-label="Example of an explicit product seam">
+  <div class="seam-diagram" aria-label="Flow historical archive guidance">
     <div class="seam-node">
       <img src="/products/runic-flow.png" alt="" aria-hidden="true" />
-      <span><small>Independent product</small>Runic Flow</span>
+      <span><small>Historical archive</small>Runic Flow</span>
     </div>
     <div class="seam-connector">
-      <span>Product-owned adapter</span>
-      <strong>RunicFlow.ApplicationBridge</strong>
+      <span>Migration guidance only</span>
+      <strong>Not a current package identity</strong>
     </div>
     <div class="seam-node">
-      <img src="/products/runic-toolkit.png" alt="" aria-hidden="true" />
-      <span><small>Independent product</small>Runic Toolkit</span>
+      <img src="/icon.png" alt="" aria-hidden="true" />
+      <span
+        ><small>No replacement or forwarding alias</small>Archive guidance</span
+      >
     </div>
   </div>
+  <p class="integration-section__archive">
+    Flow is outside the {releaseStatus.train.id} train. Its archive guide records
+    historical migration context; it is not a current package, maintained product,
+    or bridge to another Runic product.
+    <a
+      class="text-link"
+      href="https://docs.runic-artifex.eu/products/runic-flow/"
+      >Read the archive guidance <span aria-hidden="true">→</span></a
+    >
+  </p>
 </section>
 
 <section class="section shell preview-callout">
   <div>
-    <p class="eyebrow"><span></span> Build in the open</p>
-    <h2>The first package preview is public.</h2>
+    <p class="eyebrow"><span></span> Release status</p>
+    <h2>The {releaseStatus.train.id} release train is not published.</h2>
     <p>
-      Explore the source, install only what you need, and use the documentation
-      as the authoritative home for exact versions and release status.
+      No {releaseStatus.train.id} package versions or distributions have been assigned.
+      This release status is generated from the release manifest authority.
     </p>
   </div>
   <div class="preview-callout__actions">
     <a
       class="button button--primary"
-      href="https://docs.runic-artifex.eu/getting-started/"
-      >Start building <span aria-hidden="true">→</span></a
+      href="https://docs.runic-artifex.eu/releases/"
+      >View release status <span aria-hidden="true">→</span></a
     >
     <a class="button button--secondary" href="https://github.com/Runic-Artifex"
       >Browse GitHub <span aria-hidden="true">↗</span></a

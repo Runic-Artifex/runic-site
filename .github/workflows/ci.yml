@@ -16,6 +16,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
+      - name: Read release authority pin
+        id: release-authority-pin
+        run: >-
+          node --input-type=module -e "import { releaseAuthorityPin } from
+          './scripts/release-authority-pin.mjs'; console.log('revision=' +
+          releaseAuthorityPin.revision)" >> "$GITHUB_OUTPUT"
+
+      - name: Check out release authority
+        uses: actions/checkout@v7
+        with:
+          repository: Runic-Artifex/.github
+          ref: ${{ steps.release-authority-pin.outputs.revision }}
+          path: release-authority
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
@@ -35,4 +49,6 @@ jobs:
         run: npm run check
 
       - name: Build and test
+        env:
+          RUNIC_RELEASE_MANIFEST: ${{ github.workspace }}/release-authority/runic.release.json
         run: npm test

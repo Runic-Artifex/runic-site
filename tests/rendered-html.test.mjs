@@ -49,11 +49,16 @@ test('keeps the landing page distinct from technical documentation', async () =>
   assert.match(html, /Read the documentation/);
   assert.match(
     html,
-    /authoritative home for exact versions and release status/,
+    /release status is generated from the release manifest authority/,
   );
   assert.doesNotMatch(html, /\d+\.\d+\.\d+-(?:preview|beta)/i);
   assert.doesNotMatch(html, /dotnet add package|npm (?:install|i)/i);
-  assert.doesNotMatch(html, /Verified candidate|not yet published/i);
+  assert.doesNotMatch(html, /Public preview|Start building/i);
+  assert.match(html, /The v1\.0 release train is not published\./);
+  assert.match(
+    html,
+    /No v1\.0 package versions or distributions have been assigned\./,
+  );
 });
 
 test('introduces every product and links to its guide and source', async () => {
@@ -74,6 +79,20 @@ test('introduces every product and links to its guide and source', async () => {
     );
     assert.match(html, new RegExp(`src="/products/${product.slug}\\.png"`));
   }
+});
+
+test('presents Flow as a historical archive, not an active product seam', async () => {
+  const html = await render();
+
+  assert.match(html, /Seven maintained tools\. One historical archive\./);
+  assert.match(html, /Historical archive/);
+  assert.match(html, /Migration guidance only/);
+  assert.match(html, /Not a current package identity/);
+  assert.match(html, /No replacement or forwarding alias/);
+  assert.match(html, /Flow is outside the v1\.0 train\./);
+  assert.match(html, /Read the archive guidance/);
+  assert.doesNotMatch(html, /RunicFlow\.ApplicationBridge/);
+  assert.doesNotMatch(html, /deprecated migration sources/i);
 });
 
 test('provides semantic landmarks, keyboard entry, and valid page fragments', async () => {
@@ -105,6 +124,7 @@ test('explains independent ownership before using architectural shorthand', asyn
     'expected plain-language explanation',
   );
   assert.ok(text.indexOf(shorthand) >= 0, 'expected explicit-seams wording');
-  assert.match(html, /RunicFlow\.ApplicationBridge/);
-  assert.match(html, /Product-owned adapter/);
+  assert.match(html, /Runic Desktop/);
+  assert.match(html, /WebUI’s public API/);
+  assert.match(html, /Explicit seams/);
 });
