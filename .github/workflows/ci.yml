@@ -30,25 +30,45 @@ jobs:
           ref: ${{ steps.release-authority-pin.outputs.revision }}
           path: release-authority
 
+      - name: Check out current CI authority
+        uses: actions/checkout@v7
+        with:
+          repository: Runic-Artifex/.github
+          ref: main
+          path: ci-authority
+
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
-          cache: npm
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Restore Bun cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ runner.arch }}-1.4.0-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-${{ runner.arch }}-1.4.0-
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
-      - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+      - name: Audit dependencies
+        run: bun audit --audit-level=high
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
       - name: Check Svelte and TypeScript
-        run: npm run check
+        run: bun run check
 
       - name: Build and test
         env:
           RUNIC_RELEASE_MANIFEST: ${{ github.workspace }}/release-authority/runic.release.json
-        run: npm test
+          RUNIC_CI_POLICY: ${{ github.workspace }}/ci-authority/runic.ci.json
+        run: bun run test

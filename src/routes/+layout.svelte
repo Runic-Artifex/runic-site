@@ -24,6 +24,7 @@
       <a href={resolve('/#principles')}>Principles</a>
       <a href={resolve('/#products')}>Products</a>
       <a href={resolve('/#integrations')}>Integrations</a>
+      <a href={resolve('/ci/')}>CI status</a>
       <a href="https://github.com/Runic-Artifex">GitHub</a>
       <a class="nav-cta" href="https://docs.runic-artifex.eu/">Documentation</a>
     </nav>
@@ -47,6 +48,7 @@
       <a href="https://docs.runic-artifex.eu/">Documentation</a>
       <a href="https://docs.runic-artifex.eu/packages/">Packages</a>
       <a href="https://docs.runic-artifex.eu/releases/">Release status</a>
+      <a href={resolve('/ci/')}>CI status</a>
       <a href="https://github.com/Runic-Artifex">GitHub</a>
     </div>
     <p class="site-footer__legal">MIT licensed · Built in the open</p>
