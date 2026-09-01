@@ -9,6 +9,7 @@ export default tseslint.config(
     ignores: [
       '.svelte-kit/**',
       'build/**',
+      'ci-authority/**',
       'node_modules/**',
       'release-authority/**',
     ],

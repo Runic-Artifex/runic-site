@@ -1,5 +1,5 @@
 // Generated from Runic-Artifex/.github@dbafda21a892968cccac2d9f9f78120e150fce13. Do not edit manually.
-// Regenerate with: npm run release-status:sync
+// Regenerate with: bun run release-status:sync
 
 export const releaseStatus = {
   authority: {

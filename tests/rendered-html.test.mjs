@@ -6,6 +6,9 @@ import test from 'node:test';
 import { products } from '../src/lib/products.ts';
 
 const htmlPath = fileURLToPath(new URL('../build/index.html', import.meta.url));
+const ciHtmlPath = fileURLToPath(
+  new URL('../build/ci/index.html', import.meta.url),
+);
 
 function render() {
   return readFile(htmlPath, 'utf8');
@@ -127,4 +130,18 @@ test('explains independent ownership before using architectural shorthand', asyn
   assert.match(html, /Runic Desktop/);
   assert.match(html, /WebUI’s public API/);
   assert.match(html, /Explicit seams/);
+});
+
+test('renders CI policy from the machine-readable authority', async () => {
+  const html = await readFile(ciHtmlPath, 'utf8');
+
+  assert.match(html, /<title>CI control room · Runic Artifex<\/title>/);
+  assert.match(html, /Bun 1\.4\.0/);
+  assert.match(html, /GitHub Packages/);
+  assert.match(html, /Independent producers/);
+  assert.match(html, /Integrated validation/);
+  assert.match(html, /Automatic deletion/);
+  assert.match(html, /Disabled/);
+  assert.match(html, /sha256:[a-f0-9]{64}/);
+  assert.match(html, /Live run ingestion is not connected yet/);
 });

@@ -99,7 +99,7 @@ if (!allUnassigned) {
   );
 }
 
-const output = `// Generated from ${releaseAuthorityPin.repository}@${releaseAuthorityPin.revision}. Do not edit manually.\n// Regenerate with: npm run release-status:sync\n\nexport const releaseStatus = {\n  authority: {\n    repository: '${releaseAuthorityPin.repository}',\n    revision: '${releaseAuthorityPin.revision}',\n    manifestDigest:\n      'sha256:${releaseAuthorityPin.files.manifest.sha256}',\n    schemaDigest:\n      'sha256:${releaseAuthorityPin.files.schema.sha256}',\n    verifierDigest:\n      'sha256:${releaseAuthorityPin.files.verifier.sha256}',\n  },\n  train: {\n    id: '${train.id}',\n    publication: 'unassigned',\n    assignedVersions: 0,\n    assignedDistributions: 0,\n  },\n} as const;\n`;
+const output = `// Generated from ${releaseAuthorityPin.repository}@${releaseAuthorityPin.revision}. Do not edit manually.\n// Regenerate with: bun run release-status:sync\n\nexport const releaseStatus = {\n  authority: {\n    repository: '${releaseAuthorityPin.repository}',\n    revision: '${releaseAuthorityPin.revision}',\n    manifestDigest:\n      'sha256:${releaseAuthorityPin.files.manifest.sha256}',\n    schemaDigest:\n      'sha256:${releaseAuthorityPin.files.schema.sha256}',\n    verifierDigest:\n      'sha256:${releaseAuthorityPin.files.verifier.sha256}',\n  },\n  train: {\n    id: '${train.id}',\n    publication: 'unassigned',\n    assignedVersions: 0,\n    assignedDistributions: 0,\n  },\n} as const;\n`;
 
 if (check) {
   const existing = await readFile(outputPath, 'utf8');
