@@ -1,10 +1,10 @@
-// Generated from Runic-Artifex/.github@dbafda21a892968cccac2d9f9f78120e150fce13. Do not edit manually.
+// Generated from Runic-Artifex/.github@724355893b33c745d5f6bdc2d8de607eab1d465c. Do not edit manually.
 // Regenerate with: bun run release-status:sync
 
 export const releaseStatus = {
   authority: {
     repository: 'Runic-Artifex/.github',
-    revision: 'dbafda21a892968cccac2d9f9f78120e150fce13',
+    revision: '724355893b33c745d5f6bdc2d8de607eab1d465c',
     manifestDigest:
       'sha256:44509da940d238738427d2cce4a8d2d58863b21f1d976daf854c04be9c086b3f',
     schemaDigest:

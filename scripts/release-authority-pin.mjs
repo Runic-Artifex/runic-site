@@ -1,7 +1,7 @@
 export const releaseAuthorityPin = {
   // Update this complete pin after the release-authority evidence commit lands.
   repository: 'Runic-Artifex/.github',
-  revision: 'dbafda21a892968cccac2d9f9f78120e150fce13',
+  revision: '724355893b33c745d5f6bdc2d8de607eab1d465c',
   files: {
     manifest: {
       path: 'runic.release.json',
