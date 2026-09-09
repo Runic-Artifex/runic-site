@@ -14,11 +14,9 @@
   </div>
   <p class="product-card__description">{product.description}</p>
   <div class="product-card__links">
-    <a href={`https://docs.runic-artifex.eu/products/${product.slug}/`}
-      >Read the guide <span aria-hidden="true">→</span></a
-    >
-    <a href={`https://github.com/Runic-Artifex/${product.slug}`}
-      >Source <span aria-hidden="true">↗</span></a
-    >
+    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- Product URLs are external documentation and GitHub links. -->
+    <a href={product.docs}>Read the guide <span aria-hidden="true">→</span></a>
+    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- Product URLs are external documentation and GitHub links. -->
+    <a href={product.source}>Source <span aria-hidden="true">↗</span></a>
   </div>
 </article>

@@ -16,27 +16,6 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Read release authority pin
-        id: release-authority-pin
-        run: >-
-          node --input-type=module -e "import { releaseAuthorityPin } from
-          './scripts/release-authority-pin.mjs'; console.log('revision=' +
-          releaseAuthorityPin.revision)" >> "$GITHUB_OUTPUT"
-
-      - name: Check out release authority
-        uses: actions/checkout@v7
-        with:
-          repository: Runic-Artifex/.github
-          ref: ${{ steps.release-authority-pin.outputs.revision }}
-          path: release-authority
-
-      - name: Check out current CI authority
-        uses: actions/checkout@v7
-        with:
-          repository: Runic-Artifex/.github
-          ref: main
-          path: ci-authority
-
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
@@ -45,15 +24,15 @@ jobs:
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.0
+          bun-version: 1.4.2
 
       - name: Restore Bun cache
         uses: actions/cache@v4
         with:
           path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ runner.arch }}-1.4.0-${{ hashFiles('bun.lock') }}
+          key: bun-${{ runner.os }}-${{ runner.arch }}-1.4.2-${{ hashFiles('bun.lock') }}
           restore-keys: |
-            bun-${{ runner.os }}-${{ runner.arch }}-1.4.0-
+            bun-${{ runner.os }}-${{ runner.arch }}-1.4.2-
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -68,7 +47,4 @@ jobs:
         run: bun run check
 
       - name: Build and test
-        env:
-          RUNIC_RELEASE_MANIFEST: ${{ github.workspace }}/release-authority/runic.release.json
-          RUNIC_CI_POLICY: ${{ github.workspace }}/ci-authority/runic.ci.json
         run: bun run test

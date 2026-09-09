@@ -2,14 +2,13 @@
   import FamilyConstellation from '$lib/components/FamilyConstellation.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { products } from '$lib/products';
-  import { releaseStatus } from '$lib/release-status';
 </script>
 
 <svelte:head>
-  <title>Independent open-source .NET tools · Runic Artifex</title>
+  <title>C# applications with your frontend · Runic Artifex</title>
   <meta
     name="description"
-    content="Runic Artifex is a family of independent open-source .NET tools for desktop and browser UI, application hosting, assets, localization, and command-line apps."
+    content="Runic SDK brings C# application logic and React, Vue, Svelte, or Angular frontends to native desktop applications."
   />
   <link rel="canonical" href="https://runic-artifex.eu/" />
   <link rel="icon" href="/icon.png" />
@@ -17,11 +16,11 @@
   <meta property="og:site_name" content="Runic Artifex" />
   <meta
     property="og:title"
-    content="Independent tools. Explicit seams. · Runic Artifex"
+    content="C# logic. Your frontend. · Runic Artifex"
   />
   <meta
     property="og:description"
-    content="Focused open-source .NET tools that work independently and connect through documented integrations when needed."
+    content="Build native desktop applications with C# logic, your chosen frontend, and composable SDK packages."
   />
   <meta property="og:url" content="https://runic-artifex.eu/" />
   <meta property="og:image" content="https://runic-artifex.eu/og.png" />
@@ -30,39 +29,37 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta
     name="twitter:title"
-    content="Independent tools. Explicit seams. · Runic Artifex"
+    content="C# logic. Your frontend. · Runic Artifex"
   />
   <meta
     name="twitter:description"
-    content="Focused open-source .NET tools that work independently and connect through documented integrations when needed."
+    content="Build native desktop applications with C# logic, your chosen frontend, and composable SDK packages."
   />
   <meta name="twitter:image" content="https://runic-artifex.eu/og.png" />
 </svelte:head>
 
 <section class="hero shell">
   <div class="hero__copy">
-    <p class="eyebrow"><span></span> Open-source .NET product family</p>
-    <h1>Build the application you need. Keep the tools independent.</h1>
+    <p class="eyebrow"><span></span> Open-source Runic SDK</p>
+    <h1>C# at the core. Your frontend on the desktop.</h1>
     <p class="hero__lede">
-      Runic Artifex is a family of focused tools for desktop and browser UI,
-      application hosting, assets, localization, and command-line apps. Each
-      product works on its own and connects through documented integrations when
-      needed.
+      Build native desktop applications with C# application logic and a React,
+      Vue, Svelte, or Angular frontend. Runic SDK brings the host, typed bridge,
+      assets, and translations together—with packages you can also use
+      independently.
     </p>
     <div class="hero__actions">
-      <a class="button button--primary" href="#products"
-        >Explore the tools <span aria-hidden="true">↓</span></a
+      <a
+        class="button button--primary"
+        href="https://docs.runic-artifex.eu/getting-started/"
+        >Get started <span aria-hidden="true">↓</span></a
       >
       <a class="button button--secondary" href="https://docs.runic-artifex.eu/"
-        >Read the documentation <span aria-hidden="true">↗</span></a
+        >Explore the documentation <span aria-hidden="true">↗</span></a
       >
     </div>
     <ul class="hero__facts" aria-label="Project facts">
-      <li>
-        <strong>{releaseStatus.train.id} not published</strong><span
-          >No packages or distributions assigned</span
-        >
-      </li>
+      <li><strong>C# + web UI</strong><span>Your choice of frontend</span></li>
       <li><strong>MIT licensed</strong><span>Built in the open</span></li>
       <li>
         <strong>NativeAOT-minded</strong><span>From contracts to hosts</span>
@@ -100,10 +97,10 @@
     </article>
     <article>
       <span class="principle-number">03</span>
-      <h3>Independent evolution</h3>
+      <h3>Developed together</h3>
       <p>
-        Products own their contracts, packages, histories, and release cycles.
-        Applications decide when each dependency should move.
+        One SDK repository keeps the libraries, tools, examples, and
+        documentation together. Adopt the packages your application needs.
       </p>
     </article>
   </div>
@@ -113,8 +110,8 @@
   <div class="shell">
     <div class="section-heading section-heading--wide">
       <div>
-        <p class="eyebrow"><span></span> The product family</p>
-        <h2>Seven maintained tools. One historical archive.</h2>
+        <p class="eyebrow"><span></span> The SDK building blocks</p>
+        <h2>Compose the capabilities you need.</h2>
       </div>
       <p>
         Start from the capability your application needs. Each guide explains
@@ -132,62 +129,61 @@
 
 <section id="integrations" class="section shell integration-section">
   <div class="integration-section__copy">
-    <p class="eyebrow"><span></span> Explicit seams</p>
-    <h2>Composition without hidden ownership.</h2>
+    <p class="eyebrow"><span></span> From template to application</p>
+    <h2>Start with a working app. Make it yours.</h2>
     <p>
-      Each tool works on its own. Official integrations connect tools without
-      forcing their cores to depend on each other, so products can keep separate
-      packages and release cycles.
+      Choose a frontend template, then build your application behavior in C#.
+      The SDK examples show the same pieces in a counter, a customer editor, and
+      a document application.
     </p>
-    <a class="text-link" href="https://docs.runic-artifex.eu/architecture/"
-      >Explore the architecture <span aria-hidden="true">→</span></a
-    >
-  </div>
-  <div class="seam-diagram" aria-label="Flow historical archive guidance">
-    <div class="seam-node">
-      <img src="/products/runic-flow.png" alt="" aria-hidden="true" />
-      <span><small>Historical archive</small>Runic Flow</span>
-    </div>
-    <div class="seam-connector">
-      <span>Migration guidance only</span>
-      <strong>Not a current package identity</strong>
-    </div>
-    <div class="seam-node">
-      <img src="/icon.png" alt="" aria-hidden="true" />
-      <span
-        ><small>No replacement or forwarding alias</small>Archive guidance</span
-      >
-    </div>
-  </div>
-  <p class="integration-section__archive">
-    Flow is outside the {releaseStatus.train.id} train. Its archive guide records
-    historical migration context; it is not a current package, maintained product,
-    or bridge to another Runic product.
     <a
       class="text-link"
-      href="https://docs.runic-artifex.eu/products/runic-flow/"
-      >Read the archive guidance <span aria-hidden="true">→</span></a
+      href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples"
+      >Explore the examples <span aria-hidden="true">→</span></a
     >
-  </p>
+  </div>
+  <div class="template-example">
+    <p class="eyebrow">After installing the templates</p>
+    <pre><code>dotnet new runic-app-svelte --name MyApp</code></pre>
+    <p>Prefer React, Vue, or Angular? Choose the matching template.</p>
+    <a class="text-link" href="https://docs.runic-artifex.eu/getting-started/"
+      >Follow the setup guide <span aria-hidden="true">→</span></a
+    >
+  </div>
 </section>
 
 <section class="section shell preview-callout">
   <div>
-    <p class="eyebrow"><span></span> Release status</p>
-    <h2>The {releaseStatus.train.id} release train is not published.</h2>
+    <p class="eyebrow"><span></span> Build with Runic</p>
+    <h2>Your next application starts here.</h2>
     <p>
-      No {releaseStatus.train.id} package versions or distributions have been assigned.
-      This release status is generated from the release manifest authority.
+      The documentation covers setup, host choices, frontend integration, and
+      current package availability.
     </p>
   </div>
   <div class="preview-callout__actions">
     <a
       class="button button--primary"
-      href="https://docs.runic-artifex.eu/releases/"
-      >View release status <span aria-hidden="true">→</span></a
+      href="https://docs.runic-artifex.eu/getting-started/"
+      >Get started <span aria-hidden="true">→</span></a
     >
-    <a class="button button--secondary" href="https://github.com/Runic-Artifex"
-      >Browse GitHub <span aria-hidden="true">↗</span></a
+    <a
+      class="button button--secondary"
+      href="https://github.com/Runic-Artifex/runic-sdk"
+      >Browse the SDK <span aria-hidden="true">↗</span></a
     >
   </div>
+</section>
+
+<section class="section shell related-projects">
+  <p>
+    <a href="https://github.com/Runic-Artifex/cs-webui">CS-WebUI</a> is a separate
+    related project for WebUI's managed API.
+  </p>
+  <p>
+    Looking for Runic Flow? See the <a
+      href="https://docs.runic-artifex.eu/products/runic-flow/"
+      >historical archive guidance</a
+    >.
+  </p>
 </section>

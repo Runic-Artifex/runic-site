@@ -429,46 +429,6 @@ nav a:hover {
   box-shadow: 0 10px 25px rgb(0 0 0 / 32%);
 }
 
-.constellation__product--1 {
-  top: 3%;
-  left: 50%;
-}
-
-.constellation__product--2 {
-  top: 14%;
-  left: 77%;
-}
-
-.constellation__product--3 {
-  top: 50%;
-  left: 91%;
-}
-
-.constellation__product--4 {
-  top: 86%;
-  left: 77%;
-}
-
-.constellation__product--5 {
-  top: 97%;
-  left: 50%;
-}
-
-.constellation__product--6 {
-  top: 86%;
-  left: 23%;
-}
-
-.constellation__product--7 {
-  top: 50%;
-  left: 9%;
-}
-
-.constellation__product--8 {
-  top: 14%;
-  left: 23%;
-}
-
 .section {
   padding-block: clamp(5rem, 10vw, 9rem);
 }
@@ -649,18 +609,6 @@ nav a:hover {
   max-width: 12ch;
 }
 
-.integration-section__archive {
-  grid-column: 1 / -1;
-  max-width: 70ch;
-  margin: 0;
-  color: var(--parchment-muted);
-  line-height: 1.72;
-}
-
-.integration-section__archive .text-link {
-  margin-left: 0.4rem;
-}
-
 .text-link {
   display: inline-flex;
   align-items: center;
@@ -669,124 +617,6 @@ nav a:hover {
   color: var(--gold);
   font-size: 0.86rem;
   font-weight: 600;
-}
-
-.seam-diagram {
-  position: relative;
-  display: grid;
-  min-height: 29rem;
-  place-items: center;
-  padding: 2.5rem;
-  border: 1px solid var(--line);
-  background:
-    radial-gradient(circle at center, rgb(49 69 54 / 32%), transparent 50%),
-    rgb(7 16 11 / 55%);
-  box-shadow: var(--shadow);
-}
-
-.seam-diagram::before,
-.seam-diagram::after {
-  position: absolute;
-  width: 2.2rem;
-  height: 2.2rem;
-  content: '';
-}
-
-.seam-diagram::before {
-  top: 0.8rem;
-  left: 0.8rem;
-  border-top: 1px solid var(--gold-dim);
-  border-left: 1px solid var(--gold-dim);
-}
-
-.seam-diagram::after {
-  right: 0.8rem;
-  bottom: 0.8rem;
-  border-right: 1px solid var(--gold-dim);
-  border-bottom: 1px solid var(--gold-dim);
-}
-
-.seam-node {
-  display: flex;
-  width: min(100%, 24rem);
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.2rem;
-  border: 1px solid var(--line-strong);
-  background: var(--ink-raised);
-}
-
-.seam-node img {
-  width: 3.7rem;
-  height: 3.7rem;
-  border-radius: 50%;
-}
-
-.seam-node span {
-  display: grid;
-  gap: 0.2rem;
-  font-family: 'Cormorant', serif;
-  font-size: 1.4rem;
-  font-weight: 600;
-}
-
-.seam-node small {
-  color: var(--parchment-muted);
-  font-family: 'Geist Variable', sans-serif;
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.seam-connector {
-  position: relative;
-  display: grid;
-  place-items: center;
-  gap: 0.35rem;
-  min-width: 0;
-  padding-block: 2.1rem;
-  color: var(--parchment-muted);
-  text-align: center;
-}
-
-.seam-connector::before,
-.seam-connector::after {
-  position: absolute;
-  left: 50%;
-  width: 1px;
-  height: 1.5rem;
-  background: repeating-linear-gradient(
-    to bottom,
-    var(--gold-dim) 0 4px,
-    transparent 4px 8px
-  );
-  content: '';
-}
-
-.seam-connector::before {
-  top: 0.25rem;
-}
-
-.seam-connector::after {
-  bottom: 0.25rem;
-}
-
-.seam-connector span {
-  color: var(--rust);
-  font-size: 0.63rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.seam-connector strong {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  color: var(--gold);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.75rem;
-  font-weight: 500;
 }
 
 .preview-callout {
@@ -881,7 +711,7 @@ nav a:hover {
 
   .hero {
     min-height: auto;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hero__copy {
@@ -909,10 +739,6 @@ nav a:hover {
 
   .integration-section__copy {
     max-width: 720px;
-  }
-
-  .seam-diagram {
-    min-height: 26rem;
   }
 
   .preview-callout {
@@ -983,7 +809,7 @@ nav a:hover {
   }
 
   .constellation {
-    width: min(96vw, 470px);
+    width: min(100%, 470px);
   }
 
   .constellation__center {
@@ -1040,10 +866,6 @@ nav a:hover {
     font-size: 1.7rem;
   }
 
-  .seam-diagram {
-    padding: 2rem 1.25rem;
-  }
-
   .preview-callout {
     width: calc(100% - 2rem);
     padding: 2rem 1.25rem;
@@ -1069,4 +891,25 @@ nav a:hover {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.template-example {
+  min-width: 0;
+  padding: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgb(24 35 27 / 45%);
+}
+
+.template-example pre {
+  overflow-x: auto;
+  padding-block: 1rem;
+  color: var(--gold);
+  font-size: 0.85rem;
+}
+
+.related-projects {
+  padding-top: 0;
+  color: var(--parchment-muted);
+  font-size: 0.85rem;
 }
