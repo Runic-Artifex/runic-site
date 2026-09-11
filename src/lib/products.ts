@@ -28,7 +28,7 @@ export const products: Product[] = [
     shortName: 'Desktop',
     capability: 'Desktop presentation',
     description:
-      'Own the web-powered desktop presentation layer with native C# hosting and TypeScript frontend packages.',
+      'Host web-powered native windows, choose GTK3 or GTK4 on Linux, and add desktop services through platform adapters.',
     docs: `${docs}/runic-desktop/`,
     source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Desktop`,
   },
@@ -58,7 +58,7 @@ export const products: Product[] = [
     shortName: 'Command Line',
     capability: 'Command applications',
     description:
-      'Build reflection-free NativeAOT command applications with predictable output.',
+      'Generate NativeAOT-ready commands from typed C# methods, with help, validation, completion, and optional Spectre.Console presentation.',
     docs: `${docs}/runic-command-line/`,
     source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.CommandLine`,
   },
