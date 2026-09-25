@@ -18,9 +18,9 @@ export const products: Product[] = [
     shortName: 'Application',
     capability: 'Application composition',
     description:
-      'Compose .NET hosts, desktop windows, and browser frontends around one application model.',
+      'Compose typed .NET Windows and Views with generated frontend clients and scoped ViewModel lifetimes.',
     docs: `${docs}/runic-toolkit/`,
-    source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Application`,
+    source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views`,
   },
   {
     slug: 'runic-desktop',

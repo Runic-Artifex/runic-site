@@ -43,10 +43,10 @@
     <p class="eyebrow"><span></span> Open-source Runic SDK</p>
     <h1>C# at the core. Your frontend on the desktop.</h1>
     <p class="hero__lede">
-      Build native desktop applications with C# application logic and a React,
-      Vue, Svelte, or Angular frontend. Runic SDK brings the host, typed bridge,
-      assets, and translations together—with packages you can also use
-      independently.
+      Build native desktop applications with C# Window and View contracts and a
+      React, Vue, Svelte, or Angular frontend. Runic SDK brings the desktop
+      host, generated clients, assets, and translations together—with packages
+      you can also use independently.
     </p>
     <div class="hero__actions">
       <a
@@ -133,8 +133,8 @@
     <h2>Start with a working app. Make it yours.</h2>
     <p>
       Choose a frontend template, then build your application behavior in C#.
-      The SDK examples show the same pieces in a counter, a customer editor, and
-      a document application.
+      The SDK examples show the same pieces in a counter, nested Views, and
+      ReactiveUI routed notes.
     </p>
     <a
       class="text-link"
