@@ -47,6 +47,10 @@ test('offers setup and runnable examples without embedding release state', async
   assert.ok(
     html.includes('href="https://docs.runic-artifex.eu/getting-started/"'),
   );
+  // The creator command carries no version; dnx resolves the latest preview.
+  assert.ok(html.includes('dnx Runic.Create --prerelease'));
+  assert.ok(html.includes('href="https://docs.runic-artifex.eu/create/"'));
+  assert.doesNotMatch(html, /runic-app-(?:react|vue|svelte|angular)/);
   assert.ok(
     html.includes(
       'href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples"',

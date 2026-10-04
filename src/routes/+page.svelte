@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CreateCommand from '$lib/components/CreateCommand.svelte';
   import FamilyConstellation from '$lib/components/FamilyConstellation.svelte';
   import ProductCard from '$lib/components/ProductCard.svelte';
   import { products } from '$lib/products';
@@ -48,14 +49,21 @@
       host, generated clients, assets, and translations together—with packages
       you can also use independently.
     </p>
+    <CreateCommand />
+    <p class="hero__command-note">
+      Asks for your frontend, package manager, host, and ViewModel library.
+      Needs the .NET 10 SDK.
+    </p>
     <div class="hero__actions">
       <a
         class="button button--primary"
-        href="https://docs.runic-artifex.eu/getting-started/"
-        >Get started <span aria-hidden="true">↓</span></a
+        href="https://docs.runic-artifex.eu/create/"
+        >Choose your stack <span aria-hidden="true">↗</span></a
       >
-      <a class="button button--secondary" href="https://docs.runic-artifex.eu/"
-        >Explore the documentation <span aria-hidden="true">↗</span></a
+      <a
+        class="button button--secondary"
+        href="https://docs.runic-artifex.eu/getting-started/"
+        >Get started <span aria-hidden="true">↗</span></a
       >
     </div>
     <ul class="hero__facts" aria-label="Project facts">
@@ -132,9 +140,9 @@
     <p class="eyebrow"><span></span> From template to application</p>
     <h2>Start with a working app. Make it yours.</h2>
     <p>
-      Choose a frontend template, then build your application behavior in C#.
-      The SDK examples show the same pieces in a counter, nested Views, and
-      ReactiveUI routed notes.
+      Create a project for your frontend and host, then build your application
+      behavior in C#. The SDK examples show the same pieces in a counter, nested
+      Views, and ReactiveUI routed notes.
     </p>
     <a
       class="text-link"
@@ -143,11 +151,16 @@
     >
   </div>
   <div class="template-example">
-    <p class="eyebrow">After installing the templates</p>
-    <pre><code>dotnet new runic-app-svelte --name MyApp</code></pre>
-    <p>Prefer React, Vue, or Angular? Choose the matching template.</p>
-    <a class="text-link" href="https://docs.runic-artifex.eu/getting-started/"
-      >Follow the setup guide <span aria-hidden="true">→</span></a
+    <p class="eyebrow">Skip the questions</p>
+    <pre><code
+        >dnx Runic.Create --prerelease -- MyApp --frontend svelte --host desktop</code
+      ></pre>
+    <p>
+      Pass any option to the creator: React, Vue, Svelte, or Angular; npm, pnpm,
+      or Bun; CS-WebUI or Runic Desktop; CommunityToolkit.Mvvm or ReactiveUI.
+    </p>
+    <a class="text-link" href="https://docs.runic-artifex.eu/create/"
+      >Put your app together in the browser <span aria-hidden="true">→</span></a
     >
   </div>
 </section>
