@@ -913,3 +913,9 @@ nav a:hover {
   color: var(--parchment-muted);
   font-size: 0.85rem;
 }
+
+.hero__command-note {
+  margin: 0.85rem 0 2rem;
+  color: var(--parchment-muted);
+  font-size: 0.82rem;
+}
