@@ -6,3 +6,5 @@
 *.log
 .env*
 !.env.example
+
+/static/schemas/translations/

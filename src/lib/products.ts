@@ -19,7 +19,7 @@ export const products: Product[] = [
     capability: 'Application composition',
     description:
       'Compose typed .NET Windows and Views with generated frontend clients and scoped ViewModel lifetimes.',
-    docs: `${docs}/runic-toolkit/`,
+    docs: `${docs}/runic-application/`,
     source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views`,
   },
   {

@@ -1,0 +1,50 @@
+name: Verify documentation portal
+
+on:
+  pull_request:
+    paths: ['docs/**', '.github/workflows/docs.yml']
+  push:
+    branches: [main]
+    paths: ['docs/**', '.github/workflows/docs.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: docs/.node-version
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: docs-bun-${{ runner.os }}-1.4.2-${{ hashFiles('docs/bun.lock') }}
+      - name: Install documentation dependencies
+        run: bun install --frozen-lockfile
+      - name: Audit dependencies
+        run: bun audit --audit-level=high
+      - name: Lint documentation
+        run: bun run lint
+      - name: Check documentation types
+        run: bun run --bun check
+      - name: Build and test portal
+        run: bun run --bun test
+      - name: Upload independently deployable documentation
+        uses: actions/upload-artifact@v7
+        with:
+          name: documentation-site
+          path: docs/build/
+          retention-days: 7
