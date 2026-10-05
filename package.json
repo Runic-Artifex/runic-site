@@ -9,12 +9,17 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "bun scripts/sync-schema-assets.mjs && vite dev",
+    "build": "bun scripts/sync-schema-assets.mjs && vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "lint": "prettier --check . && eslint .",
-    "test": "bun run build && node --test tests/*.test.mjs"
+    "test": "bun run build && node --test tests/*.test.mjs",
+    "dev:docs": "bun run --cwd docs dev",
+    "docs:build": "bun run --cwd docs build",
+    "docs:check": "bun run --cwd docs check",
+    "docs:test": "bun run --cwd docs test",
+    "docs:release": "bun docs/scripts/update-release.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",

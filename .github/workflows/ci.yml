@@ -48,3 +48,10 @@ jobs:
 
       - name: Build and test
         run: bun run test
+
+      - name: Upload independently deployable marketing site
+        uses: actions/upload-artifact@v7
+        with:
+          name: marketing-site
+          path: build/
+          retention-days: 7
