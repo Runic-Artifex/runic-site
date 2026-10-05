@@ -50,7 +50,7 @@ export const products: Product[] = [
     description:
       'Turn portable translation resources into strongly typed, NativeAOT-ready APIs.',
     docs: `${docs}/runic-translations/`,
-    source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Translations`,
+    source: `${github}/runic-translations-sdk/tree/main/packages/dotnet/Runic.Translations`,
   },
   {
     slug: 'runic-command-line',
@@ -60,6 +60,6 @@ export const products: Product[] = [
     description:
       'Generate NativeAOT-ready commands from typed C# methods, with help, validation, completion, and optional Spectre.Console presentation.',
     docs: `${docs}/runic-command-line/`,
-    source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.CommandLine`,
+    source: `${github}/runic-cli-sdk/tree/main/packages/dotnet/Runic.CommandLine`,
   },
 ];

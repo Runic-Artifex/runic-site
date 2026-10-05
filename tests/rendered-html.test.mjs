@@ -28,9 +28,15 @@ test('links each SDK capability to its guide, current source, and existing artwo
   for (const product of products) {
     assert.ok(html.includes(`href="${product.docs}"`));
     assert.ok(html.includes(`href="${product.source}"`));
+    const sourceRepository =
+      product.slug === 'runic-command-line'
+        ? 'runic-cli-sdk'
+        : product.slug === 'runic-translations'
+          ? 'runic-translations-sdk'
+          : 'runic-sdk';
     assert.ok(
       product.source.startsWith(
-        'https://github.com/Runic-Artifex/runic-sdk/tree/main/',
+        `https://github.com/Runic-Artifex/${sourceRepository}/tree/main/`,
       ),
     );
     await access(
