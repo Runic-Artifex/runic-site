@@ -25,6 +25,10 @@ Run `bun install --frozen-lockfile` separately in `docs/`, then use
 The two applications have separate locks and CI artifacts; neither requires
 building product SDK packages. See the [ownership and cutover plan](docs/plans/documentation-ownership.md).
 
+Changes reach `main` only through pull requests that pass the `verify` check;
+see [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities as described in
+[SECURITY.md](SECURITY.md).
+
 ## Maintain content
 
 Keep the homepage focused on capabilities, templates, and examples. Update product links in `src/lib/products.ts`; preserve existing guide URLs where they serve as stable routes. Installation details, package availability, and portal guides live in [docs/](docs/README.md), published at [docs.runic-artifex.eu](https://docs.runic-artifex.eu/). Package READMEs, specifications and canonical Translations guides remain product-owned and are linked from the portal. The marketing site has no generated release or CI state to synchronize.
