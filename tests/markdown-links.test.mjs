@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 // Adapted from runic-sdk tests/engineering/markdown-links.test.mjs. Checks every
-// tracked Markdown file in the repository, not only the portal guides.
-const root = fileURLToPath(new URL('../../', import.meta.url));
+// tracked Markdown file in the repository, including the portal guides.
+const root = fileURLToPath(new URL('../', import.meta.url));
 
 // Removes fenced and indented code blocks and inline code. Indented lines
 // continue a list item rather than start code while a list is open.
@@ -71,9 +71,11 @@ export function relativeLinks(markdown) {
         ),
       ),
     ].map((match) => match[1] ?? match[2]),
-    ...[...text.matchAll(/<(?:a|img)\s[^>]*?\b(?:href|src)="([^"]+)"/g)].map(
-      (match) => match[1],
-    ),
+    ...[
+      ...text.matchAll(
+        /<(?:a|img)\s[^>]*?\b(?:href|src)=(?:"([^"]+)"|'([^']+)')/g,
+      ),
+    ].map((match) => match[1] ?? match[2]),
   ];
   return targets
     .filter(
@@ -135,7 +137,7 @@ test('the link checker reports missing relative targets only', () => {
     '',
     '[^note]: footnote-not-a-link.md',
     '[ref]: ../outside-missing.md',
-    '<a href="html-missing.md">html</a>',
+    `<a href="html-missing.md">html</a> <img src='single-missing.png'>`,
   ].join('\n');
   assert.deepEqual(brokenLinks('README.md', markdown, tracked), [
     'README.md: docs/missing.md',
@@ -144,6 +146,7 @@ test('the link checker reports missing relative targets only', () => {
     'README.md: continued-missing.md',
     'README.md: ../outside-missing.md',
     'README.md: html-missing.md',
+    'README.md: single-missing.png',
   ]);
 });
 

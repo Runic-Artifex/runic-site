@@ -1,0 +1,48 @@
+name: Dependency audit
+
+on:
+  schedule:
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit
+  cancel-in-progress: true
+
+jobs:
+  # Reports known vulnerabilities in both lockfiles, including ones that appear
+  # after the last change. Upgrades stay deliberate; nothing is changed here.
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.4.2
+      - name: Check marketing site packages for known vulnerabilities
+        run: |
+          mkdir -p "$RUNNER_TEMP/dependency-audit"
+          bun install --frozen-lockfile --ignore-scripts
+          bun audit --json > "$RUNNER_TEMP/dependency-audit/site-audit.json" || true
+          bun audit --audit-level=high
+      - name: Check documentation packages for known vulnerabilities
+        if: ${{ !cancelled() }}
+        working-directory: docs
+        run: |
+          mkdir -p "$RUNNER_TEMP/dependency-audit"
+          bun install --frozen-lockfile --ignore-scripts
+          bun audit --json > "$RUNNER_TEMP/dependency-audit/docs-audit.json" || true
+          bun audit --audit-level=high
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: dependency-audit-${{ github.run_id }}
+          path: ${{ runner.temp }}/dependency-audit
+          if-no-files-found: ignore
+          retention-days: 30
