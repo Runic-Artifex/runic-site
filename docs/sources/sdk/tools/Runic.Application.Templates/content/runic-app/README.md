@@ -44,7 +44,7 @@ browser, and then to the platform WebView: the Edge WebView2 Runtime on
 Windows, GTK 3 with WebKitGTK 4.1 on Linux, or WKWebView on macOS.
 Applications that need native windows, dialogs, or platform services can use
 the Runic Desktop host (`--host desktop` when creating a project); see the
-[host selection guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/guides/desktop/host-selection.md).
+[host selection guide](https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/desktop/host-selection.md).
 <!--#endif -->
 
 ## Project layout
@@ -66,6 +66,11 @@ the Runic Desktop host (`--host desktop` when creating a project); see the
 | `Frontend/src/App.vue`, `Frontend/src/pages` | Connect generated clients with `useView` from `@runic-artifex/vue` and render the page that `WorkspaceViewModel.Main` selects. |
 <!--#else -->
 | `Frontend/src/App.tsx`, `Frontend/src/pages` | Connect generated clients with `useView` from `@runic-artifex/react` and render the page that `WorkspaceViewModel.Main` selects. |
+<!--#endif -->
+<!--#if (frontend != "angular" && host == "desktop") -->
+| `Frontend/vite.config.ts` | Adds `runic({ desktop: true })` from `@runic-artifex/vite-plugin-runic`, which loads the Runic Desktop bootstrap and builds with relative asset URLs. To add its Runic DevTools dock, install `@vitejs/devtools` and register `DevTools()`. |
+<!--#elif (frontend != "angular") -->
+| `Frontend/vite.config.ts` | Adds `runic()` from `@runic-artifex/vite-plugin-runic` for Runic development diagnostics. To add its Runic DevTools dock, install `@vitejs/devtools` and register `DevTools()`. |
 <!--#endif -->
 | `Frontend/src/generated` | Typed clients generated from the ViewModels. They import the shared `@runic-artifex/views` runtime. |
 

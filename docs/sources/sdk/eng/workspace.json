@@ -1,6 +1,10 @@
 {
   "schemaVersion": 2,
   "version": "0.6.0-preview.1",
+  "dynamicData": {
+    "repository": "Runic-Artifex/DynamicData",
+    "forkRevision": "edd2d175794afc86e964a06cb55329f44793009f"
+  },
   "npm": [
     {
       "name": "@runic-artifex/angular",
@@ -127,7 +131,6 @@
       "paths": [
         "packages/dotnet/Runic.Platform.Administration.Windows",
         "tests/dotnet/Runic.Platform.Administration.Windows.Tests",
-        "tests/dotnet/Runic.Platform.Administration.Windows.ApiTests",
         "examples/dotnet/Runic.Administration.Console",
         "tools/Runic.Administration.Verify"
       ]
@@ -142,7 +145,6 @@
         "tests/dotnet/Runic.Desktop.Tests",
         "tests/native/Runic.Desktop.WebViewSmoke",
         "eng/build/desktop.props",
-        "docs/guides/desktop",
         "eng/branding/desktop",
         "specs/desktop",
         "tests/fixtures/desktop/evidence",
@@ -165,7 +167,6 @@
         "tests/dotnet/Runic.Assets.Tests",
         "eng/build/assets.props",
         "eng/build/assets.targets",
-        "docs/guides/assets",
         "eng/branding/assets",
         "specs/assets"
       ]
@@ -193,7 +194,6 @@
         "tests/fixtures/application",
         "eng/build/application.props",
         "eng/build/application.targets",
-        "docs/guides/application",
         "eng/branding/application",
         "specs/application",
         "tests/templates",
@@ -237,17 +237,12 @@
         "examples/notes-view-first",
         "examples/notes-reactive-views",
         "examples/dynamicdata",
+        "examples/shared",
         "examples/README.md",
         "examples/Directory.Build.props",
         "examples/Directory.Build.targets",
         "examples/Directory.Packages.props",
         "examples/NuGet.config"
-      ]
-    },
-    "docs": {
-      "dependsOn": [],
-      "paths": [
-        "docs"
       ]
     },
     "platform": {
