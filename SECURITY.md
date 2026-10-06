@@ -28,5 +28,10 @@ vulnerabilities in the Runic packages and tools to their own repositories:
 [runic-translations-sdk](https://github.com/Runic-Artifex/runic-translations-sdk/security).
 The schemas themselves are owned by runic-translations-sdk.
 
-Both CI workflows run `bun audit --audit-level=high` on every pull request and
-push to `main`. Workflow actions are pinned to full commit SHAs.
+The required `verify` workflow runs `bun audit --audit-level=high` for the
+marketing site on every pull request and push to `main`. The documentation
+workflow runs the same audit for `docs/`, but only when `docs/` or its workflow
+changes. The weekly
+[dependency audit workflow](.github/workflows/dependency-audit.yml) audits both
+lockfiles regardless of changes. Workflow actions are pinned to full commit
+SHAs.
