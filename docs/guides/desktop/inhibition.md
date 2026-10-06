@@ -38,7 +38,11 @@ consumer and separate per-platform semantics.
 
 The Linux implementation uses generated wire proxies from the pinned portal XML.
 It subscribes before calling Inhibit, waits for the backend response and retains
-both request connection and exported parent until disposal. A cancelled or failed
+the request connection until disposal. The exported parent window identifier is
+needed only while the portal handles the request, so it is released as soon as
+the request is accepted. GTK3 allows one Wayland export per window at a time;
+holding it for the lease would block later portal requests, such as file
+dialogs, on that window. X11 parents hold no native export. A cancelled or failed
 acquisition disconnects its dedicated bus connection, including a late handle
 reply; it cannot leave an owned request behind. A portal replacement does not
 replay inhibition into the new service.
