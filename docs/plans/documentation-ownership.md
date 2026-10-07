@@ -80,8 +80,8 @@ Implementation is complete in the isolated worktrees. Focused verification:
 Verification logs were retained outside source inputs in `/tmp` during review;
 CI will produce the deployable artifacts. No native or release matrix was run,
 and no deployment, registry publication, merge or push occurred during
-implementation. The remaining hosting cutover is the explicit operator action
-described above, after the site PR is reviewed and merged.
+implementation. The hosting cutover was the explicit operator action described
+above. It happened on 2026-10-08; see the cutover record below.
 
 ## Cutover record (2026-10-08)
 
