@@ -34,10 +34,9 @@
       read from the packages published on NuGet and npm.
     </p>
     <p class="lede">
-      The reference documents the published {data.release}. Types new in 0.7,
-      such as <code>DesktopContent</code>, the React and Vue
-      <code>ViewOutlet</code>, <code>views/generated</code> and the typed testing
-      host, appear here after that release.
+      The reference documents the published {data.release} only. APIs added on the
+      SDK's <code>main</code> branch since then appear here once a release publishes
+      them; until then, guides marked unreleased describe them.
     </p>
   </section>
   <section class="api-index shell">

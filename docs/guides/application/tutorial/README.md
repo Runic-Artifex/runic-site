@@ -271,5 +271,7 @@ and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/
 - The [`Runic.Application` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md)
   lists the build properties, generator diagnostics, checked writes and
   operations.
+- [Typed domain failures](../guides/typed-failures.md) returns expected
+  command failures, such as a missing title, as typed values.
 - [Add Runic to an existing app](../existing-app.md) applies the same pieces to
   a project you already have.

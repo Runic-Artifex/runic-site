@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Reflection.Metadata;
 using System.Text.RegularExpressions;
 
@@ -46,10 +47,29 @@ internal sealed record TypeSig(SigKind Kind, string Doc)
 
     public bool IsIn { get; init; }
 
+    public bool IsOut { get; init; }
+
+    /// <summary>A <c>ref readonly</c> parameter: modopt(RequiresLocationAttribute) in a function pointer.</summary>
+    public bool RequiresLocation { get; init; }
+
+    /// <summary>
+    /// The named type and its containing types, outermost first, each with
+    /// its own type parameter count. A generic instantiation's arguments are
+    /// listed outermost first across them.
+    /// </summary>
+    public ImmutableArray<NamePart> Parts { get; init; } = [];
+
     public bool IsByRef => Kind == SigKind.ByRef;
 
     public TypeSig Element => Children[0];
 }
+
+/// <summary>
+/// One type in a nested type name: <see cref="Display"/> without arity,
+/// <see cref="Doc"/> without arity (with the namespace on the outermost part),
+/// its own <see cref="Arity"/> and its documentation ID.
+/// </summary>
+internal sealed record NamePart(string Display, string Doc, int Arity, string Id);
 
 internal sealed record GenericContext(ImmutableArray<string> TypeParameters, ImmutableArray<string> MethodParameters)
 {
@@ -57,17 +77,32 @@ internal sealed record GenericContext(ImmutableArray<string> TypeParameters, Imm
 }
 
 /// <summary>
-/// Reads nullable annotations: a NullableAttribute byte array consumed in
-/// pre-order, a single NullableAttribute byte, or the NullableContext value.
-/// 0 is oblivious, 1 not annotated, 2 annotated.
+/// Reads the annotations of one signature type in pre-order: nullable flags
+/// from a NullableAttribute byte array, a single NullableAttribute byte, or the
+/// NullableContext value (0 is oblivious, 1 not annotated, 2 annotated), and
+/// tuple element names from TupleElementNamesAttribute.
 /// </summary>
-internal sealed class NullableFlags(ImmutableArray<byte> flags, byte fallback)
+internal sealed class NullableFlags(ImmutableArray<byte> flags, byte fallback, ImmutableArray<string?> names = default)
 {
     private int _position;
+    private int _namePosition;
 
     public static readonly NullableFlags Oblivious = new([], 0);
 
     public byte Next() => _position < flags.Length ? flags[_position++] : fallback;
+
+    /// <summary>The element names of the next tuple, null where unnamed.</summary>
+    public string?[] NextNames(int count)
+    {
+        var result = new string?[count];
+        for (var index = 0; index < count; index++)
+        {
+            result[index] = !names.IsDefault && _namePosition < names.Length ? names[_namePosition] : null;
+            _namePosition++;
+        }
+
+        return result;
+    }
 }
 
 internal static class SignatureRenderer
@@ -118,24 +153,45 @@ internal static class SignatureRenderer
                 }
 
                 var genericAnnotated = flags.Next() == 2 && !definition.IsValueType;
-                var tuple = definition.Doc.StartsWith("System.ValueTuple`", StringComparison.Ordinal);
-                if (!tuple)
+                if (IsTuple(type, nested: false))
+                {
+                    var names = flags.NextNames(TupleLength(type));
+                    output.Add(new Segment("("));
+                    WriteTupleElements(type, names, 0, flags, output);
+                    output.Add(new Segment(")"));
+                    break;
+                }
+
+                // Outer<A>.Inner<B> lists A and B in one argument list,
+                // outermost first; give each type its own arguments.
+                var parts = definition.Parts;
+                var grouped = parts.Length > 1
+                              && parts.Sum(part => part.Arity) == arguments.Length
+                              && parts[..^1].Any(part => part.Arity > 0);
+                if (!grouped)
                 {
                     output.Add(new Segment(definition.Name, definition.DefinitionId));
+                    WriteArguments(arguments, flags, output);
                 }
-
-                output.Add(new Segment(tuple ? "(" : "<"));
-                for (var index = 0; index < arguments.Length; index++)
+                else
                 {
-                    if (index > 0)
+                    var next = 0;
+                    for (var index = 0; index < parts.Length; index++)
                     {
-                        output.Add(new Segment(", "));
-                    }
+                        if (index > 0)
+                        {
+                            output.Add(new Segment("."));
+                        }
 
-                    Write(arguments[index], flags, output);
+                        output.Add(new Segment(parts[index].Display, parts[index].Id));
+                        if (parts[index].Arity > 0)
+                        {
+                            WriteArguments(arguments.Slice(next, parts[index].Arity), flags, output);
+                            next += parts[index].Arity;
+                        }
+                    }
                 }
 
-                output.Add(new Segment(tuple ? ")" : ">"));
                 if (genericAnnotated)
                 {
                     output.Add(new Segment("?"));
@@ -161,10 +217,110 @@ internal static class SignatureRenderer
                 output.Add(new Segment("*"));
                 break;
             case SigKind.FunctionPointer:
-                output.Add(new Segment(type.Name));
+                // One (ignored) byte for the pointer, then the return type and
+                // the parameters; C# shows the return type last.
+                flags.Next();
+                var returnType = ImmutableArray.CreateBuilder<Segment>();
+                WriteByRefPrefix(type.Children[0], isReturn: true, returnType);
+                Write(type.Children[0], flags, returnType);
+                output.Add(new Segment(type.Name + "<"));
+                foreach (var parameter in type.Children[1..])
+                {
+                    WriteByRefPrefix(parameter, isReturn: false, output);
+                    Write(parameter, flags, output);
+                    output.Add(new Segment(", "));
+                }
+
+                output.AddRange(returnType);
+                output.Add(new Segment(">"));
                 break;
         }
     }
+
+    private static void WriteArguments(ImmutableArray<TypeSig> arguments, NullableFlags flags, ImmutableArray<Segment>.Builder output)
+    {
+        output.Add(new Segment("<"));
+        for (var index = 0; index < arguments.Length; index++)
+        {
+            if (index > 0)
+            {
+                output.Add(new Segment(", "));
+            }
+
+            Write(arguments[index], flags, output);
+        }
+
+        output.Add(new Segment(">"));
+    }
+
+    /// <summary>
+    /// Writes the elements of a tuple, continuing into the TRest tuple of a
+    /// ValueTuple with eight type arguments. Each tuple type, including a
+    /// TRest, has its own nullable byte and its own run of element names, in
+    /// pre-order; the outermost run names every element.
+    /// </summary>
+    private static void WriteTupleElements(
+        TypeSig tuple, string?[] names, int offset, NullableFlags flags, ImmutableArray<Segment>.Builder output)
+    {
+        var arguments = tuple.Children[1..];
+        for (var index = 0; index < arguments.Length; index++)
+        {
+            if (index == 7 && IsTuple(arguments[index], nested: true))
+            {
+                flags.Next();
+                flags.NextNames(TupleLength(arguments[index]));
+                WriteTupleElements(arguments[index], names, offset + 7, flags, output);
+                return;
+            }
+
+            if (offset + index > 0)
+            {
+                output.Add(new Segment(", "));
+            }
+
+            Write(arguments[index], flags, output);
+            if (names[offset + index] is { } name)
+            {
+                output.Add(new Segment($" {name}"));
+            }
+        }
+    }
+
+    /// <summary>
+    /// A C# tuple: ValueTuple with two to eight type arguments, or any
+    /// ValueTuple in the TRest position of another.
+    /// </summary>
+    private static bool IsTuple(TypeSig type, bool nested) =>
+        type.Kind == SigKind.Generic
+        && type.Children[0].Doc.StartsWith("System.ValueTuple`", StringComparison.Ordinal)
+        && (nested || type.Children.Length > 2);
+
+    /// <summary>The number of elements of a tuple, including those in TRest.</summary>
+    private static int TupleLength(TypeSig tuple)
+    {
+        var arguments = tuple.Children.Length - 1;
+        return arguments == 8 && IsTuple(tuple.Children[8], nested: true) ? 7 + TupleLength(tuple.Children[8]) : arguments;
+    }
+
+    private static void WriteByRefPrefix(TypeSig type, bool isReturn, ImmutableArray<Segment>.Builder output)
+    {
+        if (type.IsByRef)
+        {
+            output.Add(new Segment(ByRefPrefix(type, isReturn, readOnly: false)));
+        }
+    }
+
+    /// <summary>
+    /// <c>ref</c>, <c>ref readonly</c>, <c>in</c> or <c>out</c> for a by-reference
+    /// type. <paramref name="readOnly"/> reports an IsReadOnlyAttribute, which
+    /// marks <c>ref readonly</c> returns that carry no modifier.
+    /// </summary>
+    public static string ByRefPrefix(TypeSig type, bool isReturn, bool readOnly) =>
+        isReturn ? (type.IsIn || readOnly ? "ref readonly " : "ref ")
+        : type.IsOut ? "out "
+        : type.RequiresLocation ? "ref readonly "
+        : type.IsIn || readOnly ? "in "
+        : "ref ";
 
     internal static IEnumerable<Segment> Join(IEnumerable<ImmutableArray<Segment>> types)
     {
@@ -248,10 +404,23 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
 
     public TypeSig GetPinnedType(TypeSig elementType) => elementType;
 
+    /// <summary>
+    /// A function pointer. Its documentation ID part is empty, as the C#
+    /// compiler writes it in XML documentation.
+    /// </summary>
     public TypeSig GetFunctionPointerType(MethodSignature<TypeSig> signature) =>
-        new(SigKind.FunctionPointer, "=FUNC")
+        new(SigKind.FunctionPointer, string.Empty)
         {
-            Name = $"delegate*<{string.Join(", ", signature.ParameterTypes.Append(signature.ReturnType).Select(SignatureRenderer.Text))}>",
+            Name = signature.Header.CallingConvention switch
+            {
+                SignatureCallingConvention.CDecl => "delegate* unmanaged[Cdecl]",
+                SignatureCallingConvention.StdCall => "delegate* unmanaged[Stdcall]",
+                SignatureCallingConvention.ThisCall => "delegate* unmanaged[Thiscall]",
+                SignatureCallingConvention.FastCall => "delegate* unmanaged[Fastcall]",
+                SignatureCallingConvention.Unmanaged => "delegate* unmanaged",
+                _ => "delegate*",
+            },
+            Children = [signature.ReturnType, .. signature.ParameterTypes],
             IsValueType = true,
         };
 
@@ -272,13 +441,32 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
         {
             "System.Runtime.CompilerServices.IsExternalInit" => unmodifiedType with { IsInitOnly = true },
             "System.Runtime.InteropServices.InAttribute" => unmodifiedType with { IsIn = true },
+            "System.Runtime.InteropServices.OutAttribute" => unmodifiedType with { IsOut = true },
+            "System.Runtime.CompilerServices.RequiresLocationAttribute" => unmodifiedType with { RequiresLocation = true },
             _ => unmodifiedType,
         };
 
     public TypeSig GetGenericInstantiation(TypeSig genericType, ImmutableArray<TypeSig> typeArguments)
     {
-        var baseDoc = Arity().Replace(genericType.Doc, string.Empty);
-        return new TypeSig(SigKind.Generic, $"{baseDoc}{{{string.Join(",", typeArguments.Select(argument => argument.Doc))}}}")
+        // Outer`1.Inner`1<A, B> is documented as Outer{A}.Inner{B}.
+        var parts = genericType.Parts;
+        string doc;
+        if (parts.Length > 0 && parts.Sum(part => part.Arity) == typeArguments.Length)
+        {
+            var next = 0;
+            doc = string.Join(".", parts.Select(part =>
+            {
+                var arguments = typeArguments.Slice(next, part.Arity);
+                next += part.Arity;
+                return part.Arity == 0 ? part.Doc : $"{part.Doc}{{{string.Join(",", arguments.Select(argument => argument.Doc))}}}";
+            }));
+        }
+        else
+        {
+            doc = $"{Arity().Replace(genericType.Doc, string.Empty)}{{{string.Join(",", typeArguments.Select(argument => argument.Doc))}}}";
+        }
+
+        return new TypeSig(SigKind.Generic, doc)
         {
             Children = [genericType, .. typeArguments],
             DefinitionId = genericType.DefinitionId,
@@ -287,36 +475,47 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
         };
     }
 
-    /// <summary>Documentation name (namespace.Outer.Inner`1) and display name.</summary>
-    internal readonly record struct TypeName(string Doc, string Display);
+    /// <summary>
+    /// Documentation name (namespace.Outer`1.Inner`1), display name
+    /// (Outer.Inner) and the name of each type from the outermost.
+    /// </summary>
+    internal readonly record struct TypeName(string Doc, string Display, ImmutableArray<NamePart> Parts);
 
     internal static TypeName DefinitionName(MetadataReader reader, TypeDefinitionHandle handle)
     {
         var definition = reader.GetTypeDefinition(handle);
-        var name = reader.GetString(definition.Name);
         var declaring = definition.GetDeclaringType();
-        if (!declaring.IsNil)
-        {
-            var outer = DefinitionName(reader, declaring);
-            return new TypeName($"{outer.Doc}.{name}", $"{outer.Display}.{StripArity(name)}");
-        }
-
-        var ns = reader.GetString(definition.Namespace);
-        return new TypeName(ns.Length == 0 ? name : $"{ns}.{name}", StripArity(name));
+        return Nested(
+            declaring.IsNil ? null : DefinitionName(reader, declaring),
+            reader.GetString(definition.Namespace),
+            reader.GetString(definition.Name));
     }
 
     internal static TypeName ReferenceName(MetadataReader reader, TypeReferenceHandle handle)
     {
         var reference = reader.GetTypeReference(handle);
-        var name = reader.GetString(reference.Name);
-        if (reference.ResolutionScope.Kind == HandleKind.TypeReference)
+        return Nested(
+            reference.ResolutionScope.Kind == HandleKind.TypeReference
+                ? ReferenceName(reader, (TypeReferenceHandle)reference.ResolutionScope)
+                : null,
+            reader.GetString(reference.Namespace),
+            reader.GetString(reference.Name));
+    }
+
+    private static TypeName Nested(TypeName? outer, string ns, string name)
+    {
+        var display = StripArity(name);
+        var tick = name.LastIndexOf('`');
+        var arity = tick >= 0 && int.TryParse(name.AsSpan(tick + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var count) ? count : 0;
+        if (outer is { } containing)
         {
-            var outer = ReferenceName(reader, (TypeReferenceHandle)reference.ResolutionScope);
-            return new TypeName($"{outer.Doc}.{name}", $"{outer.Display}.{StripArity(name)}");
+            var doc = $"{containing.Doc}.{name}";
+            return new TypeName(doc, $"{containing.Display}.{display}", [.. containing.Parts, new NamePart(display, display, arity, $"T:{doc}")]);
         }
 
-        var ns = reader.GetString(reference.Namespace);
-        return new TypeName(ns.Length == 0 ? name : $"{ns}.{name}", StripArity(name));
+        var full = ns.Length == 0 ? name : $"{ns}.{name}";
+        var docName = ns.Length == 0 ? display : $"{ns}.{display}";
+        return new TypeName(full, display, [new NamePart(display, docName, arity, $"T:{full}")]);
     }
 
     internal static string StripArity(string name) => Arity().Replace(name, string.Empty);
@@ -330,6 +529,7 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
             Name = Keywords.GetValueOrDefault(name.Doc, name.Display),
             DefinitionId = $"T:{name.Doc}",
             IsValueType = rawTypeKind == ValueTypeKind,
+            Parts = name.Parts,
         };
 
     [GeneratedRegex(@"`\d+")]
