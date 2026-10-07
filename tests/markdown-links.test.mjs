@@ -158,8 +158,13 @@ test('tracked Markdown files have no broken relative links', () => {
     .split('\0')
     .filter(Boolean);
   const tracked = trackedPaths(files);
+  // docs/sources/sdk holds verbatim copies of pinned SDK files; their relative
+  // links point into the SDK repository and are checked there.
   const documents = files.filter(
-    (file) => file.endsWith('.md') && existsSync(posix.join(root, file)),
+    (file) =>
+      file.endsWith('.md') &&
+      !file.startsWith('docs/sources/sdk/') &&
+      existsSync(posix.join(root, file)),
   );
   assert.ok(documents.length > 0);
   assert.deepEqual(

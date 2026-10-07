@@ -29,7 +29,7 @@ await using var desktop = await DesktopHost.StartAsync(new DesktopHostOptions
 });
 await using var window = await provider.OpenDesktopWindowAsync<WorkspaceWindow, WorkspaceViewModel>(
     desktop,
-    new DesktopSurfaceOptions { RootFolder = Path.Combine(AppContext.BaseDirectory, "www"), Content = "index.html" },
+    new DesktopSurfaceOptions { Content = new DesktopContent.Directory(Path.Combine(AppContext.BaseDirectory, "www"), "index.html") },
     host => new WorkspaceWindow(host),
     new DesktopWindowOptions
     {
@@ -64,9 +64,12 @@ using var provider = services.BuildServiceProvider(new ServiceProviderOptions
     ValidateOnBuild = true
 });
 
-using var window = provider.OpenWindow<WorkspaceWindow, WorkspaceViewModel>(host => new WorkspaceWindow(host));
-window.SetRootFolder(Path.Combine(AppContext.BaseDirectory, "www"));
-window.Show("index.html");
-WebUiApplication.Wait();
+// The window releases asynchronously, before WebUI cleans up its native state.
+await using (var window = provider.OpenWindow<WorkspaceWindow, WorkspaceViewModel>(host => new WorkspaceWindow(host)))
+{
+    window.SetRootFolder(Path.Combine(AppContext.BaseDirectory, "www"));
+    window.Show("index.html");
+    WebUiApplication.Wait();
+}
 WebUiApplication.Clean();
 #endif
