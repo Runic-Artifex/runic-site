@@ -106,7 +106,15 @@ suite: removing the last input device from a headless seat drops focus. The
 chooser uses verified native text entry and compositor Enter input.
 
 The container run checks actual Orca speech requests and non-silent PCM
-independently of any speech recognition.
+independently of any speech recognition. It requires Orca's speech-output records
+for each label and role plus complete, sustained, non-silent PCM recordings; a
+click, silence or truncated WAV fails. The `results` directory retains the
+evidence: `speech.json`, `orca.debug`, `orca-process.log`, `pipewire-before.json`,
+the `capture-*.log` recorder logs and `speech-*.wav`. PipeWire's recorder returns
+status 1 at its sample limit (observed in 1.6.8) because its success flag is set on
+playback drain; the runner narrowly accepts that case only with the exact sample
+count and clean recorder diagnostics. See the
+[upstream recorder implementation](https://github.com/PipeWire/pipewire/blob/1.6.8/src/tools/pw-cat.c).
 
 ### Optional Whisper cross-check
 
