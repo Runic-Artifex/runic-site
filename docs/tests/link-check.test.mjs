@@ -48,28 +48,95 @@ function stripMarkup(value) {
 
 function decodeAttribute(value) {
   return value
-    .replace(/&amp;/g, '&')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+    .replace(/&#x([\da-f]+);/gi, (_, code) =>
+      String.fromCodePoint(Number.parseInt(code, 16)),
+    )
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
     .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>');
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 }
 
-/** `<a href>`, `<link href>`, `<script src>` and `<img src>` in a page. */
-function references(html) {
-  const found = [];
-  const body = html.replace(/<!--[\s\S]*?-->/g, '');
-  for (const match of body.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)) {
-    const href = /\bhref="([^"]*)"/.exec(match[1])?.[1];
-    if (href !== undefined)
-      found.push({ url: decodeAttribute(href), text: stripMarkup(match[2]) });
+const attributePattern =
+  /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+const tagPattern =
+  /<([a-zA-Z][\w-]*)((?:\s+[^\s"'<>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*\/?>/g;
+
+/** Parses double-quoted, single-quoted and unquoted attributes of a tag. */
+export function parseAttributes(source) {
+  const attributes = new Map();
+  for (const match of source.matchAll(attributePattern)) {
+    const name = match[1].toLowerCase();
+    if (!attributes.has(name))
+      attributes.set(
+        name,
+        decodeAttribute(match[2] ?? match[3] ?? match[4] ?? ''),
+      );
   }
-  for (const match of body.matchAll(
-    /<(?:link|script|img|source)\b[^>]*\b(?:href|src)="([^"]*)"/g,
-  )) {
-    found.push({ url: decodeAttribute(match[1]), text: '' });
+  return attributes;
+}
+
+/** Start tags with their attributes, ignoring comments and script bodies. */
+export function tags(html) {
+  const markup = html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/(<(script|style)\b[^>]*>)[\s\S]*?<\/\2>/gi, '$1</$2>');
+  return [...markup.matchAll(tagPattern)].map((match) => ({
+    name: match[1].toLowerCase(),
+    attributes: parseAttributes(match[2]),
+    end: match.index + match[0].length,
+    markup,
+  }));
+}
+
+function srcsetUrls(value) {
+  return value
+    .split(',')
+    .map((candidate) => candidate.trim().split(/\s+/)[0])
+    .filter(Boolean);
+}
+
+const imageMeta = new Set(['og:image', 'og:image:url', 'twitter:image']);
+
+/**
+ * Every URL a page references: `href` on `a` and `link`, `src` and
+ * `srcset` on embedded content, and social preview images.
+ */
+export function references(html) {
+  const found = [];
+  for (const tag of tags(html)) {
+    const { name, attributes } = tag;
+    const href = attributes.get('href');
+    if (name === 'a' && href !== undefined) {
+      const close = tag.markup.indexOf('</a>', tag.end);
+      const text = stripMarkup(
+        tag.markup.slice(tag.end, close < 0 ? undefined : close),
+      );
+      found.push({ url: href, text });
+    } else if (name === 'link' && href !== undefined) {
+      found.push({ url: href, text: '' });
+    }
+    if (attributes.has('src'))
+      found.push({ url: attributes.get('src'), text: '' });
+    if (attributes.has('srcset'))
+      for (const url of srcsetUrls(attributes.get('srcset')))
+        found.push({ url, text: '' });
+    const property = attributes.get('property') ?? attributes.get('name');
+    if (name === 'meta' && imageMeta.has(property) && attributes.has('content'))
+      found.push({ url: attributes.get('content'), text: '' });
   }
   return found;
+}
+
+/** Fragment targets: only `id` attributes define anchors. */
+export function anchorIds(html) {
+  return new Set(
+    tags(html)
+      .map((tag) => tag.attributes.get('id'))
+      .filter((id) => id !== undefined),
+  );
 }
 
 const pages = new Map(
@@ -82,15 +149,7 @@ const idCache = new Map();
 
 function ids(file) {
   if (!idCache.has(file)) {
-    const html = readFileSync(file, 'utf8');
-    idCache.set(
-      file,
-      new Set(
-        [...html.matchAll(/\b(?:id|name)="([^"]+)"/g)].map((match) =>
-          decodeAttribute(match[1]),
-        ),
-      ),
-    );
+    idCache.set(file, anchorIds(readFileSync(file, 'utf8')));
   }
   return idCache.get(file);
 }
@@ -167,4 +226,35 @@ test('pages link guides on the site, not their GitHub sources', () => {
     }
   }
   assert.deepEqual(failures, []);
+});
+
+test('the link parser reads every attribute form and only id anchors', () => {
+  const html = `<!-- <a href="/commented"> -->
+<a href='/single/'>Single</a> <a href=/unquoted/ class=x>Unquoted</a>
+<a class="x" href="/double/?a=1&amp;b=2">Double</a>
+<img alt="a > b" src="/img.png" srcset="/img-1x.png 1x, /img-2x.png 2x">
+<meta property="og:image" content="https://docs.runic-artifex.eu/og.png">
+<meta name="twitter:image" content='/tw.png'>
+<script src="/app.js">const fake = '<a href="/in-script">';</script>
+<div data-id="data" name="named" id='real'></div><span id=bare></span>`;
+  assert.deepEqual(
+    references(html).map((reference) => reference.url),
+    [
+      '/single/',
+      '/unquoted/',
+      '/double/?a=1&b=2',
+      '/img.png',
+      '/img-1x.png',
+      '/img-2x.png',
+      'https://docs.runic-artifex.eu/og.png',
+      '/tw.png',
+      '/app.js',
+    ],
+  );
+  assert.equal(references(html)[1].text, 'Unquoted');
+  assert.deepEqual([...anchorIds(html)].sort(), ['bare', 'real']);
+  assert.deepEqual(
+    Object.fromEntries(parseAttributes(` href='a b' disabled data-x=1`)),
+    { href: 'a b', disabled: '', 'data-x': '1' },
+  );
 });

@@ -120,15 +120,27 @@ function posixResolve(fromFile: string, target: string) {
 }
 
 /**
- * Resolves a guide link. Links to other guides become site routes; relative
- * links to other docs files go to their GitHub source. A link to a missing
- * guide throws so the build fails.
+ * Resolves a guide link or image. Links to other guides become site routes;
+ * relative links to other docs files go to their GitHub source. Only https,
+ * mailto, relative and fragment links are allowed. A link to a missing guide
+ * or docs file, or with another scheme, throws so the build fails.
+ *
+ * `docsFileExists` receives a path relative to docs/, such as
+ * `tests/guide-snippets.test.mjs`.
  */
 export function resolveGuideLink(
   fromFile: string,
   href: string,
   files: ReadonlySet<string>,
+  docsFileExists: (path: string) => boolean,
 ): string {
+  const scheme = /^\s*([a-z][a-z0-9+.-]*):/i.exec(href)?.[1].toLowerCase();
+  if (scheme !== undefined && scheme !== 'https' && scheme !== 'mailto') {
+    throw new Error(`${fromFile} uses a disallowed link scheme: ${href}`);
+  }
+  if (/^\s*[\\/]{2}/.test(href)) {
+    throw new Error(`${fromFile} uses a protocol-relative link: ${href}`);
+  }
   const github = githubGuide(href);
   if (github) {
     if (!files.has(github.file)) {
@@ -136,7 +148,7 @@ export function resolveGuideLink(
     }
     return `${guideHref(github.file)}${github.hash}`;
   }
-  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//')) return href;
+  if (scheme !== undefined) return href;
   if (href.startsWith('#')) return href;
   const [target, ...hashParts] = href.split('#');
   const hash = hashParts.length ? `#${hashParts.join('#')}` : '';
@@ -161,6 +173,10 @@ export function resolveGuideLink(
       return `${guideHref(`${file}/README.md`)}${hash}`;
     }
   }
+  const path = resolved.replace(/\/$/, '');
+  if (path === '' || !docsFileExists(path)) {
+    throw new Error(`${fromFile} links to missing file docs/${resolved}`);
+  }
   return `${docsSourceUrl}${encodeURI(resolved)}${hash}`;
 }
 
@@ -177,6 +193,7 @@ type AnchoredHeading = Tokens.Heading & { anchor?: string };
 export function renderGuide(
   source: GuideSource,
   files: ReadonlySet<string>,
+  docsFileExists: (path: string) => boolean,
 ): Guide {
   const marked = new Marked({ gfm: true });
   const tokens = marked.lexer(source.markdown);
@@ -195,7 +212,12 @@ export function renderGuide(
       }
     } else if (token.type === 'link' || token.type === 'image') {
       const link = token as Tokens.Link | Tokens.Image;
-      link.href = resolveGuideLink(source.file, link.href, files);
+      link.href = resolveGuideLink(
+        source.file,
+        link.href,
+        files,
+        docsFileExists,
+      );
     }
   });
   if (!title || tokens.find((token) => token.type === 'heading') !== title) {
@@ -215,13 +237,36 @@ export function renderGuide(
       html({ text }) {
         return escapeHtml(text);
       },
+      // Code scrolls horizontally, so keyboard users must be able to focus it.
+      code({ text, lang }) {
+        const language = /^\S*/.exec(lang ?? '')?.[0] ?? '';
+        const label = language ? `${language} code example` : 'Code example';
+        const className = language
+          ? ` class="language-${escapeHtml(language)}"`
+          : '';
+        return `<pre tabindex="0" role="region" aria-label="${escapeHtml(label)}"><code${className}>${escapeHtml(text)}\n</code></pre>\n`;
+      },
     },
   });
-  // Wide tables scroll inside the content column. Code is escaped, so these
-  // tags only come from Markdown tables.
+  // Wide tables scroll inside a focusable, labelled region. Code is escaped,
+  // so these tags only come from Markdown tables, in document order.
+  const tableLabels: string[] = [];
+  walkTokens(body, (token) => {
+    if (token.type === 'table') {
+      const columns = (token as Tokens.Table).header
+        .map((cell) => collapse(cell.tokens.map(plainText).join('')))
+        .filter(Boolean);
+      tableLabels.push(`Table: ${columns.join(', ')}`);
+    }
+  });
+  let table = 0;
   const html = marked
     .parser(body)
-    .replace(/<table>/g, '<div class="table-scroll"><table>')
+    .replace(
+      /<table>/g,
+      () =>
+        `<div class="table-scroll" tabindex="0" role="region" aria-label="${escapeHtml(tableLabels[table++] ?? 'Table')}"><table>`,
+    )
     .replace(/<\/table>/g, '</table></div>');
 
   const sections: GuideSection[] = [];
@@ -268,7 +313,10 @@ export function renderGuide(
   };
 }
 
-export function renderGuides(sources: readonly GuideSource[]): Guide[] {
+export function renderGuides(
+  sources: readonly GuideSource[],
+  docsFileExists: (path: string) => boolean,
+): Guide[] {
   const files = new Set(sources.map((source) => source.file));
   const paths = new Map<string, string>();
   for (const { file } of sources) {
@@ -279,5 +327,5 @@ export function renderGuides(sources: readonly GuideSource[]): Guide[] {
   }
   return [...sources]
     .sort((a, b) => a.file.localeCompare(b.file))
-    .map((source) => renderGuide(source, files));
+    .map((source) => renderGuide(source, files, docsFileExists));
 }

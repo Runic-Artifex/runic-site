@@ -50,10 +50,12 @@
     <aside class="guide-sidebar">
       <SearchForm />
       <nav class="guide-nav" aria-label="Guides">
-        {#each data.navigation as group (group.title)}
+        {#each data.navigation as group, groupIndex (group.title)}
           <div class="guide-nav-group">
-            <strong>{group.title}</strong>
-            <ul>
+            <h2 class="guide-nav-heading" id={`guide-nav-${groupIndex}`}>
+              {group.title}
+            </h2>
+            <ul aria-labelledby={`guide-nav-${groupIndex}`}>
               {#each group.guides as entry (entry.href)}
                 <li>
                   <a

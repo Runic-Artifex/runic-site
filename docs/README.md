@@ -38,8 +38,9 @@ The build renders every Markdown file in `guides/` as a page under `/guides/`:
 `guides/a/README.md` becomes `/guides/a/` and `guides/a/b.md` becomes
 `/guides/a/b/`. Heading anchors match GitHub's, so `#section` links keep
 working. Links between guides become site links; relative links to other files
-in this directory point to their GitHub source. A link to a missing guide fails
-the build. Guides are Markdown only; raw HTML is shown as text.
+in this directory point to their GitHub source. Links may only be relative,
+fragments, `https:` or `mailto:`; another scheme, or a link to a missing guide
+or file, fails the build. Guides are Markdown only; raw HTML is shown as text.
 
 Add each new guide to `src/lib/guide-navigation.ts`, which orders the guide
 sidebar; the build fails while a guide is missing from it. Runic Translations
@@ -48,8 +49,9 @@ consumer guides stay in their repository and appear in the sidebar as links.
 The build also writes `search-index.json` with the text of each guide section
 and product summary. The `/search/` page loads it and ranks results in the
 browser; there is no search service. `tests/link-check.test.mjs` resolves every
-internal link and fragment in `build/` and checks the syntax of external links
-without fetching them.
+internal `href`, `src`, `srcset` and social image in `build/`, and every
+fragment against the target page's `id` attributes. It checks the syntax of
+external links without fetching them.
 
 Guide sources keep their GitHub paths, so existing GitHub links still open the
 Markdown. GitHub cannot redirect a file to another site, and the static host has

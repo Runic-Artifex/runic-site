@@ -1,16 +1,24 @@
 // The guide sidebar. Every file in docs/guides appears exactly once;
 // tests/guides.test.mjs fails when a guide is added without a place here.
 
+/** A guide file below docs/guides, optionally with a sidebar label. */
+export type GuideNavigationEntry =
+  string | { readonly file: string; readonly label: string };
+
 export type GuideNavigationGroup = {
   readonly title: string;
-  /** Guide files below docs/guides, in reading order. */
-  readonly files: readonly string[];
+  /** Guides in reading order. */
+  readonly files: readonly GuideNavigationEntry[];
   /** Guides that their owning product publishes elsewhere. */
   readonly external?: readonly {
     readonly href: string;
     readonly label: string;
   }[];
 };
+
+export function navigationFile(entry: GuideNavigationEntry) {
+  return typeof entry === 'string' ? entry : entry.file;
+}
 
 export const guideNavigation: readonly GuideNavigationGroup[] = [
   { title: 'Overview', files: ['README.md'] },
@@ -27,9 +35,6 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'application/reference/reactiveui.md',
       'application/architecture/README.md',
       'application/architecture/reactiveui-expansion.md',
-      'application/contributing/README.md',
-      'application/contributing/development.md',
-      'application/contributing/quality-gates.md',
     ],
   },
   {
@@ -42,11 +47,6 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'desktop/size-and-tuning.md',
       'desktop/migrations/webui-compat-to-desktop.md',
       'desktop/host-choice-and-footprint.md',
-      'desktop/nixos-development.md',
-      'desktop/container-automation.md',
-      'desktop/vm-automation.md',
-      'desktop/portal-vm.md',
-      'portal-implementation-audit.md',
     ],
   },
   {
@@ -64,6 +64,31 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       {
         href: 'https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations',
         label: 'Translations guides',
+      },
+    ],
+  },
+  {
+    title: 'Contributing to Application',
+    files: [
+      'application/contributing/README.md',
+      'application/contributing/development.md',
+      'application/contributing/quality-gates.md',
+    ],
+  },
+  {
+    // SDK development and test infrastructure rather than product usage.
+    title: 'Contributing and testing',
+    files: [
+      'desktop/nixos-development.md',
+      'desktop/container-automation.md',
+      'portal-implementation-audit.md',
+      {
+        file: 'desktop/vm-automation.md',
+        label: 'Desktop VM automation (deprecated)',
+      },
+      {
+        file: 'desktop/portal-vm.md',
+        label: 'NixOS portal test VMs (deprecated)',
       },
     ],
   },

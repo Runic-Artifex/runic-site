@@ -1009,10 +1009,14 @@ pre {
   gap: 18px;
 }
 
-.guide-nav strong {
-  display: block;
+.guide-nav-heading {
   margin-bottom: 6px;
   color: var(--foreground);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  letter-spacing: normal;
+  line-height: inherit;
 }
 
 .guide-nav ul {
@@ -1141,6 +1145,12 @@ pre {
 .guide-prose hr {
   border: 0;
   border-top: 1px solid var(--border);
+}
+
+.guide-prose pre:focus-visible,
+.table-scroll:focus-visible {
+  outline: 2px solid var(--docs-accent);
+  outline-offset: 2px;
 }
 
 .table-scroll {

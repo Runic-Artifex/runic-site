@@ -8,7 +8,9 @@
   let query = $state('');
   let index = $state<ReturnType<typeof prepareIndex> | null>(null);
   let failed = $state(false);
-  let results = $derived(index ? search(index, query) : []);
+  const shown = 20;
+  let matches = $derived(index ? search(index, query, Infinity) : []);
+  let results = $derived(matches.slice(0, shown));
 
   onMount(() => {
     query = new URLSearchParams(window.location.search).get('q') ?? '';
@@ -88,9 +90,9 @@
       <p class="search-status">The search index could not be loaded.</p>
     {:else if query.trim() && index}
       <p class="search-status">
-        {results.length === 0
+        {matches.length === 0
           ? 'No results.'
-          : `${results.length}${results.length === 20 ? '+' : ''} result${results.length === 1 ? '' : 's'}`}
+          : `${matches.length > shown ? `${shown}+` : matches.length} result${matches.length === 1 ? '' : 's'}`}
       </p>
     {/if}
   </div>
