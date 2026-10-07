@@ -16,7 +16,8 @@ they copy the built frontend to a `www` folder next to the executable.
 > are marked where they occur.
 
 Replace `<VERSION>` below with the current release from the
-[package catalog](https://docs.runic-artifex.eu/packages/).
+[package catalog](https://docs.runic-artifex.eu/packages/). The code below is quoted
+from the package READMEs and checked against them.
 
 ## 1. Add the packages
 
@@ -40,18 +41,19 @@ along.
 Build the frontend first, for example with `npm run build`, so its output
 folder exists. Then point the .NET project at that folder:
 
-```xml docs-test=source:packages/dotnet/Runic.Assets/README.md
+```xml docs-test=readme:packages/dotnet/Runic.Assets/README.md
 <PropertyGroup>
   <RunicAssetsDist>../Client.Web/dist</RunicAssetsDist>
 </PropertyGroup>
 ```
 
 `dotnet build` packs the folder into a canonical archive and embeds it as the
-`Runic.Assets.StaticFiles` resource. The build repacks it only when the folder
-or the project changes, and the same files always produce the same bytes. Load it at
+`Runic.Assets.StaticFiles` resource. The build skips packing when the files and
+the project look unchanged by their timestamps, so after deleting a file from
+the folder run a rebuild. The same files always produce the same bytes. Load it at
 startup:
 
-```csharp docs-test=source:packages/dotnet/Runic.Assets/README.md
+```csharp docs-test=readme:packages/dotnet/Runic.Assets/README.md
 using System.Reflection;
 using Runic.Assets;
 
@@ -59,13 +61,13 @@ AssetArchiveSource assets = AssetArchive.ReadEmbedded(
     Assembly.GetExecutingAssembly());
 ```
 
-| Property                          | Use                                                                                           |
-| --------------------------------- | --------------------------------------------------------------------------------------------- |
-| `RunicAssetsDist`                 | Folder to pack and embed.                                                                     |
-| `RunicAssetsEntryPoint`           | Entry document inside the folder. Defaults to `index.html`.                                   |
-| `RunicAssetsDistExclude`          | Paths to leave out, separated by semicolons, such as build statistics.                        |
-| `RunicAssetsEmbeddedArchive`      | Embed an archive that was packed in a separate step (see below) instead of `RunicAssetsDist`. |
-| `RunicAssetsEmbeddedResourceName` | Resource name, if not `Runic.Assets.StaticFiles`. Pass the same name to `ReadEmbedded`.       |
+| Property                          | Use                                                                                                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RunicAssetsDist`                 | Folder to pack and embed.                                                                                                                                        |
+| `RunicAssetsEntryPoint`           | Entry document inside the folder. Defaults to `index.html`.                                                                                                      |
+| `RunicAssetsDistExclude`          | Paths to leave out, separated by semicolons. Defaults to `runic-assets.zip`; setting it replaces the default, so list that file again if the folder contains it. |
+| `RunicAssetsEmbeddedArchive`      | Embed an archive that was packed in a separate step (see below) instead of `RunicAssetsDist`.                                                                    |
+| `RunicAssetsEmbeddedResourceName` | Resource name, if not `Runic.Assets.StaticFiles`. Pass the same name to `ReadEmbedded`.                                                                          |
 
 Hashed file names, such as Vite's `index-Cf3tzbYH.js`, are cached as immutable.
 Every other file, including `index.html`, is revalidated with its entity tag.
@@ -74,7 +76,7 @@ Every other file, including `index.html`, is revalidated with its entity tag.
 
 Map the source in `Program.cs`:
 
-```csharp docs-test=source:packages/dotnet/Runic.Assets.AspNetCore/README.md
+```csharp docs-test=readme:packages/dotnet/Runic.Assets.AspNetCore/README.md
 AssetArchiveSource assets = AssetArchive.ReadEmbedded(
     Assembly.GetExecutingAssembly());
 
@@ -92,13 +94,13 @@ Because unknown extensionless paths return the entry point, an application that
 also serves an API should mount the assets under a prefix and build the
 frontend with the same absolute base (Vite's `base: "/ui/"`):
 
-```csharp docs-test=source:packages/dotnet/Runic.Assets.AspNetCore/README.md
+```csharp docs-test=readme:packages/dotnet/Runic.Assets.AspNetCore/README.md
 app.MapRunicAssetSource(assets, "ui");
 ```
 
 or serve exact paths only:
 
-```csharp docs-test=source:packages/dotnet/Runic.Assets.AspNetCore/README.md
+```csharp docs-test=readme:packages/dotnet/Runic.Assets.AspNetCore/README.md
 app.MapRunicAssetSource(assets, routing: new AssetRoutingOptions
 {
     ServeEntryPointAtRoot = false,
@@ -113,7 +115,7 @@ the entry point is at `/index.html` and there is no `AssetRoutingOptions`.
 
 Pass the adapter's content handler as the surface content:
 
-```csharp docs-test=source:packages/dotnet/Runic.Assets.Desktop/README.md
+```csharp docs-test=readme:packages/dotnet/Runic.Assets.Desktop/README.md
 AssetArchiveSource assets = AssetArchive.ReadEmbedded(Assembly.GetExecutingAssembly());
 await using var host = await DesktopHost.StartAsync();
 await using var surface = await host.CreateSurfaceAsync(new DesktopSurfaceOptions
@@ -124,8 +126,12 @@ await using var surface = await host.CreateSurfaceAsync(new DesktopSurfaceOption
 
 Paths resolve exactly as in ASP.NET Core, so one archive behaves the same on
 both hosts. Pass `AssetRoutingOptions` to `ToDesktopContentHandler` to change
-the rules. In 0.6.0-preview.1 set
-`ContentHandler = assets.ToDesktopContentHandler()` instead of `Content`.
+the rules.
+
+In 0.6.0-preview.1 set `ContentHandler = assets.ToDesktopContentHandler()`
+instead of `Content`. There, `ToDesktopContentHandler` extends `IAssetSource`
+and takes `DesktopAssetOptions? options`; in 0.7 it extends
+`IAssetSnapshotSource` and takes `AssetRoutingOptions? routing`.
 
 ## 5. Pack in a separate step
 
@@ -135,7 +141,7 @@ frontend once for several .NET builds, an application that loads an archive
 file at run time, or to inspect exactly what the build would embed. The packer
 ships inside the `Runic.Assets` package:
 
-```sh docs-test=source:tools/Runic.Assets.Packer/README.md
+```sh docs-test=readme:tools/Runic.Assets.Packer/README.md
 packer="$HOME/.nuget/packages/runic.assets/<VERSION>/tools/net10.0/Runic.Assets.Packer.dll"
 dotnet "$packer" Client.Web/dist artifacts/app.runic-assets --trusted-generated-output
 ```

@@ -71,9 +71,11 @@
         Generated clients share one runtime, <code>@runic-artifex/views</code>,
         which includes a mock Bridge for frontend work without .NET.
         <code>useView</code> in the React, Vue and Svelte packages and
-        <code>injectView()</code> in the Angular package connect and dispose a client
-        with the component that renders it. Their command helpers and View outlets
-        arrive with SDK 0.7.
+        <code>injectView()</code> in the Angular package connect and dispose a
+        client with the component that renders it. Svelte and Angular render the
+        selected View with an outlet; the React and Vue outlets and the command
+        helpers (<code>useCommand</code>, <code>injectCommand</code>) arrive
+        with SDK 0.7.
       </p>
     </ContentCard>
     <ContentCard eyebrow="Calls" title="Use typed commands and writes">

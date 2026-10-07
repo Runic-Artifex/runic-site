@@ -16,7 +16,7 @@ Build a [portal VM](portal-vm.md) from the current source and run from its graph
 terminal. For serial access, import the desktop environment as described there.
 Use a new output directory for each invocation; close other Runic fixtures first.
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 runic-portal-automate --output "$HOME/.cache/runic-automation/basic-1" \
   -- runic-portal-test gtk4-usability
 ```
@@ -37,7 +37,7 @@ registered request, not whether the machine physically suspends.
 For the standard-runtime Flatpak fixture, follow its
 [installation instructions](https://github.com/Runic-Artifex/runic-sdk/blob/main/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md), then run:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 runic-portal-automate --output "$HOME/.cache/runic-automation/flatpak-1" \
   --gnome-pickers -- flatpak run --user com.runic.tests.Sandbox
 ```
@@ -60,7 +60,7 @@ and the KDE adapter subsequently passed in the managed container runner.
 
 Add `--orca` to the guest command to check native focus and screen-reader audio:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 runic-portal-automate --output "$HOME/.cache/runic-automation/orca-1" \
   --orca --gnome-pickers -- flatpak run --user com.runic.tests.Sandbox
 ```
@@ -87,7 +87,7 @@ and clean recorder diagnostics. See the
 Optionally cross-check those recordings with local CPU Whisper. Build the tool
 and checksum-pinned English model on the host, outside the normal SDK shell:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 nix build .#vm-whisper --out-link artifacts/vm-whisper
 nix build .#vm-whisper-model --out-link artifacts/vm-whisper-model
 
@@ -118,7 +118,7 @@ quality. Those distinctions also apply when no person listens to the recording.
 
 The audio checks have focused negative tests:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 direnv exec . python3 -B -m unittest discover \
   -s tests/native/Runic.Desktop.Gtk4.Smoke -p test_speech_audio.py
 ```
@@ -127,7 +127,7 @@ direnv exec . python3 -B -m unittest discover \
 
 Add `--gnome-keyboard` to exercise GNOME's compositor input path:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 runic-portal-automate --output "$HOME/.cache/runic-automation/keyboard-1" \
   --gnome-keyboard --gnome-pickers -- flatpak run --user com.runic.tests.Sandbox
 ```

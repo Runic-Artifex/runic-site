@@ -3,8 +3,8 @@
 This tutorial builds on the project that `dotnet new runic-app` creates. Each
 stage adds one idea: ViewModels, the Window and its Views, opening the Window,
 rendering Views in the frontend, writing state from the frontend, and testing.
-Every code block is an excerpt of the template or of an SDK example that the
-SDK's CI builds and runs.
+Every command comes from the template, and every code block is an excerpt of
+the template or of an SDK example that the SDK's CI builds and runs.
 
 > **Unreleased.** The tutorial follows the SDK's `main` branch, which becomes
 > Runic SDK 0.7.0-preview.1. Differences from the published 0.6.0-preview.1
@@ -20,8 +20,9 @@ dotnet tool restore
 dotnet runic dev
 ```
 
-These are the template defaults: React, npm, the CS-WebUI host and
-CommunityToolkit.Mvvm. The app opens with a Welcome page and a Counter page.
+Replace `<VERSION>` with the current release from the
+[package catalog](https://docs.runic-artifex.eu/packages/). These are the
+template defaults: React, npm, the CS-WebUI host and CommunityToolkit.Mvvm. The app opens with a Welcome page and a Counter page.
 Keep `dotnet runic dev` running; frontend edits reload in place and C# edits
 rebuild and restart the app.
 
@@ -159,10 +160,25 @@ export function CounterPage({ page }: { page: CounterPageReference }) {
   const error = increment.error ?? connection;
 ```
 
-Vue and Svelte have the same `useView`, `useCommand` and `ViewOutlet`; Angular
-has `injectView()`, `injectCommand()` and `RunicViewOutlet`. `useCommand`,
-`injectCommand` and the outlets are new in 0.7; 0.6 projects call the client
-methods directly and select the page component themselves.
+The other frameworks follow their own idioms. Vue's `useView` from
+`@runic-artifex/vue` accepts a ref or getter (`MaybeRefOrGetter`). Svelte
+imports from `@runic-artifex/svelte/views` and passes a getter, so the
+connection follows reactive state:
+
+<!-- prettier-ignore -->
+```svelte docs-test=template:frontends/svelte/src/App.svelte frontend=svelte
+  const workspace = useView(() => ({ connect: connectWorkspace }));
+  const navigate = useCommand((name: "showWelcome" | "showCounter") => workspace.client?.[name]());
+```
+
+Angular has `injectView()`, `injectCommand()` and `RunicViewOutlet` from
+`@runic-artifex/angular`.
+
+The command helpers (`useCommand`, `injectCommand`) and the React and Vue
+`ViewOutlet` are new in 0.7. Svelte's `ViewOutlet`, Angular's
+`RunicViewOutlet` and `ViewRegistry` are already in 0.6.0-preview.1; 0.6
+React and Vue projects select the page component themselves, and 0.6 projects
+call the client methods directly in `try`/`catch`.
 
 ## 6. Write state from the frontend
 

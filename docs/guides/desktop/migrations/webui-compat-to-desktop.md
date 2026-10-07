@@ -18,7 +18,7 @@ listener, sessions, and a platform presentation at once.
 
 The common server-only migration is:
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 await using var host = await DesktopHost.StartAsync(new DesktopHostOptions
 {
     Port = 0,
@@ -39,7 +39,7 @@ map each 0.6 form to its case.
 
 Register capabilities on the surface, then open an optional window:
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 using var registration = surface.RegisterCapability(
     "greet",
     static (invocation, _) =>

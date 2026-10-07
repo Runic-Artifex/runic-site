@@ -55,7 +55,7 @@ and rejects forced shutdown. Its lifecycle suite starts fresh host processes for
 unconnected, connected and disconnected cases, including shutdown while an
 active browser is polling. Both host choices run the same suite:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 nix develop
 CONFIGURATION=Release RunicHost=cswebui bun run verify:customers
 CONFIGURATION=Release RunicHost=desktop bun run verify:customers

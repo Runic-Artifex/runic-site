@@ -46,13 +46,17 @@ The script checks the checkout revision and source bytes before replacing the
 snapshot. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
 
-Guide code blocks opt into verification with `docs-test=<kind>` in their info
-string. `tests/guide-snippets.test.mjs` checks `commands` blocks against the
-commands the creator, the catalog and the generated README produce, and
-`template:<path>` or `source:<path>` blocks as excerpts of the snapshot. The
-template and examples it quotes are built and run by the SDK's own CI, so a
-refresh that changes quoted code fails here until the guide follows. Every
-block in a quickstart guide must be tagged. The snapshot follows the SDK's
+Every fenced code block in `guides/` names its check with `docs-test=<kind>`
+in its info string; `tests/guide-snippets.test.mjs` enforces this and rejects
+indented code blocks and misspelled attributes. `commands` blocks must match
+the commands the creator, the catalog and the generated README produce.
+`template:<path>` and `source:<path>` blocks are excerpts of the template or
+of examples and tests, which the SDK's CI builds and runs, so these snippets
+are compiled code. `readme:<path>` blocks are excerpts of SDK package READMEs;
+they only track the README text, which SDK CI does not compile. In each case a
+snapshot refresh that changes the quoted text fails here until the guide
+follows. `skip:<reason>` marks blocks that are not checked, such as SDK
+repository workflows; quickstart guides may not skip. The snapshot follows the SDK's
 `main` branch; guides mark APIs that are not in the published release as
 unreleased.
 

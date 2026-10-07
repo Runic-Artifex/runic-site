@@ -1,29 +1,37 @@
 // Verifies the code blocks of the portal guides against the pinned SDK snapshot
 // in sources/sdk, without .NET, a network or a sibling checkout.
 //
-// A fenced block opts in with `docs-test=<kind>` in its info string:
+// Every fenced block in docs/guides names how it is checked with
+// `docs-test=<kind>` in its info string:
 //
 //   ```sh docs-test=commands
 //   ```csharp docs-test=template:Program.cs host=desktop
 //   ```ts docs-test=source:examples/notes-view-first/Frontend/test/notes.test.ts
+//   ```xml docs-test=readme:packages/dotnet/Runic.Assets/README.md
+//   ```sh docs-test=skip:sdk-repository-workflow
 //
 // - `commands`: every line is a command the portal or the template documents:
 //   the creator and template commands that `creatorCommands` builds from the
 //   template's own declarations, a package install command for a catalog
 //   package or a package the template references, or a command from the
 //   generated README. `<VERSION>` stands for the release version.
-// - `template:<path>`: the block is an excerpt of a runic-app template file,
-//   rendered for the selection given as `symbol=value` (or `flag=value`)
-//   arguments over the template defaults, with the project named `MyApp`.
-//   The SDK's template acceptance suite builds and runs every variant.
-// - `source:<path>`: the block is an excerpt of a snapshot file, such as an
-//   example's tests, which SDK CI runs, or a package README.
+// - `template:<path>`: an excerpt of a runic-app template file, rendered for
+//   the selection given as `symbol=value` (or `flag=value`) arguments over
+//   the template defaults, with the project named `MyApp`. The SDK's template
+//   acceptance suite builds and runs every variant, so this code is compiled.
+// - `source:<path>`: an excerpt of compiled SDK code in the snapshot, such as
+//   an example or its tests, which SDK CI builds and runs. READMEs are not
+//   accepted here.
+// - `readme:<path>`: an excerpt of an SDK README in the snapshot. This only
+//   keeps the guide in step with the package documentation; SDK CI does not
+//   compile README code.
+// - `skip:<reason>`: not checked, with a one-word reason such as
+//   `sdk-repository-workflow`. Quickstart guides may not skip.
 //
 // An excerpt may skip source lines with a line containing only `...`,
 // `// ...`, `# ...` or `<!-- ... -->`. Each part must match consecutive source
-// lines; indentation may differ by a constant amount.
-//
-// Every block in a quickstart guide must opt in.
+// lines; indentation may differ by a constant amount. Guides use fenced code
+// blocks only.
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -48,7 +56,7 @@ const templateRoot = new URL(
   snapshotRoot,
 );
 
-/** Guides whose every code block must be verified. */
+/** Guides whose every code block must be verified; they may not skip. */
 export const quickstartGuides = [
   'application/getting-started/README.md',
   'application/tutorial/README.md',
@@ -75,6 +83,10 @@ export function parseBlocks(markdown) {
     }
     const words = info.trim().split(/\s+/).filter(Boolean);
     const test = words.find((word) => word.startsWith('docs-test='));
+    // Any other spelling of the attribute, such as docs-tests= or docs_test=.
+    const misspelled = words.filter(
+      (word) => word !== test && /^docs?[-_]?tests?\b/i.test(word),
+    );
     const options = Object.fromEntries(
       words
         .filter((word) => word !== test && word.includes('='))
@@ -84,6 +96,7 @@ export function parseBlocks(markdown) {
       line: index + 1,
       language: words[0] ?? '',
       test: test?.slice('docs-test='.length),
+      misspelled,
       options,
       code: body.join('\n'),
     });
@@ -243,12 +256,54 @@ function verifyBlock(block, label, commands) {
       );
       return;
     case 'source':
-      assert.deepEqual(block.options, {}, `${label}: sources take no options`);
+    case 'readme':
+      assert.deepEqual(block.options, {}, `${label}: ${kind} takes no options`);
+      assert.equal(
+        /(^|\/)README\.md$/.test(path),
+        kind === 'readme',
+        `${label}: quote README.md files with readme:, compiled code with source:`,
+      );
       assertExcerpt(block.code, readSnapshot(path), `${label} (${path})`);
+      return;
+    case 'skip':
+      assert.match(path, /^[a-z][a-z-]*$/, `${label}: skip needs a reason`);
       return;
     default:
       assert.fail(`${label}: unknown docs-test kind '${kind}'`);
   }
+}
+
+/** Line numbers of indented code blocks, which cannot carry a docs-test kind. */
+export function indentedCodeBlocks(markdown) {
+  const found = [];
+  let fence = null;
+  let blank = true;
+  let code = false;
+  let list = false;
+  markdown.split('\n').forEach((line, index) => {
+    const indent = line.match(/^[ \t]*/)[0].replace(/\t/g, '    ').length;
+    const marker = line.trimStart().match(/^(`{3,}|~{3,})/)?.[1];
+    if (fence) {
+      if (marker?.[0] === fence[0] && marker.length >= fence.length)
+        fence = null;
+      return;
+    }
+    if (marker && indent < 4) {
+      fence = marker;
+      return;
+    }
+    if (!line.trim()) {
+      blank = true;
+      return;
+    }
+    const starts = indent >= 4 && !list && blank && !code;
+    code = indent >= 4 && !list && (blank || code);
+    if (starts) found.push(index + 1);
+    if (!code && indent < 4)
+      list = /^\s*([-*+]|\d+[.)])\s/.test(line) || (list && indent > 0);
+    blank = false;
+  });
+  return found;
 }
 
 function guideFiles(directory = guidesRoot, prefix = '') {
@@ -264,7 +319,27 @@ function guideFiles(directory = guidesRoot, prefix = '') {
   );
 }
 
-test('every quickstart code block is verified', () => {
+test('every guide code block names its check', () => {
+  for (const guide of guideFiles()) {
+    const markdown = readFileSync(new URL(guide, guidesRoot), 'utf8');
+    assert.deepEqual(
+      indentedCodeBlocks(markdown),
+      [],
+      `${guide}: use fenced code blocks so they can name a docs-test kind`,
+    );
+    for (const block of parseBlocks(markdown)) {
+      const label = `${guide}:${block.line}`;
+      assert.deepEqual(
+        block.misspelled,
+        [],
+        `${label}: write docs-test=<kind>`,
+      );
+      assert.ok(
+        block.test,
+        `${label} needs a docs-test kind (see tests/guide-snippets.test.mjs)`,
+      );
+    }
+  }
   for (const guide of quickstartGuides) {
     const blocks = parseBlocks(
       readFileSync(new URL(guide, guidesRoot), 'utf8'),
@@ -272,8 +347,8 @@ test('every quickstart code block is verified', () => {
     assert.ok(blocks.length > 0, `${guide} has no code blocks`);
     for (const block of blocks)
       assert.ok(
-        block.test,
-        `${guide}:${block.line} needs a docs-test kind (see tests/guide-snippets.test.mjs)`,
+        !block.test.startsWith('skip'),
+        `${guide}:${block.line}: quickstart blocks may not skip`,
       );
   }
 });
@@ -318,6 +393,32 @@ test('the snippet checker rejects edited and reordered excerpts', () => {
     ['cs', 'template:Views.cs', { host: 'desktop' }, 'x'],
   );
   assert.throws(() => selectionFor({ host: 'electron' }));
+  assert.deepEqual(
+    parseBlocks('```sh docs-tests=commands\nx\n```')[0].misspelled,
+    ['docs-tests=commands'],
+  );
+  assert.deepEqual(
+    indentedCodeBlocks('Text\n\n    code\n\n- item\n\n    continued\n'),
+    [3],
+  );
+  assert.throws(() =>
+    verifyBlock(
+      {
+        test: 'source:tools/Runic.Assets.Packer/README.md',
+        options: {},
+        code: '',
+      },
+      'readme as source',
+      new Set(),
+    ),
+  );
+  assert.throws(() =>
+    verifyBlock(
+      { test: 'skip', options: {}, code: '' },
+      'no reason',
+      new Set(),
+    ),
+  );
   const commands = documentedCommands();
   assert.ok(commands.has('dnx Runic.Create@<VERSION>'));
   assert.ok(

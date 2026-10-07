@@ -22,7 +22,7 @@ Inject `IRunicModelContext` and obtain its sequencer from
 until disposal. Each window owns its model context; native UI dispatch remains
 the host's responsibility.
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 var changes = store.Connect()
     .SortAndVirtualize(comparer, requests)
     .ObserveOn(sequencer)
@@ -42,7 +42,7 @@ adapter namespace.
 
 ## Opt into collection updates
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 public sealed record Row(int Id, string Label, int Value);
 
 [RunicCollection(nameof(Row.Id))]
@@ -71,7 +71,7 @@ Keep the large source cache shared and the viewport request and bound
 collection per presentation. `SortAndVirtualize` suppresses updates outside
 that viewport. The browser helper computes a fixed-height range:
 
-```ts
+```ts docs-test=skip:illustrative-fragment
 const range = collectionViewport({
   totalCount,
   scrollTop,
