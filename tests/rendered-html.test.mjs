@@ -68,9 +68,12 @@ test('offers setup and runnable examples without embedding release state', async
   );
   assert.ok(
     !products.some((product) =>
-      ['runic-flow', 'runic-translations-editor', 'cs-webui'].includes(
-        product.slug,
-      ),
+      [
+        'runic-flow',
+        'runic-toolkit',
+        'runic-translations-editor',
+        'cs-webui',
+      ].includes(product.slug),
     ),
   );
 });

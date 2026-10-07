@@ -64,7 +64,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Flow',
     shortName: 'Flow',
-    icon: '/products/runic-toolkit.png',
+    icon: '/products/runic-application.png',
     kicker: 'Historical project',
     summary: 'Historical Runic Flow information and migration guidance.',
     description:
@@ -94,7 +94,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Application',
     shortName: 'Application',
-    icon: '/products/runic-toolkit.png',
+    icon: '/products/runic-application.png',
     kicker: 'Window and View model',
     summary:
       'Compose typed .NET Windows and Views with generated TypeScript clients for browser frontends.',

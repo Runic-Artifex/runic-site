@@ -13,7 +13,7 @@ const docs = 'https://docs.runic-artifex.eu/products';
 
 export const products: Product[] = [
   {
-    slug: 'runic-toolkit',
+    slug: 'runic-application',
     name: 'Runic Application',
     shortName: 'Application',
     capability: 'Application composition',
