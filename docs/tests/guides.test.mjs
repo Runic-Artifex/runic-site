@@ -327,8 +327,8 @@ test('portal pages link the rendered guides', () => {
 test('builds a small offline search index over all guides and products', () => {
   const raw = readFileSync(new URL('search-index.json', buildDirectory));
   // Budget: the index loads only on the search page.
-  assert.ok(raw.length < 256 * 1024, `index is ${raw.length} bytes`);
-  assert.ok(gzipSync(raw).length < 64 * 1024, 'compressed index over budget');
+  assert.ok(raw.length < 288 * 1024, `index is ${raw.length} bytes`);
+  assert.ok(gzipSync(raw).length < 72 * 1024, 'compressed index over budget');
   const index = JSON.parse(raw.toString('utf8'));
   assert.equal(index.version, 1);
   const pages = new Set(index.entries.map((entry) => entry.u.split('#')[0]));

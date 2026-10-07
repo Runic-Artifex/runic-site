@@ -37,7 +37,7 @@
     <p class="lede">
       These SDK packages are available in Runic SDK {currentRelease.version}.
       Keep SDK dependencies on the same preview version. Command Line and
-      Translations will publish their next previews independently.
+      Translations are released independently.
     </p>
   </section>
   <section class="content-grid shell">

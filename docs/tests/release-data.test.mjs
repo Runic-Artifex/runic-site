@@ -42,7 +42,7 @@ test('the unified 0.6 catalog remains immutable release history', () => {
 // Packages added to the SDK after the active release. The pinned snapshot is a
 // development revision, so its inventory can be ahead of the published catalog;
 // `bun run docs:release` adds them once a release publishes them.
-const unpublishedInventory = ['@runic-artifex/views-effect'];
+const unpublishedInventory = [];
 
 test('active catalog follows the SDK-owned package inventory only', () => {
   const inventory = [...workspace.nuget, ...workspace.npm]

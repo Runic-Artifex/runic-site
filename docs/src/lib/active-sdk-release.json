@@ -1,6 +1,6 @@
 {
-  "version": "0.6.0-preview.1",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.6.0-preview.1",
+  "version": "0.7.0-preview.1",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.1",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -71,7 +71,7 @@
     {
       "identity": "Runic.Application.Templates",
       "ecosystem": "nuget",
-      "product": "application",
+      "product": "templates",
       "installKind": "dotnet-template"
     },
     {
@@ -83,7 +83,7 @@
     {
       "identity": "Runic.Create",
       "ecosystem": "nuget",
-      "product": "application",
+      "product": "templates",
       "installKind": "dotnet-tool-exec"
     },
     {
@@ -162,6 +162,12 @@
       "identity": "@runic-artifex/views",
       "ecosystem": "npm",
       "product": "application",
+      "installKind": "npm-package"
+    },
+    {
+      "identity": "@runic-artifex/views-effect",
+      "ecosystem": "npm",
+      "product": "views-effect",
       "installKind": "npm-package"
     },
     {

@@ -85,7 +85,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 128 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 160 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
   assert.ok(

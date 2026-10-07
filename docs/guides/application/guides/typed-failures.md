@@ -6,9 +6,8 @@ and the generated TypeScript client returns them as typed values instead of
 rejecting. Everything else, such as a crashed handler or a lost connection,
 still rejects with `BridgeError`.
 
-> **Unreleased.** Declared failures are new in Runic SDK 0.7.0-preview.1 and
-> are not in the published 0.6.0-preview.1. This guide follows the SDK's `main`
-> branch. Every code block is an excerpt of the
+> Declared failures are new in Runic SDK 0.7.0-preview.1 and are not in
+> 0.6.0-preview.1. Every code block is an excerpt of the
 > [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first),
 > which the SDK's CI builds and tests, or of a package README.
 

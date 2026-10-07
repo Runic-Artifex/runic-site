@@ -248,10 +248,11 @@ export const products: Product[] = [
     description:
       'Runic Translations discovers one translations/runic.json project with locale-scoped MessageFormat 2 files. Its deterministic compiler generates identifier-safe message calls, locale metadata, request-local SSR support, typed C# and tree-shakable ESM while keeping its runtime ABI portable and NativeAOT-ready.',
     releaseProduct: null,
-    version: null,
-    versionState: 'unassigned',
+    version: '0.6.0-preview.2',
+    versionState: 'published',
     availability: 'independent',
-    transitioning: true,
+    releaseNotes:
+      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.2',
     source: 'https://github.com/Runic-Artifex/runic-translations-sdk',
     bestFor: [
       'Deterministic localization builds',
@@ -331,10 +332,11 @@ export const products: Product[] = [
     description:
       'Runic Command Line generates NativeAOT-ready commands from ordinary typed C# methods. Help, validation, completion, environment fallbacks and shared options work in standalone tools and hosted Runic applications. Add Runic.CommandLine.Spectre for styled help, progress and prompts; machine output remains structured and predictable.',
     releaseProduct: null,
-    version: null,
-    versionState: 'unassigned',
+    version: '0.6.0-preview.2',
+    versionState: 'published',
     availability: 'independent',
-    transitioning: true,
+    releaseNotes:
+      'https://github.com/Runic-Artifex/runic-cli-sdk/releases/tag/v0.6.0-preview.2',
     source: 'https://github.com/Runic-Artifex/runic-cli-sdk',
     bestFor: [
       'NativeAOT command applications',

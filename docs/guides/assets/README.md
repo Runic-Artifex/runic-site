@@ -11,9 +11,8 @@ executable and a folder, or when an ASP.NET Core application serves a single
 page application. Projects created with `dotnet new runic-app` do not need it:
 they copy the built frontend to a `www` folder next to the executable.
 
-> **Unreleased.** This guide follows the SDK's `main` branch, which becomes
-> Runic SDK 0.7.0-preview.1. Differences from the published 0.6.0-preview.1
-> are marked where they occur.
+> This guide follows Runic SDK 0.7.0-preview.1. Differences from
+> 0.6.0-preview.1 are marked where they occur.
 
 Replace `<VERSION>` below with the current release from the
 [package catalog](https://docs.runic-artifex.eu/packages/). The code below is quoted
