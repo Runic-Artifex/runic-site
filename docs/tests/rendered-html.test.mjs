@@ -94,7 +94,7 @@ test('renders the documentation home with complete metadata and branding', async
   assert.equal(html.match(/<main\b/g)?.length, 1);
   assert.match(
     html,
-    /background-image:\s*url\(\/products\/runic-toolkit\.png\)/,
+    /background-image:\s*url\(\/products\/runic-application\.png\)/,
   );
   assert.match(html, /Runic Application/);
   assert.match(html, /CS-WebUI/);
