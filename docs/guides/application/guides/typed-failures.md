@@ -57,9 +57,12 @@ public sealed record TitleRequired : SaveFailure;
 public sealed record TitleTaken(string ExistingTitle) : SaveFailure;
 ```
 
-A failure may also be a single record or another type the Bridge can encode.
-Keep it small: an encoded failure over 4 KiB is reported as an ordinary
-failure, as is a value that is not the declared type.
+A failure may also be a single record or another type the Bridge can encode,
+such as a string. `matchCase` and `catchCase` accept only `$case` unions
+(`[RunicUnion]`), so read such a failure directly: `outcome.failure` in
+TypeScript, or `Effect.catchTag("ViewDomainFailure", …)` in Effect. Keep it
+small: an encoded failure over 4 KiB is reported as an ordinary failure, as is
+a value that is not the declared type.
 
 ## Declare and throw it
 
@@ -126,9 +129,10 @@ state or `{ ok: false, failure }`, and its operation carries the failure type:
   recoverSaveWithRequestId(requestId: string): Promise<EditorSaveOperation>;
 ```
 
-`matchCase` from `@runic-artifex/views` needs a handler for every case, so a
-case added in .NET is a compile error until the frontend handles it. The Notes
-frontends share one description of Save's failure:
+For a `[RunicUnion]` failure, `matchCase` from `@runic-artifex/views` needs a
+handler for every `$case`, so a case added in .NET is a compile error until
+the frontend handles it. The Notes frontends share one description of Save's
+failure:
 
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-view-first/Frontend/src/save-failure.ts
@@ -237,7 +241,9 @@ The helpers come from `@runic-artifex/react`, `@runic-artifex/vue`,
 In `@runic-artifex/views-effect`, `command` and `operation` succeed with the
 outcome's value and move a declared failure into the error channel as the
 tagged `ViewDomainFailure<F>`. Commands without a declaration keep their
-types. `catchCase` handles every case:
+types. For a `[RunicUnion]` failure, `catchCase` handles every case; for any
+other failure type, use `Effect.catchTag("ViewDomainFailure", …)` and read
+`error.failure`:
 
 <!-- prettier-ignore -->
 ```ts docs-test=readme:packages/web/views-effect/README.md

@@ -134,6 +134,12 @@ public class Outer<T>
     {
     }
 
+    /// <summary>A nested generic type with a variant parameter.</summary>
+    /// <typeparam name="V">The produced type.</typeparam>
+    public interface ISource<out V>
+    {
+    }
+
     /// <summary>A nested type that only has the outer type argument.</summary>
     public class Leaf
     {
@@ -157,6 +163,17 @@ public unsafe class Shapes
 
     /// <summary>A function pointer before a nullable parameter.</summary>
     public string? AfterPointer(delegate*<string?, object, string?> callback, string? note) => note;
+
+    /// <summary>A read-only reference parameter.</summary>
+    public int Peek(ref readonly int value, in int other) => value + other;
+
+    /// <summary>A read-only reference parameter of a virtual method.</summary>
+    public virtual int PeekVirtual(ref readonly int value) => value;
+
+    /// <summary>A function pointer with a read-only reference parameter.</summary>
+    public void ReadOnlyPointer(delegate*<ref readonly int, in int, void> callback)
+    {
+    }
 
     /// <summary>A function pointer with by-reference parameters and return.</summary>
     public void ByRefPointer(delegate*<ref int, in string?, out object?, ref readonly string> callback)

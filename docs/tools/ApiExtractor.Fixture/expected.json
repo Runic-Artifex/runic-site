@@ -235,13 +235,36 @@
       ]
     },
     {
+      "id": "T:Runic.ApiExtractor.Fixture.Outer`1.ISource`1",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "Outer<T>.ISource<V>",
+      "kind": "interface",
+      "declaringType": "T:Runic.ApiExtractor.Fixture.Outer`1",
+      "signature": [
+        "public interface Outer<T>.ISource<out V>"
+      ],
+      "docs": {
+        "summary": [
+          "A nested generic type with a variant parameter."
+        ],
+        "typeparams": [
+          {
+            "name": "V",
+            "doc": [
+              "The produced type."
+            ]
+          }
+        ]
+      }
+    },
+    {
       "id": "T:Runic.ApiExtractor.Fixture.Outer`1.Inner`1",
       "namespace": "Runic.ApiExtractor.Fixture",
-      "name": "Outer.Inner<U>",
+      "name": "Outer<T>.Inner<U>",
       "kind": "class",
       "declaringType": "T:Runic.ApiExtractor.Fixture.Outer`1",
       "signature": [
-        "public class Outer.Inner<U>"
+        "public class Outer<T>.Inner<U>"
       ],
       "docs": {
         "summary": [
@@ -270,11 +293,11 @@
     {
       "id": "T:Runic.ApiExtractor.Fixture.Outer`1.Leaf",
       "namespace": "Runic.ApiExtractor.Fixture",
-      "name": "Outer.Leaf",
+      "name": "Outer<T>.Leaf",
       "kind": "class",
       "declaringType": "T:Runic.ApiExtractor.Fixture.Outer`1",
       "signature": [
-        "public class Outer.Leaf"
+        "public class Outer<T>.Leaf"
       ],
       "docs": {
         "summary": [
@@ -450,6 +473,45 @@
           "docs": {
             "summary": [
               "Tuple names of a nested tuple."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.Peek(System.Int32@,System.Int32@)",
+          "kind": "method",
+          "name": "Peek",
+          "signature": [
+            "public int Peek(ref readonly int value, in int other)"
+          ],
+          "docs": {
+            "summary": [
+              "A read-only reference parameter."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.PeekVirtual(System.Int32@)",
+          "kind": "method",
+          "name": "PeekVirtual",
+          "signature": [
+            "public virtual int PeekVirtual(ref readonly int value)"
+          ],
+          "docs": {
+            "summary": [
+              "A read-only reference parameter of a virtual method."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.ReadOnlyPointer()",
+          "kind": "method",
+          "name": "ReadOnlyPointer",
+          "signature": [
+            "public void ReadOnlyPointer(delegate*<ref readonly int, in int, void> callback)"
+          ],
+          "docs": {
+            "summary": [
+              "A function pointer with a read-only reference parameter."
             ]
           }
         },

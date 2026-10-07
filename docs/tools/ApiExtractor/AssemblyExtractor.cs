@@ -98,8 +98,29 @@ internal sealed class AssemblyExtractor
         var sealedType = (definition.Attributes & TypeAttributes.Sealed) != 0;
 
         // The signature shows variance; the type's name does not.
-        var declaredName = name.Display + (ownTypeParameters.Length > 0 ? $"<{string.Join(", ", ownTypeParameters)}>" : string.Empty);
-        var displayName = name.Display + (ownTypeParameters.Length > 0 ? $"<{string.Join(", ", ownTypeParameters.Select(parameter => parameter.Split(' ')[^1]))}>" : string.Empty);
+        // A nested type shows each containing type's parameters with it
+        // (Outer<T>.Inner<U>), as references do.
+        var outerArity = allTypeParameters.Length - ownArity;
+        string GroupedName(bool variance)
+        {
+            if (name.Parts.Sum(part => part.Arity) != allTypeParameters.Length)
+            {
+                var own = variance ? ownTypeParameters : ownTypeParameters.Select(parameter => parameter.Split(' ')[^1]);
+                return name.Display + (ownTypeParameters.Length > 0 ? $"<{string.Join(", ", own)}>" : string.Empty);
+            }
+
+            var next = 0;
+            return string.Join(".", name.Parts.Select(part =>
+            {
+                var parameters = Enumerable.Range(next, part.Arity)
+                    .Select(index => variance && index >= outerArity ? ownTypeParameters[index - outerArity] : allTypeParameters[index]);
+                next += part.Arity;
+                return part.Arity > 0 ? $"{part.Display}<{string.Join(", ", parameters)}>" : part.Display;
+            }));
+        }
+
+        var declaredName = GroupedName(variance: true);
+        var displayName = GroupedName(variance: false);
         var parts = new List<Segment> { new(Accessibility(definition.Attributes)) };
         if (kind == "class" && (definition.Attributes & (TypeAttributes.Abstract | TypeAttributes.Sealed)) == (TypeAttributes.Abstract | TypeAttributes.Sealed))
         {
@@ -539,6 +560,8 @@ internal sealed class AssemblyExtractor
                 var attributes = hasParameter ? parameter.Attributes : default;
                 prefix += (attributes & ParameterAttributes.Out) != 0 && (attributes & ParameterAttributes.In) == 0
                     ? "out "
+                    : type.RequiresLocation || (hasParameter && HasAttribute(parameter.GetCustomAttributes(), "System.Runtime.CompilerServices", "RequiresLocationAttribute"))
+                        ? "ref readonly "
                     : type.IsIn || (hasParameter && HasAttribute(parameter.GetCustomAttributes(), "System.Runtime.CompilerServices", "IsReadOnlyAttribute"))
                         ? "in "
                         : "ref ";

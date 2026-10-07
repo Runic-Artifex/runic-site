@@ -135,8 +135,9 @@ the nuget.org catalog, then runs `tools/ApiExtractor`. It reads the highest
 documentation. Signatures keep publicly visible types only and show nullable
 reference annotations (including inside function pointers), generic
 constraints, `params`, `required`, enum defaults, `ref` and `ref readonly`
-returns, and tuple element names. Nested generic types keep their arguments
-with each type (`Outer<string>.Inner<int>`) and tuples of more than seven
+returns and parameters, and tuple element names. Nested generic types keep
+their arguments with each type, in references (`Outer<string>.Inner<int>`) and
+declarations (`Outer<T>.Inner<U>`), and tuples of more than seven
 elements are shown flat. For npm it verifies each tarball against `dist.integrity` and reads
 the exported declarations of every typed entry point with the TypeScript
 compiler API. A final pass resolves `<inheritdoc/>` from base types,

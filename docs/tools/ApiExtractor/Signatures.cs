@@ -49,6 +49,9 @@ internal sealed record TypeSig(SigKind Kind, string Doc)
 
     public bool IsOut { get; init; }
 
+    /// <summary>A <c>ref readonly</c> parameter: modopt(RequiresLocationAttribute) in a function pointer.</summary>
+    public bool RequiresLocation { get; init; }
+
     /// <summary>
     /// The named type and its containing types, outermost first, each with
     /// its own type parameter count. A generic instantiation's arguments are
@@ -315,6 +318,7 @@ internal static class SignatureRenderer
     public static string ByRefPrefix(TypeSig type, bool isReturn, bool readOnly) =>
         isReturn ? (type.IsIn || readOnly ? "ref readonly " : "ref ")
         : type.IsOut ? "out "
+        : type.RequiresLocation ? "ref readonly "
         : type.IsIn || readOnly ? "in "
         : "ref ";
 
@@ -438,6 +442,7 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
             "System.Runtime.CompilerServices.IsExternalInit" => unmodifiedType with { IsInitOnly = true },
             "System.Runtime.InteropServices.InAttribute" => unmodifiedType with { IsIn = true },
             "System.Runtime.InteropServices.OutAttribute" => unmodifiedType with { IsOut = true },
+            "System.Runtime.CompilerServices.RequiresLocationAttribute" => unmodifiedType with { RequiresLocation = true },
             _ => unmodifiedType,
         };
 
