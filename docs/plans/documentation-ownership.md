@@ -1,6 +1,6 @@
 # Documentation ownership migration
 
-Status: implemented and independently reviewed; deployment cutover has not happened.
+Status: implemented, independently reviewed and deployed. The hosting cutover happened on 2026-10-08 from `752d25be`.
 
 The shared documentation portal belongs to `Runic-Artifex/runic-site`. The
 marketing app at the repository root and the portal in `docs/` have separate
@@ -82,3 +82,20 @@ CI will produce the deployable artifacts. No native or release matrix was run,
 and no deployment, registry publication, merge or push occurred during
 implementation. The remaining hosting cutover is the explicit operator action
 described above, after the site PR is reviewed and merged.
+
+## Cutover record (2026-10-08)
+
+Both builds came from runic-site `752d25bea36f08976aa51933b73ef81daf8e0e0d`.
+The marketing and portal checks and tests passed first: svelte-check found 0
+errors in either, the marketing site passed 7 tests and the portal passed 75.
+The release was published as `/persist/runic-web/releases/20261007T225647-n2v41G`
+with `deploy-runic-web.sh`. The previous release stays available through
+`--rollback`.
+
+- Before the cutover, a crawl of the live portal found 20 pages. Every one
+  exists in the new build.
+- After the cutover, all 571 portal pages in the build return 200, including the
+  legacy Application product routes and `/search/?q=`.
+- `www.runic-artifex.eu` still redirects to the apex with a 308.
+- All eight apex `/schemas/translations/*.json` files are byte-identical before
+  and after the cutover.
