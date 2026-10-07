@@ -395,9 +395,11 @@ test('product documentation areas link to their owning guides', async () => {
     assert.ok(html.includes(`href="${guide}"`), slug);
   }
   const translations = await render('/products/runic-translations');
-  assert.ok(
-    translations.includes(
-      'runic-translations-sdk/blob/main/docs/guides/translations/quickstart-vite.md',
-    ),
-  );
+  for (const quickstart of ['quickstart-vite.md', 'quickstart-sveltekit.md'])
+    assert.ok(
+      translations.includes(
+        `href="${github}runic-translations-sdk/blob/main/docs/guides/translations/${quickstart}"`,
+      ),
+      quickstart,
+    );
 });
