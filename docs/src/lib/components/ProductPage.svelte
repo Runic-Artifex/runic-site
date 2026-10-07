@@ -30,6 +30,8 @@
       ? catalogRows.filter(
           (entry) =>
             entry.productId === product.releaseProduct ||
+            entry.productId === 'templates' ||
+            entry.productId === 'views-effect' ||
             entry.name === '@runic-artifex/svelte' ||
             entry.name === '@runic-artifex/sveltekit',
         )
@@ -94,9 +96,11 @@
         >
       {:else if !isArchived && hasPublishedVersion}
         <ActionLink
-          href={resolve('/products/[slug]#availability', {
-            slug: product.slug,
-          })}
+          href={isIndependent && product.guides?.length
+            ? product.guides[0].href
+            : resolve('/products/[slug]#availability', {
+                slug: product.slug,
+              })}
           >{isApplication
             ? 'Downloads'
             : `Install ${product.shortName}`}</ActionLink
@@ -194,9 +198,11 @@
           title={isArchived
             ? 'Retired project'
             : isIndependent
-              ? product.transitioning
-                ? 'Independent preview pending'
-                : 'Independently released product'
+              ? hasPublishedVersion
+                ? `${product.shortName} ${product.version}`
+                : product.transitioning
+                  ? 'Independent preview pending'
+                  : 'Independently released product'
               : product.slug === 'runic-application'
                 ? `Runic Application · SDK ${currentRelease.version}`
                 : isApplication
@@ -213,7 +219,11 @@
               >
               for the current Window and View application model.
             {:else if isIndependent}
-              {#if product.transitioning}
+              {#if hasPublishedVersion}
+                {product.name} is released independently from the Runic SDK. The current
+                preview is <code>{product.version}</code>; its getting started
+                guide shows how to install it.
+              {:else if product.transitioning}
                 {product.name} is moving to its own release lifecycle. Its first independent
                 preview is not yet published; the 0.6.0-preview.1 unified catalog
                 remains available as release history. Follow the product for its next

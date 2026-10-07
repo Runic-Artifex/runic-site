@@ -112,8 +112,9 @@ This reads the published tagged SDK package inventory using `gh` and updates
 before deployment. Refresh the pinned SDK input inventory for its matching
 release revision as needed. Development version bumps never publish package
 availability. `published-release.json` preserves the immutable unified
-0.6.0-preview.1 history; Command Line and Translations have separate release
-lifecycles and remain explicitly pending until their own preview is published.
+0.6.0-preview.1 history. Command Line and Translations have separate release
+lifecycles: after one of their releases, update `version` and `releaseNotes`
+of the product in `src/lib/docs-data.ts`.
 
 ## API reference
 
@@ -154,7 +155,7 @@ direnv exec <runic-sdk-checkout> bun docs/scripts/test-api-extractor.mjs
 
 Site CI has no .NET, so this test runs by hand. Search has one entry per type.
 `tests/api-reference.test.mjs` checks the pins, digest and size budgets: at
-most 1.5 MB of inputs, 128 KB of HTML per page, and 3 MB for all reference
+most 1.5 MB of inputs, 160 KB of HTML per page, and 3 MB for all reference
 pages and their `__data.json` payloads gzipped. The link check covers every
 reference page.
 

@@ -302,7 +302,11 @@ test('uses the canonical Runic Translations identifiers', async () => {
   assert.match(html, /runic\.translations\/1/);
   assert.match(html, /Runic\.Translations\.\*/);
   assert.match(html, /runic-translations-sdk/);
-  assert.match(stripMarkup(html), /independent preview is not yet published/);
+  assert.match(stripMarkup(html), /released independently from the Runic SDK/);
+  assert.ok(
+    html.includes('runic-translations-sdk/releases/tag/v0.6.0-preview.2'),
+  );
+  assert.doesNotMatch(html, /independent preview is not yet published/);
 });
 
 test('keeps CS-WebUI as an already independent product', async () => {

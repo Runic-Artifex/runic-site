@@ -6,9 +6,8 @@ rendering Views in the frontend, writing state from the frontend, and testing.
 Every command comes from the template, and every code block is an excerpt of
 the template or of an SDK example that the SDK's CI builds and runs.
 
-> **Unreleased.** The tutorial follows the SDK's `main` branch, which becomes
-> Runic SDK 0.7.0-preview.1. Differences from the published 0.6.0-preview.1
-> are marked where they occur.
+> The tutorial follows Runic SDK 0.7.0-preview.1. Differences from
+> 0.6.0-preview.1 are marked where they occur.
 
 ## 1. Create the project
 
