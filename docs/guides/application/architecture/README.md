@@ -15,8 +15,8 @@ conflicts; callers should await pending writes before issuing a command that dep
 on the updated value. Accepted operations remain owned by .NET through a browser
 reload, and a reconnect receives a fresh snapshot.
 
-See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/examples/first-window/README.md) for the smallest
-composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/examples/notes-view-first/README.md) for
+See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/examples/first-window/README.md) for the smallest
+composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/examples/notes-view-first/README.md) for
 nested content, routing, and multiple Views over a ViewModel.
 
 The [reactive contract expansion proposal](reactiveui-expansion.md) explores

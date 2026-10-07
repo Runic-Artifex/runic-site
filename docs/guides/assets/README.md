@@ -147,7 +147,7 @@ dotnet "$packer" Client.Web/dist artifacts/app.runic-assets --trusted-generated-
 
 Embed the result with `RunicAssetsEmbeddedArchive`, or open the file at run time
 with `AssetArchive.Read`. The
-[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/tools/Runic.Assets.Packer/README.md)
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/tools/Runic.Assets.Packer/README.md)
 lists its options, JSON output and exit codes.
 
 ### Trusted generated output
@@ -181,11 +181,11 @@ directory.
 
 ## Reference
 
-- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Assets/README.md):
+- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/dotnet/Runic.Assets/README.md):
   explicit embedded resources, the Linux development directory source,
   validation and inspection.
-- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Assets.AspNetCore/README.md)
-  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Assets.Desktop/README.md):
+- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/dotnet/Runic.Assets.AspNetCore/README.md)
+  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/dotnet/Runic.Assets.Desktop/README.md):
   HTTP behavior and routing.
-- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/specs/assets/archive-v1.md)
+- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/specs/assets/archive-v1.md)
   and the [framework-neutral asset boundary](adr/0013-framework-neutral-asset-boundary.md).
