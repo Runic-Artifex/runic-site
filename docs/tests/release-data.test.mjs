@@ -44,6 +44,19 @@ test('the unified 0.6 catalog remains immutable release history', () => {
 // `bun run docs:release` adds them once a release publishes them.
 const unpublishedInventory = [];
 
+// The versions a pinned snapshot may carry: the active release, or the
+// immediate next development version (the next preview of the same
+// major.minor, or the first preview of the next minor).
+const acceptedSnapshotVersions = (version) => {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?$/.exec(version);
+  assert.ok(match, `unexpected version ${version}`);
+  const [major, minor, patch, preview] = match.slice(1).map(Number);
+  const accepted = [version, `${major}.${minor + 1}.0-preview.1`];
+  if (!Number.isNaN(preview))
+    accepted.push(`${major}.${minor}.${patch}-preview.${preview + 1}`);
+  return accepted;
+};
+
 test('active catalog follows the SDK-owned package inventory only', () => {
   const inventory = [...workspace.nuget, ...workspace.npm]
     .map((entry) => entry.name)
@@ -51,7 +64,12 @@ test('active catalog follows the SDK-owned package inventory only', () => {
   const catalog = activeSdkRelease.packages
     .map((entry) => entry.identity)
     .sort();
-  assert.equal(activeSdkRelease.version, workspace.version);
+  assert.ok(
+    acceptedSnapshotVersions(activeSdkRelease.version).includes(
+      workspace.version,
+    ),
+    `snapshot ${workspace.version} is neither ${activeSdkRelease.version} nor its next version`,
+  );
   assert.deepEqual(
     catalog,
     inventory.filter((name) => !unpublishedInventory.includes(name)),
@@ -116,4 +134,16 @@ test('catalog uses its published snapshot even when development packages change'
   assert.equal(docs.catalogRows.length, 1);
   assert.equal(docs.activeVersionForProduct('application').value, '1.0.0');
   assert.equal(docs.activeVersionForProduct('future'), undefined);
+});
+
+test('a snapshot may be the active release or its immediate next version', () => {
+  assert.deepEqual(acceptedSnapshotVersions('0.7.0-preview.1'), [
+    '0.7.0-preview.1',
+    '0.8.0-preview.1',
+    '0.7.0-preview.2',
+  ]);
+  assert.deepEqual(acceptedSnapshotVersions('1.0.0'), [
+    '1.0.0',
+    '1.1.0-preview.1',
+  ]);
 });

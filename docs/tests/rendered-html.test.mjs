@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import activeSdkRelease from '../src/lib/active-sdk-release.json' with { type: 'json' };
+import support from '../sources/sdk/eng/support.json' with { type: 'json' };
 import {
   createReleaseDocs,
   packageInstallCommand,
@@ -21,6 +22,7 @@ const primaryRoutes = [
   '/architecture',
   '/packages',
   '/releases',
+  '/support',
   '/readiness',
   '/products/runic-application',
   '/products/runic-desktop',
@@ -402,4 +404,73 @@ test('product documentation areas link to their owning guides', async () => {
       ),
       quickstart,
     );
+});
+
+const supportLabels = {
+  'ci-verified': 'CI-verified',
+  'packaged-unverified': 'Packaged, not CI-verified',
+  unsupported: 'Unsupported',
+};
+
+test('synchronized support data has the format the page renders', () => {
+  // Fails a snapshot refresh loudly when eng/support.json changes format.
+  assert.equal(support.schemaVersion, 1);
+  assert.deepEqual(Object.keys(support.statuses), Object.keys(supportLabels));
+  for (const host of support.hosts)
+    for (const target of host.targets)
+      assert.ok(
+        Object.hasOwn(supportLabels, target.status),
+        `${host.id} ${target.rid}: unknown status ${target.status}`,
+      );
+});
+
+test('renders the support matrix from the synchronized SDK data', async () => {
+  const html = await render('/support');
+  const text = stripMarkup(html);
+  const matrix = html.match(
+    /aria-label="Support by host and runtime identifier"[\s\S]*?<tbody>([\s\S]*?)<\/tbody>/,
+  )?.[1];
+  assert.ok(matrix, 'expected the support matrix table');
+  const rows = new Map(
+    [...matrix.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(([, row]) => [
+      row.match(/<th scope="row"><code>([^<]+)<\/code><\/th>/)?.[1],
+      [...row.matchAll(/<td data-status="([^"]+)"[^>]*>([^<]*)<\/td>/g)].map(
+        ([, status, label]) => ({ status, label }),
+      ),
+    ]),
+  );
+  const rids = [
+    ...new Set(
+      support.hosts.flatMap((host) => host.targets.map((target) => target.rid)),
+    ),
+  ];
+  assert.deepEqual([...rows.keys()], rids);
+  for (const rid of rids) {
+    const expected = support.hosts.map((host) => {
+      const status =
+        host.targets.find((target) => target.rid === rid)?.status ??
+        'unsupported';
+      return { status, label: supportLabels[status] };
+    });
+    assert.deepEqual(rows.get(rid), expected, rid);
+  }
+  for (const host of support.hosts)
+    for (const target of host.targets)
+      if (target.status !== 'ci-verified')
+        assert.ok(text.includes(target.reason), target.reason);
+  for (const status of Object.keys(supportLabels))
+    assert.ok(text.includes(support.statuses[status]), status);
+  for (const requirement of support.requirements)
+    assert.ok(text.includes(requirement.note), requirement.id);
+
+  const home = await render();
+  const primary = home.match(/<nav class="desktop-nav"[\s\S]*?<\/nav>/)?.[0];
+  assert.ok(
+    primary && !primary.includes('support'),
+    'Support stays out of the header',
+  );
+  assert.match(
+    home,
+    /<footer[\s\S]*href="\.\/support">Supported platforms<\/a>/,
+  );
 });
