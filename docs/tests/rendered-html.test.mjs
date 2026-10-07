@@ -31,6 +31,9 @@ const primaryRoutes = [
   '/products/runic-command-line',
   '/products/cs-webui',
   '/products/runic-flow',
+  '/guides',
+  '/guides/application/tutorial',
+  '/search',
 ];
 
 function render(path = '/') {
@@ -347,40 +350,7 @@ test('links SDK release notes and renders active SDK install commands', async ()
   assert.doesNotMatch(applicationHtml, /Runic\.Application\.Bridge/);
 });
 
-test('resolves every internal route link and fragment in the prerendered site', async () => {
-  const knownRoutes = new Set(primaryRoutes);
-  const pages = new Map(
-    await Promise.all(
-      primaryRoutes.map(async (path) => [path, await render(path)]),
-    ),
-  );
-
-  for (const [sourcePath, html] of pages) {
-    const basePath = sourcePath === '/' ? '/' : `${sourcePath}/`;
-    for (const match of html.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)) {
-      const target = new URL(
-        match[1],
-        `https://docs.runic-artifex.eu${basePath}`,
-      );
-      if (target.origin !== 'https://docs.runic-artifex.eu') continue;
-      const targetPath = target.pathname.replace(/\/$/, '') || '/';
-      assert.ok(
-        knownRoutes.has(targetPath),
-        `${sourcePath} links to missing route ${target.pathname}`,
-      );
-      if (target.hash) {
-        const fragment = decodeURIComponent(target.hash.slice(1));
-        assert.match(
-          pages.get(targetPath),
-          new RegExp(
-            `\\bid="${fragment.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}"`,
-          ),
-          `${sourcePath} links to missing fragment ${targetPath}${target.hash}`,
-        );
-      }
-    }
-  }
-});
+// tests/link-check.test.mjs checks every link and fragment in the build.
 
 test('published release is consistent across onboarding, catalog and release notes', async () => {
   for (const route of ['/packages', '/releases', '/getting-started']) {
@@ -396,28 +366,20 @@ test('published release is consistent across onboarding, catalog and release not
 });
 
 test('product documentation areas link to their owning guides', async () => {
+  const github = 'https://github.com/Runic-Artifex/';
   for (const [slug, guide] of [
-    [
-      'runic-application',
-      'runic-site/blob/main/docs/guides/application/README.md',
-    ],
-    [
-      'runic-desktop',
-      'runic-site/blob/main/docs/guides/desktop/host-selection.md',
-    ],
-    ['runic-assets', 'runic-site/blob/main/docs/guides/assets/README.md'],
+    ['runic-application', '/guides/application/'],
+    ['runic-desktop', '/guides/desktop/host-selection/'],
+    ['runic-assets', '/guides/assets/'],
     [
       'runic-translations',
-      'runic-translations-sdk/blob/main/docs/guides/translations/quickstart-dotnet.md',
+      `${github}runic-translations-sdk/blob/main/docs/guides/translations/quickstart-dotnet.md`,
     ],
-    ['runic-command-line', 'runic-cli-sdk/blob/main/README.md'],
+    ['runic-command-line', `${github}runic-cli-sdk/blob/main/README.md`],
   ]) {
     const html = await render(`/products/${slug}`);
     assert.match(html, /id="guides"/);
-    assert.ok(
-      html.includes(`href="https://github.com/Runic-Artifex/${guide}"`),
-      slug,
-    );
+    assert.ok(html.includes(`href="${guide}"`), slug);
   }
   const translations = await render('/products/runic-translations');
   assert.ok(

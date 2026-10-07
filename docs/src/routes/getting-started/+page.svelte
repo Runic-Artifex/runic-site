@@ -108,7 +108,7 @@
       <p>
         Follow <a
           class="text-link"
-          href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/tutorial/README.md"
+          href={resolve('/guides/[...path]', { path: 'application/tutorial' })}
           >Windows and Views, step by step</a
         >
         through the generated project and its tests,
@@ -140,8 +140,9 @@
         can add <code>Runic.Application.Desktop</code>. The
         <a
           class="text-link"
-          href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/desktop/host-selection.md"
-          >host selection guide</a
+          href={resolve('/guides/[...path]', {
+            path: 'desktop/host-selection',
+          })}>host selection guide</a
         > compares them.
       </p>
     </ContentCard>
@@ -156,13 +157,14 @@
       <p>
         <a
           class="text-link"
-          href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/existing-app.md"
-          >Add Runic to an existing app</a
+          href={resolve('/guides/[...path]', {
+            path: 'application/existing-app',
+          })}>Add Runic to an existing app</a
         >
         or
         <a
           class="text-link"
-          href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/assets/README.md"
+          href={resolve('/guides/[...path]', { path: 'assets' })}
           >embed and serve a frontend with Runic Assets</a
         >.
       </p>

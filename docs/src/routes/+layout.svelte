@@ -16,6 +16,7 @@
   import * as Tooltip from '#lib/components/ui/tooltip/index.js';
   import CodeXmlIcon from '@lucide/svelte/icons/code-xml';
   import MenuIcon from '@lucide/svelte/icons/menu';
+  import SearchIcon from '@lucide/svelte/icons/search';
   import { onMount, type Snippet } from 'svelte';
   import './layout.css';
   import '../app.css';
@@ -28,12 +29,20 @@
   const navigation = [
     { href: '/getting-started', label: 'Start' },
     { href: '/create', label: 'Create' },
+    { href: '/guides', label: 'Guides' },
     { href: '/products', label: 'Products' },
     { href: '/views', label: 'Window and View' },
     { href: '/architecture', label: 'Architecture' },
     { href: '/packages', label: 'Packages' },
     { href: '/releases', label: 'Releases' },
   ] as const;
+
+  function navHref(href: (typeof navigation)[number]['href']) {
+    // The guide index is the empty rest parameter of /guides/[...path].
+    return href === '/guides'
+      ? resolve('/guides/[...path]', { path: '' })
+      : resolve(href);
+  }
 
   function isCurrent(href: (typeof navigation)[number]['href']) {
     return href === '/products'
@@ -93,7 +102,7 @@
       <nav class="desktop-nav" aria-label="Primary navigation">
         {#each navigation as item (item.href)}
           <a
-            href={resolve(item.href)}
+            href={navHref(item.href)}
             aria-current={isCurrent(item.href) ? 'page' : undefined}
             >{item.label}</a
           >
@@ -106,7 +115,7 @@
           <nav aria-label="Mobile navigation without JavaScript">
             {#each navigation as item (item.href)}
               <a
-                href={resolve(item.href)}
+                href={navHref(item.href)}
                 aria-current={isCurrent(item.href) ? 'page' : undefined}
                 >{item.label}</a
               >
@@ -125,6 +134,17 @@
             onpalettechange={changeThemePalette}
           />
         </div>
+        <Button
+          href={resolve('/search')}
+          variant="ghost"
+          size="icon"
+          aria-label="Search the documentation"
+          aria-current={page.url.pathname.startsWith('/search')
+            ? 'page'
+            : undefined}
+        >
+          <SearchIcon />
+        </Button>
         <Tooltip.Root>
           <Tooltip.Trigger>
             {#snippet child({ props })}
@@ -171,7 +191,7 @@
             <nav class="mobile-nav" aria-label="Mobile navigation">
               {#each navigation as item (item.href)}
                 <a
-                  href={resolve(item.href)}
+                  href={navHref(item.href)}
                   aria-current={isCurrent(item.href) ? 'page' : undefined}
                   onclick={() => (mobileOpen = false)}>{item.label}</a
                 >

@@ -58,7 +58,7 @@ export const products: Product[] = [
     slug: 'runic-flow',
     guides: [
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/README.md',
+        href: '/guides/application/',
         label: 'Migrate to Application',
       },
     ],
@@ -84,19 +84,19 @@ export const products: Product[] = [
     slug: 'runic-application',
     guides: [
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/README.md',
+        href: '/guides/application/',
         label: 'Application guide',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/tutorial/README.md',
+        href: '/guides/application/tutorial/',
         label: 'Windows and Views, step by step',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/existing-app.md',
+        href: '/guides/application/existing-app/',
         label: 'Add Runic to an existing app',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/architecture/README.md',
+        href: '/guides/application/architecture/',
         label: 'Application architecture',
       },
     ],
@@ -126,11 +126,11 @@ export const products: Product[] = [
     slug: 'runic-desktop',
     guides: [
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/desktop/host-selection.md',
+        href: '/guides/desktop/host-selection/',
         label: 'Choose a desktop host',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/desktop-services.md',
+        href: '/guides/desktop-services/',
         label: 'Native desktop services',
       },
     ],
@@ -193,7 +193,7 @@ export const products: Product[] = [
     slug: 'runic-assets',
     guides: [
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/assets/README.md',
+        href: '/guides/assets/',
         label: 'Embed and serve assets',
       },
       {

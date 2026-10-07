@@ -1,8 +1,7 @@
 // Minimal package compositions for common goals. Every package must be in the
 // active SDK catalog (tests/package-goals.test.mjs), so the install commands
 // come from the same release as the full inventory.
-const guides =
-  'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides';
+import { guideHref } from './guide-paths';
 
 export type GoalPackage = {
   readonly name: string;
@@ -70,7 +69,7 @@ export const packageGoals: readonly PackageGoal[] = [
       },
     ],
     guide: {
-      href: `${guides}/application/existing-app.md`,
+      href: guideHref('application/existing-app.md'),
       label: 'Add Runic to an existing app',
     },
   },
@@ -86,7 +85,7 @@ export const packageGoals: readonly PackageGoal[] = [
       },
     ],
     guide: {
-      href: `${guides}/application/tutorial/README.md#7-test-the-window-and-the-frontend`,
+      href: `${guideHref('application/tutorial/README.md')}#7-test-the-window-and-the-frontend`,
       label: 'Testing in the tutorial',
     },
   },
@@ -103,7 +102,7 @@ export const packageGoals: readonly PackageGoal[] = [
       },
     ],
     guide: {
-      href: `${guides}/desktop/host-selection.md`,
+      href: guideHref('desktop/host-selection.md'),
       label: 'Choose a desktop host',
     },
   },
@@ -127,7 +126,7 @@ export const packageGoals: readonly PackageGoal[] = [
       },
     ],
     guide: {
-      href: `${guides}/assets/README.md`,
+      href: guideHref('assets/README.md'),
       label: 'Embed and serve assets',
     },
   },
