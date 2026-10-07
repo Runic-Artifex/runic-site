@@ -1,4 +1,4 @@
-// Usage: ApiExtractor <output-directory> <package.nupkg>...
+// Usage: ApiExtractor <output-directory> <package-id>=<package.nupkg>...
 //
 // For each package, selects one target framework under lib/ (the highest
 // netX.Y, else the highest netstandard), reads every assembly in it with
@@ -17,17 +17,41 @@ internal static partial class Program
 {
     private static int Main(string[] args)
     {
+        if (args is ["--select-framework", .. var candidates])
+        {
+            // Test hook: prints the framework the extractor would document.
+            Console.WriteLine(SelectFramework(candidates) ?? "(none)");
+            return 0;
+        }
+
         if (args.Length < 2)
         {
-            Console.Error.WriteLine("Usage: ApiExtractor <output-directory> <package.nupkg>...");
+            Console.Error.WriteLine("Usage: ApiExtractor <output-directory> <package-id>=<package.nupkg>...");
             return 2;
         }
 
         Directory.CreateDirectory(args[0]);
-        foreach (var nupkg in args.Skip(1))
+        foreach (var argument in args.Skip(1))
         {
+            var separator = argument.IndexOf('=', StringComparison.Ordinal);
+            if (separator <= 0)
+            {
+                Console.Error.WriteLine($"Expected <package-id>=<package.nupkg>, got {argument}");
+                return 2;
+            }
+
+            var expected = argument[..separator];
+            var nupkg = argument[(separator + 1)..];
             var package = ExtractPackage(nupkg);
             var id = package["package"]!.GetValue<string>();
+            // The nuspec id names the output file: it must be the requested
+            // package and a plain file name.
+            if (!string.Equals(id, expected, StringComparison.Ordinal) || !PackageId().IsMatch(id))
+            {
+                Console.Error.WriteLine($"{nupkg}: nuspec id '{id}' is not the expected '{expected}'");
+                return 1;
+            }
+
             var path = Path.Combine(args[0], $"{id}.json");
             File.WriteAllText(path, package.ToJsonString(JsonOptions) + "\n");
             Console.WriteLine($"{id}: {package["types"]!.AsArray().Count} types -> {path}");
@@ -143,6 +167,9 @@ internal static partial class Program
 
         return members;
     }
+
+    [GeneratedRegex(@"^[A-Za-z0-9_][A-Za-z0-9._-]*$")]
+    private static partial Regex PackageId();
 
     [GeneratedRegex(@"^net(\d+\.\d+)(-.+)?$")]
     private static partial Regex NetFramework();

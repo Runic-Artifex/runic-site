@@ -42,7 +42,7 @@ const fetchBytes = async (url) =>
 
 async function syncNuGet(packages) {
   const pins = [];
-  const files = [];
+  const ids = [];
   for (const { identity } of packages) {
     const lower = identity.toLowerCase();
     const version = release.version.toLowerCase();
@@ -56,7 +56,7 @@ async function syncNuGet(packages) {
     assert.equal(sha512, catalog.packageHash, `${identity}: SHA-512 mismatch`);
     const file = path.join(work, `${lower}.${version}.nupkg`);
     await writeFile(file, bytes);
-    files.push(file);
+    ids.push(`${identity}=${file}`);
     pins.push({
       ecosystem: 'nuget',
       package: identity,
@@ -78,7 +78,7 @@ async function syncNuGet(packages) {
     [
       path.join(project, 'bin/Release/net10.0/ApiExtractor.dll'),
       extracted,
-      ...files,
+      ...ids,
     ],
     { stdio: 'inherit' },
   );

@@ -88,6 +88,27 @@ export function finishApiPackages(packages) {
         });
   }
 
+  const framework = /^[A-Z]:(?:System|Microsoft)\./;
+  const objectMembers = new Map([
+    ['ToString', 'M:System.Object.ToString'],
+    ['Equals(System.Object)', 'M:System.Object.Equals(System.Object)'],
+    ['GetHashCode', 'M:System.Object.GetHashCode'],
+  ]);
+  // Framework interfaces that declare commonly implemented members.
+  const frameworkDeclarers = new Map([
+    ['Dispose', 'System.IDisposable'],
+    ['DisposeAsync', 'System.IAsyncDisposable'],
+    ['PropertyChanged', 'System.ComponentModel.INotifyPropertyChanged'],
+    ['PropertyChanging', 'System.ComponentModel.INotifyPropertyChanging'],
+    ['ErrorsChanged', 'System.ComponentModel.INotifyDataErrorInfo'],
+    ['GetErrors', 'System.ComponentModel.INotifyDataErrorInfo'],
+    ['HasErrors', 'System.ComponentModel.INotifyDataErrorInfo'],
+    [
+      'CollectionChanged',
+      'System.Collections.Specialized.INotifyCollectionChanged',
+    ],
+  ]);
+
   // Chains resolve over repeated passes.
   for (let changed = true; changed;) {
     changed = false;
@@ -104,5 +125,29 @@ export function finishApiPackages(packages) {
       item.entry.inherited = source.id;
       changed = true;
     }
+  }
+
+  // Documentation inherited from .NET itself: point at Microsoft Learn.
+  for (const item of pending) {
+    const inheritdoc = item.entry.docs?.inheritdoc;
+    if (!inheritdoc || inheritdoc.cref) continue;
+    const body = item.entry.id.slice(2);
+    const key = `${body.replace(/\(.*$/, '').split('.').at(-1)}${/\(.*\)$/.exec(body)?.[0] ?? ''}`;
+    // Several framework ancestors could declare the member; only link when
+    // the declaring one is certain.
+    const fromFramework =
+      item.entry.id.startsWith('M:') && objectMembers.has(key)
+        ? objectMembers.get(key)
+        : (() => {
+            const matches = item
+              .candidates()
+              .filter((id) => framework.test(id));
+            if (matches.length === 1) return matches[0];
+            const declarer = frameworkDeclarers.get(key.replace(/\(.*$/, ''));
+            return declarer
+              ? matches.find((id) => id.slice(2).startsWith(`${declarer}.`))
+              : undefined;
+          })();
+    if (fromFramework) inheritdoc.cref = fromFramework;
   }
 }

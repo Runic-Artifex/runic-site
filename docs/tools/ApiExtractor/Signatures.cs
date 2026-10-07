@@ -7,29 +7,182 @@ namespace ApiExtractor;
 /// <summary>A run of display text, optionally linking a type by documentation ID.</summary>
 internal sealed record Segment(string Text, string? Ref = null);
 
-/// <summary>
-/// A decoded type: its XML documentation ID form (for member IDs and cref
-/// links) and its C# display form.
-/// </summary>
-internal sealed record TypeSig(string Doc, ImmutableArray<Segment> Display, string? DefinitionId = null)
+internal enum SigKind
 {
-    public bool IsByRef { get; init; }
+    Primitive,
+    Named,
+    Generic,
+    SZArray,
+    Array,
+    ByRef,
+    Pointer,
+    TypeParameter,
+    FunctionPointer,
+}
+
+/// <summary>
+/// A decoded signature type as a tree. <see cref="Doc"/> is the XML
+/// documentation ID form; <see cref="SignatureRenderer"/> produces the C#
+/// display form, applying nullable reference annotations in metadata order.
+/// </summary>
+internal sealed record TypeSig(SigKind Kind, string Doc)
+{
+    /// <summary>Display name of a primitive, named type or type parameter.</summary>
+    public string Name { get; init; } = string.Empty;
+
+    /// <summary>Documentation ID (T:...) of a named type or generic definition.</summary>
+    public string? DefinitionId { get; init; }
+
+    /// <summary>The type definition in the assembly being read, when it is one.</summary>
+    public TypeDefinitionHandle Definition { get; init; }
+
+    public ImmutableArray<TypeSig> Children { get; init; } = [];
+
+    public int Rank { get; init; }
+
+    public bool IsValueType { get; init; }
 
     public bool IsInitOnly { get; init; }
 
     public bool IsIn { get; init; }
 
-    /// <summary>True for value types and generic parameters, whose null default is <c>default</c>.</summary>
-    public bool IsValueType { get; init; }
+    public bool IsByRef => Kind == SigKind.ByRef;
 
-    public static TypeSig Text(string doc, string display) => new(doc, [new Segment(display)]);
-
-    public string DisplayText => string.Concat(Display.Select(segment => segment.Text));
+    public TypeSig Element => Children[0];
 }
 
 internal sealed record GenericContext(ImmutableArray<string> TypeParameters, ImmutableArray<string> MethodParameters)
 {
     public static readonly GenericContext Empty = new([], []);
+}
+
+/// <summary>
+/// Reads nullable annotations: a NullableAttribute byte array consumed in
+/// pre-order, a single NullableAttribute byte, or the NullableContext value.
+/// 0 is oblivious, 1 not annotated, 2 annotated.
+/// </summary>
+internal sealed class NullableFlags(ImmutableArray<byte> flags, byte fallback)
+{
+    private int _position;
+
+    public static readonly NullableFlags Oblivious = new([], 0);
+
+    public byte Next() => _position < flags.Length ? flags[_position++] : fallback;
+}
+
+internal static class SignatureRenderer
+{
+    /// <summary>
+    /// C# display form. Follows Roslyn's NullableAttribute layout: reference
+    /// types, arrays and type parameters take one byte before their type
+    /// arguments or element; generic value types take one (ignored) byte;
+    /// non-generic value types take none; Nullable&lt;T&gt; contributes only T.
+    /// </summary>
+    public static ImmutableArray<Segment> Render(TypeSig type, NullableFlags? flags = null)
+    {
+        var segments = ImmutableArray.CreateBuilder<Segment>();
+        Write(type, flags ?? NullableFlags.Oblivious, segments);
+        return segments.ToImmutable();
+    }
+
+    public static string Text(TypeSig type) => string.Concat(Render(type).Select(segment => segment.Text));
+
+    private static void Write(TypeSig type, NullableFlags flags, ImmutableArray<Segment>.Builder output)
+    {
+        switch (type.Kind)
+        {
+            case SigKind.Primitive:
+                var primitiveAnnotated = !type.IsValueType && flags.Next() == 2;
+                output.Add(new Segment(type.Name + (primitiveAnnotated ? "?" : string.Empty)));
+                break;
+            case SigKind.Named:
+                var namedAnnotated = !type.IsValueType && flags.Next() == 2;
+                output.Add(new Segment(type.Name, type.DefinitionId));
+                if (namedAnnotated)
+                {
+                    output.Add(new Segment("?"));
+                }
+
+                break;
+            case SigKind.TypeParameter:
+                output.Add(new Segment(type.Name + (flags.Next() == 2 ? "?" : string.Empty)));
+                break;
+            case SigKind.Generic:
+                var definition = type.Children[0];
+                var arguments = type.Children[1..];
+                if (definition.Doc == "System.Nullable`1")
+                {
+                    Write(arguments[0], flags, output);
+                    output.Add(new Segment("?"));
+                    break;
+                }
+
+                var genericAnnotated = flags.Next() == 2 && !definition.IsValueType;
+                var tuple = definition.Doc.StartsWith("System.ValueTuple`", StringComparison.Ordinal);
+                if (!tuple)
+                {
+                    output.Add(new Segment(definition.Name, definition.DefinitionId));
+                }
+
+                output.Add(new Segment(tuple ? "(" : "<"));
+                for (var index = 0; index < arguments.Length; index++)
+                {
+                    if (index > 0)
+                    {
+                        output.Add(new Segment(", "));
+                    }
+
+                    Write(arguments[index], flags, output);
+                }
+
+                output.Add(new Segment(tuple ? ")" : ">"));
+                if (genericAnnotated)
+                {
+                    output.Add(new Segment("?"));
+                }
+
+                break;
+            case SigKind.SZArray:
+            case SigKind.Array:
+                var arrayAnnotated = flags.Next() == 2;
+                Write(type.Element, flags, output);
+                output.Add(new Segment(type.Kind == SigKind.SZArray ? "[]" : $"[{new string(',', type.Rank - 1)}]"));
+                if (arrayAnnotated)
+                {
+                    output.Add(new Segment("?"));
+                }
+
+                break;
+            case SigKind.ByRef:
+                Write(type.Element, flags, output);
+                break;
+            case SigKind.Pointer:
+                Write(type.Element, flags, output);
+                output.Add(new Segment("*"));
+                break;
+            case SigKind.FunctionPointer:
+                output.Add(new Segment(type.Name));
+                break;
+        }
+    }
+
+    internal static IEnumerable<Segment> Join(IEnumerable<ImmutableArray<Segment>> types)
+    {
+        var first = true;
+        foreach (var type in types)
+        {
+            if (!first)
+            {
+                yield return new Segment(", ");
+            }
+
+            first = false;
+            foreach (var segment in type)
+            {
+                yield return segment;
+            }
+        }
+    }
 }
 
 internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig, GenericContext>
@@ -58,54 +211,61 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
 
     public TypeSig GetPrimitiveType(PrimitiveTypeCode typeCode)
     {
-        var doc = typeCode switch
+        var doc = typeCode == PrimitiveTypeCode.TypedReference ? "System.TypedReference" : $"System.{typeCode}";
+        return new TypeSig(SigKind.Primitive, doc)
         {
-            PrimitiveTypeCode.TypedReference => "System.TypedReference",
-            _ => $"System.{typeCode}",
-        };
-        return TypeSig.Text(doc, Keywords.GetValueOrDefault(doc, typeCode.ToString())) with
-        {
+            Name = Keywords.GetValueOrDefault(doc, typeCode.ToString()),
+            DefinitionId = $"T:{doc}",
             IsValueType = typeCode is not (PrimitiveTypeCode.String or PrimitiveTypeCode.Object),
         };
     }
 
     public TypeSig GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind) =>
-        Named(DefinitionName(reader, handle)) with { IsValueType = rawTypeKind == ValueTypeKind };
+        Named(DefinitionName(reader, handle), rawTypeKind) with { Definition = handle };
 
     public TypeSig GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte rawTypeKind) =>
-        Named(ReferenceName(reader, handle)) with { IsValueType = rawTypeKind == ValueTypeKind };
-
-    /// <summary>SignatureTypeKind.ValueType in a signature's raw type kind.</summary>
-    private const byte ValueTypeKind = 0x11;
+        Named(ReferenceName(reader, handle), rawTypeKind);
 
     public TypeSig GetTypeFromSpecification(
         MetadataReader reader, GenericContext genericContext, TypeSpecificationHandle handle, byte rawTypeKind) =>
         reader.GetTypeSpecification(handle).DecodeSignature(this, genericContext);
 
     public TypeSig GetSZArrayType(TypeSig elementType) =>
-        new($"{elementType.Doc}[]", [.. elementType.Display, new Segment("[]")]);
+        new(SigKind.SZArray, $"{elementType.Doc}[]") { Children = [elementType] };
 
     public TypeSig GetArrayType(TypeSig elementType, ArrayShape shape) =>
-        new(
-            $"{elementType.Doc}[{string.Join(",", Enumerable.Repeat("0:", shape.Rank))}]",
-            [.. elementType.Display, new Segment($"[{new string(',', shape.Rank - 1)}]")]);
+        new(SigKind.Array, $"{elementType.Doc}[{string.Join(",", Enumerable.Repeat("0:", shape.Rank))}]")
+        {
+            Children = [elementType],
+            Rank = shape.Rank,
+        };
 
     public TypeSig GetByReferenceType(TypeSig elementType) =>
-        elementType with { Doc = $"{elementType.Doc}@", IsByRef = true };
+        new(SigKind.ByRef, $"{elementType.Doc}@") { Children = [elementType] };
 
     public TypeSig GetPointerType(TypeSig elementType) =>
-        new($"{elementType.Doc}*", [.. elementType.Display, new Segment("*")]);
+        new(SigKind.Pointer, $"{elementType.Doc}*") { Children = [elementType], IsValueType = true };
 
     public TypeSig GetPinnedType(TypeSig elementType) => elementType;
 
     public TypeSig GetFunctionPointerType(MethodSignature<TypeSig> signature) =>
-        TypeSig.Text("=FUNC", $"delegate*<{string.Join(", ", signature.ParameterTypes.Append(signature.ReturnType).Select(type => type.DisplayText))}>");
+        new(SigKind.FunctionPointer, "=FUNC")
+        {
+            Name = $"delegate*<{string.Join(", ", signature.ParameterTypes.Append(signature.ReturnType).Select(SignatureRenderer.Text))}>",
+            IsValueType = true,
+        };
 
     public TypeSig GetGenericMethodParameter(GenericContext genericContext, int index) =>
-        TypeSig.Text($"``{index}", index < genericContext.MethodParameters.Length ? genericContext.MethodParameters[index] : $"TM{index}") with { IsValueType = true };
+        new(SigKind.TypeParameter, $"``{index}")
+        {
+            Name = index < genericContext.MethodParameters.Length ? genericContext.MethodParameters[index] : $"TM{index}",
+        };
 
     public TypeSig GetGenericTypeParameter(GenericContext genericContext, int index) =>
-        TypeSig.Text($"`{index}", index < genericContext.TypeParameters.Length ? genericContext.TypeParameters[index] : $"T{index}") with { IsValueType = true };
+        new(SigKind.TypeParameter, $"`{index}")
+        {
+            Name = index < genericContext.TypeParameters.Length ? genericContext.TypeParameters[index] : $"T{index}",
+        };
 
     public TypeSig GetModifiedType(TypeSig modifier, TypeSig unmodifiedType, bool isRequired) =>
         modifier.Doc switch
@@ -117,44 +277,14 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
 
     public TypeSig GetGenericInstantiation(TypeSig genericType, ImmutableArray<TypeSig> typeArguments)
     {
-        var definition = genericType.DefinitionId;
         var baseDoc = Arity().Replace(genericType.Doc, string.Empty);
-        var doc = $"{baseDoc}{{{string.Join(",", typeArguments.Select(argument => argument.Doc))}}}";
-        if (genericType.Doc == "System.Nullable`1")
+        return new TypeSig(SigKind.Generic, $"{baseDoc}{{{string.Join(",", typeArguments.Select(argument => argument.Doc))}}}")
         {
-            return new TypeSig(doc, [.. typeArguments[0].Display, new Segment("?")], definition);
-        }
-
-        if (genericType.Doc.StartsWith("System.ValueTuple`", StringComparison.Ordinal))
-        {
-            return new TypeSig(doc, [new Segment("("), .. Join(typeArguments), new Segment(")")], definition) { IsValueType = true };
-        }
-
-        return new TypeSig(
-            doc,
-            [.. genericType.Display, new Segment("<"), .. Join(typeArguments), new Segment(">")],
-            definition)
-        {
-            IsValueType = genericType.IsValueType,
+            Children = [genericType, .. typeArguments],
+            DefinitionId = genericType.DefinitionId,
+            Definition = genericType.Definition,
+            IsValueType = genericType.IsValueType && genericType.Doc != "System.Nullable`1",
         };
-    }
-
-    internal static IEnumerable<Segment> Join(IEnumerable<TypeSig> types)
-    {
-        var first = true;
-        foreach (var type in types)
-        {
-            if (!first)
-            {
-                yield return new Segment(", ");
-            }
-
-            first = false;
-            foreach (var segment in type.Display)
-            {
-                yield return segment;
-            }
-        }
     }
 
     /// <summary>Documentation name (namespace.Outer.Inner`1) and display name.</summary>
@@ -191,12 +321,16 @@ internal sealed partial class SignatureProvider : ISignatureTypeProvider<TypeSig
 
     internal static string StripArity(string name) => Arity().Replace(name, string.Empty);
 
-    private static TypeSig Named(TypeName name)
-    {
-        var display = Keywords.GetValueOrDefault(name.Doc, name.Display);
-        var id = $"T:{name.Doc}";
-        return new TypeSig(name.Doc, [new Segment(display, id)], id);
-    }
+    /// <summary>SignatureTypeKind.ValueType in a signature's raw type kind.</summary>
+    private const byte ValueTypeKind = 0x11;
+
+    private static TypeSig Named(TypeName name, byte rawTypeKind) =>
+        new(SigKind.Named, name.Doc)
+        {
+            Name = Keywords.GetValueOrDefault(name.Doc, name.Display),
+            DefinitionId = $"T:{name.Doc}",
+            IsValueType = rawTypeKind == ValueTypeKind,
+        };
 
     [GeneratedRegex(@"`\d+")]
     private static partial Regex Arity();

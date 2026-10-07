@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Golden-test input for tools/ApiExtractor: a small library covering the
+    signature and documentation shapes the extractor renders. Packed and
+    extracted by scripts/test-api-extractor.mjs; never published.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <PackageId>Runic.ApiExtractor.Fixture</PackageId>
+    <Version>1.0.0</Version>
+    <Deterministic>true</Deterministic>
+    <IsPackable>true</IsPackable>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

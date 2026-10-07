@@ -83,12 +83,23 @@ internal sealed class AssemblyExtractor
             .Select(parameter => _reader.GetString(_reader.GetGenericParameter(parameter).Name))
             .ToImmutableArray();
         var ownArity = OwnArity(_reader.GetString(definition.Name));
-        var ownTypeParameters = allTypeParameters.Skip(allTypeParameters.Length - ownArity).ToArray();
+        var ownTypeParameters = definition.GetGenericParameters()
+            .Skip(allTypeParameters.Length - ownArity)
+            .Select(parameter => _reader.GetGenericParameter(parameter))
+            .Select(parameter => (parameter.Attributes & GenericParameterAttributes.VarianceMask) switch
+            {
+                GenericParameterAttributes.Covariant => "out ",
+                GenericParameterAttributes.Contravariant => "in ",
+                _ => string.Empty,
+            } + _reader.GetString(parameter.Name))
+            .ToArray();
         var context = new GenericContext(allTypeParameters, []);
         var kind = TypeKind(definition, out var baseType);
         var sealedType = (definition.Attributes & TypeAttributes.Sealed) != 0;
 
-        var displayName = name.Display + (ownTypeParameters.Length > 0 ? $"<{string.Join(", ", ownTypeParameters)}>" : string.Empty);
+        // The signature shows variance; the type's name does not.
+        var declaredName = name.Display + (ownTypeParameters.Length > 0 ? $"<{string.Join(", ", ownTypeParameters)}>" : string.Empty);
+        var displayName = name.Display + (ownTypeParameters.Length > 0 ? $"<{string.Join(", ", ownTypeParameters.Select(parameter => parameter.Split(' ')[^1]))}>" : string.Empty);
         var parts = new List<Segment> { new(Accessibility(definition.Attributes)) };
         if (kind == "class" && (definition.Attributes & (TypeAttributes.Abstract | TypeAttributes.Sealed)) == (TypeAttributes.Abstract | TypeAttributes.Sealed))
         {
@@ -128,30 +139,37 @@ internal sealed class AssemblyExtractor
         if (kind == "delegate")
         {
             var invoke = definition.GetMethods().First(method => _reader.GetString(_reader.GetMethodDefinition(method).Name) == "Invoke");
-            var signature = _reader.GetMethodDefinition(invoke).DecodeSignature(_provider, context);
+            var invokeMethod = _reader.GetMethodDefinition(invoke);
+            var signature = invokeMethod.DecodeSignature(_provider, context);
+            var invokeContext = Context(invokeMethod.GetCustomAttributes(), handle);
             parts.Add(new Segment(" delegate "));
-            parts.AddRange(signature.ReturnType.Display);
-            parts.Add(new Segment($" {displayName}("));
-            parts.AddRange(Parameters(_reader.GetMethodDefinition(invoke), signature, isExtension: false));
+            parts.AddRange(SignatureRenderer.Render(signature.ReturnType, ReturnFlags(invokeMethod, invokeContext)));
+            parts.Add(new Segment($" {declaredName}("));
+            parts.AddRange(Parameters(invokeMethod, signature, isExtension: false, invokeContext));
             parts.Add(new Segment(")"));
+            parts.AddRange(Constraints(definition.GetGenericParameters().Skip(allTypeParameters.Length - ownArity), context, Context(null, handle)));
         }
         else
         {
-            parts.Add(new Segment($" {kind} {displayName}"));
-            var inherits = new List<TypeSig>();
+            parts.Add(new Segment($" {kind} {declaredName}"));
+            var typeNullableContext = Context(null, handle);
+            var inherits = new List<ImmutableArray<Segment>>();
             if (baseType is not null)
             {
-                inherits.Add(baseType);
+                inherits.Add(SignatureRenderer.Render(baseType, Flags(definition.GetCustomAttributes(), typeNullableContext)));
                 type["base"] = baseType.DefinitionId;
             }
 
+            // Internal interfaces of this assembly are implementation details.
             var interfaces = definition.GetInterfaceImplementations()
-                .Select(implementation => Decode(_reader.GetInterfaceImplementation(implementation).Interface, context))
+                .Select(implementationHandle => _reader.GetInterfaceImplementation(implementationHandle))
+                .Select(implementation => (Implementation: implementation, Type: Decode(implementation.Interface, context)))
+                .Where(item => item.Type.Definition.IsNil || IsVisible(item.Type.Definition))
                 .ToList();
             if (interfaces.Count > 0)
             {
                 type["interfaces"] = new JsonArray(interfaces
-                    .Select(item => item.DefinitionId)
+                    .Select(item => item.Type.DefinitionId)
                     .OfType<string>()
                     .Distinct()
                     .Select(item => (JsonNode)item)
@@ -160,14 +178,17 @@ internal sealed class AssemblyExtractor
 
             if (kind != "enum")
             {
-                inherits.AddRange(interfaces);
+                inherits.AddRange(interfaces.Select(item =>
+                    SignatureRenderer.Render(item.Type, Flags(item.Implementation.GetCustomAttributes(), typeNullableContext))));
             }
 
             if (inherits.Count > 0)
             {
                 parts.Add(new Segment(" : "));
-                parts.AddRange(SignatureProvider.Join(inherits));
+                parts.AddRange(SignatureRenderer.Join(inherits));
             }
+
+            parts.AddRange(Constraints(definition.GetGenericParameters().Skip(allTypeParameters.Length - ownArity), context, typeNullableContext));
 
             ExtractMembers(handle, definition, kind, sealedType, name, context, members);
         }
@@ -232,11 +253,17 @@ internal sealed class AssemblyExtractor
                 parts.Add(new Segment("static "));
             }
 
-            parts.AddRange(signature.ReturnType.Display);
+            if (HasAttribute(property.GetCustomAttributes(), "System.Runtime.CompilerServices", "RequiredMemberAttribute"))
+            {
+                parts.Add(new Segment("required "));
+            }
+
+            var propertyContext = Context(null, handle);
+            parts.AddRange(SignatureRenderer.Render(signature.ReturnType, Flags(property.GetCustomAttributes(), propertyContext)));
             if (signature.ParameterTypes.Length > 0)
             {
                 parts.Add(new Segment(" this["));
-                parts.AddRange(Parameters(primary.Value, signature, isExtension: false, skipReturnParameter: true, parameterOwner: visibleGetter ?? visibleSetter));
+                parts.AddRange(Parameters(primary.Value, signature, isExtension: false, Context(primary.Value.GetCustomAttributes(), handle)));
                 parts.Add(new Segment("]"));
             }
             else
@@ -289,7 +316,7 @@ internal sealed class AssemblyExtractor
             {
                 new((isInterface ? string.Empty : AccessibilityText(adder.Value.Attributes) + Modifiers(adder.Value.Attributes, isInterface)) + "event "),
             };
-            parts.AddRange(eventType.Display);
+            parts.AddRange(SignatureRenderer.Render(eventType, Flags(@event.GetCustomAttributes(), Context(null, handle))));
             parts.Add(new Segment($" {name}"));
             var member = new JsonObject
             {
@@ -341,6 +368,8 @@ internal sealed class AssemblyExtractor
                 id += $"~{signature.ReturnType.Doc}";
             }
 
+            var methodContext = Context(method.GetCustomAttributes(), handle);
+            var returnType = SignatureRenderer.Render(signature.ReturnType, ReturnFlags(method, methodContext));
             var parts = new List<Segment>();
             if (!isInterface)
             {
@@ -365,14 +394,14 @@ internal sealed class AssemblyExtractor
                 var symbol = OperatorSymbol(name);
                 if (name is "op_Implicit" or "op_Explicit")
                 {
-                    displayName = $"{(name == "op_Implicit" ? "implicit" : "explicit")} operator {signature.ReturnType.DisplayText}";
+                    displayName = $"{(name == "op_Implicit" ? "implicit" : "explicit")} operator {string.Concat(returnType.Select(segment => segment.Text))}";
                     parts.Add(new Segment($"{(name == "op_Implicit" ? "implicit" : "explicit")} operator "));
-                    parts.AddRange(signature.ReturnType.Display);
+                    parts.AddRange(returnType);
                 }
                 else
                 {
                     displayName = $"operator {symbol}";
-                    parts.AddRange(signature.ReturnType.Display);
+                    parts.AddRange(returnType);
                     parts.Add(new Segment($" operator {symbol}"));
                 }
             }
@@ -380,7 +409,7 @@ internal sealed class AssemblyExtractor
             {
                 memberKind = "method";
                 displayName = name;
-                parts.AddRange(signature.ReturnType.Display);
+                parts.AddRange(returnType);
                 parts.Add(new Segment($" {name}"));
                 if (methodTypeParameters.Length > 0)
                 {
@@ -389,8 +418,9 @@ internal sealed class AssemblyExtractor
             }
 
             parts.Add(new Segment("("));
-            parts.AddRange(Parameters(method, signature, isExtension));
+            parts.AddRange(Parameters(method, signature, isExtension, methodContext));
             parts.Add(new Segment(")"));
+            parts.AddRange(Constraints(method.GetGenericParameters(), context, methodContext));
             var member = new JsonObject
             {
                 ["id"] = id,
@@ -440,8 +470,13 @@ internal sealed class AssemblyExtractor
                     ? " const"
                     : ((field.Attributes & FieldAttributes.Static) != 0 ? " static" : string.Empty)
                       + ((field.Attributes & FieldAttributes.InitOnly) != 0 ? " readonly" : string.Empty);
+                if (HasAttribute(field.GetCustomAttributes(), "System.Runtime.CompilerServices", "RequiredMemberAttribute"))
+                {
+                    modifiers += " required";
+                }
+
                 parts.Add(new Segment((access == FieldAttributes.Public ? "public" : access == FieldAttributes.Family ? "protected" : "protected internal") + modifiers + " "));
-                parts.AddRange(fieldType.Display);
+                parts.AddRange(SignatureRenderer.Render(fieldType, Flags(field.GetCustomAttributes(), Context(null, handle))));
                 parts.Add(new Segment($" {name}"));
                 if ((field.Attributes & FieldAttributes.Literal) != 0 && !constant.IsNil)
                 {
@@ -472,11 +507,9 @@ internal sealed class AssemblyExtractor
         MethodDefinition method,
         MethodSignature<TypeSig> signature,
         bool isExtension,
-        bool skipReturnParameter = true,
-        MethodDefinition? parameterOwner = null)
+        byte nullableContext)
     {
-        var owner = parameterOwner ?? method;
-        var parameters = owner.GetParameters()
+        var parameters = method.GetParameters()
             .Select(handle => _reader.GetParameter(handle))
             .Where(parameter => parameter.SequenceNumber > 0)
             .ToDictionary(parameter => parameter.SequenceNumber);
@@ -491,7 +524,9 @@ internal sealed class AssemblyExtractor
             parameters.TryGetValue(index + 1, out var parameter);
             var hasParameter = parameters.ContainsKey(index + 1);
             var prefix = index == 0 && isExtension ? "this " : string.Empty;
-            if (hasParameter && HasAttribute(parameter.GetCustomAttributes(), "System", "ParamArrayAttribute"))
+            if (hasParameter
+                && (HasAttribute(parameter.GetCustomAttributes(), "System", "ParamArrayAttribute")
+                    || HasAttribute(parameter.GetCustomAttributes(), "System.Runtime.CompilerServices", "ParamCollectionAttribute")))
             {
                 prefix += "params ";
             }
@@ -511,7 +546,8 @@ internal sealed class AssemblyExtractor
                 yield return new Segment(prefix);
             }
 
-            foreach (var segment in type.Display)
+            var flags = hasParameter ? Flags(parameter.GetCustomAttributes(), nullableContext) : new NullableFlags([], nullableContext);
+            foreach (var segment in SignatureRenderer.Render(type, flags))
             {
                 yield return segment;
             }
@@ -523,8 +559,170 @@ internal sealed class AssemblyExtractor
                 {
                     var constant = parameter.GetDefaultValue();
                     var text = constant.IsNil ? "default" : ConstantText(constant);
-                    yield return new Segment($" = {(text == "null" && type.IsValueType ? "default" : text)}");
+                    yield return new Segment($" = {DefaultText(type, text)}");
                 }
+            }
+        }
+    }
+
+    /// <summary>Shows enum defaults by name and value-type nulls as <c>default</c>.</summary>
+    private string DefaultText(TypeSig type, string text)
+    {
+        var target = type.IsByRef ? type.Element : type;
+        if (text == "null")
+        {
+            return target.IsValueType ? "default" : text;
+        }
+
+        if (target.Kind != SigKind.Named || !target.IsValueType)
+        {
+            return text;
+        }
+
+        if (!target.Definition.IsNil)
+        {
+            var definition = _reader.GetTypeDefinition(target.Definition);
+            if (!definition.BaseType.IsNil && Decode(definition.BaseType, GenericContext.Empty).Doc == "System.Enum")
+            {
+                foreach (var fieldHandle in definition.GetFields())
+                {
+                    var field = _reader.GetFieldDefinition(fieldHandle);
+                    var constant = field.GetDefaultValue();
+                    if ((field.Attributes & FieldAttributes.Literal) != 0 && !constant.IsNil && ConstantText(constant) == text)
+                    {
+                        return $"{target.Name}.{_reader.GetString(field.Name)}";
+                    }
+                }
+
+                return $"({target.Name}){text}";
+            }
+
+            return text;
+        }
+
+        // A named value type with a numeric constant is an enum from another
+        // assembly, whose member names are not available here.
+        return $"({target.Name}){text}";
+    }
+
+    /// <summary>
+    /// NullableContextAttribute of the member, else of its declaring types
+    /// outward; 0 (oblivious) when none applies.
+    /// </summary>
+    private byte Context(CustomAttributeHandleCollection? memberAttributes, TypeDefinitionHandle type)
+    {
+        if (memberAttributes is { } attributes && NullableValue(attributes, "NullableContextAttribute") is { Length: 1 } member)
+        {
+            return member[0];
+        }
+
+        for (var current = type; !current.IsNil; current = _reader.GetTypeDefinition(current).GetDeclaringType())
+        {
+            if (NullableValue(_reader.GetTypeDefinition(current).GetCustomAttributes(), "NullableContextAttribute") is { Length: 1 } value)
+            {
+                return value[0];
+            }
+        }
+
+        return 0;
+    }
+
+    private NullableFlags Flags(CustomAttributeHandleCollection attributes, byte context) =>
+        NullableValue(attributes, "NullableAttribute") switch
+        {
+            { Length: 1 } single => new NullableFlags([], single[0]),
+            { } flags => new NullableFlags(flags, context),
+            null => new NullableFlags([], context),
+        };
+
+    /// <summary>The return type's annotations live on parameter row 0.</summary>
+    private NullableFlags ReturnFlags(MethodDefinition method, byte context)
+    {
+        foreach (var handle in method.GetParameters())
+        {
+            var parameter = _reader.GetParameter(handle);
+            if (parameter.SequenceNumber == 0)
+            {
+                return Flags(parameter.GetCustomAttributes(), context);
+            }
+        }
+
+        return new NullableFlags([], context);
+    }
+
+    /// <summary>The byte or byte[] argument of a nullable attribute, if present.</summary>
+    private ImmutableArray<byte>? NullableValue(CustomAttributeHandleCollection attributes, string name)
+    {
+        foreach (var handle in attributes)
+        {
+            if (AttributeName(handle) != ("System.Runtime.CompilerServices", name))
+            {
+                continue;
+            }
+
+            var value = _reader.GetCustomAttribute(handle).DecodeValue(new AttributeTypeProvider());
+            return value.FixedArguments[0].Value switch
+            {
+                byte single => [single],
+                ImmutableArray<CustomAttributeTypedArgument<string>> array => array.Select(item => (byte)item.Value!).ToImmutableArray(),
+                _ => null,
+            };
+        }
+
+        return null;
+    }
+
+    /// <summary>C# <c>where</c> clauses for generic parameters that have constraints.</summary>
+    private IEnumerable<Segment> Constraints(IEnumerable<GenericParameterHandle> parameters, GenericContext context, byte nullableContext)
+    {
+        foreach (var handle in parameters)
+        {
+            var parameter = _reader.GetGenericParameter(handle);
+            var attributes = parameter.Attributes;
+            // Roslyn marks notnull and class with 1, class? and unconstrained
+            // parameters with 2, eliding the value that equals the context.
+            var own = NullableValue(parameter.GetCustomAttributes(), "NullableAttribute")?.FirstOrDefault() ?? nullableContext;
+            var clauses = new List<ImmutableArray<Segment>>();
+            var isStruct = (attributes & GenericParameterAttributes.NotNullableValueTypeConstraint) != 0;
+            if ((attributes & GenericParameterAttributes.ReferenceTypeConstraint) != 0)
+            {
+                clauses.Add([new Segment(own == 2 ? "class?" : "class")]);
+            }
+            else if (isStruct)
+            {
+                clauses.Add([new Segment(HasAttribute(parameter.GetCustomAttributes(), "System.Runtime.CompilerServices", "IsUnmanagedAttribute") ? "unmanaged" : "struct")]);
+            }
+
+            var types = parameter.GetConstraints()
+                .Select(constraintHandle => _reader.GetGenericParameterConstraint(constraintHandle))
+                .Select(constraint => (Constraint: constraint, Type: Decode(constraint.Type, context)))
+                .Where(item => !(isStruct && item.Type.Doc == "System.ValueType"))
+                .ToList();
+            if (clauses.Count == 0 && types.Count == 0 && own == 1)
+            {
+                clauses.Add([new Segment("notnull")]);
+            }
+
+            clauses.AddRange(types.Select(item => SignatureRenderer.Render(item.Type, Flags(item.Constraint.GetCustomAttributes(), nullableContext))));
+            if ((attributes & GenericParameterAttributes.DefaultConstructorConstraint) != 0 && !isStruct)
+            {
+                clauses.Add([new Segment("new()")]);
+            }
+
+            if (((int)attributes & 0x20) != 0)
+            {
+                clauses.Add([new Segment("allows ref struct")]);
+            }
+
+            if (clauses.Count == 0)
+            {
+                continue;
+            }
+
+            yield return new Segment($" where {_reader.GetString(parameter.Name)} : ");
+            foreach (var segment in SignatureRenderer.Join(clauses))
+            {
+                yield return segment;
             }
         }
     }

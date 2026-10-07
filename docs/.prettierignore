@@ -10,3 +10,4 @@ static
 
 sources/sdk
 sources/api
+tools/ApiExtractor.Fixture/expected.json

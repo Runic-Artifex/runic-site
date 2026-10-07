@@ -1,0 +1,649 @@
+{
+  "package": "Runic.ApiExtractor.Fixture",
+  "version": "1.0.0",
+  "framework": "net10.0",
+  "frameworks": [
+    "net10.0"
+  ],
+  "assemblies": [
+    "ApiExtractor.Fixture"
+  ],
+  "types": [
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.CommandDescriptor`1",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "CommandDescriptor<T>",
+      "kind": "record",
+      "interfaces": [
+        "T:System.IEquatable`1"
+      ],
+      "signature": [
+        "public sealed record CommandDescriptor<T> : ",
+        [
+          "IEquatable",
+          "T:System.IEquatable`1"
+        ],
+        "<",
+        [
+          "CommandDescriptor",
+          "T:Runic.ApiExtractor.Fixture.CommandDescriptor`1"
+        ],
+        "<T>> where T : class"
+      ],
+      "docs": {
+        "summary": [
+          "Describes one command, like ",
+          {
+            "c": "CommandDescriptor<T>"
+          },
+          "."
+        ],
+        "params": [
+          {
+            "name": "Name",
+            "doc": [
+              "The command name."
+            ]
+          },
+          {
+            "name": "ExecuteAsync",
+            "doc": [
+              "Runs the command."
+            ]
+          }
+        ],
+        "typeparams": [
+          {
+            "name": "T",
+            "doc": [
+              "The command state."
+            ]
+          }
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.CommandDescriptor`1.#ctor(System.String,System.Func{`0,System.Threading.CancellationToken,System.Object,System.Threading.Tasks.Task})",
+          "kind": "constructor",
+          "name": "CommandDescriptor",
+          "signature": [
+            "public CommandDescriptor(string Name, ",
+            [
+              "Func",
+              "T:System.Func`4"
+            ],
+            "<T, ",
+            [
+              "CancellationToken",
+              "T:System.Threading.CancellationToken"
+            ],
+            ", object?, ",
+            [
+              "Task",
+              "T:System.Threading.Tasks.Task"
+            ],
+            ">? ExecuteAsync = null)"
+          ],
+          "docs": {
+            "summary": [
+              "Describes one command, like ",
+              {
+                "c": "CommandDescriptor<T>"
+              },
+              "."
+            ],
+            "params": [
+              {
+                "name": "Name",
+                "doc": [
+                  "The command name."
+                ]
+              },
+              {
+                "name": "ExecuteAsync",
+                "doc": [
+                  "Runs the command."
+                ]
+              }
+            ],
+            "typeparams": [
+              {
+                "name": "T",
+                "doc": [
+                  "The command state."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.CommandDescriptor`1.ExecuteAsync",
+          "kind": "property",
+          "name": "ExecuteAsync",
+          "signature": [
+            "public ",
+            [
+              "Func",
+              "T:System.Func`4"
+            ],
+            "<T, ",
+            [
+              "CancellationToken",
+              "T:System.Threading.CancellationToken"
+            ],
+            ", object?, ",
+            [
+              "Task",
+              "T:System.Threading.Tasks.Task"
+            ],
+            ">? ExecuteAsync { get; init; }"
+          ],
+          "docs": {
+            "summary": [
+              "Runs the command."
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.CommandDescriptor`1.Name",
+          "kind": "property",
+          "name": "Name",
+          "signature": [
+            "public string Name { get; init; }"
+          ],
+          "docs": {
+            "summary": [
+              "The command name."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.ISource`1",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "ISource<T>",
+      "kind": "interface",
+      "signature": [
+        "public interface ISource<out T>"
+      ],
+      "docs": {
+        "summary": [
+          "A covariant source."
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.ISource`1.Read",
+          "kind": "method",
+          "name": "Read",
+          "signature": [
+            "T Read()"
+          ],
+          "docs": {
+            "summary": [
+              "Reads a value."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.StartMode",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "StartMode",
+      "kind": "enum",
+      "signature": [
+        "public enum StartMode"
+      ],
+      "docs": {
+        "summary": [
+          "Selects how a ",
+          {
+            "see": "T:Runic.ApiExtractor.Fixture.Widget"
+          },
+          " starts."
+        ]
+      },
+      "members": [
+        {
+          "id": "F:Runic.ApiExtractor.Fixture.StartMode.Immediate",
+          "kind": "value",
+          "name": "Immediate",
+          "signature": [
+            "Immediate = 0"
+          ],
+          "docs": {
+            "summary": [
+              "Start at once."
+            ]
+          }
+        },
+        {
+          "id": "F:Runic.ApiExtractor.Fixture.StartMode.Deferred",
+          "kind": "value",
+          "name": "Deferred",
+          "signature": [
+            "Deferred = 1"
+          ],
+          "docs": {
+            "summary": [
+              "Wait for a signal."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.Widget",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "Widget",
+      "kind": "class",
+      "interfaces": [
+        "T:System.IDisposable",
+        "T:System.ComponentModel.INotifyPropertyChanged"
+      ],
+      "signature": [
+        "public class Widget : ",
+        [
+          "IDisposable",
+          "T:System.IDisposable"
+        ],
+        ", ",
+        [
+          "INotifyPropertyChanged",
+          "T:System.ComponentModel.INotifyPropertyChanged"
+        ]
+      ],
+      "docs": {
+        "summary": [
+          "A widget with every member shape the extractor renders."
+        ],
+        "remarks": [
+          "See ",
+          {
+            "see": "M:Runic.ApiExtractor.Fixture.Widget.StartAsync(Runic.ApiExtractor.Fixture.StartMode,System.String,System.Threading.CancellationToken)"
+          },
+          "."
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.#ctor(System.String)",
+          "kind": "constructor",
+          "name": "Widget",
+          "signature": [
+            "public Widget(string? name = null)"
+          ],
+          "obsolete": "Constructors of types with required members are not supported in this version of your compiler.",
+          "docs": {
+            "summary": [
+              "Creates a widget."
+            ],
+            "params": [
+              {
+                "name": "name",
+                "doc": [
+                  "An optional name."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "F:Runic.ApiExtractor.Fixture.Widget.DefaultName",
+          "kind": "field",
+          "name": "DefaultName",
+          "signature": [
+            "public const string DefaultName = \"widget\""
+          ],
+          "docs": {
+            "summary": [
+              "The default name."
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.Widget.Aliases",
+          "kind": "property",
+          "name": "Aliases",
+          "signature": [
+            "public string[]? Aliases { get; protected set; }"
+          ],
+          "docs": {
+            "summary": [
+              "A nullable array of non-null strings."
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.Widget.Item(System.Int32)",
+          "kind": "indexer",
+          "name": "this[]",
+          "signature": [
+            "public string? this[int index] { get; }"
+          ],
+          "docs": {
+            "summary": [
+              "Gets an item."
+            ],
+            "params": [
+              {
+                "name": "index",
+                "doc": [
+                  "The index."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.Widget.Labels",
+          "kind": "property",
+          "name": "Labels",
+          "signature": [
+            "public required ",
+            [
+              "IReadOnlyList",
+              "T:System.Collections.Generic.IReadOnlyList`1"
+            ],
+            "<string?> Labels { get; set; }"
+          ],
+          "docs": {
+            "summary": [
+              "Labels that may contain nulls."
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.Widget.Name",
+          "kind": "property",
+          "name": "Name",
+          "signature": [
+            "public string? Name { get; init; }"
+          ],
+          "docs": {
+            "summary": [
+              "The optional name."
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.Widget.Summary",
+          "kind": "property",
+          "name": "Summary",
+          "signature": [
+            "public (int, string?)? Summary { get; set; }"
+          ],
+          "docs": {
+            "summary": [
+              "A nullable value tuple."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.Convert``1(System.Func{Runic.ApiExtractor.Fixture.Widget,``0})",
+          "kind": "method",
+          "name": "Convert",
+          "signature": [
+            "public TResult Convert<TResult>(",
+            [
+              "Func",
+              "T:System.Func`2"
+            ],
+            "<",
+            [
+              "Widget",
+              "T:Runic.ApiExtractor.Fixture.Widget"
+            ],
+            ", TResult> convert) where TResult : class?, new()"
+          ],
+          "docs": {
+            "summary": [
+              "Converts the widget."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.Dispose",
+          "kind": "method",
+          "name": "Dispose",
+          "signature": [
+            "public void Dispose()"
+          ],
+          "docs": {
+            "inheritdoc": {}
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.Echo``1(``0)",
+          "kind": "method",
+          "name": "Echo",
+          "signature": [
+            "public T Echo<T>(T value)"
+          ],
+          "docs": {
+            "summary": [
+              "Returns its argument."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.Find``1(System.Func{``0,System.Boolean},``0[])",
+          "kind": "method",
+          "name": "Find",
+          "signature": [
+            "public TValue? Find<TValue>(",
+            [
+              "Func",
+              "T:System.Func`2"
+            ],
+            "<TValue, bool> match, params TValue[] values) where TValue : notnull"
+          ],
+          "docs": {
+            "summary": [
+              "Finds a value."
+            ],
+            "typeparams": [
+              {
+                "name": "TValue",
+                "doc": [
+                  "The value type."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.OnPropertyChanged(System.String)",
+          "kind": "method",
+          "name": "OnPropertyChanged",
+          "signature": [
+            "protected virtual void OnPropertyChanged(string propertyName)"
+          ],
+          "docs": {
+            "summary": [
+              "Raises ",
+              {
+                "see": "E:Runic.ApiExtractor.Fixture.Widget.PropertyChanged"
+              },
+              "."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.StartAsync(Runic.ApiExtractor.Fixture.StartMode,System.String,System.Threading.CancellationToken)",
+          "kind": "method",
+          "name": "StartAsync",
+          "signature": [
+            "public virtual ",
+            [
+              "Task",
+              "T:System.Threading.Tasks.Task`1"
+            ],
+            "<string?> StartAsync(",
+            [
+              "StartMode",
+              "T:Runic.ApiExtractor.Fixture.StartMode"
+            ],
+            " mode = StartMode.Deferred, string? reason = null, ",
+            [
+              "CancellationToken",
+              "T:System.Threading.CancellationToken"
+            ],
+            " cancellationToken = default)"
+          ],
+          "docs": {
+            "summary": [
+              "Starts the widget."
+            ],
+            "returns": [
+              "The previous name, if any."
+            ],
+            "params": [
+              {
+                "name": "mode",
+                "doc": [
+                  "The start mode."
+                ]
+              },
+              {
+                "name": "reason",
+                "doc": [
+                  "Why it starts."
+                ]
+              },
+              {
+                "name": "cancellationToken",
+                "doc": [
+                  "Cancels the start."
+                ]
+              }
+            ],
+            "exceptions": [
+              {
+                "cref": "T:System.InvalidOperationException",
+                "doc": [
+                  "The widget is disposed."
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.ToString",
+          "kind": "method",
+          "name": "ToString",
+          "signature": [
+            "public override string ToString()"
+          ],
+          "docs": {
+            "inheritdoc": {}
+          }
+        },
+        {
+          "id": "E:Runic.ApiExtractor.Fixture.Widget.PropertyChanged",
+          "kind": "event",
+          "name": "PropertyChanged",
+          "signature": [
+            "public event ",
+            [
+              "PropertyChangedEventHandler",
+              "T:System.ComponentModel.PropertyChangedEventHandler"
+            ],
+            "? PropertyChanged"
+          ],
+          "docs": {
+            "inheritdoc": {}
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Widget.op_Addition(Runic.ApiExtractor.Fixture.Widget,Runic.ApiExtractor.Fixture.Widget)",
+          "kind": "operator",
+          "name": "operator +",
+          "signature": [
+            "public static ",
+            [
+              "Widget",
+              "T:Runic.ApiExtractor.Fixture.Widget"
+            ],
+            " operator +(",
+            [
+              "Widget",
+              "T:Runic.ApiExtractor.Fixture.Widget"
+            ],
+            " left, ",
+            [
+              "Widget",
+              "T:Runic.ApiExtractor.Fixture.Widget"
+            ],
+            " right)"
+          ],
+          "docs": {
+            "summary": [
+              "Combines two widgets."
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.WidgetCallback`1",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "WidgetCallback<T>",
+      "kind": "delegate",
+      "signature": [
+        "public delegate void WidgetCallback<in T>(T value, string? note) where T : struct"
+      ],
+      "docs": {
+        "summary": [
+          "A callback."
+        ]
+      }
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.WidgetExtensions",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "WidgetExtensions",
+      "kind": "class",
+      "signature": [
+        "public static class WidgetExtensions"
+      ],
+      "docs": {
+        "summary": [
+          "Extensions for ",
+          {
+            "see": "T:Runic.ApiExtractor.Fixture.Widget"
+          },
+          "."
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.WidgetExtensions.Named(Runic.ApiExtractor.Fixture.Widget,System.String)",
+          "kind": "method",
+          "name": "Named",
+          "signature": [
+            "public static ",
+            [
+              "Widget",
+              "T:Runic.ApiExtractor.Fixture.Widget"
+            ],
+            " Named(this ",
+            [
+              "Widget",
+              "T:Runic.ApiExtractor.Fixture.Widget"
+            ],
+            " widget, string name)"
+          ],
+          "extension": true,
+          "docs": {
+            "summary": [
+              "Names a widget."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
