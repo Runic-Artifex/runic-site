@@ -115,7 +115,12 @@ test('owns shared root appearance state and both desktop and mobile controls', a
     layout,
     /<Sheet\.Content[\s\S]*?<AppearanceMenu[\s\S]*?onpalettechange=/,
   );
-  assert.match(layout, /<noscript>[\s\S]*?noscript-nav[\s\S]*?<\/noscript>/);
+  // Static API pages render the JavaScript-free navigation directly.
+  assert.match(layout, /\{#snippet staticNavigation\(\)\}[\s\S]*?noscript-nav/);
+  assert.match(
+    layout,
+    /<noscript>\{@render staticNavigation\(\)\}<\/noscript>/,
+  );
 
   assert.match(menu, /let accessibleLabel = \$derived/);
   assert.match(menu, /aria-label=\{accessibleLabel\}/);

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { apiPackageSlug, hasApiReference } from '#lib/api-paths.js';
   import ContentCard from '#lib/components/ContentCard.svelte';
   import { packageGoals } from '#lib/package-goals.js';
   import {
@@ -104,6 +105,16 @@
               </p>
             {/if}
             <pre><code>{packageInstallCommand(row)}</code></pre>
+            {#if hasApiReference(row.installKind)}
+              <p>
+                <a
+                  class="text-link"
+                  href={resolve('/api/[package]', {
+                    package: apiPackageSlug(row.name),
+                  })}>API reference</a
+                >
+              </p>
+            {/if}
           </section>
         {/each}
       </div>

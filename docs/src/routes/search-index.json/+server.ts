@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { apiReference } from '#lib/api.server.js';
 import { products } from '#lib/docs-data.js';
 import { guides } from '#lib/guides.server.js';
 import type { SearchEntry, SearchIndex } from '#lib/search-core.js';
@@ -25,5 +26,7 @@ export function GET() {
       x: `${product.summary} ${product.description}`,
     });
   }
+  // One entry per API type; members are found on the type page.
+  entries.push(...apiReference.searchEntries());
   return json({ version: 1, entries } satisfies SearchIndex);
 }

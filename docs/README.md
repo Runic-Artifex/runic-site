@@ -115,6 +115,34 @@ availability. `published-release.json` preserves the immutable unified
 0.6.0-preview.1 history; Command Line and Translations have separate release
 lifecycles and remain explicitly pending until their own preview is published.
 
+## API reference
+
+`/api/` documents the public API of every NuGet and npm library package in
+`src/lib/active-sdk-release.json`; templates and tools have no library API.
+The build reads only the checked-in models in `sources/api/` and their pins in
+`sources/api-inputs.json` (package, version, download URL, registry SHA-512
+and a content digest). After updating the active release, refresh them from
+the site repository root with network access and the .NET SDK:
+
+```sh
+bun docs/scripts/sync-api-inputs.mjs
+```
+
+For NuGet the script verifies each published `.nupkg` against the SHA-512 in
+the nuget.org catalog, then runs `tools/ApiExtractor`. It reads the highest
+`netX.Y` target under `lib/` (else `netstandard`) with
+`System.Reflection.Metadata`, without loading package code, and joins the XML
+documentation. For npm it verifies each tarball against `dist.integrity` and
+reads the exported declarations of every typed entry point with the TypeScript
+compiler API. A final pass resolves `<inheritdoc/>` from base types,
+interfaces or its `cref` across packages. Review the diff with the release.
+
+Reference pages are static HTML without client-side JavaScript, which keeps
+the several hundred type pages small; they show the JavaScript-free
+navigation. Search has one entry per type. `tests/api-reference.test.mjs`
+checks the pins, digest and size budgets (1.5 MB of inputs, 6 MB of rendered
+HTML), and the link check covers every reference page.
+
 See [the ownership and deployment plan](plans/documentation-ownership.md) for
 review branches and the ordered hosting cutover. This change does not publish
 or deploy either application.
