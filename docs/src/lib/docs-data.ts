@@ -235,6 +235,10 @@ export const products: Product[] = [
         label: 'Vite and TypeScript quickstart',
       },
       {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/quickstart-sveltekit.md',
+        label: 'SvelteKit quickstart',
+      },
+      {
         href: 'https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations',
         label: 'Translations guides',
       },
