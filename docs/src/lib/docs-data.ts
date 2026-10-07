@@ -256,11 +256,11 @@ export const products: Product[] = [
     description:
       'Runic Translations discovers one translations/runic.json project with locale-scoped MessageFormat 2 files. Its deterministic compiler generates identifier-safe message calls, locale metadata, request-local SSR support, typed C# and tree-shakable ESM while keeping its runtime ABI portable and NativeAOT-ready.',
     releaseProduct: null,
-    version: '0.6.0-preview.2',
+    version: '0.6.0-preview.3',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.2',
+      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.3',
     source: 'https://github.com/Runic-Artifex/runic-translations-sdk',
     bestFor: [
       'Deterministic localization builds',
