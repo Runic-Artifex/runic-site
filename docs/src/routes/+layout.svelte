@@ -34,7 +34,6 @@
     { href: '/views', label: 'Window and View' },
     { href: '/architecture', label: 'Architecture' },
     { href: '/packages', label: 'Packages' },
-    { href: '/support', label: 'Support' },
     { href: '/api', label: 'API' },
     { href: '/releases', label: 'Releases' },
   ] as const;
@@ -252,7 +251,9 @@
       <div>
         <strong>Explore</strong><a href={resolve('/products')}>Products</a><a
           href={resolve('/packages')}>Package catalog</a
-        ><a href={resolve('/architecture')}>Architecture</a>
+        ><a href={resolve('/support')}>Supported platforms</a><a
+          href={resolve('/architecture')}>Architecture</a
+        >
       </div>
       <div>
         <strong>Project</strong><a href="https://runic-artifex.eu/"
