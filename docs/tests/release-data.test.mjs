@@ -44,6 +44,16 @@ test('the unified 0.6 catalog remains immutable release history', () => {
 // `bun run docs:release` adds them once a release publishes them.
 const unpublishedInventory = [];
 
+// Orders x.y.z and x.y.z-preview.n versions; a release sorts after its previews.
+const versionKey = (version) => {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?$/.exec(version);
+  assert.ok(match, `unexpected version ${version}`);
+  const [, major, minor, patch, preview] = match;
+  return [major, minor, patch, preview ?? 99999]
+    .map((part) => String(part).padStart(5, '0'))
+    .join('.');
+};
+
 test('active catalog follows the SDK-owned package inventory only', () => {
   const inventory = [...workspace.nuget, ...workspace.npm]
     .map((entry) => entry.name)
@@ -51,7 +61,11 @@ test('active catalog follows the SDK-owned package inventory only', () => {
   const catalog = activeSdkRelease.packages
     .map((entry) => entry.identity)
     .sort();
-  assert.equal(activeSdkRelease.version, workspace.version);
+  // A development snapshot carries the next version, which is never older.
+  assert.ok(
+    versionKey(workspace.version) >= versionKey(activeSdkRelease.version),
+    `snapshot ${workspace.version} is older than ${activeSdkRelease.version}`,
+  );
   assert.deepEqual(
     catalog,
     inventory.filter((name) => !unpublishedInventory.includes(name)),

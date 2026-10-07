@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import activeSdkRelease from '../src/lib/active-sdk-release.json' with { type: 'json' };
+import support from '../sources/sdk/eng/support.json' with { type: 'json' };
 import {
   createReleaseDocs,
   packageInstallCommand,
@@ -21,6 +22,7 @@ const primaryRoutes = [
   '/architecture',
   '/packages',
   '/releases',
+  '/support',
   '/readiness',
   '/products/runic-application',
   '/products/runic-desktop',
@@ -131,6 +133,7 @@ test('keeps navigation usable before hydration and exposes the Sheet trigger con
     ['./views', 'Window and View'],
     ['./architecture', 'Architecture'],
     ['./packages', 'Packages'],
+    ['./support', 'Support'],
     ['./releases', 'Releases'],
   ]) {
     assert.match(fallback, new RegExp(`href="${href}">${label}<\\/a>`));
@@ -402,4 +405,40 @@ test('product documentation areas link to their owning guides', async () => {
       ),
       quickstart,
     );
+});
+
+test('renders the support matrix from the synchronized SDK data', async () => {
+  const html = await render('/support');
+  const text = stripMarkup(html);
+  const labels = {
+    'ci-verified': 'CI-verified',
+    'packaged-unverified': 'Packaged, not CI-verified',
+    unsupported: 'Unsupported',
+  };
+  for (const host of support.hosts) {
+    assert.match(
+      text,
+      new RegExp(host.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    );
+    for (const target of host.targets) {
+      assert.match(
+        html,
+        new RegExp(
+          `<td data-status="${target.status}"[^>]*>${labels[target.status]}</td>`,
+        ),
+        `${host.id} ${target.rid}`,
+      );
+      if (target.status !== 'ci-verified')
+        assert.ok(text.includes(target.reason), target.reason);
+    }
+  }
+  const rids = new Set(
+    support.hosts.flatMap((host) => host.targets.map((target) => target.rid)),
+  );
+  assert.equal(
+    [...html.matchAll(/<td data-status="/g)].length,
+    rids.size * support.hosts.length,
+  );
+  for (const requirement of support.requirements)
+    assert.ok(text.includes(requirement.note), requirement.id);
 });

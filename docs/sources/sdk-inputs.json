@@ -1,8 +1,9 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "7bc41a71c8a4d22ff5855e56b51067d6c02699c1",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/7bc41a71c8a4d22ff5855e56b51067d6c02699c1.tar.gz",
+  "revision": "c00f0d457341c954d49585e981721bf6ebc4251c",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/c00f0d457341c954d49585e981721bf6ebc4251c.tar.gz",
   "files": [
+    "eng/support.json",
     "eng/workspace.json",
     "examples/first-window-desktop/Program.cs",
     "examples/first-window/CounterViewModel.cs",
@@ -47,5 +48,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:8d467bf6855108e083a9a259c728cfc5e2b82d25a5c4a5d035e8d4c4493b2e25"
+  "contentDigest": "sha256:8436398ca7a701a321894bd736e3f92eebd601793e6a63dfef1a678c88287ff3"
 }

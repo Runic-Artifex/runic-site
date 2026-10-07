@@ -126,10 +126,12 @@
       <pre><code>dotnet publish -c Release -r linux-x64</code></pre>
       <p>
         Use <code>win-x64</code>, <code>osx-arm64</code> or another runtime
-        identifier for other platforms. The publish folder contains the
-        executable and a <code>www</code> folder with the built frontend; distribute
-        the whole folder. Users need no JavaScript runtime or package manager, only
-        a browser or the platform WebView.
+        identifier for other platforms; the
+        <a class="text-link" href={resolve('/support')}>supported platforms</a>
+        page lists them per host. The publish folder contains the executable and a
+        <code>www</code> folder with the built frontend; distribute the whole folder.
+        Users need no JavaScript runtime or package manager, only a browser or the
+        platform WebView.
       </p>
     </ContentCard>
     <ContentCard eyebrow="Native windows" title="Choose a host">

@@ -34,6 +34,7 @@
     { href: '/views', label: 'Window and View' },
     { href: '/architecture', label: 'Architecture' },
     { href: '/packages', label: 'Packages' },
+    { href: '/support', label: 'Support' },
     { href: '/api', label: 'API' },
     { href: '/releases', label: 'Releases' },
   ] as const;

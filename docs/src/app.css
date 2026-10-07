@@ -794,7 +794,8 @@ pre {
   font-size: 0.75rem;
 }
 
-@media (max-width: 960px) {
+/* The primary navigation needs about 1180px next to the brand and search. */
+@media (max-width: 1240px) {
   .desktop-nav {
     display: none;
   }
