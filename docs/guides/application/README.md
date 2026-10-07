@@ -11,22 +11,22 @@ construction, typed commands, property writes, and operation lifetimes. A View
 mount is acknowledged by the browser, so a content session can create and release
 its logical View as frontend routes change. Generated clients are framework-neutral;
 React, Vue, Svelte, Angular, and plain TypeScript use the same contract. They
-share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/web/views/README.md),
+share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/web/views/README.md),
 which also provides a mock Bridge for development without .NET. The
-[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/web/react/README.md) and
-[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/web/vue/README.md) packages, `useView` in
-[`@runic-artifex/svelte/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/web/svelte/README.md) and
-`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/web/angular/README.md)
+[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/web/react/README.md) and
+[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/web/vue/README.md) packages, `useView` in
+[`@runic-artifex/svelte/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/web/svelte/README.md) and
+`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/web/angular/README.md)
 connect and dispose clients with component lifetimes.
 
 Start with [getting started](getting-started/README.md), follow
 [Windows and Views, step by step](tutorial/README.md), or
 [add Runic to an existing app](existing-app.md). The
-[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/examples/first-window/README.md) is the smallest example; then read the
-[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/examples/notes-view-first/README.md) and
-[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/examples/notes-reactive-views/README.md) examples. The
+[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/examples/first-window/README.md) is the smallest example; then read the
+[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/examples/notes-view-first/README.md) and
+[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the
-[`Runic.Application` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Views/README.md).
+[`Runic.Application` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/packages/dotnet/Runic.Application.Views/README.md).
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.

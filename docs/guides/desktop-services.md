@@ -31,7 +31,7 @@ applications should use the GTK4 portal adapter and must not load GTK3 just to
 open a file. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
