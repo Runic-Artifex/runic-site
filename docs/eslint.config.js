@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     ignores: [
       'sources/sdk/**',
+      'tools/*/bin/**',
+      'tools/*/obj/**',
       '.svelte-kit/**',
       'build/**',
       'dist/**',
