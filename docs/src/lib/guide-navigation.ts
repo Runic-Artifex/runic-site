@@ -83,14 +83,6 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'desktop/nixos-development.md',
       'desktop/container-automation.md',
       'portal-implementation-audit.md',
-      {
-        file: 'desktop/vm-automation.md',
-        label: 'Desktop VM automation (deprecated)',
-      },
-      {
-        file: 'desktop/portal-vm.md',
-        label: 'NixOS portal test VMs (deprecated)',
-      },
     ],
   },
 ];

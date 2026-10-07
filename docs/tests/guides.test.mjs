@@ -270,8 +270,6 @@ test('every guide renders and appears once in the guide navigation', () => {
   assert.deepEqual(last.files.map(navigationFile).sort(), [
     'desktop/container-automation.md',
     'desktop/nixos-development.md',
-    'desktop/portal-vm.md',
-    'desktop/vm-automation.md',
     'portal-implementation-audit.md',
   ]);
   const contributing = guideNavigation.find((group) =>
@@ -279,11 +277,6 @@ test('every guide renders and appears once in the guide navigation', () => {
   );
   assert.equal(contributing.title, 'Contributing to Application');
   const sidebar = render('/guides/');
-  for (const label of [
-    'Desktop VM automation (deprecated)',
-    'NixOS portal test VMs (deprecated)',
-  ])
-    assert.ok(sidebar.includes(`>${label}</a>`), label);
   assert.match(
     sidebar,
     /<h2 class="guide-nav-heading" id="guide-nav-0">\s*Overview\s*<\/h2>\s*<ul aria-labelledby="guide-nav-0">/,

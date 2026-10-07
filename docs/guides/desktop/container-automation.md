@@ -1,11 +1,9 @@
 # Linux desktop container automation
 
-Managed systemd-nspawn is the preferred direction for Linux desktop integration
-checks. GNOME's full Flatpak/input/audio sequence runs without QEMU or a host
+Managed systemd-nspawn containers run the Linux desktop integration checks. GNOME's full Flatpak/input/audio sequence runs without QEMU or a host
 Wayland, session D-Bus, PipeWire, home-directory or device bind. Plasma has a
 separate configuration so each desktop selects its own portal implementations.
-The Linux VM helpers are deprecated compatibility tools; new Linux orchestration
-work belongs here.
+This is the only supported Linux desktop runner.
 
 ## Prepare once
 
@@ -107,10 +105,41 @@ from a private PipeWire null sink. The virtual keyboard remains alive for the
 suite: removing the last input device from a headless seat drops focus. The
 chooser uses verified native text entry and compositor Enter input.
 
-Optional local Whisper validation uses the same
-[speech verifier](vm-automation.md#orca-and-recorded-speech) against the copied
-`results` directory. The container run checks actual Orca speech requests and
-non-silent PCM independently; ASR does not replace those assertions.
+The container run checks actual Orca speech requests and non-silent PCM
+independently of any speech recognition.
+
+### Optional Whisper cross-check
+
+Optionally cross-check the recordings with local CPU Whisper. Build the tool and
+checksum-pinned English model from the SDK root, outside the normal SDK shell:
+
+```sh docs-test=skip:sdk-repository-workflow
+nix build .#vm-whisper --out-link artifacts/vm-whisper
+nix build .#vm-whisper-model --out-link artifacts/vm-whisper-model
+
+direnv exec . python3 -B tests/native/Runic.Desktop.Gtk4.Smoke/transcribe-speech.py \
+  artifacts/container-results/gnome-1/results --model artifacts/vm-whisper-model \
+  --whisper artifacts/vm-whisper/bin/whisper-cli \
+  --output artifacts/container-results/gnome-1/transcripts
+```
+
+This uses locked whisper.cpp 1.9.2 with base.en, four CPU threads and no cloud
+service. The model is an opt-in approximately 148 MB dependency. The script
+requires the native checks to have passed, rechecks the WAV, and compares the
+recognized label and role. Expected phrases are never passed as recognition
+prompts. It retains the transcript and recognizer diagnostics, and returns
+nonzero for mismatches; inspect both audio and Orca output before attributing
+an ASR mismatch to Runic. Recognition can invent text in non-speech audio, so it
+cannot replace the independent native and PCM assertions. See the
+[Whisper model card](https://github.com/openai/whisper/blob/main/model-card.md)
+and [whisper.cpp](https://github.com/ggml-org/whisper.cpp).
+
+The audio checks have focused negative tests:
+
+```sh docs-test=skip:sdk-repository-workflow
+direnv exec . python3 -B -m unittest discover \
+  -s tests/native/Runic.Desktop.Gtk4.Smoke -p test_speech_audio.py
+```
 
 ## Compositor input and notifications
 
@@ -198,6 +227,28 @@ checks. The keyboard checks cover all fixture controls in both directions and re
 native focus events, text insertion events, text values and caret positions;
 `accessibility-events.json` retains the observed events. Numeric/range controls,
 selection-change events and broader assistive-technology interaction remain
-future coverage. CI host provisioning can extend the runner. Windows VM and future real-macOS testing are unchanged. Linux VM
-helpers are deprecated compatibility tools; new Linux test work belongs in the
-managed container runner. These coverage limitations do not add release gates.
+future coverage. CI host provisioning can extend the runner. Windows VM and future real-macOS
+testing are separate workstreams. These coverage limitations do not add release
+gates.
+
+## Extending the suite
+
+Extend managed containers for Linux. Prepare immutable fixtures and pinned
+runtime dependencies before the interaction phase, and keep GNOME/Plasma jobs
+separate. Windows VM and real macOS adapters remain independent workstreams.
+
+| Area                  | Automation approach and next assertion                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Keyboard and IME      | GNOME/IBus and KDE/Fcitx5 compositor typing, Tab/Shift+Tab and Pinyin pass in containers. Physical devices remain separate. Changing an accessible text value does not test an IME.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Scaling and targeting | The container adapters set/read actual Mutter/KScreen scales and verify compositor pointer hits at 100%, 150% and 200%. Standalone Xorg verifies XSettings 96/144/192 DPI, WebView pixel ratios and XTEST targeting. Visual caret/candidate placement remains separate. CSS zoom and an AT-SPI button action do not establish physical targeting.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Notifications         | The container adapter activates the visible shell action and asserts the token, receiver PID and native focused-window result for live and cold launch. Calling the application's D-Bus callback directly would bypass the activation-token behavior under test.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Accessibility         | Native roles/focus, Orca speech records, recorded audio and optional local ASR now work in GNOME and KDE. Native values, insertion/caret events and complete forward/reverse keyboard focus order also pass. Listening remains useful for announcement quality.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Windows               | Use the [Windows UI Automation smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/tests/native/Runic.Desktop.WebViewSmoke/windows-ui-automation.md) through the existing interactive VM login. It verifies WebView2 accessibility names, editable focus, `ValuePattern`, `InvokePattern`, actual typed text and complete forward/reverse Tab navigation with native focused-element identity and `HasKeyboardFocus`, a UIA-point mouse click at the VM's observed 96 DPI, native open-file selection, open/save cancellation and atomic save with independent file verification, live output and deterministic process exit for JIT and executable-only NativeAOT publishes. Run native power-request checks independently. Session-0 SSH alone cannot cover interactive display behavior. Opt-in Narrator label/role speech with real WASAPI audio is implemented. IME composition remains application-specific and outside this smoke. Physical input, visual candidate placement, independent audio transcription, display-scale changes/multi-DPI pointer behavior, overwrite-confirmation flows and visual rendering remain Windows work. |
+| macOS                 | Add an AXUIElement/Accessibility adapter and native assertions after the real Mac is available. Keep native support explicitly untested until then.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+Start these as focused, opt-in desktop jobs. Move stable scenarios into CI with
+the same prepared dependencies and failure handling. Preserve
+structured results, native logs and failure screenshots; do not add broad soaks,
+mandatory manual gates or retry failures until they happen to pass. Visual IME
+placement, spoken quality and real power transitions are still outside the
+current automated runner's claims.
