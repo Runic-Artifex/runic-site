@@ -405,7 +405,7 @@ test('product documentation areas link to their owning guides', async () => {
       'runic-desktop',
       'runic-site/blob/main/docs/guides/desktop/host-selection.md',
     ],
-    ['runic-assets', 'runic-site/tree/main/docs/guides/assets'],
+    ['runic-assets', 'runic-site/blob/main/docs/guides/assets/README.md'],
     [
       'runic-translations',
       'runic-translations-sdk/blob/main/docs/guides/translations/quickstart-dotnet.md',

@@ -4,7 +4,7 @@ Use `DesktopWindowOptions.ConfirmCloseAsync` when closing a native window can di
 application state. The application owns the decision and its UI; Desktop owns native
 interception and window lifetime. No viewmodel or CommunityToolkit adapter is involved.
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 await using var window = await surface.OpenWindowAsync(new DesktopWindowOptions
 {
     Browser = BrowserKind.Embedded,

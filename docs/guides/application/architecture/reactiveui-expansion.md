@@ -49,7 +49,7 @@ Runic separates an ordinary bridge command call from a retained operation.
 The former keeps the existing fire-and-snapshot behavior. The latter is the
 generated recovery API for ReactiveUI commands and has a request ID:
 
-```ts
+```ts docs-test=skip:illustrative-fragment
 const operation = await editor.startSaveWithRequestId(id, request);
 const outcome = await operation.completion;
 if (outcome.kind === 'succeeded') use(outcome.result);
@@ -105,7 +105,7 @@ model graph. `RunicModelContext` provides the default queue. A synchronous
 bridge route enters a synchronous turn only to decode, inspect state, or change
 state. It never holds that turn across a task, I/O operation, or interaction.
 
-```text
+```text docs-test=skip:diagram
 turn: capture input / change local state
 await: storage, network, or interaction
 turn: apply the result / take the next snapshot

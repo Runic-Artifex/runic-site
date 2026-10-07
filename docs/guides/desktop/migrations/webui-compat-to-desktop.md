@@ -18,29 +18,35 @@ listener, sessions, and a platform presentation at once.
 
 The common server-only migration is:
 
-```csharp
-await using var host = await DesktopHost.StartAsync(new DesktopHostOptions
+```csharp docs-test=source:examples/first-window-desktop/Program.cs
+await using var desktop = await DesktopHost.StartAsync(new DesktopHostOptions
 {
-    Port = 0,
+    ...
 });
-await using var surface = await host.CreateSurfaceAsync(new DesktopSurfaceOptions
+var surfaceOptions = new DesktopSurfaceOptions
 {
-    Content = content,
-});
+    Content = new DesktopContent.Directory(Path.Combine(AppContext.BaseDirectory, "www"), "index.html"),
+};
+...
+await using var surface = await desktop.CreateSurfaceAsync(surfaceOptions);
 ```
+
+`Content` takes one `DesktopContent` case: `Directory(root, entry?)` for local
+files, `Html(document)`, `ExternalUrl(url)` or `Handler(contentHandler)`. Only
+directory content serves local files. This form is unreleased and ships with
+Runic SDK 0.7.0-preview.1; 0.6.0-preview.1 sets `RootFolder` and a `Content`
+string, or `ContentHandler`. The
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/main/eng/release/notes/0.7.0-preview.1.md#upgrading)
+map each 0.6 form to its case.
 
 Register capabilities on the surface, then open an optional window:
 
-```csharp
-using var registration = surface.RegisterCapability(
+```csharp docs-test=readme:packages/dotnet/Runic.Desktop/pack/README.md
+using var greeting = surface.RegisterCapability(
     "greet",
     static (invocation, _) =>
         ValueTask.FromResult<PresentationResult>($"Hello, {invocation.GetString()}!"));
-
-await using var window = await surface.OpenWindowAsync(new DesktopWindowOptions
-{
-    Browser = BrowserKind.Embedded,
-});
+await using var window = await surface.OpenWindowAsync();
 window.WaitForClose();
 ```
 

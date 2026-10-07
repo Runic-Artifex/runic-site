@@ -4,14 +4,14 @@
 complete ZIP, and records a JSON inventory with hashes and byte counts. It never
 removes files based on its category guesses.
 
-```sh
-dotnet runic size --project App.csproj --runtime linux-x64 --host desktop \
-  --profile default --report measurements/desktop.json
-dotnet runic size --project App.csproj --runtime linux-x64 --host desktop \
-  --profile minimal --report measurements/minimal.json
-dotnet runic size --project App.csproj --runtime linux-x64 --host cswebui \
-  --report measurements/cswebui.json
+```sh docs-test=readme:tools/dotnet-runic/README.md
+dotnet runic size --project path/to/App.csproj --runtime linux-x64 --report measurements/linux.json
 ```
+
+`--runtime` is required. `--project` selects the project when the directory has
+several, and `--configuration` overrides Release. The host and the
+[minimal hosting profile](#minimal-desktop-hosting) come from the project, so
+compare them by measuring each project configuration into its own report.
 
 The command uses Release, self-contained NativeAOT and size optimization by
 default. Use `--no-aot` for a managed comparison. It preserves your project's
@@ -22,7 +22,7 @@ evidence is retained. `--output json` selects the command's JSON envelope;
 A successful publish alone has verification status `not-run`. Supply a checker
 that exercises the actual published application to earn `passed`:
 
-```sh
+```sh docs-test=skip:illustrative-command
 dotnet runic size --runtime linux-x64 --report measurements/checked.json \
   --verify bun --verify-argument ./check-published-app.mjs
 ```
@@ -47,7 +47,7 @@ paths and command arguments: review it before sharing.
 
 Enable the opt-in profile for ordinary publishing with:
 
-```xml
+```xml docs-test=skip:illustrative-project-setting
 <PropertyGroup>
   <RunicDesktopMinimalHost>true</RunicDesktopMinimalHost>
   <PublishAot>true</PublishAot>
@@ -105,7 +105,7 @@ results are separate from the older minimal sample's 8.25 MiB Desktop measuremen
 
 After building and packing local package candidates:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 nix develop
 CONFIGURATION=Release bun run pack
 CONFIGURATION=Release bun run verify:footprint

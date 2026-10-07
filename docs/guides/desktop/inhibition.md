@@ -5,7 +5,7 @@ Use inhibition only around an explicit operation such as a long export. Request
 only when the operation also needs the display to stay awake. Each acquisition
 owns an independent lease. Dispose it on success, failure and cancellation:
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 var result = await inhibition.AcquireAsync(
     DesktopInhibitionEffects.SystemSleep, "Exporting the project", cancellationToken);
 if (result is PlatformResult<IDesktopInhibitionLease>.Success acquired)
@@ -52,7 +52,7 @@ session. The live test's display request failed in SSH's service session and
 passed in the logged-in desktop session; do not assume a service can keep a
 user's display awake. Run the focused test there:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 dotnet run --project tests/dotnet/Runic.Platform.Windows.Tests -c Release -- --native-inhibition
 ```
 

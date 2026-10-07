@@ -13,7 +13,7 @@ The host needs the active managed-nspawn helpers and BTF-enabled systemd describ
 in [the container configuration](https://github.com/Runic-Artifex/runic-sdk/blob/main/nixos/portal-container/README.md).
 Prepare one small base directory, in a parent owned by the invoking user:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 mkdir -p /tmp/runic-desktop-base
 sudo install -d -o root -g root -m 0755 /tmp/runic-desktop-base/root \
   /tmp/runic-desktop-base/root/usr /tmp/runic-desktop-base/root/usr/bin
@@ -29,7 +29,7 @@ results have been copied out. Do not use a real system root as this base.
 
 Build the chosen desktop and locked Flatpak preparation tools from the SDK root:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 nix build .#nixosConfigurations.runic-headless-gnome.config.system.build.toplevel \
   --out-link artifacts/container-gnome
 nix build .#nixosConfigurations.runic-headless-kde.config.system.build.toplevel \
@@ -41,7 +41,7 @@ Prepare the standard runtime once, outside the network-isolated test. The helper
 pins both GNOME Platform 50 and its Mesa GL extension and uses a dedicated cache;
 it does not install anything into the host user's normal Flatpak installation.
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 PATH="$PWD/artifacts/desktop-flatpak-tools/bin:$PATH" \
   bash nixos/portal-container/prepare-runtime.sh "$PWD/.cache/container-flatpak" \
   > /tmp/runic-runtime-path
@@ -60,7 +60,7 @@ using the locked SDK environment. For the native suite, use the ordinary
 NativeAOT fixture publish. Put only the required executable and installer in a
 small directory, then freeze that directory as the test input:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 mkdir -p .cache/container-inputs
 cp tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/install.sh \
   .cache/container-inputs/install-flatpak.sh
@@ -79,7 +79,7 @@ SDK caches and build outputs out of Nix source snapshots.
 
 ## Run and collect
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 python3 -B nixos/portal-container/run.py \
   --desktop gnome --system artifacts/container-gnome \
   --root /tmp/runic-desktop-base/root \

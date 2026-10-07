@@ -19,8 +19,10 @@ which also provides a mock Bridge for development without .NET. The
 `injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/angular/README.md)
 connect and dispose clients with component lifetimes.
 
-Start with [getting started](getting-started/README.md) or the
-[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/first-window/README.md), then read the
+Start with [getting started](getting-started/README.md), follow
+[Windows and Views, step by step](tutorial/README.md), or
+[add Runic to an existing app](existing-app.md). The
+[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/first-window/README.md) is the smallest example; then read the
 [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/notes-view-first/README.md) and
 [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the

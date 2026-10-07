@@ -8,7 +8,7 @@ Linux workflow. Windows VM testing is unaffected.
 The SDK flake provides two isolated graphical NixOS VMs for native portal
 acceptance. Build exactly one desktop at a time:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 nix build .#nixosConfigurations.runic-portal-kde.config.system.build.vm
 ./result/bin/run-runic-portal-kde-vm
 
@@ -40,7 +40,7 @@ Build outputs never modify the mounted source.
 Open the desktop's terminal application inside the VM and run one check at a
 time:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 runic-portal-test settings
 runic-portal-test native
 runic-portal-test notifications
@@ -76,7 +76,7 @@ and log in as `runic` on the serial console. The graphical window remains
 available for manual interaction. Import the guest desktop's display environment
 before running native checks from that console:
 
-```sh
+```sh docs-test=skip:sdk-repository-workflow
 export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
 while IFS='=' read -r name value; do
   case "$name" in

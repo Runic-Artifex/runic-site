@@ -102,7 +102,7 @@ their observable yields zero values. A non-void command defaults to an
 exactly-one result. Mark a property when its observable intentionally has a
 different cardinality:
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 [RunicCommandResult(BridgeCommandResultCardinality.Last)]
 public IReactiveCommand<SaveRequest, SaveResult> SaveCommand { get; }
 
@@ -136,7 +136,7 @@ ReactiveUI's command error policy.
 Use a plain synchronous command where its fire-and-snapshot contract is the
 right fit:
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 [RunicCommandInput(typeof(SaveRequest))]
 public ICommand SaveCommand { get; }
 ```
@@ -146,7 +146,7 @@ public ICommand SaveCommand { get; }
 An interaction property is application-owned and must be a public getter with
 no public setter. Its browser surface is typed from the same graph:
 
-```ts
+```ts docs-test=skip:illustrative-fragment
 const stop = view.interactions.confirmDiscard.handle(
   async (request, { signal }) => showConfirmation(request, signal),
 );
@@ -186,7 +186,7 @@ window.
 `RunicModelContext` queues short synchronous reads and mutations. Await I/O or
 an interaction outside a turn, then use a later turn to commit state:
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 await context.InvokeAsync(() => viewModel.IsSaving = true, cancellationToken);
 var result = await repository.SaveAsync(request, cancellationToken);
 await context.InvokeAsync(() => viewModel.Apply(result), cancellationToken);
@@ -214,7 +214,7 @@ main-thread scheduler.
 Create and bind the context before constructing commands, then pass its
 scheduler as the positional scheduler argument to the ReactiveUI factory:
 
-```csharp
+```csharp docs-test=skip:illustrative-fragment
 services.AddRunicReactiveModelContext();
 
 public EditorViewModel(

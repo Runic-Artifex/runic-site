@@ -34,8 +34,9 @@ retained history are recorded in `sources/portal-origin.json`.
 
 The Application creator imports only the template files and package inventory
 listed in `sources/sdk-inputs.json`; these checked-in inputs have an immutable
-SDK revision and SHA-256 digest. To refresh them, update the pin and digest, then
-run from the repository root:
+SDK revision and SHA-256 digest. The same snapshot holds the example tests and
+package READMEs that the guides quote. To refresh them, update the pin and
+digest, then run from the repository root:
 
 ```sh
 bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
@@ -44,6 +45,20 @@ bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
 The script checks the checkout revision and source bytes before replacing the
 snapshot. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
+
+Every fenced code block in `guides/` names its check with `docs-test=<kind>`
+in its info string; `tests/guide-snippets.test.mjs` enforces this and rejects
+indented code blocks and misspelled attributes. `commands` blocks must match
+the commands the creator, the catalog and the generated README produce.
+`template:<path>` and `source:<path>` blocks are excerpts of the template or
+of examples and tests, which the SDK's CI builds and runs, so these snippets
+are compiled code. `readme:<path>` blocks are excerpts of SDK package READMEs;
+they only track the README text, which SDK CI does not compile. In each case a
+snapshot refresh that changes the quoted text fails here until the guide
+follows. `skip:<reason>` marks blocks that are not checked, such as SDK
+repository workflows; quickstart guides may not skip. The snapshot follows the SDK's
+`main` branch; guides mark APIs that are not in the published release as
+unreleased.
 
 Runic Translations owns canonical schemas. Preserve the existing pin and content
 digest in `sources/translations-schemas.json`. Synchronize a changed pin with:

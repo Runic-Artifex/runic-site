@@ -1,9 +1,18 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "63b07c440d6b72bf15212a6b8a7225a381a5e9cd",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/63b07c440d6b72bf15212a6b8a7225a381a5e9cd.tar.gz",
+  "revision": "b98326c7809ca446f2acbfe27ddc551b1dd8b93f",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/b98326c7809ca446f2acbfe27ddc551b1dd8b93f.tar.gz",
   "files": [
     "eng/workspace.json",
+    "examples/first-window-desktop/Program.cs",
+    "examples/first-window/CounterViewModel.cs",
+    "examples/first-window/Frontend/src/app.ts",
+    "examples/notes-view-first/Frontend/test/notes.test.ts",
+    "examples/notes-view-first/Tests/NotesWindowTests.cs",
+    "packages/dotnet/Runic.Assets.AspNetCore/README.md",
+    "packages/dotnet/Runic.Assets.Desktop/README.md",
+    "packages/dotnet/Runic.Assets/README.md",
+    "packages/dotnet/Runic.Desktop/pack/README.md",
     "tools/Runic.Application.Templates/content/runic-app/.template.config/dotnetcli.host.json",
     "tools/Runic.Application.Templates/content/runic-app/.template.config/template.json",
     "tools/Runic.Application.Templates/content/runic-app/Program.cs",
@@ -15,10 +24,13 @@
     "tools/Runic.Application.Templates/content/runic-app/frontends/angular/src/index.html",
     "tools/Runic.Application.Templates/content/runic-app/frontends/react/index.html",
     "tools/Runic.Application.Templates/content/runic-app/frontends/react/src/App.tsx",
+    "tools/Runic.Application.Templates/content/runic-app/frontends/react/src/pages/CounterPage.tsx",
     "tools/Runic.Application.Templates/content/runic-app/frontends/svelte/index.html",
     "tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.svelte",
     "tools/Runic.Application.Templates/content/runic-app/frontends/vue/index.html",
-    "tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.vue"
+    "tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.vue",
+    "tools/Runic.Assets.Packer/README.md",
+    "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:dbefbd9092a01dc110a951c4d69ad563af0199b28aa553ca7c0f35af252704cc"
+  "contentDigest": "sha256:232e0ca896ddf17b78e3fab2d7daeb27a368cf1934e315a05643523d752e0e4b"
 }
