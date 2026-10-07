@@ -225,6 +225,18 @@ test('redirects the legacy Runic Application product slug', async () => {
   assert.match(html, /href="[^"]*products\/runic-application\/?"/);
 });
 
+test('product pages use their own product icon', async () => {
+  const flow = await render('/products/runic-flow');
+  assert.match(flow, /background-image:\s*url\(\/products\/runic-flow\.png\)/);
+  assert.doesNotMatch(flow, /url\(\/products\/runic-application\.png\)/);
+
+  const application = await render('/products/runic-application');
+  assert.match(
+    application,
+    /background-image:\s*url\(\/products\/runic-application\.png\)/,
+  );
+});
+
 test('builds an accessible branded page for nginx 404 responses', async () => {
   const html = await render('/404');
   assert.match(html, /That rune is not in the catalog/);
