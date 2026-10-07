@@ -143,6 +143,7 @@ internal sealed class AssemblyExtractor
             var signature = invokeMethod.DecodeSignature(_provider, context);
             var invokeContext = Context(invokeMethod.GetCustomAttributes(), handle);
             parts.Add(new Segment(" delegate "));
+            parts.AddRange(RefReturn(signature.ReturnType, ReturnIsReadOnly(invokeMethod)));
             parts.AddRange(SignatureRenderer.Render(signature.ReturnType, ReturnFlags(invokeMethod, invokeContext)));
             parts.Add(new Segment($" {declaredName}("));
             parts.AddRange(Parameters(invokeMethod, signature, isExtension: false, invokeContext));
@@ -259,6 +260,7 @@ internal sealed class AssemblyExtractor
             }
 
             var propertyContext = Context(null, handle);
+            parts.AddRange(RefReturn(signature.ReturnType, HasAttribute(property.GetCustomAttributes(), "System.Runtime.CompilerServices", "IsReadOnlyAttribute") || (visibleGetter is { } readOnlyGetter && ReturnIsReadOnly(readOnlyGetter))));
             parts.AddRange(SignatureRenderer.Render(signature.ReturnType, Flags(property.GetCustomAttributes(), propertyContext)));
             if (signature.ParameterTypes.Length > 0)
             {
@@ -409,6 +411,7 @@ internal sealed class AssemblyExtractor
             {
                 memberKind = "method";
                 displayName = name;
+                parts.AddRange(RefReturn(signature.ReturnType, ReturnIsReadOnly(method)));
                 parts.AddRange(returnType);
                 parts.Add(new Segment($" {name}"));
                 if (methodTypeParameters.Length > 0)
@@ -627,13 +630,45 @@ internal sealed class AssemblyExtractor
         return 0;
     }
 
-    private NullableFlags Flags(CustomAttributeHandleCollection attributes, byte context) =>
-        NullableValue(attributes, "NullableAttribute") switch
+    private NullableFlags Flags(CustomAttributeHandleCollection attributes, byte context)
+    {
+        var names = TupleElementNames(attributes);
+        return NullableValue(attributes, "NullableAttribute") switch
         {
-            { Length: 1 } single => new NullableFlags([], single[0]),
-            { } flags => new NullableFlags(flags, context),
-            null => new NullableFlags([], context),
+            { Length: 1 } single => new NullableFlags([], single[0], names),
+            { } flags => new NullableFlags(flags, context, names),
+            null => new NullableFlags([], context, names),
         };
+    }
+
+    /// <summary>The names of TupleElementNamesAttribute, in pre-order of the tuples in the type.</summary>
+    private ImmutableArray<string?> TupleElementNames(CustomAttributeHandleCollection attributes)
+    {
+        foreach (var handle in attributes)
+        {
+            if (AttributeName(handle) != ("System.Runtime.CompilerServices", "TupleElementNamesAttribute"))
+            {
+                continue;
+            }
+
+            var value = _reader.GetCustomAttribute(handle).DecodeValue(new AttributeTypeProvider());
+            return value.FixedArguments[0].Value is ImmutableArray<CustomAttributeTypedArgument<string>> names
+                ? names.Select(name => name.Value as string).ToImmutableArray()
+                : default;
+        }
+
+        return default;
+    }
+
+    /// <summary>A <c>ref readonly</c> return without a modifier has IsReadOnlyAttribute on parameter row 0.</summary>
+    private bool ReturnIsReadOnly(MethodDefinition method) =>
+        method.GetParameters()
+            .Select(handle => _reader.GetParameter(handle))
+            .Any(parameter => parameter.SequenceNumber == 0
+                              && HasAttribute(parameter.GetCustomAttributes(), "System.Runtime.CompilerServices", "IsReadOnlyAttribute"));
+
+    private static IEnumerable<Segment> RefReturn(TypeSig type, bool readOnly) =>
+        type.IsByRef ? [new Segment(SignatureRenderer.ByRefPrefix(type, isReturn: true, readOnly))] : [];
 
     /// <summary>The return type's annotations live on parameter row 0.</summary>
     private NullableFlags ReturnFlags(MethodDefinition method, byte context)

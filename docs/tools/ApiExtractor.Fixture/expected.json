@@ -189,6 +189,312 @@
       ]
     },
     {
+      "id": "T:Runic.ApiExtractor.Fixture.Locator`1",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "Locator<T>",
+      "kind": "delegate",
+      "signature": [
+        "public delegate ref readonly T Locator<T>((T Item, int Index) entry)"
+      ],
+      "docs": {
+        "summary": [
+          "A callback that returns a reference."
+        ]
+      }
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.Outer`1",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "Outer<T>",
+      "kind": "class",
+      "signature": [
+        "public class Outer<T>"
+      ],
+      "docs": {
+        "summary": [
+          "A generic type with a nested generic type."
+        ],
+        "typeparams": [
+          {
+            "name": "T",
+            "doc": [
+              "The outer type argument."
+            ]
+          }
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Outer`1.#ctor",
+          "kind": "constructor",
+          "name": "Outer",
+          "signature": [
+            "public Outer()"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.Outer`1.Inner`1",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "Outer.Inner<U>",
+      "kind": "class",
+      "declaringType": "T:Runic.ApiExtractor.Fixture.Outer`1",
+      "signature": [
+        "public class Outer.Inner<U>"
+      ],
+      "docs": {
+        "summary": [
+          "A nested generic type."
+        ],
+        "typeparams": [
+          {
+            "name": "U",
+            "doc": [
+              "The inner type argument."
+            ]
+          }
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Outer`1.Inner`1.#ctor",
+          "kind": "constructor",
+          "name": "Inner",
+          "signature": [
+            "public Inner()"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.Outer`1.Leaf",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "Outer.Leaf",
+      "kind": "class",
+      "declaringType": "T:Runic.ApiExtractor.Fixture.Outer`1",
+      "signature": [
+        "public class Outer.Leaf"
+      ],
+      "docs": {
+        "summary": [
+          "A nested type that only has the outer type argument."
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Outer`1.Leaf.#ctor",
+          "kind": "constructor",
+          "name": "Leaf",
+          "signature": [
+            "public Leaf()"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "T:Runic.ApiExtractor.Fixture.Shapes",
+      "namespace": "Runic.ApiExtractor.Fixture",
+      "name": "Shapes",
+      "kind": "class",
+      "signature": [
+        "public class Shapes"
+      ],
+      "docs": {
+        "summary": [
+          "Signature shapes that need more than one nullable annotation per type."
+        ]
+      },
+      "members": [
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.#ctor",
+          "kind": "constructor",
+          "name": "Shapes",
+          "signature": [
+            "public Shapes()"
+          ]
+        },
+        {
+          "id": "F:Runic.ApiExtractor.Fixture.Shapes.Native",
+          "kind": "field",
+          "name": "Native",
+          "signature": [
+            "public delegate* unmanaged[Cdecl]<int, void> Native"
+          ],
+          "docs": {
+            "summary": [
+              "An unmanaged function pointer."
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.Shapes.Slot",
+          "kind": "property",
+          "name": "Slot",
+          "signature": [
+            "public ref int Slot { get; }"
+          ],
+          "docs": {
+            "summary": [
+              "A reference returned by reference."
+            ]
+          }
+        },
+        {
+          "id": "P:Runic.ApiExtractor.Fixture.Shapes.Text",
+          "kind": "property",
+          "name": "Text",
+          "signature": [
+            "public ref readonly string? Text { get; }"
+          ],
+          "docs": {
+            "summary": [
+              "A read-only reference."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.AfterPointer(,System.String)",
+          "kind": "method",
+          "name": "AfterPointer",
+          "signature": [
+            "public string? AfterPointer(delegate*<string?, object, string?> callback, string? note)"
+          ],
+          "docs": {
+            "summary": [
+              "A function pointer before a nullable parameter."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.ByRefPointer()",
+          "kind": "method",
+          "name": "ByRefPointer",
+          "signature": [
+            "public void ByRefPointer(delegate*<ref int, in string?, out object?, ref readonly string> callback)"
+          ],
+          "docs": {
+            "summary": [
+              "A function pointer with by-reference parameters and return."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.Long",
+          "kind": "method",
+          "name": "Long",
+          "signature": [
+            "public (int A, string? B, int C, int D, int E, int F, int G, string? H, object I) Long()"
+          ],
+          "docs": {
+            "summary": [
+              "A tuple with more than seven elements."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.Nested(Runic.ApiExtractor.Fixture.Outer{System.Int32}.Leaf,Runic.ApiExtractor.Fixture.Outer{System.Object}.Inner{System.String}[])",
+          "kind": "method",
+          "name": "Nested",
+          "signature": [
+            "public ",
+            [
+              "Outer",
+              "T:Runic.ApiExtractor.Fixture.Outer`1"
+            ],
+            "<string?>.",
+            [
+              "Inner",
+              "T:Runic.ApiExtractor.Fixture.Outer`1.Inner`1"
+            ],
+            "<object>? Nested(",
+            [
+              "Outer",
+              "T:Runic.ApiExtractor.Fixture.Outer`1"
+            ],
+            "<int>.",
+            [
+              "Leaf",
+              "T:Runic.ApiExtractor.Fixture.Outer`1.Leaf"
+            ],
+            " leaf, ",
+            [
+              "Outer",
+              "T:Runic.ApiExtractor.Fixture.Outer`1"
+            ],
+            "<object?>.",
+            [
+              "Inner",
+              "T:Runic.ApiExtractor.Fixture.Outer`1.Inner`1"
+            ],
+            "<string>[] all)"
+          ],
+          "docs": {
+            "summary": [
+              "Nested generic types keep their arguments with each type."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.NestedTuple",
+          "kind": "method",
+          "name": "NestedTuple",
+          "signature": [
+            "public (string? Name, (int X, int Y) Point, ",
+            [
+              "List",
+              "T:System.Collections.Generic.List`1"
+            ],
+            "<(int Id, string? Label)> Rows) NestedTuple()"
+          ],
+          "docs": {
+            "summary": [
+              "Tuple names of a nested tuple."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.Ref",
+          "kind": "method",
+          "name": "Ref",
+          "signature": [
+            "public ref int Ref()"
+          ],
+          "docs": {
+            "summary": [
+              "A reference return."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.RefReadOnly",
+          "kind": "method",
+          "name": "RefReadOnly",
+          "signature": [
+            "public ref readonly string? RefReadOnly()"
+          ],
+          "docs": {
+            "summary": [
+              "A read-only reference return."
+            ]
+          }
+        },
+        {
+          "id": "M:Runic.ApiExtractor.Fixture.Shapes.Unnamed",
+          "kind": "method",
+          "name": "Unnamed",
+          "signature": [
+            "public (int, int, int, int, int, int, int, int)? Unnamed()"
+          ],
+          "docs": {
+            "summary": [
+              "A long tuple without element names."
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": "T:Runic.ApiExtractor.Fixture.StartMode",
       "namespace": "Runic.ApiExtractor.Fixture",
       "name": "StartMode",
@@ -373,7 +679,7 @@
           "kind": "property",
           "name": "Summary",
           "signature": [
-            "public (int, string?)? Summary { get; set; }"
+            "public (int Count, string? Label)? Summary { get; set; }"
           ],
           "docs": {
             "summary": [

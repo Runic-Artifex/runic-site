@@ -102,6 +102,9 @@ public static class WidgetExtensions
     public static Widget Named(this Widget widget, string name) => widget;
 }
 
+/// <summary>A callback that returns a reference.</summary>
+public delegate ref readonly T Locator<T>((T Item, int Index) entry);
+
 /// <summary>A callback.</summary>
 public delegate void WidgetCallback<in T>(T value, string? note) where T : struct;
 
@@ -119,4 +122,62 @@ internal interface IInternalMarker
 
 internal sealed class Hidden
 {
+}
+
+/// <summary>A generic type with a nested generic type.</summary>
+/// <typeparam name="T">The outer type argument.</typeparam>
+public class Outer<T>
+{
+    /// <summary>A nested generic type.</summary>
+    /// <typeparam name="U">The inner type argument.</typeparam>
+    public class Inner<U>
+    {
+    }
+
+    /// <summary>A nested type that only has the outer type argument.</summary>
+    public class Leaf
+    {
+    }
+}
+
+/// <summary>Signature shapes that need more than one nullable annotation per type.</summary>
+public unsafe class Shapes
+{
+    private int _slot;
+    private string? _text;
+
+    /// <summary>An unmanaged function pointer.</summary>
+    public delegate* unmanaged[Cdecl]<int, void> Native;
+
+    /// <summary>A reference returned by reference.</summary>
+    public ref int Slot => ref _slot;
+
+    /// <summary>A read-only reference.</summary>
+    public ref readonly string? Text => ref _text;
+
+    /// <summary>A function pointer before a nullable parameter.</summary>
+    public string? AfterPointer(delegate*<string?, object, string?> callback, string? note) => note;
+
+    /// <summary>A function pointer with by-reference parameters and return.</summary>
+    public void ByRefPointer(delegate*<ref int, in string?, out object?, ref readonly string> callback)
+    {
+    }
+
+    /// <summary>Nested generic types keep their arguments with each type.</summary>
+    public Outer<string?>.Inner<object>? Nested(Outer<int>.Leaf leaf, Outer<object?>.Inner<string>[] all) => null;
+
+    /// <summary>A tuple with more than seven elements.</summary>
+    public (int A, string? B, int C, int D, int E, int F, int G, string? H, object I) Long() => default;
+
+    /// <summary>A long tuple without element names.</summary>
+    public (int, int, int, int, int, int, int, int)? Unnamed() => null;
+
+    /// <summary>Tuple names of a nested tuple.</summary>
+    public (string? Name, (int X, int Y) Point, List<(int Id, string? Label)> Rows) NestedTuple() => default;
+
+    /// <summary>A reference return.</summary>
+    public ref int Ref() => ref _slot;
+
+    /// <summary>A read-only reference return.</summary>
+    public ref readonly string? RefReadOnly() => ref _text;
 }
