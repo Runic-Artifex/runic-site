@@ -19,10 +19,10 @@ browser configuration. Restricted automation can put its Nix cache in a writable
 location with `XDG_CACHE_HOME=/tmp/runic-nix-cache nix develop`; ordinary
 interactive development does not need that override.
 
-For isolated KDE Plasma and GNOME portal acceptance, use the separate
-[NixOS portal VMs](portal-vm.md). They run their own desktop session and portal
-backend; the development shell intentionally does not start or reconfigure the
-host's desktop services.
+For isolated KDE Plasma and GNOME portal acceptance, use the
+[managed desktop containers](container-automation.md). They run their own desktop
+session and portal backend; the development shell intentionally does not start or
+reconfigure the host's desktop services.
 
 ## September 7, 2026 crash investigation
 
