@@ -55,7 +55,7 @@ do not rebuild a runtime snapshot for every test invocation.
 
 ## Prepare fixture inputs
 
-Build the [portable NativeAOT Flatpak fixture](https://github.com/Runic-Artifex/runic-sdk/blob/main/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md)
+Build the [portable NativeAOT Flatpak fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md)
 using the locked SDK environment. For the native suite, use the ordinary
 NativeAOT fixture publish. Put only the required executable and installer in a
 small directory, then freeze that directory as the test input:

@@ -181,7 +181,7 @@ call the client methods directly in `try`/`catch`.
 
 ## 6. Write state from the frontend
 
-The [First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/first-window)
+The [First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.1/examples/first-window)
 extends the counter with a writable step. A public setter makes a property
 writable from the frontend:
 
@@ -211,7 +211,7 @@ A rejected write or command rejects with the `BridgeError` from
 ## 7. Test the Window and the frontend
 
 Both halves can be tested without a browser or a native window. The
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first)
+[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.1/examples/notes-view-first)
 nests a sidebar, a document and an editor, and tests each side. Its .NET tests
 drive the real ViewModels and generated Bridges through `RunicWindowTestHost`
 from `Runic.Application.Testing`, with a fake clock:
@@ -258,16 +258,16 @@ test("a rejected field write stops the save that follows it", async () => {
 `RunicWindowTestHostOptions`, the typed `Root` driver and the generated
 `*.mock.ts` files are new in 0.7. In 0.6 the test host takes the root route
 name and exchanges JSON; see the
-[`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Testing/README.md)
-and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#testing).
+[`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Testing/README.md)
+and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.1/packages/web/views#testing).
 
 ## Where next
 
-- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-reactive-views)
+- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.1/examples/notes-reactive-views)
   uses ReactiveUI routing and several Views over one model.
-- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/dynamicdata)
+- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.1/examples/dynamicdata)
   presents a large keyed collection through viewports.
-- The [`Runic.Application` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md)
+- The [`Runic.Application` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Views/README.md)
   lists the build properties, generator diagnostics, checked writes and
   operations.
 - [Typed domain failures](../guides/typed-failures.md) returns expected

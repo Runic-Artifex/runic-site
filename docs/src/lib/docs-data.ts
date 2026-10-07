@@ -17,6 +17,8 @@ export type Product = {
   summary: string;
   description: string;
   releaseProduct: ReleaseProductId | null;
+  /** Further catalog components whose packages the product page lists. */
+  includedReleaseProducts?: ReleaseProductId[];
   version: string | null;
   versionState: 'published' | 'unpublished' | 'unassigned';
   source: string;
@@ -109,6 +111,8 @@ export const products: Product[] = [
     description:
       'Runic Application uses explicit partial Window and View types to connect scoped .NET ViewModels to ordinary TypeScript clients and framework components. The browser framework owns rendering; .NET constructs each logical View and owns its model and operation lifetime.',
     ...releaseMetadata('application'),
+    // Project templates, the creator, the Effect bindings and the Svelte packages.
+    includedReleaseProducts: ['templates', 'views-effect', 'svelte'],
     source:
       'https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views',
     bestFor: [
