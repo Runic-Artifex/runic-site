@@ -106,8 +106,14 @@
         .NET owns the application model and operation lifetime.
       </p>
       <p>
+        Follow <a
+          class="text-link"
+          href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/tutorial/README.md"
+          >Windows and Views, step by step</a
+        >
+        through the generated project and its tests,
         <a class="text-link" href={resolve('/views')}
-          >Learn about Windows and Views</a
+          >learn about Windows and Views</a
         >, or explore the
         <a
           class="text-link"
@@ -141,11 +147,24 @@
     </ContentCard>
     <ContentCard eyebrow="Existing project" title="Add one capability">
       <p>
-        You can adopt Application Views, Desktop, or Assets separately. Choose a
-        package and copy its installation command from the <a
+        You can adopt Application Views, Desktop, or Assets separately. The <a
           class="text-link"
           href={resolve('/packages')}>package catalog</a
-        >. Command Line and Translations have their own installation guidance.
+        > lists the packages for each goal. Command Line and Translations have their
+        own installation guidance.
+      </p>
+      <p>
+        <a
+          class="text-link"
+          href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/existing-app.md"
+          >Add Runic to an existing app</a
+        >
+        or
+        <a
+          class="text-link"
+          href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/assets/README.md"
+          >embed and serve a frontend with Runic Assets</a
+        >.
       </p>
       <p>
         Application Views uses explicit Window and View types. Its build tooling

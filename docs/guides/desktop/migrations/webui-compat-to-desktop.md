@@ -25,9 +25,17 @@ await using var host = await DesktopHost.StartAsync(new DesktopHostOptions
 });
 await using var surface = await host.CreateSurfaceAsync(new DesktopSurfaceOptions
 {
-    Content = content,
+    Content = new DesktopContent.Directory(Path.Combine(AppContext.BaseDirectory, "www"), "index.html"),
 });
 ```
+
+`Content` takes one `DesktopContent` case: `Directory(root, entry?)` for local
+files, `Html(document)`, `ExternalUrl(url)` or `Handler(contentHandler)`. Only
+directory content serves local files. This form is unreleased and ships with
+Runic SDK 0.7.0-preview.1; 0.6.0-preview.1 sets `RootFolder` and a `Content`
+string, or `ContentHandler`. The
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/main/eng/release/notes/0.7.0-preview.1.md#upgrading)
+map each 0.6 form to its case.
 
 Register capabilities on the surface, then open an optional window:
 

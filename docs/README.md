@@ -34,8 +34,9 @@ retained history are recorded in `sources/portal-origin.json`.
 
 The Application creator imports only the template files and package inventory
 listed in `sources/sdk-inputs.json`; these checked-in inputs have an immutable
-SDK revision and SHA-256 digest. To refresh them, update the pin and digest, then
-run from the repository root:
+SDK revision and SHA-256 digest. The same snapshot holds the example tests and
+package READMEs that the guides quote. To refresh them, update the pin and
+digest, then run from the repository root:
 
 ```sh
 bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
@@ -44,6 +45,16 @@ bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
 The script checks the checkout revision and source bytes before replacing the
 snapshot. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
+
+Guide code blocks opt into verification with `docs-test=<kind>` in their info
+string. `tests/guide-snippets.test.mjs` checks `commands` blocks against the
+commands the creator, the catalog and the generated README produce, and
+`template:<path>` or `source:<path>` blocks as excerpts of the snapshot. The
+template and examples it quotes are built and run by the SDK's own CI, so a
+refresh that changes quoted code fails here until the guide follows. Every
+block in a quickstart guide must be tagged. The snapshot follows the SDK's
+`main` branch; guides mark APIs that are not in the published release as
+unreleased.
 
 Runic Translations owns canonical schemas. Preserve the existing pin and content
 digest in `sources/translations-schemas.json`. Synchronize a changed pin with:

@@ -32,8 +32,8 @@
     </p>
     <div class="actions">
       <ActionLink
-        href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/first-window"
-        >Build the first Window</ActionLink
+        href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/tutorial/README.md"
+        >Follow the tutorial</ActionLink
       >
       <ActionLink
         variant="outline"
@@ -72,7 +72,8 @@
         which includes a mock Bridge for frontend work without .NET.
         <code>useView</code> in the React, Vue and Svelte packages and
         <code>injectView()</code> in the Angular package connect and dispose a client
-        with the component that renders it.
+        with the component that renders it. Their command helpers and View outlets
+        arrive with SDK 0.7.
       </p>
     </ContentCard>
     <ContentCard eyebrow="Calls" title="Use typed commands and writes">
@@ -80,6 +81,15 @@
         Generated clients expose snapshots, subscriptions, commands, property
         writes, and disposal. Writes return receipts and version conflicts;
         accepted operations stay owned by .NET through a browser reload.
+      </p>
+    </ContentCard>
+    <ContentCard eyebrow="Testing" title="Test both sides without a window">
+      <p>
+        <code>Runic.Application.Testing</code> drives the real ViewModels and
+        generated Bridges in a .NET test, without a browser or native window.
+        Frontend tests run the generated clients against the mock Bridge in
+        <code>@runic-artifex/views</code>. Typed drivers and generated mocks
+        arrive with SDK 0.7.
       </p>
     </ContentCard>
     <ContentCard
@@ -95,6 +105,11 @@
       </p>
       <div class="actions">
         <ActionLink
+          href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/first-window"
+          >First Window</ActionLink
+        >
+        <ActionLink
+          variant="outline"
           href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first"
           >CommunityToolkit Notes</ActionLink
         >

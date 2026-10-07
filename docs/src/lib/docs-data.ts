@@ -88,6 +88,14 @@ export const products: Product[] = [
         label: 'Application guide',
       },
       {
+        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/tutorial/README.md',
+        label: 'Windows and Views, step by step',
+      },
+      {
+        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/existing-app.md',
+        label: 'Add Runic to an existing app',
+      },
+      {
         href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/architecture/README.md',
         label: 'Application architecture',
       },
@@ -185,8 +193,8 @@ export const products: Product[] = [
     slug: 'runic-assets',
     guides: [
       {
-        href: 'https://github.com/Runic-Artifex/runic-site/tree/main/docs/guides/assets',
-        label: 'Asset guides',
+        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/assets/README.md',
+        label: 'Embed and serve assets',
       },
       {
         href: 'https://github.com/Runic-Artifex/runic-sdk/tree/main/specs/assets',
