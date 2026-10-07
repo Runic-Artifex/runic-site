@@ -64,7 +64,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Flow',
     shortName: 'Flow',
-    icon: '/products/runic-application.png',
+    icon: '/products/runic-flow.png',
     kicker: 'Historical project',
     summary: 'Historical Runic Flow information and migration guidance.',
     description:
