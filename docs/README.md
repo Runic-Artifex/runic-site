@@ -70,7 +70,10 @@ bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
 ```
 
 The script checks the checkout revision and source bytes before replacing the
-snapshot. Review the manifest and imported files together. The snapshot is an
+snapshot. Guides link SDK sources (`examples/`, `packages/`, `tools/`, `tests/`,
+`specs/`) and the current release notes at the active release tag, such as
+`blob/v0.7.0-preview.1/`, so the links match the quoted snapshot; move them to
+the new tag with the catalog. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
 
 Every fenced code block in `guides/` names its check with `docs-test=<kind>`

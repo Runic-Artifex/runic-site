@@ -207,8 +207,8 @@ The exact generated codec/command path is covered by a ReactiveUI Native AOT
 fixture with no warnings. That verifies the bridge contract under AOT; it does
 not represent every native host or frontend combination.
 
-The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
-[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
-[model context](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/RunicModelContext.cs),
-and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
+The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
+[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
+[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Views/RunicModelContext.cs),
+and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).

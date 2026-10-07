@@ -22,20 +22,12 @@
     state: product.versionState,
     value: product.version,
   });
-  let currentPackages = $derived(
-    catalogRows.filter((entry) => entry.productId === product.releaseProduct),
-  );
   let displayPackages = $derived(
-    product.slug === 'runic-application'
-      ? catalogRows.filter(
-          (entry) =>
-            entry.productId === product.releaseProduct ||
-            entry.productId === 'templates' ||
-            entry.productId === 'views-effect' ||
-            entry.name === '@runic-artifex/svelte' ||
-            entry.name === '@runic-artifex/sveltekit',
-        )
-      : currentPackages,
+    catalogRows.filter(
+      (entry) =>
+        entry.productId === product.releaseProduct ||
+        (product.includedReleaseProducts?.includes(entry.productId) ?? false),
+    ),
   );
   let hasPublishedVersion = $derived(productVersion.state === 'published');
   let availabilityVersion = $derived(productVersion);

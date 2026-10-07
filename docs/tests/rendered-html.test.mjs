@@ -343,12 +343,21 @@ test('links SDK release notes and renders active SDK install commands', async ()
       );
     }
   }
+  assert.match(packageHtml, /Templates · NuGet/);
+  assert.match(packageHtml, /Effect bindings · npm/);
+  assert.doesNotMatch(
+    packageHtml,
+    />(?:views-effect|administration-windows) · /,
+  );
   const applicationHtml = await render('/products/runic-application');
   for (const name of [
     'Runic.Application',
     'Runic.Application.Testing',
     'Runic.Application.ReactiveUI',
+    'Runic.Application.Templates',
+    'Runic.Create',
     '@runic-artifex/svelte',
+    '@runic-artifex/views-effect',
   ])
     assert.ok(applicationHtml.includes(name), name);
   assert.doesNotMatch(applicationHtml, /Runic\.Application\.Bridge/);

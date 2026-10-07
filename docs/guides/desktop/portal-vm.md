@@ -66,7 +66,7 @@ access for initial NuGet restore but does not expose host services or reuse the
 host desktop/session bus.
 
 The normal commands exercise an unsandboxed desktop application. The
-[Flatpak fixture](https://github.com/Runic-Artifex/runic-sdk/blob/main/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md)
+[Flatpak fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md)
 adds actual application-sandbox checks. See [VM automation](vm-automation.md)
 for the unattended runner, current coverage and remaining desktop adapters.
 Snap policy and production application packaging remain separate checks.

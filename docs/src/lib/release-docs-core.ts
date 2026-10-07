@@ -18,6 +18,21 @@ export type PublishedRelease = {
     readonly installKind: string;
   }[];
 };
+// Display names of the component ids that eng/workspace.json assigns to packages.
+const productLabels: Readonly<Record<string, string>> = {
+  'administration-windows': 'Windows administration',
+  application: 'Application',
+  assets: 'Assets',
+  desktop: 'Desktop',
+  platform: 'Platform',
+  svelte: 'Svelte',
+  templates: 'Templates',
+  'views-effect': 'Effect bindings',
+  vite: 'Vite plugin',
+};
+export function productLabel(product: string) {
+  return productLabels[product] ?? product;
+}
 export function versionLabel(version: ReleaseVersion | undefined) {
   return version?.value ?? 'Version unassigned';
 }
@@ -57,7 +72,7 @@ export function createReleaseDocs(release: PublishedRelease) {
         ? `https://www.nuget.org/packages/${entry.identity}/${release.version}`
         : `https://www.npmjs.com/package/${entry.identity}/v/${release.version}`,
     productId: entry.product,
-    product: entry.product,
+    product: productLabel(entry.product),
     installKind: entry.installKind,
     version,
   }));

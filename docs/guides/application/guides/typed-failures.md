@@ -8,7 +8,7 @@ still rejects with `BridgeError`.
 
 > Declared failures are new in Runic SDK 0.7.0-preview.1 and are not in
 > 0.6.0-preview.1. Every code block is an excerpt of the
-> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first),
+> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.1/examples/notes-view-first),
 > which the SDK's CI builds and tests, or of a package README.
 
 ## Before you add a declaration
@@ -36,7 +36,7 @@ TypeScript does not flag the old code: an ignored
 `Promise<BridgeOutcome<...>>` compiles like an ignored `Promise<State>`.
 Callers that already read the result, or use a framework command helper, only
 need to show the new `failure`. The
-[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/main/eng/release/notes/0.7.0-preview.1.md#upgrading)
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/eng/release/notes/0.7.0-preview.1.md#upgrading)
 list this with the other breaking changes.
 
 ## Shape the failure
@@ -100,7 +100,7 @@ outcome `domain_failed`. A misplaced, repeated or unsupported declaration is
 the build error `RUNICBRIDGE012`. A synchronous plain `ICommand` reports only a
 failure thrown before `Execute` returns; use an asynchronous command for
 failures that happen after an `await`. The
-[Runic.Application README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
+[Runic.Application README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
 has the full rules.
 
 ## Handle the outcome in TypeScript
@@ -173,7 +173,7 @@ like `wait()` and resolves the same `BridgeOutcome` as the command; it rejects
 with `BridgeError` when the operation failed unexpectedly, was cancelled or
 timed out, and with `BridgeOperationUncertainError` when its outcome is
 unknown. A stream keeps the values it published before the failure. The
-[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#declared-failures)
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.1/packages/web/views/README.md#declared-failures)
 maps every terminal status to `outcome()`.
 
 ## Framework command helpers
