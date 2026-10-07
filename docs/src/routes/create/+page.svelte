@@ -29,7 +29,7 @@
       bun: { text: 'Bun 1.4 or later', href: 'https://bun.sh' },
       cswebui: {
         text: 'A Chromium-based browser, or the platform WebView as a fallback',
-        href: 'https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/desktop/host-selection.md',
+        href: '/guides/desktop/host-selection/',
       },
       desktop: {
         text: 'WebView2 on Windows, WKWebView on macOS, or GTK 3 with WebKitGTK 4.1 on Linux',

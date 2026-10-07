@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import ActionLink from '#lib/components/ActionLink.svelte';
   import ContentCard from '#lib/components/ContentCard.svelte';
 </script>
@@ -32,7 +33,7 @@
     </p>
     <div class="actions">
       <ActionLink
-        href="https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/application/tutorial/README.md"
+        href={resolve('/guides/[...path]', { path: 'application/tutorial' })}
         >Follow the tutorial</ActionLink
       >
       <ActionLink
