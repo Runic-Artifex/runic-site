@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "82603744faf390acbf0d203f6eed1a827ba51e7c",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/82603744faf390acbf0d203f6eed1a827ba51e7c.tar.gz",
+  "revision": "b98326c7809ca446f2acbfe27ddc551b1dd8b93f",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/b98326c7809ca446f2acbfe27ddc551b1dd8b93f.tar.gz",
   "files": [
     "eng/workspace.json",
     "examples/first-window/CounterViewModel.cs",
