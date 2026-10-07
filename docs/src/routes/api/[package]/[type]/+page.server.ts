@@ -2,8 +2,6 @@ import { error } from '@sveltejs/kit';
 import { apiReference } from '#lib/api.server.js';
 import type { EntryGenerator, PageServerLoad } from './$types';
 
-export const csr = false;
-
 export const entries: EntryGenerator = () =>
   apiReference.packages.flatMap((pkg) =>
     pkg.groups.flatMap((group) =>

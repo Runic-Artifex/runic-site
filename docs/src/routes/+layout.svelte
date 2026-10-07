@@ -25,9 +25,6 @@
   let mobileOpen = $state(false);
   let themeMode = $state<ThemeMode>('dark');
   let themePalette = $state<ThemePalette>('runic');
-  // API reference pages are static HTML without client-side JavaScript, so
-  // they show the JavaScript-free navigation and omit JavaScript controls.
-  let staticPage = $derived(page.route.id?.startsWith('/api') ?? false);
 
   const navigation = [
     { href: '/getting-started', label: 'Start' },
@@ -113,7 +110,7 @@
         {/each}
       </nav>
 
-      {#snippet staticNavigation()}
+      <noscript>
         <details class="noscript-nav">
           <summary>Navigation</summary>
           <nav aria-label="Mobile navigation without JavaScript">
@@ -126,127 +123,108 @@
             {/each}
           </nav>
         </details>
-      {/snippet}
-      {#if staticPage}
-        {@render staticNavigation()}
-      {:else}
-        <noscript>{@render staticNavigation()}</noscript>
-      {/if}
+      </noscript>
 
-      {#if staticPage}
-        <!-- Plain links: these pages load no JavaScript for menus or tooltips. -->
-        <div class="static-controls">
-          <a href={resolve('/search')} aria-label="Search the documentation"
-            ><SearchIcon aria-hidden="true" /></a
-          >
-          <a
-            href="https://github.com/Runic-Artifex"
-            aria-label="Runic Artifex on GitHub"
-            ><CodeXmlIcon aria-hidden="true" /></a
-          >
+      <div class="flex items-center gap-2">
+        <div class="desktop-appearance">
+          <AppearanceMenu
+            mode={themeMode}
+            palette={themePalette}
+            compact
+            onmodechange={changeThemeMode}
+            onpalettechange={changeThemePalette}
+          />
         </div>
-      {:else}
-        <div class="flex items-center gap-2">
-          <div class="desktop-appearance">
-            <AppearanceMenu
-              mode={themeMode}
-              palette={themePalette}
-              compact
-              onmodechange={changeThemeMode}
-              onpalettechange={changeThemePalette}
-            />
-          </div>
-          <Button
-            href={resolve('/search')}
-            variant="ghost"
-            size="icon"
-            aria-label="Search the documentation"
-            aria-current={page.url.pathname.startsWith('/search')
-              ? 'page'
-              : undefined}
-          >
-            <SearchIcon />
-          </Button>
-          <Tooltip.Root>
-            <Tooltip.Trigger>
-              {#snippet child({ props })}
-                <Button
-                  {...props}
-                  class="hidden sm:inline-flex"
-                  href="https://github.com/Runic-Artifex"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Runic Artifex on GitHub"
-                >
-                  <CodeXmlIcon />
-                </Button>
-              {/snippet}
-            </Tooltip.Trigger>
-            <Tooltip.Content>GitHub organization</Tooltip.Content>
-          </Tooltip.Root>
+        <Button
+          href={resolve('/search')}
+          variant="ghost"
+          size="icon"
+          aria-label="Search the documentation"
+          aria-current={page.url.pathname.startsWith('/search')
+            ? 'page'
+            : undefined}
+        >
+          <SearchIcon />
+        </Button>
+        <Tooltip.Root>
+          <Tooltip.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                class="hidden sm:inline-flex"
+                href="https://github.com/Runic-Artifex"
+                variant="ghost"
+                size="icon"
+                aria-label="Runic Artifex on GitHub"
+              >
+                <CodeXmlIcon />
+              </Button>
+            {/snippet}
+          </Tooltip.Trigger>
+          <Tooltip.Content>GitHub organization</Tooltip.Content>
+        </Tooltip.Root>
 
-          <Sheet.Root bind:open={mobileOpen}>
-            <Sheet.Trigger>
-              {#snippet child({ props })}
-                <Button
-                  {...props}
-                  class="mobile-menu-button"
-                  variant="outline"
-                  size="icon"
-                  aria-label="Open documentation navigation"
+        <Sheet.Root bind:open={mobileOpen}>
+          <Sheet.Trigger>
+            {#snippet child({ props })}
+              <Button
+                {...props}
+                class="mobile-menu-button"
+                variant="outline"
+                size="icon"
+                aria-label="Open documentation navigation"
+              >
+                <MenuIcon />
+              </Button>
+            {/snippet}
+          </Sheet.Trigger>
+          <Sheet.Content side="right" class="w-[min(88vw,24rem)]">
+            <Sheet.Header>
+              <Sheet.Title class="font-serif text-2xl"
+                >Documentation</Sheet.Title
+              >
+              <Sheet.Description>
+                Explore Runic Artifex products, architecture, packages, and
+                release notes.
+              </Sheet.Description>
+            </Sheet.Header>
+            <Separator />
+            <nav class="mobile-nav" aria-label="Mobile navigation">
+              {#each navigation as item (item.href)}
+                <a
+                  href={navHref(item.href)}
+                  aria-current={isCurrent(item.href) ? 'page' : undefined}
+                  onclick={() => (mobileOpen = false)}>{item.label}</a
                 >
-                  <MenuIcon />
-                </Button>
-              {/snippet}
-            </Sheet.Trigger>
-            <Sheet.Content side="right" class="w-[min(88vw,24rem)]">
-              <Sheet.Header>
-                <Sheet.Title class="font-serif text-2xl"
-                  >Documentation</Sheet.Title
-                >
-                <Sheet.Description>
-                  Explore Runic Artifex products, architecture, packages, and
-                  release notes.
-                </Sheet.Description>
-              </Sheet.Header>
-              <Separator />
-              <nav class="mobile-nav" aria-label="Mobile navigation">
-                {#each navigation as item (item.href)}
-                  <a
-                    href={navHref(item.href)}
-                    aria-current={isCurrent(item.href) ? 'page' : undefined}
-                    onclick={() => (mobileOpen = false)}>{item.label}</a
-                  >
-                {/each}
-              </nav>
-              <Separator />
-              <div class="grid gap-3 p-5">
-                <AppearanceMenu
-                  mode={themeMode}
-                  palette={themePalette}
-                  onmodechange={changeThemeMode}
-                  onpalettechange={changeThemePalette}
-                />
-                <Button
-                  href="https://runic-artifex.eu/"
-                  variant="outline"
-                  class="w-full"
-                >
-                  Runic Artifex website
-                </Button>
-                <Button
-                  href="https://github.com/Runic-Artifex"
-                  variant="outline"
-                  class="w-full"
-                >
-                  <CodeXmlIcon />
-                  GitHub organization
-                </Button>
-              </div>
-            </Sheet.Content>
-          </Sheet.Root>
-        </div>
-      {/if}
+              {/each}
+            </nav>
+            <Separator />
+            <div class="grid gap-3 p-5">
+              <AppearanceMenu
+                mode={themeMode}
+                palette={themePalette}
+                onmodechange={changeThemeMode}
+                onpalettechange={changeThemePalette}
+              />
+              <Button
+                href="https://runic-artifex.eu/"
+                variant="outline"
+                class="w-full"
+              >
+                Runic Artifex website
+              </Button>
+              <Button
+                href="https://github.com/Runic-Artifex"
+                variant="outline"
+                class="w-full"
+              >
+                <CodeXmlIcon />
+                GitHub organization
+              </Button>
+            </div>
+          </Sheet.Content>
+        </Sheet.Root>
+      </div>
     </div>
   </header>
 

@@ -33,6 +33,12 @@
       Public types and members of every library package in Runic SDK {data.release},
       read from the packages published on NuGet and npm.
     </p>
+    <p class="lede">
+      The reference documents the published {data.release}. Types new in 0.7,
+      such as <code>DesktopContent</code>, the React and Vue
+      <code>ViewOutlet</code>, <code>views/generated</code> and the typed testing
+      host, appear here after that release.
+    </p>
   </section>
   <section class="api-index shell">
     {#each groups as group (group.title)}

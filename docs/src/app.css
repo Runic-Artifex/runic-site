@@ -1509,28 +1509,3 @@ pre {
     max-height: none;
   }
 }
-
-.static-controls {
-  display: flex;
-  gap: 8px;
-}
-
-.static-controls a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  color: var(--foreground);
-}
-
-.static-controls a:hover,
-.static-controls a:focus-visible {
-  background: var(--muted);
-}
-
-.static-controls svg {
-  width: 16px;
-  height: 16px;
-}

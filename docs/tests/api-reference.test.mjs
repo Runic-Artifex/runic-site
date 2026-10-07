@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
@@ -77,13 +78,23 @@ test('API inputs and rendered pages stay within their size budgets', () => {
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
   assert.ok(inputs <= 1.5 * 1024 * 1024, `inputs are ${inputs} bytes`);
-  const rendered = files(buildApi)
-    .filter((file) => file.endsWith('.html'))
-    .reduce((total, file) => total + statSync(file).size, 0);
-  assert.ok(rendered <= 6 * 1024 * 1024, `rendered HTML is ${rendered} bytes`);
+  // Each page, and the whole reference as served compressed, including the
+  // __data.json payloads that client-side navigation loads.
+  let compressed = 0;
+  for (const file of files(buildApi)) {
+    if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
+    const bytes = readFileSync(file);
+    if (file.endsWith('.html'))
+      assert.ok(bytes.length <= 128 * 1024, `${file} is ${bytes.length} bytes`);
+    compressed += gzipSync(bytes).length;
+  }
+  assert.ok(
+    compressed <= 3 * 1024 * 1024,
+    `the reference is ${compressed} bytes gzipped`,
+  );
 });
 
-test('every package and type has its page, and pages load no scripts', () => {
+test('every package and type has its page', () => {
   let pages = 0;
   for (const pkg of reference.packages) {
     const packageHtml = readFileSync(
@@ -98,7 +109,6 @@ test('every package and type has its page, and pages load no scripts', () => {
           'utf8',
         );
         assert.equal(html.match(/<h1\b/g)?.length, 1, view.type.id);
-        assert.doesNotMatch(html, /<script\b[^>]*\bsrc=|modulepreload/);
         pages++;
       } else {
         assert.ok(packageHtml.includes(`id="${view.anchor}"`), view.type.id);
@@ -297,4 +307,88 @@ test('the checked-in reference resolves most inheritdoc and cross references', (
       }
   assert.ok(inherited > 50, `${inherited} inherited`);
   assert.ok(unresolved < inherited / 2, `${unresolved} unresolved`);
+});
+
+test('signatures reference only public types of the reference packages', () => {
+  const publicTypes = new Set(
+    Object.values(models).flatMap((model) =>
+      model.types.map((type) => type.id),
+    ),
+  );
+  // Internal types of the documented assemblies share their namespaces.
+  const namespaces = new Set(
+    Object.values(models)
+      .filter((model) => model.framework)
+      .flatMap((model) => model.types.map((type) => type.namespace)),
+  );
+  const failures = [];
+  for (const model of Object.values(models).filter((m) => m.framework))
+    for (const type of model.types) {
+      const refs = [
+        type.base,
+        ...(type.interfaces ?? []),
+        ...[type, ...(type.members ?? [])].flatMap((entry) =>
+          entry.signature.filter(Array.isArray).map((part) => part[1]),
+        ),
+      ].filter(Boolean);
+      for (const ref of refs) {
+        const namespace = ref.slice(2).split('.').slice(0, -1).join('.');
+        if (namespaces.has(namespace) && !publicTypes.has(ref))
+          failures.push(`${type.id} -> ${ref}`);
+      }
+    }
+  assert.deepEqual(failures, []);
+});
+
+test('signatures carry nullable reference annotations', () => {
+  const descriptor = models['dotnet/Runic.Application.json'].types.find(
+    (type) => type.id === 'T:Runic.Application.Views.CommandDescriptor`1',
+  );
+  const text = (parts) =>
+    parts.map((part) => (typeof part === 'string' ? part : part[0])).join('');
+  const constructor = descriptor.members.find((m) => m.kind === 'constructor');
+  assert.match(
+    text(constructor.signature),
+    /Func<T, CancellationToken, object\?, Task>\? ExecuteAsync = null/,
+  );
+  const bridge = models['dotnet/Runic.Application.json'].types.find(
+    (type) => type.id === 'T:Runic.Application.Views.ViewModelBridge`1',
+  );
+  assert.equal(
+    text(bridge.signature),
+    'public class ViewModelBridge<T> : IDisposable where T : INotifyPropertyChanged',
+  );
+});
+
+test('links inheritdoc from framework types to Microsoft Learn', () => {
+  const model = {
+    package: 'Demo',
+    version: '1',
+    types: [
+      {
+        id: 'T:Demo.Thing',
+        kind: 'class',
+        interfaces: [
+          'T:System.ComponentModel.INotifyPropertyChanged',
+          'T:System.IDisposable',
+        ],
+        members: [
+          { id: 'M:Demo.Thing.Dispose', docs: { inheritdoc: {} } },
+          { id: 'E:Demo.Thing.PropertyChanged', docs: { inheritdoc: {} } },
+          { id: 'M:Demo.Thing.ToString', docs: { inheritdoc: {} } },
+          { id: 'M:Demo.Thing.Other', docs: { inheritdoc: {} } },
+        ],
+      },
+    ],
+  };
+  finishApiPackages([model]);
+  assert.deepEqual(
+    model.types[0].members.map((member) => member.docs.inheritdoc.cref),
+    [
+      'M:System.IDisposable.Dispose',
+      'E:System.ComponentModel.INotifyPropertyChanged.PropertyChanged',
+      'M:System.Object.ToString',
+      undefined,
+    ],
+  );
 });

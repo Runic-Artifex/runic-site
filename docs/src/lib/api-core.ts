@@ -342,7 +342,11 @@ export class ApiReference {
             : escapeHtml(node.t);
         if ('b' in node) return `<strong>${this.inline(node.b)}</strong>`;
         if ('i' in node) return `<em>${this.inline(node.i)}</em>`;
-        return this.blocks([node]);
+        // Inline contexts cannot hold blocks: flatten them to phrasing content.
+        if ('p' in node) return ` ${this.inline(node.p)} `;
+        if ('pre' in node) return `<code>${escapeHtml(node.pre)}</code>`;
+        const items = 'ul' in node ? node.ul : node.ol;
+        return items.map((item) => this.inline(item)).join('; ');
       })
       .join('');
   }
@@ -386,7 +390,7 @@ export class ApiReference {
         ? `<p class="api-label">${title}</p><dl class="api-params">${items
             .map(
               (item) =>
-                `<dt><code>${escapeHtml(item.name)}</code></dt><dd>${this.inline(item.doc) || '—'}</dd>`,
+                `<dt><code>${escapeHtml(item.name)}</code></dt><dd>${this.blocks(item.doc) || '—'}</dd>`,
             )
             .join('')}</dl>`
         : '';
@@ -400,7 +404,7 @@ export class ApiReference {
       html += `<p class="api-label">Exceptions</p><dl class="api-params">${docs.exceptions
         .map(
           (exception) =>
-            `<dt>${exception.cref ? this.link(exception.cref) : ''}</dt><dd>${this.inline(exception.doc) || '—'}</dd>`,
+            `<dt>${exception.cref ? this.link(exception.cref) : ''}</dt><dd>${this.blocks(exception.doc) || '—'}</dd>`,
         )
         .join('')}</dl>`;
     if (docs.remarks?.length)
@@ -411,13 +415,14 @@ export class ApiReference {
       html += `<p class="api-label">See also</p><ul>${docs.seealso
         .map((cref) => `<li>${this.link(cref)}</li>`)
         .join('')}</ul>`;
-    if (docs.inheritdoc)
-      html += `<p class="api-inherited">Inherits documentation from ${
-        docs.inheritdoc.cref
-          ? this.link(docs.inheritdoc.cref)
-          : 'its base member'
-      }.</p>`;
-    else if (entry.inherited)
+    if (docs.inheritdoc) {
+      const cref = docs.inheritdoc.cref;
+      html += cref
+        ? `<p class="api-inherited">Inherits documentation from ${this.link(cref)}${
+            this.href(cref) ? '' : ', which this reference does not include'
+          }.</p>`
+        : '<p class="api-inherited">Inherits documentation from a base member that this reference does not include.</p>';
+    } else if (entry.inherited)
       html += `<p class="api-inherited">Documentation from ${this.link(entry.inherited)}.</p>`;
     if (!html) html = '<p class="api-undocumented">No documentation.</p>';
     return html;
@@ -493,10 +498,10 @@ export class ApiReference {
           kind: kindLabel(view.type.kind),
           href: view.page ? view.href : null,
           anchor: view.anchor,
-          summary: this.inline(
+          summary: this.blocks(
             view.type.docs?.summary?.filter(
               (node) => typeof node === 'string' || !('pre' in node),
-            ) ?? [],
+            ),
           ),
           // Page-less types are documented here in full.
           inline: view.page
