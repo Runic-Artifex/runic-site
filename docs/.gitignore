@@ -40,3 +40,7 @@ yarn-error.log*
 /.wrangler/
 /outputs/
 /work/
+
+# API extractor build output
+/tools/*/bin/
+/tools/*/obj/

@@ -1,0 +1,237 @@
+{
+  "release": "0.6.0-preview.1",
+  "extractors": {
+    "dotnet": "tools/ApiExtractor (System.Reflection.Metadata)",
+    "npm": "TypeScript 6.0.3 compiler API"
+  },
+  "packages": [
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform.Administration.Windows",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform.administration.windows/0.6.0-preview.1/runic.platform.administration.windows.0.6.0-preview.1.nupkg",
+      "sha512": "+aeFE3KPyTayhaL3s+yr0QOVSu40pPaqhJHpxbU1FwfG2+CqFgC/ttq6j1H51IafUdlE3d2FzLQBmsQlemaLnw==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.Administration.Windows.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Assets",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.assets/0.6.0-preview.1/runic.assets.0.6.0-preview.1.nupkg",
+      "sha512": "n2fKfgp6vOM+u8qcDGQyz7sbF4Gfop6p5UEWC+tHoL6RAp3CmPVdaz4jfzVl7lHoE84ojssMUaHD71pxyGa9hQ==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Assets.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Assets.AspNetCore",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.assets.aspnetcore/0.6.0-preview.1/runic.assets.aspnetcore.0.6.0-preview.1.nupkg",
+      "sha512": "w+dgrvdMW9S6+l0+H8wN6NgsGUGEf9OLMJS6JbQXmQy56HHQihaMYVF7Wa1+D6dBGrbAd0NYpo9DakFSPIMpCA==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Assets.AspNetCore.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Assets.Desktop",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.assets.desktop/0.6.0-preview.1/runic.assets.desktop.0.6.0-preview.1.nupkg",
+      "sha512": "HATpK++q/gPzc720hFtBZpwXr136s8zPcrOoRxL/KmbqyiOgNVX+MPfUGAY6SpM/2rShJ5wPmnAJ8XE/4sfuHA==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Assets.Desktop.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Desktop",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.desktop/0.6.0-preview.1/runic.desktop.0.6.0-preview.1.nupkg",
+      "sha512": "IGIJm+DTgICDZbxomUoJ+iXC2D1Olw/upkm8gSGfwDFRL3qufTZR6mVmRzZ9EnMHyYzrsuz+YqS/mjYtBG/E+g==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Desktop.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Application",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.application/0.6.0-preview.1/runic.application.0.6.0-preview.1.nupkg",
+      "sha512": "TyYwM8z6+BdAWmKUwx9P01RWurQyXe887s9SWOMhrjkUCOO+dFjF9uywQWEb1bIcq7mYfqITJyfTsGtqIHtTVg==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Application.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Application.Testing",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.application.testing/0.6.0-preview.1/runic.application.testing.0.6.0-preview.1.nupkg",
+      "sha512": "BhbNdKnwFq6R4PnnGUrClVzHYgJQ5xkJSaPvqeLC2iaKywllP0RoIzcZ65irMaY4/aaXIbYXwX7qF3ynygTZHQ==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Application.Testing.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Application.ReactiveUI",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.application.reactiveui/0.6.0-preview.1/runic.application.reactiveui.0.6.0-preview.1.nupkg",
+      "sha512": "x57CArlgIXqPn+a2LgpMUtAua7p7ksBRndEzWqI2l9l+nb6nq+S9/tJDhuVJ4042YHM7rFl7wumexbrb6C7fQg==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Application.ReactiveUI.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Application.ReactiveUI.Reactive",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.application.reactiveui.reactive/0.6.0-preview.1/runic.application.reactiveui.reactive.0.6.0-preview.1.nupkg",
+      "sha512": "k+F0+x6Z3ynFCgfji4G3ZLee31COb+rEVdkRguTh3A4NKTlSUREhzX8IE0cKjbQK8/ISv0dWzSnXZ8aP6tE10Q==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Application.ReactiveUI.Reactive.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Application.CsWebUi",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.application.cswebui/0.6.0-preview.1/runic.application.cswebui.0.6.0-preview.1.nupkg",
+      "sha512": "Ez2iFW0q36GaAm2Jb+NWzg/KlrMcffP6sWVDdaaWE2V4HtmMdv+4cePiKWgHV7lpTK92mawh3YCHs0JhFe3CAg==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Application.CsWebUi.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Application.Desktop",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.application.desktop/0.6.0-preview.1/runic.application.desktop.0.6.0-preview.1.nupkg",
+      "sha512": "Mf+DdaSBKAXCgb9RyAtF/NTA6uJ/D7QwqnWv8dgabT6rfv1LN2Jq+FRBgcsy+gco5JfVyWWpft5Kdc/cQxuuuw==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Application.Desktop.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform/0.6.0-preview.1/runic.platform.0.6.0-preview.1.nupkg",
+      "sha512": "zLfj2d4/sZ6UCBCTym5XPjzZOZ0HGLSeNFIPYuxGvdDyWYKQfQsshS/YJfdWyIiKwHYoo2AjHCA85TcUusc29Q==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform.Runtime",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform.runtime/0.6.0-preview.1/runic.platform.runtime.0.6.0-preview.1.nupkg",
+      "sha512": "8zkmLQEXEA/p6BuMSj4sABlostPoJ+8Qdjy/Px2aKbLZ6U7G3DBYCV+XoTGVSTcF9b/1CYOe65gnZksuDwJy8w==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.Runtime.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform.Windows",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform.windows/0.6.0-preview.1/runic.platform.windows.0.6.0-preview.1.nupkg",
+      "sha512": "MtiWaaMU0Mpxkav4XV3x0H1K6RPh2KPtsVf41HMmXkYaiUNvgJV8FS1fS+P85bRrguqpc54AW2IMHDwr0uNG3Q==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.Windows.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform.Linux",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform.linux/0.6.0-preview.1/runic.platform.linux.0.6.0-preview.1.nupkg",
+      "sha512": "ze5e19salm3Nl/RG8GLa3DFn+wufefRmCO2pe4EUj6DeLmN3rRIroPIzTI+gpVW4GmtQVsor8m2/KIFJ7sO09g==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.Linux.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform.MacOS",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform.macos/0.6.0-preview.1/runic.platform.macos.0.6.0-preview.1.nupkg",
+      "sha512": "YXfa5WOtF8ja8/4QbxrUlPPfEXjhbDpxnCjqR3TubpjGMub9mIbRarGXCe0+VIK4JnsxmjLXkPy0YwMsuJnNyw==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.MacOS.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Desktop.Gtk4",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.desktop.gtk4/0.6.0-preview.1/runic.desktop.gtk4.0.6.0-preview.1.nupkg",
+      "sha512": "IWTAZkc75vY8XuJyY4pVRJEhrZFBmpUVpaW60J9zN6DobgFcMJu7ZMUJkTpeJFnaKXBFpcvnRAWMd2zKpTqajg==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Desktop.Gtk4.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform.Linux.Portal",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform.linux.portal/0.6.0-preview.1/runic.platform.linux.portal.0.6.0-preview.1.nupkg",
+      "sha512": "zIuA5w/gARHSAsX4KDXTl3NxzztUR4bfFCpdJiYdqrrdjtlybi8C7+OCWJJ+PXwgE4LlaTzZ58nxBtoDW8qBWA==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.Linux.Portal.json"
+    },
+    {
+      "ecosystem": "nuget",
+      "package": "Runic.Platform.Linux.Gtk4",
+      "version": "0.6.0-preview.1",
+      "url": "https://api.nuget.org/v3-flatcontainer/runic.platform.linux.gtk4/0.6.0-preview.1/runic.platform.linux.gtk4.0.6.0-preview.1.nupkg",
+      "sha512": "91/2pjBlYVSmzAbX0qDv8mCyTxWMxB4SazMhyxbBdw5AHz5AUYbo0GkReVLQcGdcKURplZqkRM9sOCksgGfmUA==",
+      "framework": "net10.0",
+      "file": "dotnet/Runic.Platform.Linux.Gtk4.json"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@runic-artifex/angular",
+      "version": "0.6.0-preview.1",
+      "url": "https://registry.npmjs.org/@runic-artifex/angular/-/angular-0.6.0-preview.1.tgz",
+      "integrity": "sha512-aeYeoorqgavgE41uPonm8gkMijPEM5wLUam+/BPFsqUUB2uxjQM3MpdUfgT/mXv4KhaSmGeDHyKqopimilZlKA==",
+      "file": "npm/@runic-artifex__angular.json"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@runic-artifex/vite-plugin-runic",
+      "version": "0.6.0-preview.1",
+      "url": "https://registry.npmjs.org/@runic-artifex/vite-plugin-runic/-/vite-plugin-runic-0.6.0-preview.1.tgz",
+      "integrity": "sha512-d0ByaOQ461h9kd7fWOdYTLrd4g8DOMpN6lG+pnt76nMOZ5rhC1LX8IiLPb+eGD3EmVVMLVjCK0Zfd0gJLYcgxw==",
+      "file": "npm/@runic-artifex__vite-plugin-runic.json"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@runic-artifex/svelte",
+      "version": "0.6.0-preview.1",
+      "url": "https://registry.npmjs.org/@runic-artifex/svelte/-/svelte-0.6.0-preview.1.tgz",
+      "integrity": "sha512-BNGe5D1wm7RTOBvh7B9zStnbKZYbJy6LuQeG6wnppM6Va1LIogMaoZN0Ur30wApvUnLbk6HLW3RO8XfA67imRw==",
+      "file": "npm/@runic-artifex__svelte.json"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@runic-artifex/sveltekit",
+      "version": "0.6.0-preview.1",
+      "url": "https://registry.npmjs.org/@runic-artifex/sveltekit/-/sveltekit-0.6.0-preview.1.tgz",
+      "integrity": "sha512-YSRsSBPXnGo4iWH9oQOvc0BwMsIWiLTQ/BK18pjPCG/5q7mz5anLt0dR8uMqkdmxgrqE5W0NptkoU0RNlx/eRg==",
+      "file": "npm/@runic-artifex__sveltekit.json"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@runic-artifex/views",
+      "version": "0.6.0-preview.1",
+      "url": "https://registry.npmjs.org/@runic-artifex/views/-/views-0.6.0-preview.1.tgz",
+      "integrity": "sha512-44uCc3bs87CWxzT1SBf7j5noiFqTcKmmNOQKQ6CkWCGXUfTVK6QOJZPRzNt1PaEwoNHFPJ8jv5nb4EM6zmA+qQ==",
+      "file": "npm/@runic-artifex__views.json"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@runic-artifex/react",
+      "version": "0.6.0-preview.1",
+      "url": "https://registry.npmjs.org/@runic-artifex/react/-/react-0.6.0-preview.1.tgz",
+      "integrity": "sha512-J7Z5vtJEsTcWf4XqZG52IsIkMg6mZexAt5K74aQJ53VniXwkmno/UXfa3TP9mHBL2f8peaHnP0rjfUsPLCgcVA==",
+      "file": "npm/@runic-artifex__react.json"
+    },
+    {
+      "ecosystem": "npm",
+      "package": "@runic-artifex/vue",
+      "version": "0.6.0-preview.1",
+      "url": "https://registry.npmjs.org/@runic-artifex/vue/-/vue-0.6.0-preview.1.tgz",
+      "integrity": "sha512-VGA2HmlSV2lBJEgMYZbrrv+a5/FoOMhpCAocsqnMTItlg4PX1MbHmFpPVO9EBGmLGQUX/CZg6RGhg1WRLkO4pw==",
+      "file": "npm/@runic-artifex__vue.json"
+    }
+  ],
+  "contentDigest": "sha256:2581ff3ca6d4bde03259cbd11117821e27e499e479086020f4bcb285b806d656"
+}
