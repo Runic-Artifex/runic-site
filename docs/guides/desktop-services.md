@@ -8,13 +8,17 @@ system provider or add a generic application-host registration layer.
 Factories such as `WindowsPlatformProvider.CreateNotifications(...)` and
 `LinuxPlatformProvider.CreateSettings()` return services that the caller owns and
 disposes. Native file dialogs, file launchers, and clipboard providers also need
-a verified presentation owner. Implement `INativePickerOwner` for the native
-window and marshal its `InvokeAsync` callback to that window's UI thread. Keep its
-generation and availability tied to the actual presentation; do not retain native
-handles beyond the callback or send paths and handles to the browser.
+a verified presentation owner. For an embedded Runic Desktop window, use the
+shipped owner (unreleased; `Runic.Application.Desktop` 0.7.0-preview.3): each
+opened Window exposes `DesktopBridgeWindow<TViewModel>.NativeOwner`, and
+`new DesktopNativeOwner(window)` creates one for a `DesktopWindow` opened without
+Views. Pass it to the provider, for example
+`LinuxPlatformProvider.CreateFileDialogs(window.NativeOwner)`. The owner runs
+provider callbacks on the window's native thread and becomes unavailable when
+that window closes or is replaced. It is unavailable for installed-browser
+presentations. Do not retain native handles beyond the callback or send paths
+and handles to the browser.
 
-For an embedded Runic Desktop window, `DesktopWindow.DispatchNativeAsync` is the
-verified native dispatch primitive from which an owner adapter can be built.
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native
 window only after that cleanup has completed.
