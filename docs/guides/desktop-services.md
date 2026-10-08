@@ -8,13 +8,20 @@ system provider or add a generic application-host registration layer.
 Factories such as `WindowsPlatformProvider.CreateNotifications(...)` and
 `LinuxPlatformProvider.CreateSettings()` return services that the caller owns and
 disposes. Native file dialogs, file launchers, and clipboard providers also need
-a verified presentation owner. Implement `INativePickerOwner` for the native
-window and marshal its `InvokeAsync` callback to that window's UI thread. Keep its
-generation and availability tied to the actual presentation; do not retain native
-handles beyond the callback or send paths and handles to the browser.
+a verified presentation owner. For an embedded Runic Desktop window, use the
+shipped owner (unreleased; `Runic.Application.Desktop` 0.7.0-preview.3): each
+opened Window exposes `DesktopBridgeWindow<TViewModel>.NativeOwner`, and
+`new DesktopNativeOwner(desktopWindow)` creates one for a `DesktopWindow` opened
+without Views. Pass it to the provider, for example
+`LinuxPlatformProvider.CreateFileDialogs(workspace.NativeOwner)`, where
+`workspace` is the opened bridge window. The owner runs provider callbacks on
+the window's native thread and becomes unavailable when that window closes or is
+replaced. `DesktopNativeOwner.IsAvailable` is false for any window without native
+dispatch, such as an installed browser after fallback or a custom host without a
+native handle. Do not retain native handles beyond the callback or send paths and
+handles to the browser. Non-Desktop hosts, such as CS-WebUI and custom window
+hosts, still implement `INativePickerOwner` over their own dispatcher.
 
-For an embedded Runic Desktop window, `DesktopWindow.DispatchNativeAsync` is the
-verified native dispatch primitive from which an owner adapter can be built.
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native
 window only after that cleanup has completed.
@@ -25,10 +32,13 @@ leases; saves use a staged transaction and report known or uncertain commit
 outcomes. `PresentationLifetime` tracks admitted work, and the shared runtime
 releases leases and provider resources during disposal.
 
-Linux file dialogs use XDG portals by default with GTK3 parenting. GTK-native
-choosers are a separate explicit compatibility choice for unsandboxed apps. GTK4
-applications should use the GTK4 portal adapter and must not load GTK3 just to
-open a file. Windows notifications require shell registration for the chosen
+Linux file dialogs use XDG portals by default with GTK3 parenting.
+`LinuxPlatformProvider.CreateFileDialogs(owner)` is for the default GTK 3 backend
+only: it parents through GTK 3 and must not be used with a GTK 4 window. GTK-native
+choosers are a separate explicit compatibility choice for unsandboxed apps. GTK 4
+applications should use the GTK 4 portal adapter, for example
+`PortalPlatformProvider.CreateFileDialogs(Gtk4PlatformProvider.CreatePortalWindowOwner(owner))`,
+and must not load GTK 3 just to open a file. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
 The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
