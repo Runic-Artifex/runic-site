@@ -10,7 +10,7 @@ Primitives 9.0.0; the fork also tests Primitives 8.4.0 used by ReactiveUI 25.
 
 DynamicData's cache, filtering, grouping, transforms and disposal stay in .NET.
 Runic exports the resulting collection through a generated, reflection-free
-bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/examples/dynamicdata/README.md)
+bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/examples/dynamicdata/README.md)
 has a 100,000-row source cache, keyed browser rendering and an independent
 viewport for each presentation.
 

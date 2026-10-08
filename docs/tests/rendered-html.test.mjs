@@ -185,7 +185,7 @@ test('create page prerenders the default project and every template choice', asy
   for (const [name, values] of [
     ['frontend', ['react', 'vue', 'svelte', 'angular']],
     ['packageManager', ['npm', 'pnpm', 'bun']],
-    ['host', ['cswebui', 'desktop']],
+    ['host', ['cswebui', 'desktop', 'desktop-gtk4']],
     ['viewModels', ['toolkit', 'reactiveui']],
   ]) {
     const radios = [

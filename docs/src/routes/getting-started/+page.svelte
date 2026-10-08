@@ -137,9 +137,11 @@
     <ContentCard eyebrow="Native windows" title="Choose a host">
       <p>
         The creator asks for the host. CS-WebUI is the default. Choose Runic
-        Desktop (<code>--host desktop</code>) for native windows, embedded
-        WebViews, file dialogs and other platform services; existing projects
-        can add <code>Runic.Application.Desktop</code>. The
+        Desktop (<code>--host desktop</code>, or
+        <code>--host desktop-gtk4</code>
+        for GTK 4 on Linux) for native windows, embedded WebViews, file dialogs and
+        other platform services; existing projects can add
+        <code>Runic.Application.Desktop</code>. The
         <a
           class="text-link"
           href={resolve('/guides/[...path]', {

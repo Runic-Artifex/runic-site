@@ -42,6 +42,7 @@ import {
   creatorOptions,
   defaultSelection,
   templateSourceName,
+  templateSymbols,
 } from '../src/lib/creator.ts';
 import {
   createReleaseDocs,
@@ -130,7 +131,7 @@ function renderTemplateFile(path, selection) {
   assert.ok(!path.split('/').includes('..'), path);
   return renderTemplate(
     readFileSync(new URL(path, templateRoot), 'utf8'),
-    selection,
+    templateSymbols(selection),
   )
     .replaceAll(templateSourceName, projectName)
     .replaceAll('__RUNIC_NUGET_VERSION__', versionPlaceholder)
