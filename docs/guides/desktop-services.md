@@ -32,8 +32,8 @@ leases; saves use a staged transaction and report known or uncertain commit
 outcomes. `PresentationLifetime` tracks admitted work, and the shared runtime
 releases leases and provider resources during disposal.
 
-Linux file dialogs use XDG portals by default with GTK3 parenting.
-`LinuxPlatformProvider.CreateFileDialogs(owner)` is for the default GTK 3 backend
+Linux file dialogs use XDG portals by default with GTK 3 parenting.
+`LinuxPlatformProvider.CreateFileDialogs(owner)` is for Linux with GTK 3
 only: it parents through GTK 3 and must not be used with a GTK 4 window. GTK-native
 choosers are a separate explicit compatibility choice for unsandboxed apps. GTK 4
 applications should use the GTK 4 portal adapter, for example
