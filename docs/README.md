@@ -158,7 +158,7 @@ direnv exec <runic-sdk-checkout> bun docs/scripts/test-api-extractor.mjs
 
 Site CI has no .NET, so this test runs by hand. Search has one entry per type.
 `tests/api-reference.test.mjs` checks the pins, digest and size budgets: at
-most 1.5 MB of inputs, 160 KB of HTML per page, and 3 MB for all reference
+most 1.5 MB of inputs, 160 KB of HTML per page, and 3.5 MB for all reference
 pages and their `__data.json` payloads gzipped. The link check covers every
 reference page.
 

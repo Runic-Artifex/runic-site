@@ -2,6 +2,7 @@
 // defaults, and flags cannot drift from `dotnet new runic-app` or Runic.Create.
 import hostJson from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/.template.config/dotnetcli.host.json';
 import templateJson from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/.template.config/template.json';
+import { evaluate } from './template-conditions';
 
 export type CreatorChoice = {
   readonly value: string;
@@ -26,6 +27,7 @@ type TemplateSymbol = {
   readonly displayName?: string;
   readonly description?: string;
   readonly defaultValue?: string;
+  readonly value?: string;
   readonly choices?: readonly {
     readonly choice: string;
     readonly displayName?: string;
@@ -67,6 +69,20 @@ export function defaultSelection(): Record<string, string> {
   return Object.fromEntries(
     creatorOptions.map((option) => [option.symbol, option.defaultValue]),
   );
+}
+
+/**
+ * Adds the template's computed symbols, such as `desktopHost`, to a selection,
+ * as `true` or `false`, in declaration order like the template engine.
+ */
+export function templateSymbols(
+  selection: CreatorSelection,
+): Record<string, string> {
+  const result: Record<string, string> = { ...selection };
+  for (const [name, symbol] of Object.entries(symbols))
+    if (symbol.type === 'computed')
+      result[name] = String(evaluate(symbol.value ?? '', result));
+  return result;
 }
 
 export function choiceFor(

@@ -1,4 +1,4 @@
-# Operation-scoped idle inhibition (unreleased)
+# Operation-scoped idle inhibition
 
 Use inhibition only around an explicit operation such as a long export. Request
 `SystemSleep` to ask that idle system sleep be suppressed; add `DisplaySleep`

@@ -44,7 +44,10 @@ export function renderTemplate(
   return output.join('\n');
 }
 
-/** Evaluates `==`, `!=`, `&&`, `||`, and parentheses over template symbols. */
+/**
+ * Evaluates `==`, `!=`, `&&`, `||`, parentheses, and bare boolean symbols such
+ * as `(gtk4)`, which hold when the symbol's value is `true`.
+ */
 export function evaluate(
   expression: string,
   selection: TemplateSymbols,
@@ -74,6 +77,7 @@ export function evaluate(
       return result;
     }
     const left = value();
+    if (peek() !== '==' && peek() !== '!=') return left === 'true';
     const operator = next();
     const right = value();
     if (operator === '==') return left === right;

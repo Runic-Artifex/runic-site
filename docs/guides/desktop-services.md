@@ -9,8 +9,8 @@ Factories such as `WindowsPlatformProvider.CreateNotifications(...)` and
 `LinuxPlatformProvider.CreateSettings()` return services that the caller owns and
 disposes. Native file dialogs, file launchers, and clipboard providers also need
 a verified presentation owner. For an embedded Runic Desktop window, use the
-shipped owner (unreleased; `Runic.Application.Desktop` 0.7.0-preview.3): each
-opened Window exposes `DesktopBridgeWindow<TViewModel>.NativeOwner`, and
+shipped owner in `Runic.Application.Desktop`: each opened Window exposes
+`DesktopBridgeWindow<TViewModel>.NativeOwner`, and
 `new DesktopNativeOwner(desktopWindow)` creates one for a `DesktopWindow` opened
 without Views. Pass it to the provider, for example
 `LinuxPlatformProvider.CreateFileDialogs(workspace.NativeOwner)`, where
@@ -41,7 +41,7 @@ applications should use the GTK 4 portal adapter, for example
 and must not load GTK 3 just to open a file. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.2/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies

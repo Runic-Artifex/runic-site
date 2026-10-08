@@ -13,7 +13,11 @@ import program from '../../sources/sdk/tools/Runic.Application.Templates/content
 import project from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/RunicWindowApp.csproj?raw';
 import views from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/Views.cs?raw';
 import viewModels from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/WorkspaceViewModel.cs?raw';
-import { templateSourceName, type CreatorSelection } from './creator';
+import {
+  templateSourceName,
+  templateSymbols,
+  type CreatorSelection,
+} from './creator';
 import { renderTemplate } from './template-conditions';
 
 export type PreviewFile = {
@@ -49,8 +53,9 @@ export function previewFiles(
   selection: CreatorSelection,
 ): PreviewFile[] {
   const frontend = frontends[selection.frontend] ?? frontends.react;
+  const symbols = templateSymbols(selection);
   const render = (content: string) =>
-    renderTemplate(content, selection)
+    renderTemplate(content, symbols)
       .replaceAll(templateSourceName, name)
       .replaceAll('__RUNIC_NUGET_VERSION__', version);
   return [

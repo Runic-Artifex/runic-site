@@ -7,6 +7,7 @@ import {
   creatorOptions,
   defaultSelection,
   isValidProjectName,
+  templateSymbols,
 } from '../src/lib/creator.ts';
 import { evaluate, renderTemplate } from '../src/lib/template-conditions.ts';
 
@@ -70,6 +71,10 @@ test('conditions support the template engine operators', () => {
   assert.ok(
     !evaluate('host == "cswebui" || viewModels == "reactiveui"', symbols),
   );
+  assert.ok(
+    evaluate('(enabled) && host != "cswebui"', { ...symbols, enabled: 'true' }),
+  );
+  assert.ok(!evaluate('enabled', { ...symbols, enabled: 'false' }));
   assert.throws(
     () => evaluate('missing == "x"', symbols),
     /Unknown template symbol/,
@@ -96,6 +101,19 @@ test('conditions support the template engine operators', () => {
   );
 });
 
+test('computed template symbols follow the host choice', () => {
+  const computed = (host) => {
+    const { desktopHost, gtk4 } = templateSymbols({
+      ...defaultSelection(),
+      host,
+    });
+    return [desktopHost, gtk4];
+  };
+  assert.deepEqual(computed('cswebui'), ['false', 'false']);
+  assert.deepEqual(computed('desktop'), ['true', 'false']);
+  assert.deepEqual(computed('desktop-gtk4'), ['true', 'true']);
+});
+
 test('every template file renders cleanly for every host and ViewModel choice', () => {
   const sources = [
     'Program.cs',
@@ -107,14 +125,15 @@ test('every template file renders cleanly for every host and ViewModel choice', 
     'frontends/angular/src/index.html',
   ];
   for (const frontend of ['react', 'vue', 'svelte', 'angular'])
-    for (const host of ['cswebui', 'desktop'])
+    for (const host of ['cswebui', 'desktop', 'desktop-gtk4'])
       for (const viewModels of ['toolkit', 'reactiveui']) {
-        const symbols = {
+        const symbols = templateSymbols({
           frontend,
           packageManager: 'npm',
           host,
           viewModels,
-        };
+        });
+        const desktop = host !== 'cswebui';
         const files = Object.fromEntries(
           sources.map((path) => [path, renderTemplate(read(path), symbols)]),
         );
@@ -125,14 +144,22 @@ test('every template file renders cleanly for every host and ViewModel choice', 
             `${path} ${host} ${viewModels}`,
           );
         assert.equal(
-          files['Program.cs'].includes('DesktopHost.StartAsync'),
-          host === 'desktop',
+          files['Program.cs'].includes('DesktopEventLoop.Run'),
+          desktop,
+        );
+        assert.equal(
+          files['Program.cs'].includes('.WithGtk4()'),
+          host === 'desktop-gtk4',
+        );
+        assert.equal(
+          files['RunicWindowApp.csproj'].includes('Runic.Desktop.Gtk4'),
+          host === 'desktop-gtk4',
         );
         assert.equal(
           files['frontends/react/index.html'].includes(
             'runic-desktop-views.js',
           ),
-          host === 'desktop',
+          desktop,
         );
         assert.equal(
           files['WorkspaceViewModel.cs'].includes('ReactiveObject'),

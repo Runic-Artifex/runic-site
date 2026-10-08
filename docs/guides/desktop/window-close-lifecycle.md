@@ -101,7 +101,9 @@ the caller cancels. Never retain the handle beyond the owning presentation or se
 it to JavaScript.
 
 `Runic.Platform` provider APIs take an explicit owner for native file dialogs,
-launchers, and clipboard access. The application owns that adapter and the service
-lifetime; dispose services while the native event loop remains active. On macOS use
+launchers, and clipboard access. For an embedded Desktop window pass
+`DesktopNativeOwner` (see [platform services](../desktop-services.md)); the
+application owns the service lifetime and disposes services while the native
+event loop remains active. On macOS use
 `DesktopEventLoop.Run(Func<Task>)` when composing asynchronous cleanup around
 Desktop directly so AppKit stays on its main thread until disposal completes.

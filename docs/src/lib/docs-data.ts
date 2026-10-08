@@ -243,6 +243,10 @@ export const products: Product[] = [
         label: 'SvelteKit quickstart',
       },
       {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/rmf2.md#document-messages',
+        label: 'Document messages',
+      },
+      {
         href: 'https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations',
         label: 'Translations guides',
       },
@@ -256,11 +260,11 @@ export const products: Product[] = [
     description:
       'Runic Translations discovers one translations/runic.json project with locale-scoped MessageFormat 2 files. Its deterministic compiler generates identifier-safe message calls, locale metadata, request-local SSR support, typed C# and tree-shakable ESM while keeping its runtime ABI portable and NativeAOT-ready.',
     releaseProduct: null,
-    version: '0.6.0-preview.3',
+    version: '0.6.0-preview.4',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.3',
+      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.4',
     source: 'https://github.com/Runic-Artifex/runic-translations-sdk',
     bestFor: [
       'Deterministic localization builds',
