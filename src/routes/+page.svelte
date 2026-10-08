@@ -157,7 +157,8 @@
       ></pre>
     <p>
       Pass any option to the creator: React, Vue, Svelte, or Angular; npm, pnpm,
-      or Bun; CS-WebUI or Runic Desktop; CommunityToolkit.Mvvm or ReactiveUI.
+      or Bun; CS-WebUI, Runic Desktop, or Runic Desktop with GTK 4 on Linux;
+      CommunityToolkit.Mvvm or ReactiveUI.
     </p>
     <a class="text-link" href="https://docs.runic-artifex.eu/create/"
       >Put your app together in the browser <span aria-hidden="true">→</span></a

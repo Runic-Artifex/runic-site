@@ -48,7 +48,7 @@ export const products: Product[] = [
     shortName: 'Translations',
     capability: 'Deterministic localization',
     description:
-      'Turn portable translation resources into strongly typed, NativeAOT-ready APIs.',
+      'Turn portable translation resources, from short messages to structured documents, into strongly typed, NativeAOT-ready APIs.',
     docs: `${docs}/runic-translations/`,
     source: `${github}/runic-translations-sdk/tree/main/packages/dotnet/Runic.Translations`,
   },
