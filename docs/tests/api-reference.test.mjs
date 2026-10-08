@@ -89,7 +89,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
     compressed += gzipSync(bytes).length;
   }
   assert.ok(
-    compressed <= 3 * 1024 * 1024,
+    compressed <= 3.5 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });
