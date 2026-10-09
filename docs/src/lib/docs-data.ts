@@ -98,6 +98,10 @@ export const products: Product[] = [
         label: 'Add Runic to an existing app',
       },
       {
+        href: '/guides/application/migrations/wpf-incremental/',
+        label: 'Adopt Runic incrementally in WPF',
+      },
+      {
         href: '/guides/application/architecture/',
         label: 'Application architecture',
       },
@@ -111,8 +115,14 @@ export const products: Product[] = [
     description:
       'Runic Application uses explicit partial Window and View types to connect scoped .NET ViewModels to ordinary TypeScript clients and framework components. The browser framework owns rendering; .NET constructs each logical View and owns its model and operation lifetime.',
     ...releaseMetadata('application'),
-    // Project templates, the creator, the Effect bindings and the Svelte packages.
-    includedReleaseProducts: ['templates', 'views-effect', 'svelte'],
+    // Optional navigation/presentation integrations and frontend/template packages.
+    includedReleaseProducts: [
+      'navigation',
+      'application-wpf',
+      'templates',
+      'views-effect',
+      'svelte',
+    ],
     source:
       'https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views',
     bestFor: [
@@ -260,11 +270,11 @@ export const products: Product[] = [
     description:
       'Runic Translations discovers one translations/runic.json project with locale-scoped MessageFormat 2 files. Its deterministic compiler generates identifier-safe message calls, locale metadata, request-local SSR support, typed C# and tree-shakable ESM while keeping its runtime ABI portable and NativeAOT-ready.',
     releaseProduct: null,
-    version: '0.6.0-preview.4',
+    version: '0.6.0-preview.5',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.4',
+      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.5',
     source: 'https://github.com/Runic-Artifex/runic-translations-sdk',
     bestFor: [
       'Deterministic localization builds',

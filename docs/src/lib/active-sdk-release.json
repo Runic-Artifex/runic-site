@@ -1,6 +1,6 @@
 {
-  "version": "0.7.0-preview.3",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.3",
+  "version": "0.7.0-preview.5",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.5",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -30,6 +30,30 @@
       "identity": "Runic.Desktop",
       "ecosystem": "nuget",
       "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Navigation",
+      "ecosystem": "nuget",
+      "product": "navigation",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Navigation.ReactiveUI",
+      "ecosystem": "nuget",
+      "product": "navigation",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Navigation.ReactiveUI.Reactive",
+      "ecosystem": "nuget",
+      "product": "navigation",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Navigation.Wpf",
+      "ecosystem": "nuget",
+      "product": "navigation",
       "installKind": "nuget-package"
     },
     {
@@ -66,6 +90,12 @@
       "identity": "Runic.Application.Desktop",
       "ecosystem": "nuget",
       "product": "application",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Application.Wpf",
+      "ecosystem": "nuget",
+      "product": "application-wpf",
       "installKind": "nuget-package"
     },
     {

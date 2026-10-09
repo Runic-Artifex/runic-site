@@ -5,7 +5,11 @@ frontend, and want them to talk through typed Windows and Views. To start from
 nothing, [create a project](getting-started/README.md) instead; the steps below
 reproduce what the template sets up. Replace `<VERSION>` with the current
 release from the [package catalog](https://docs.runic-artifex.eu/packages/) and
-keep all Runic packages on that version.
+keep Application SDK packages on that version. Runic Translations and Runic
+Command Line have independent release versions.
+
+For an existing WPF shell, follow [incremental WPF migration](migrations/wpf-incremental.md)
+to add native navigation or embed an individual web View.
 
 ## 1. Add the packages
 

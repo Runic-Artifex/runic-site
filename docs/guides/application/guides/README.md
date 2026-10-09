@@ -5,6 +5,7 @@
 - [Getting started with templates](../getting-started/README.md)
 - [Windows and Views, step by step](../tutorial/README.md)
 - [Add Runic to an existing app](../existing-app.md)
+- [Incremental WPF migration](../migrations/wpf-incremental.md)
 - [Embed and serve assets](../../assets/README.md)
 - [Package and build reference](../reference/README.md)
 - [SDK contribution guide](../contributing/README.md)

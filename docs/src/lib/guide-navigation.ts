@@ -28,6 +28,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'application/getting-started/README.md',
       'application/tutorial/README.md',
       'application/existing-app.md',
+      'application/migrations/wpf-incremental.md',
       'application/README.md',
       'application/guides/README.md',
       'application/guides/dynamicdata.md',

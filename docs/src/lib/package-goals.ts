@@ -74,6 +74,46 @@ export const packageGoals: readonly PackageGoal[] = [
     },
   },
   {
+    id: 'wpf-navigation',
+    title: 'Adopt navigation in WPF',
+    summary:
+      'Keep native Views and existing ViewModels while adopting the shared navigation engine, WPF hosts and idiomatic MVVM commands.',
+    packages: [
+      {
+        name: 'Runic.Navigation.Wpf',
+        note: 'Native hosts and dispatcher context; includes Runic.Navigation.',
+      },
+      {
+        name: 'Runic.Navigation.ReactiveUI',
+        note: 'Only for ReactiveUI observable and command helpers; choose the .Reactive flavor for System.Reactive.',
+      },
+    ],
+    guide: {
+      href: guideHref('application/migrations/wpf-incremental.md'),
+      label: 'Adopt Runic incrementally in WPF',
+    },
+  },
+  {
+    id: 'wpf-web-view',
+    title: 'Replace one WPF View with a web View',
+    summary:
+      'Embed a web presentation in the existing WPF shell and retain the same application-owned model, services and navigation entry.',
+    packages: [
+      {
+        name: 'Runic.Application.Wpf',
+        note: 'Experimental child WebView2 host; includes the Desktop bridge.',
+      },
+      {
+        name: '@runic-artifex/views',
+        note: 'Shared browser runtime; add the binding for your frontend framework.',
+      },
+    ],
+    guide: {
+      href: guideHref('application/migrations/wpf-incremental.md'),
+      label: 'Migrate individual Views',
+    },
+  },
+  {
     id: 'test',
     title: 'Test Windows and Views',
     summary:
