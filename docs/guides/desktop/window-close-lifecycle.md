@@ -43,18 +43,23 @@ responsive while the confirmation is pending.
 - `CloseAsync`, surface/host disposal and application shutdown **bypass confirmation**.
   They can release resources even if a callback ignores cancellation. A late approval
   cannot close a subsequently opened replacement window.
+- Bridge invocation completion and domain-task completion are separate. A cancelled
+  ReactiveUI invocation can finish before its accepted workflow finishes recovery.
+  Retain and await application-owned work during asynchronous disposal; see
+  [operations and cancellation](../application/guides/operations-and-cancellation.md).
 - This intercepts ordinary user close requests. It does not promise interception of
   OS session termination, process killing, crashes, or power loss. Durable drafts
   require a separate persistence policy.
 
 ## Platform and custom-host support
 
-| Presentation            | Interception                                                       | Forced destruction                         |
-| ----------------------- | ------------------------------------------------------------------ | ------------------------------------------ |
-| Windows WebView2        | `WM_CLOSE` (also used by the existing WebView2 close notification) | `DestroyWindow` on the owning UI thread    |
-| Linux GTK 3 / WebKitGTK | `delete-event` returns true while the decision runs                | `gtk_widget_destroy` on the GTK dispatcher |
-| macOS WKWebView         | `windowShouldClose:` returns false while the decision runs         | `NSWindow.close` on the main thread        |
-| Installed browser       | No native close confirmation capability                            | Existing browser lifecycle                 |
+| Presentation              | Interception                                                       | Forced destruction                         |
+| ------------------------- | ------------------------------------------------------------------ | ------------------------------------------ |
+| Windows WebView2          | `WM_CLOSE` (also used by the existing WebView2 close notification) | `DestroyWindow` on the owning UI thread    |
+| Linux GTK 3 / WebKitGTK   | `delete-event` returns true while the decision runs                | `gtk_widget_destroy` on the GTK dispatcher |
+| Linux GTK 4 / WebKitGTK 6 | `close-request` returns true while the decision runs               | Window destruction on the GTK 4 dispatcher |
+| macOS WKWebView           | `windowShouldClose:` returns false while the decision runs         | `NSWindow.close` on the main thread        |
+| Installed browser         | No native close confirmation capability                            | Existing browser lifecycle                 |
 
 The native hooks follow the platform contracts for
 [Windows close requests](https://learn.microsoft.com/en-us/windows/win32/learnwin32/closing-the-window),
@@ -78,9 +83,7 @@ mode currently targets Windows/Linux; browser mode remains available on macOS.
 
 ## Verification
 
-Managed tests cover veto/retry, shared decisions, callback failure/cancellation,
-caller cancellation, forced shutdown, stale window references, surface reuse,
-custom-host opt-in and unsupported browser policies. The `Runic.Desktop.Tests` managed suite covers confirmation policy, shared
+The `Runic.Desktop.Tests` managed suite covers confirmation policy, shared
 requests, cancellation, forced shutdown, stale window references, surface reuse,
 custom-host opt-in and unsupported browser policies.
 
@@ -89,6 +92,10 @@ custom-host opt-in and unsupported browser policies.
 thread. It checks bridge responsiveness during the pending decision, veto, retry and
 approved destruction. Root CI runs this smoke on Linux x64, Windows x64 and macOS Apple Silicon. Local execution evidence is retained with the native smoke outputs;
 adding CI coverage is not evidence that a remote platform run has passed.
+
+The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Desktop.Gtk4/README.md)
+also exercises close veto/retry on its own dispatcher. Select the native backend
+you ship when verifying your application's close and cleanup behavior.
 
 ## Presentation-owned native work
 

@@ -62,6 +62,7 @@ export const quickstartGuides = [
   'application/getting-started/README.md',
   'application/tutorial/README.md',
   'application/existing-app.md',
+  'application/package-consumer.md',
   'assets/README.md',
 ];
 

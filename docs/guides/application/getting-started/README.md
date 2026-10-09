@@ -24,7 +24,7 @@ dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host
 | ------------------- | ----------------------------------------------- | --------- |
 | `--frontend`        | `react`, `vue`, `svelte`, `angular`             | `react`   |
 | `--package-manager` | `npm`, `pnpm`, `bun`                            | `npm`     |
-| `--host`            | `cswebui`, `desktop`                            | `cswebui` |
+| `--host`            | `cswebui`, `desktop`, `desktop-gtk4`            | `cswebui` |
 | `--view-models`     | `toolkit` (CommunityToolkit.Mvvm), `reactiveui` | `toolkit` |
 
 Replace `<VERSION>` with the current release from the
@@ -61,6 +61,8 @@ operation lifetime.
   generated project, then nested Views and tests.
 - [Add Runic to an existing app](../existing-app.md) when you already have a
   .NET project and a frontend.
+- [Build a desktop app from published packages](../package-consumer.md) covers
+  GTK 4, generated assets, scoped services, native ownership and shutdown.
 - [Embed and serve assets](../../assets/README.md) to ship a frontend inside
   the executable or serve it from ASP.NET Core.
 - [Host selection](../../desktop/host-selection.md) compares CS-WebUI and Runic
