@@ -44,7 +44,7 @@ context's naming defaults. Treat each consumer's generated wire contract as
 explicit rather than assuming serializer configuration controls both.
 
 SDK development adds the unreleased assembly-level
-[`RunicBridgeJsonIgnore`](https://github.com/Runic-Artifex/runic-sdk/blob/e57963af2fb0f9619862d18cc7217dff7a08fb23/packages/dotnet/Runic.Application.Views/RunicPresentation.cs)
+[`RunicBridgeJsonIgnore`](https://github.com/Runic-Artifex/runic-sdk/blob/d230f42e391bf778649eb827191aa56edbeb1372/packages/dotnet/Runic.Application.Views/RunicPresentation.cs)
 opt-in for shared DTOs. Put it in the assembly declaring the ViewModel; that
 ViewModel's policy follows its DTO graph, including DTOs in another assembly.
 It recognizes unconditional `[JsonIgnore]` and
