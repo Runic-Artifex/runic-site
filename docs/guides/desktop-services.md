@@ -46,3 +46,28 @@ checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
 and native verification status.
+
+## Directory selection
+
+Published `0.7.0-preview.5` file dialogs provide read/save file leases. They have
+no directory-selection contract; a file's display name is not an exact directory
+path or access grant. Apps needing folder selection on that release own an
+adapter and its native lifetime, or accept a typed path.
+
+SDK development adds the unreleased
+`IFileDialogs.OpenDirectoryAsync(OpenDirectoryOptions, CancellationToken)`
+contract and the `platform.directories.open` capability. A successful selected
+`IDirectoryLease` has `DisplayName` and `LocalPath`; keep the lease alive while
+the application's C# filesystem work uses the path and dispose it afterwards.
+The lease retains native access until disposal or presentation close. Native
+grants and lease objects stay in C#; publish application DTOs to the frontend.
+
+Dismissal, caller cancellation and owner closure remain different results:
+`Dismissed`, `OperationCanceledException` and `Unavailable(OwnerClosed)`.
+Existing file-only implementations remain compatible and return directory
+selection unavailable. Treat an unavailable provider or browser-only owner as
+an application state, and retain an appropriate fallback.
+
+This API is absent from the published catalog. Adopt a deliberately built
+candidate or a release that contains it before using it; see the
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md).

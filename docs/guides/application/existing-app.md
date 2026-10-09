@@ -8,6 +8,9 @@ release from the [package catalog](https://docs.runic-artifex.eu/packages/) and
 keep Application SDK packages on that version. Runic Translations and Runic
 Command Line have independent release versions.
 
+For a package-only GTK 4 consumer and its scoped/native shutdown ownership, see
+[Build a desktop app from published packages](package-consumer.md).
+
 For an existing WPF shell, follow [incremental WPF migration](migrations/wpf-incremental.md)
 to add native navigation or embed an individual web View.
 
