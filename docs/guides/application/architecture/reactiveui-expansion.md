@@ -1,7 +1,7 @@
 # Reactive application contracts
 
 This document records the implemented architecture behind Runic's ReactiveUI
-25 bridge. It is an internal contract design, not a second public wire
+26 bridge. It is an internal contract design, not a second public wire
 specification. Application authors normally work with generated C# attachments
 and TypeScript clients; the permanent routes described here are transport
 details.
@@ -101,9 +101,11 @@ must not casually retry an effect.
 ## Model execution and delivery
 
 `IRunicModelContext` owns short serialized reads and mutations for a mutable
-model graph. `RunicModelContext` provides the default queue. A synchronous
-bridge route enters a synchronous turn only to decode, inspect state, or change
-state. It never holds that turn across a task, I/O operation, or interaction.
+model graph. These types and `RunicModelContextRegistry` are in the
+`Runic.Navigation` package and namespace. `RunicModelContext` provides the default
+queue. A synchronous bridge route enters a synchronous turn only to decode,
+inspect state, or change state. It never holds that turn across a task, I/O
+operation, or interaction.
 
 ```text docs-test=skip:diagram
 turn: capture input / change local state
@@ -129,17 +131,19 @@ is synchronously publishing JavaScript. Full snapshots can coalesce at the
 delivery boundary; operation terminals and interaction requests do not use the
 broadcast channel.
 
-The ReactiveUI adapters expose a context-backed scheduler provider. The default
-flavor returns `ReactiveUI.Primitives.Concurrency.ISequencer`; the System.Reactive
+The `Runic.Navigation.ReactiveUI` adapters expose a context-backed scheduler
+provider. The default flavor returns `ReactiveUI.Primitives.Concurrency.ISequencer`; the System.Reactive
 flavor returns `System.Reactive.Concurrency.IScheduler`. Neither modifies a
 process-wide main-thread scheduler. Native UI dispatch and browser rendering
 remain owned by their hosts.
 
 `services.AddRunicReactiveModelContext()` is the DI setup for either selected
 adapter. It uses `TryAdd` for the scoped `IRunicModelContext`, singleton
-scheduler provider, and selected flavor's scoped scheduler, preserving
-application overrides. The default context is drained by asynchronous scope
-disposal. Application composition still binds each root and independently
+scheduler provider, and selected flavor's transient scheduler registration,
+preserving application overrides. The provider returns one scheduler per context
+for as long as that context is alive; repeated resolutions share that instance.
+The default context is drained by asynchronous scope disposal. Application
+composition still binds each root and independently
 presented child through `RunicModelContextRegistry`.
 
 ## Interaction ownership and delivery
@@ -207,8 +211,8 @@ The exact generated codec/command path is covered by a ReactiveUI Native AOT
 fixture with no warnings. That verifies the bridge contract under AOT; it does
 not represent every native host or frontend combination.
 
-The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
-[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
-[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/packages/dotnet/Runic.Application.Views/RunicModelContext.cs),
-and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
+The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
+[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
+[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
+and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).

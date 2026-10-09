@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.7.0-preview.3",
+  "version": "0.7.0-preview.5",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "edd2d175794afc86e964a06cb55329f44793009f"
@@ -61,6 +61,22 @@
       "project": "packages/dotnet/Runic.Desktop/Runic.Desktop.csproj"
     },
     {
+      "name": "Runic.Navigation",
+      "project": "packages/dotnet/Runic.Navigation/Runic.Navigation.csproj"
+    },
+    {
+      "name": "Runic.Navigation.ReactiveUI",
+      "project": "packages/dotnet/Runic.Navigation.ReactiveUI/Runic.Navigation.ReactiveUI.csproj"
+    },
+    {
+      "name": "Runic.Navigation.ReactiveUI.Reactive",
+      "project": "packages/dotnet/Runic.Navigation.ReactiveUI.Reactive/Runic.Navigation.ReactiveUI.Reactive.csproj"
+    },
+    {
+      "name": "Runic.Navigation.Wpf",
+      "project": "packages/dotnet/Runic.Navigation.Wpf/Runic.Navigation.Wpf.csproj"
+    },
+    {
       "name": "Runic.Application",
       "project": "packages/dotnet/Runic.Application.Views/Runic.Application.Views.csproj"
     },
@@ -83,6 +99,10 @@
     {
       "name": "Runic.Application.Desktop",
       "project": "packages/dotnet/Runic.Application.Desktop/Runic.Application.Desktop.csproj"
+    },
+    {
+      "name": "Runic.Application.Wpf",
+      "project": "packages/dotnet/Runic.Application.Wpf/Runic.Application.Wpf.csproj"
     },
     {
       "name": "Runic.Application.Templates",
@@ -173,10 +193,24 @@
         "specs/assets"
       ]
     },
+    "navigation": {
+      "dependsOn": [],
+      "paths": [
+        "packages/dotnet/Runic.Navigation",
+        "packages/dotnet/Runic.Navigation.ReactiveUI",
+        "packages/dotnet/Runic.Navigation.ReactiveUI.Reactive",
+        "packages/dotnet/Runic.Navigation.Wpf",
+        "tests/dotnet/Runic.Navigation.Tests",
+        "tests/dotnet/Runic.Navigation.Wpf.Tests",
+        "tests/fixtures/navigation",
+        "examples/wpf-navigation"
+      ]
+    },
     "application": {
       "dependsOn": [
         "desktop",
-        "platform"
+        "platform",
+        "navigation"
       ],
       "paths": [
         "packages/dotnet/Runic.Application.Views",
@@ -206,6 +240,18 @@
         "tests/fixtures/application/reactiveui25-aot",
         "tests/fixtures/application/reactiveui-behavioral-conformance",
         "tests/fixtures/application/reactiveui-reactive-flavor"
+      ]
+    },
+    "application-wpf": {
+      "dependsOn": [
+        "application",
+        "navigation"
+      ],
+      "paths": [
+        "packages/dotnet/Runic.Application.Wpf",
+        "tests/dotnet/Runic.Application.Wpf.Tests",
+        "tests/dotnet/Runic.Application.Wpf.Windows.Tests",
+        "examples/wpf-hybrid-editor"
       ]
     },
     "views-effect": {
