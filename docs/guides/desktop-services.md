@@ -70,4 +70,4 @@ an application state, and retain an appropriate fallback.
 
 This API is absent from the published catalog. Adopt a deliberately built
 candidate or a release that contains it before using it; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/dotnet/Runic.Platform/README.md).
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/e57963af2fb0f9619862d18cc7217dff7a08fb23/packages/dotnet/Runic.Platform/README.md).

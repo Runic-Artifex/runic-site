@@ -75,9 +75,9 @@ absent from published `0.7.0-preview.5`. Use a deliberately built candidate or a
 release that contains them; a development version does not establish package
 availability.
 
-[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/web/views/src/operation-controller.ts)
+[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/e57963af2fb0f9619862d18cc7217dff7a08fb23/packages/web/views/src/operation-controller.ts)
 and Svelte's
-[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/web/svelte/src/views/use-operation.svelte.ts)
+[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/e57963af2fb0f9619862d18cc7217dff7a08fb23/packages/web/svelte/src/views/use-operation.svelte.ts)
 bind generated
 Start handles to admission, pending state, status, terminal outcome, declared
 failure, unexpected error and Cancel. Progress remains application state in the
@@ -170,7 +170,7 @@ availability must finish after terminal invocation status. Call `dispose()`
 when the selection owner leaves; it drops feedback and queued intent without
 requesting cancellation of accepted work.
 
-[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
+[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/e57963af2fb0f9619862d18cc7217dff7a08fb23/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
 reserves application-owned work before invoking
 its factory. `DrainAsync` stops new admission and waits for accepted tasks;
 cancelling the caller's drain wait does not cancel those tasks. Asynchronous
@@ -196,7 +196,7 @@ public async ValueTask DisposeAsync()
 
 These development snippets are illustrative; published-package onboarding stays
 checked against the portal's pinned template. The
-[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/tests/fixtures/application/operations-consumer/README.md)
+[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/e57963af2fb0f9619862d18cc7217dff7a08fb23/tests/fixtures/application/operations-consumer/README.md)
 builds from packed NuGet/npm archives and exercises operation feedback, latest
 selection, session replacement, DTO opt-in and accepted-work disposal through the
 real Desktop bridge.
