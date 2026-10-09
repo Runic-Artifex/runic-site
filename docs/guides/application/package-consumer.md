@@ -1,8 +1,7 @@
 # Build a desktop app from published packages
 
-This path uses NuGet and npm packages in an application repository. You do not
-need an SDK checkout, sibling project references, frontend source links, or a
-custom bridge protocol. The examples below match the published
+This path uses published NuGet/npm packages and the generated bridge in your
+application repository, with no SDK source dependencies. The examples match the published
 `0.7.0-preview.5` template. Replace `<VERSION>` with the published version in the
 [package catalog](https://docs.runic-artifex.eu/packages/), and keep the
 Application, Desktop, template, tool and frontend Runic packages on that version.
@@ -24,8 +23,7 @@ You need the .NET 10 SDK and the frontend tools reported by
 `dotnet runic doctor`. The creator's destination option is `--directory`;
 `--output` selects the creator's output format, not a filesystem destination.
 Keep the generated package versions and lockfiles in your app repository. The
-[project creator](https://docs.runic-artifex.eu/create/) previews other frontend,
-ViewModel and host choices. For an existing project, use
+[project creator](https://docs.runic-artifex.eu/create/) previews other choices. For an existing project, use
 [Add Runic to an existing app](existing-app.md).
 
 `desktop-gtk4` adds `Runic.Application.Desktop`, `Runic.Desktop.Gtk4`,
@@ -76,10 +74,8 @@ services.AddRunicViews();
 
 `OpenDesktopWindowAsync` creates the Window's asynchronous DI scope, resolves
 the root model, opens the surface and presentation, and attaches the generated
-Bridge. Register window-bound native services as scoped too. Keep shared domain
-services independent of the window where their lifetime permits it. Use the
-Window's model context for model state and its native dispatcher for native UI;
-they are different owners.
+Bridge. Register window-bound native services as scoped too. Use the Window's
+model context for model state and its native dispatcher for native UI.
 
 ## Start the native event loop before asynchronous work
 
@@ -99,8 +95,8 @@ return DesktopEventLoop.Run(options, async desktop =>
 
 On Linux this keeps GTK 4 on the process main thread. Keep asynchronous Window,
 scope and provider cleanup inside the callback so the event loop remains active
-until cleanup finishes. Retain the diagnostic sink: a missing embedded runtime
-or a fallback should be visible to the app.
+until cleanup finishes. Retain the diagnostic sink to report a missing runtime
+or fallback.
 
 ## Bind native services to the opened presentation
 
@@ -116,14 +112,10 @@ and retain an appropriate application alternative. Keep native handles inside
 owner-dispatched callbacks and never send them to JavaScript. Dispose owner-bound
 resources while their owner and event loop are still available.
 
-Published `0.7.0-preview.5` file dialogs select read/save files; they do not
-provide a directory-selection contract. A read lease's display name is not an
-exact directory path. An app needing folder selection must own an adapter and
-its native lifetime or accept a typed path. Do not treat file selection as
-directory access.
-
-The [directory-selection development API](../desktop-services.md#directory-selection)
-is unreleased; it does not change these published-package prerequisites.
+Published `0.7.0-preview.5` has no directory-selection contract. Apps needing
+folder selection own a native adapter or accept a typed path. See
+[directory selection](../desktop-services.md#directory-selection) for the lease
+boundary and unreleased API.
 
 ## Own shutdown and verify the published output
 
@@ -147,10 +139,10 @@ dotnet publish -c Release -r linux-x64
 Distribute the whole publish directory, including `www`; the frontend needs no
 Node.js or package manager at runtime. A framework-dependent publish still needs
 the matching .NET runtime, and embedded hosting still needs the native libraries.
-Run the published output as well as the development host. Check initial model
-state, a long operation with responsive Cancel, native-service unavailability,
-and close while accepted work is recovering. A managed test or browser-only run
-does not establish that the selected native host works.
+Run the published native output as well as the development host. Check initial
+state, a long operation with responsive Cancel, unavailable native services,
+and close during recovery. Managed or browser-only checks do not verify the
+native host.
 
 For domain DTOs shared with a CLI, see
 [serializer and bridge contract boundaries](reference/README.md#shared-dtos-and-serializer-attributes).

@@ -43,7 +43,8 @@ names, with `[RunicAlias]` taking precedence, but does not inherit a JSON
 context's naming defaults. Treat each consumer's generated wire contract as
 explicit rather than assuming serializer configuration controls both.
 
-SDK development adds the unreleased assembly-level `[RunicBridgeJsonIgnore]`
+SDK development adds the unreleased assembly-level
+[`RunicBridgeJsonIgnore`](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/dotnet/Runic.Application.Views/RunicPresentation.cs)
 opt-in for shared DTOs. Put it in the assembly declaring the ViewModel; that
 ViewModel's policy follows its DTO graph, including DTOs in another assembly.
 It recognizes unconditional `[JsonIgnore]` and
@@ -76,6 +77,6 @@ a recognized identity with `TryGet`. Failure data reports recovery state; it doe
 not make automatic retry safe.
 
 These failure-data APIs are unreleased. Follow the independent
-[Command Line guide](https://github.com/Runic-Artifex/runic-cli-sdk/blob/main/packages/dotnet/Runic.CommandLine/README.md)
+[Command Line guide](https://github.com/Runic-Artifex/runic-cli-sdk/blob/645c7e7a12b314013958d7b6a5428ca8d51b6845/packages/dotnet/Runic.CommandLine/README.md)
 for the owning contract and adoption instructions; do not assume Application's
 development version publishes them.

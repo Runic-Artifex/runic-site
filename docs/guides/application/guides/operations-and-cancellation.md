@@ -7,12 +7,10 @@ outlive the generated invocation that admitted it.
 
 ## Observe an accepted operation
 
-A Start receipt establishes admission; it does not establish success. Retain
-the generated operation handle and show its current status. A cancellation
-request is also not a terminal outcome: continue observing until the operation
-settles. Show declared domain failure separately from an unexpected bridge or
-transport error, and inspect current application state when completion is
-unknown before retrying a mutation.
+A Start receipt establishes admission. Retain the operation handle and observe
+it until terminal status, including after requesting cancellation. Show declared
+domain failure separately from a bridge or transport error, and inspect current
+application state when completion is unknown before retrying a mutation.
 
 With published `Runic.Desktop` `0.7.0-preview.5`, an awaited WebUI callback can
 hold later callbacks, including Cancel. For that release, use Start followed
@@ -72,13 +70,15 @@ and [published-package desktop onboarding](../package-consumer.md).
 
 ## Development APIs
 
-The SDK development version is `0.7.0-preview.6`; the following helpers are
-unreleased and are absent from the published `0.7.0-preview.5` packages. Their
-installation version must come from a deliberately built candidate or a future
-published release, not from substituting the development version into the
-package catalog.
+The following helpers are unreleased SDK `0.7.0-preview.6` development APIs,
+absent from published `0.7.0-preview.5`. Use a deliberately built candidate or a
+release that contains them; a development version does not establish package
+availability.
 
-`createOperationController` and Svelte's `useOperation` bind generated
+[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/web/views/src/operation-controller.ts)
+and Svelte's
+[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/web/svelte/src/views/use-operation.svelte.ts)
+bind generated
 Start handles to admission, pending state, status, terminal outcome, declared
 failure, unexpected error and Cancel. Progress remains application state in the
 generated View snapshot. Disposing a binding stops its observation;
@@ -109,8 +109,13 @@ duplicate click:
 {#if save.pending}<p role="status">
     {save.admitting ? 'Starting…' : 'Saving…'}
   </p>{/if}
+{#if save.outcome?.ok}<p role="status">
+    {editor.state?.savedMessage || 'Saved.'}
+  </p>{/if}
 {#if save.failure}<p role="alert">{save.failure.$case}</p>{/if}
-{#if save.error}<p role="alert">{String(save.error)}</p>{/if}
+{#if save.error ?? editor.error}<p role="alert">
+    {String(save.error ?? editor.error)}
+  </p>{/if}
 {#if save.cancelError}<p role="alert">{String(save.cancelError)}</p>{/if}
 ```
 
@@ -120,13 +125,13 @@ model state. Flush pending field writes before Save when your editor has a form
 write queue; see [typed domain failures](typed-failures.md#framework-command-helpers).
 
 `createLatestOperationController` coalesces the latest selection intent and
-waits for terminal status before the next admission. An intent can additionally
+waits for terminal status before the next admission in the same session. An intent can additionally
 supply a real-work barrier and a session-validity check. Cancellation and
 replacement clear queued intent. Transport uncertainty blocks further admission
 until an explicit replacement resolves ownership.
 
 For a workspace contract exposing `startSelectCommit` and a short `cancelRead`
-control command, capture the client and session for each intent:
+control command, pass the session that rendered the selected item:
 
 ```ts docs-test=skip:illustrative-fragment
 import { createLatestOperationController } from '@runic-artifex/views';
@@ -136,34 +141,36 @@ import type {
 } from './generated/workspace.js';
 
 const selection = createLatestOperationController();
-let session = 0;
+type SelectionSession = { readonly client: WorkspaceClient };
+let currentSession: SelectionSession | undefined;
 
-function selectCommit(client: WorkspaceClient, commit: CommitSelection) {
-  const capturedSession = session;
+function selectCommit(session: SelectionSession, commit: CommitSelection) {
   return selection.run({
-    start: () => client.startSelectCommit(commit),
+    start: () => session.client.startSelectCommit(commit),
     cancel: async () => {
-      await client.cancelRead();
+      await session.client.cancelRead();
     },
-    isCurrent: () => capturedSession === session,
+    isCurrent: () => session === currentSession,
   });
 }
 
-function sessionReplaced() {
-  session++;
+function sessionReplaced(client: WorkspaceClient) {
+  currentSession = { client };
   selection.clear('replace');
 }
 ```
 
 Use `clear("cancel")` for a user Cancel that also discards queued selections.
 Call `clear("replace")` only when the application establishes a replacement
-session; it suppresses cancellation against the departing identity and clears
-uncertain admission. Add `waitForCompletion` when domain work or command
+session. It detaches the old observation, suppresses cancellation against the
+departing identity and permits fresh-session admission; the application keeps
+ownership of the old work's drain. It also clears uncertain admission.
+Add `waitForCompletion` when domain work or command
 availability must finish after terminal invocation status. Call `dispose()`
 when the selection owner leaves; it drops feedback and queued intent without
 requesting cancellation of accepted work.
 
-[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/5a6be8f8e4394f71797ba10af7e2251117a802cf/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
+[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
 reserves application-owned work before invoking
 its factory. `DrainAsync` stops new admission and waits for accepted tasks;
 cancelling the caller's drain wait does not cancel those tasks. Asynchronous
@@ -187,6 +194,9 @@ public async ValueTask DisposeAsync()
 }
 ```
 
-These development examples are illustrative and are outside the portal's pinned
-published-template snippet checks. The package-only onboarding snippets remain
-checked against that published snapshot.
+These development snippets are illustrative; published-package onboarding stays
+checked against the portal's pinned template. The
+[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/74eb7f595e1990aecbce230fa091c8a591d47e2e/tests/fixtures/application/operations-consumer/README.md)
+builds from packed NuGet/npm archives and exercises operation feedback, latest
+selection, session replacement, DTO opt-in and accepted-work disposal through the
+real Desktop bridge.
