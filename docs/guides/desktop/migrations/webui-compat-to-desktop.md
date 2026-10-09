@@ -36,7 +36,7 @@ files, `Html(document)`, `ExternalUrl(url)` or `Handler(contentHandler)`. Only
 directory content serves local files. This form is new in Runic SDK
 0.7.0-preview.1; 0.6.0-preview.1 sets `RootFolder` and a `Content`
 string, or `ContentHandler`. The
-[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/eng/release/notes/0.7.0-preview.1.md#upgrading)
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/eng/release/notes/0.7.0-preview.1.md#upgrading)
 map each 0.6 form to its case.
 
 Register capabilities on the surface, then open an optional window:

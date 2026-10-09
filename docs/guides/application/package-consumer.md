@@ -1,12 +1,10 @@
 # Build a desktop app from published packages
 
-This path uses published NuGet/npm packages and the generated bridge in your
-application repository, with no SDK source dependencies. The examples match the published
-`0.7.0-preview.5` template. Replace `<VERSION>` with the published version in the
-[package catalog](https://docs.runic-artifex.eu/packages/), and keep the
-Application, Desktop, template, tool and frontend Runic packages on that version.
-Command Line and Translations have independent releases; choose their versions
-from their product pages.
+Use published NuGet/npm packages and generated clients in your application
+repository. These examples match the `0.7.0-preview.6` template. Replace
+`<VERSION>` with the [catalog version](https://docs.runic-artifex.eu/packages/)
+for Application, Desktop, templates, tools and frontend packages. Command Line
+and Translations have independent versions on their product pages.
 
 ## Create the package consumer
 
@@ -19,12 +17,11 @@ dotnet tool restore
 dotnet runic dev
 ```
 
-You need the .NET 10 SDK and the frontend tools reported by
-`dotnet runic doctor`. The creator's destination option is `--directory`;
-`--output` selects the creator's output format, not a filesystem destination.
-Keep the generated package versions and lockfiles in your app repository. The
-[project creator](https://docs.runic-artifex.eu/create/) previews other choices. For an existing project, use
-[Add Runic to an existing app](existing-app.md).
+Install .NET 10 and the frontend tools reported by `dotnet runic doctor`.
+The creator uses `--directory` for its destination and `--output` for output
+format. Commit generated versions and lockfiles. The
+[creator](https://docs.runic-artifex.eu/create/) previews other choices; see
+[existing-app setup](existing-app.md) to add Runic to an app.
 
 `desktop-gtk4` adds `Runic.Application.Desktop`, `Runic.Desktop.Gtk4`,
 `Runic.Platform.Linux.Gtk4` and `Runic.Platform.Linux.Portal`. Linux needs GTK
@@ -40,18 +37,15 @@ Both use WebView2 on Windows and WKWebView on macOS; see
 <RunicViewsWindowProject>true</RunicViewsWindowProject>
 ```
 
-Declare the Window and its Views in C#. `dotnet build` inspects those contracts,
-writes typed clients under `Frontend/src/generated`, runs the frontend's `build`
-script, and copies `Frontend/dist` into `www` beside the application. Keep the
-generated client directory ignored; an editor can report missing modules before
-the first .NET build. Regenerate clients when you change a contract or upgrade
-Runic packages.
+Declare the Window and Views in C#. `dotnet build` generates clients under
+`Frontend/src/generated`, runs the frontend build, and copies `Frontend/dist`
+into `www` beside the application. Ignore generated clients; missing imports
+before the first .NET build are expected. Rebuild after contract or package changes.
 
-The Desktop Vite template uses `runic({ desktop: true })` from
-`@runic-artifex/vite-plugin-runic`. It loads the Desktop bootstrap and builds
-relative asset URLs for each window's surface path. Application code imports the
-public `@runic-artifex/views` entry; generated modules own its generated-code
-entries.
+Vite's `runic({ desktop: true })` from `@runic-artifex/vite-plugin-runic` loads
+the Desktop bootstrap and builds relative asset URLs for each surface path.
+App code imports public `@runic-artifex/views`; generated modules own its
+generated-code entries.
 
 The default asset bundle is the `www` directory. The Window serves it with
 `DesktopContent.Directory(Path.Combine(AppContext.BaseDirectory, "www"), "index.html")`.
@@ -72,10 +66,9 @@ services.AddScoped<CounterViewModel>();
 services.AddRunicViews();
 ```
 
-`OpenDesktopWindowAsync` creates the Window's asynchronous DI scope, resolves
-the root model, opens the surface and presentation, and attaches the generated
-Bridge. Register window-bound native services as scoped too. Use the Window's
-model context for model state and its native dispatcher for native UI.
+`OpenDesktopWindowAsync` creates the asynchronous DI scope, resolves the root
+model and attaches its Bridge to the presentation. Register window-bound services
+as scoped. Model state uses the model context; native UI uses its dispatcher.
 
 ## Start the native event loop before asynchronous work
 
@@ -93,10 +86,9 @@ return DesktopEventLoop.Run(options, async desktop =>
     });
 ```
 
-On Linux this keeps GTK 4 on the process main thread. Keep asynchronous Window,
-scope and provider cleanup inside the callback so the event loop remains active
-until cleanup finishes. Retain the diagnostic sink to report a missing runtime
-or fallback.
+This keeps GTK 4 on Linux's process main thread. Complete Window, scope and
+provider cleanup inside the callback while the event loop is active. Retain
+the diagnostic sink for missing runtimes and fallback.
 
 ## Bind native services to the opened presentation
 
@@ -106,16 +98,15 @@ matches the backend. GTK 4 file dialogs use
 The GTK 3 `LinuxPlatformProvider.CreateFileDialogs` must not parent a GTK 4 window.
 See [desktop services](../desktop-services.md) for other providers.
 
-The owner verifies the presentation and dispatches native work on its owning
-thread. A browser fallback has `IsAvailable == false`; show an unavailable state
-and retain an appropriate application alternative. Keep native handles inside
-owner-dispatched callbacks and never send them to JavaScript. Dispose owner-bound
-resources while their owner and event loop are still available.
+The owner verifies the presentation and dispatches work on its native thread.
+Browser fallback has `IsAvailable == false`; expose unavailability with an app
+alternative. Keep native handles inside dispatched C# callbacks. Dispose native
+resources while their owner and event loop are available.
 
-Published `0.7.0-preview.5` has no directory-selection contract. Apps needing
-folder selection own a native adapter or accept a typed path. See
-[directory selection](../desktop-services.md#directory-selection) for the lease
-boundary and unreleased API.
+For folder selection, use `IFileDialogs.OpenDirectoryAsync` and retain the
+selected directory lease while C# work uses its local path. See
+[directory selection](../desktop-services.md#directory-selection) for ownership
+and unavailable-provider handling.
 
 ## Own shutdown and verify the published output
 
@@ -125,11 +116,10 @@ await saving a draft. It requires an embedded presentation with
 `DesktopPresentationPolicy.RequestedOnly`; the template's
 `EmbeddedThenBrowser` fallback cannot promise native confirmation.
 
-Forced `CloseAsync` and disposal bypass confirmation. They stop bridge admission
-and observe tracked invocation completion, but cancelled command completion does
-not prove that an accepted domain task has finished recovery. The application
-must retain that task, await it during asynchronous model/service disposal, and
-release its resources afterwards. See [operations and cancellation](guides/operations-and-cancellation.md)
+Forced `CloseAsync` and disposal bypass confirmation. Bridge invocation completion
+does not establish accepted domain-task recovery. Retain and await those tasks
+in asynchronous model/service disposal before releasing resources. See
+[operations and cancellation](guides/operations-and-cancellation.md)
 and [window close lifecycle](../desktop/window-close-lifecycle.md).
 
 ```sh docs-test=commands

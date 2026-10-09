@@ -18,8 +18,8 @@ without Views. Pass it to the provider, for example
 the window's native thread and becomes unavailable when that window closes or is
 replaced. `DesktopNativeOwner.IsAvailable` is false for any window without native
 dispatch, such as an installed browser after fallback or a custom host without a
-native handle. Do not retain native handles beyond the callback or send paths and
-handles to the browser. Non-Desktop hosts, such as CS-WebUI and custom window
+native handle. Do not retain native handles beyond the callback or send native
+handles and leases to the browser. Non-Desktop hosts, such as CS-WebUI and custom window
 hosts, still implement `INativePickerOwner` over their own dispatcher.
 
 Create and dispose owner-bound services while the native event loop is running.
@@ -41,7 +41,7 @@ applications should use the GTK 4 portal adapter, for example
 and must not load GTK 3 just to open a file. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
@@ -49,12 +49,7 @@ and native verification status.
 
 ## Directory selection
 
-Published `0.7.0-preview.5` file dialogs provide read/save file leases. They have
-no directory-selection contract; a file's display name is not an exact directory
-path or access grant. Apps needing folder selection on that release own an
-adapter and its native lifetime, or accept a typed path.
-
-SDK development adds the unreleased
+SDK `0.7.0-preview.6` provides the
 `IFileDialogs.OpenDirectoryAsync(OpenDirectoryOptions, CancellationToken)`
 contract and the `platform.directories.open` capability. A successful selected
 `IDirectoryLease` has `DisplayName` and `LocalPath`; keep the lease alive while
@@ -68,6 +63,5 @@ Existing file-only implementations remain compatible and return directory
 selection unavailable. Treat an unavailable provider or browser-only owner as
 an application state, and retain an appropriate fallback.
 
-This API is absent from the published catalog. Adopt a deliberately built
-candidate or a release that contains it before using it; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/d230f42e391bf778649eb827191aa56edbeb1372/packages/dotnet/Runic.Platform/README.md).
+Use the provider matching the presentation backend; see the
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Platform/README.md).

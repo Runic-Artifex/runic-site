@@ -6,23 +6,23 @@ and namespaces keep the older `Views` name; independent navigation packages use
 
 | Package                                                                                                                                                                   | Source folder                                          | Namespace                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------- |
-| [`Runic.Application`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Views/README.md)                                 | `packages/dotnet/Runic.Application.Views`              | `Runic.Application.Views`              |
-| [`Runic.Application.CsWebUi`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Views.CsWebUi/README.md)                 | `packages/dotnet/Runic.Application.Views.CsWebUi`      | `Runic.Application.Views.CsWebUi`      |
-| [`Runic.Application.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Desktop/README.md)                       | `packages/dotnet/Runic.Application.Desktop`            | `Runic.Application.Views.Desktop`      |
-| [`Runic.Application.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md)           | `packages/dotnet/Runic.Application.Views.ReactiveUI`   | `Runic.Application.Views.ReactiveUI`   |
-| [`Runic.Application.Testing`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Testing/README.md)                       | `packages/dotnet/Runic.Application.Testing`            | `Runic.Application.Testing`            |
-| [`Runic.Application.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Wpf/README.md)                               | `packages/dotnet/Runic.Application.Wpf`                | `Runic.Application.Views.Wpf`          |
-| [`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Navigation/README.md)                                         | `packages/dotnet/Runic.Navigation`                     | `Runic.Navigation`                     |
-| [`Runic.Navigation.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Navigation.Wpf/README.md)                                 | `packages/dotnet/Runic.Navigation.Wpf`                 | `Runic.Navigation.Wpf`                 |
-| [`Runic.Navigation.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Navigation.ReactiveUI/README.md)                   | `packages/dotnet/Runic.Navigation.ReactiveUI`          | `Runic.Navigation.ReactiveUI`          |
-| [`Runic.Navigation.ReactiveUI.Reactive`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Navigation.ReactiveUI.Reactive/README.md) | `packages/dotnet/Runic.Navigation.ReactiveUI.Reactive` | `Runic.Navigation.ReactiveUI.Reactive` |
+| [`Runic.Application`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views/README.md)                                 | `packages/dotnet/Runic.Application.Views`              | `Runic.Application.Views`              |
+| [`Runic.Application.CsWebUi`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views.CsWebUi/README.md)                 | `packages/dotnet/Runic.Application.Views.CsWebUi`      | `Runic.Application.Views.CsWebUi`      |
+| [`Runic.Application.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Desktop/README.md)                       | `packages/dotnet/Runic.Application.Desktop`            | `Runic.Application.Views.Desktop`      |
+| [`Runic.Application.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md)           | `packages/dotnet/Runic.Application.Views.ReactiveUI`   | `Runic.Application.Views.ReactiveUI`   |
+| [`Runic.Application.Testing`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Testing/README.md)                       | `packages/dotnet/Runic.Application.Testing`            | `Runic.Application.Testing`            |
+| [`Runic.Application.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Wpf/README.md)                               | `packages/dotnet/Runic.Application.Wpf`                | `Runic.Application.Views.Wpf`          |
+| [`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Navigation/README.md)                                         | `packages/dotnet/Runic.Navigation`                     | `Runic.Navigation`                     |
+| [`Runic.Navigation.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Navigation.Wpf/README.md)                                 | `packages/dotnet/Runic.Navigation.Wpf`                 | `Runic.Navigation.Wpf`                 |
+| [`Runic.Navigation.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Navigation.ReactiveUI/README.md)                   | `packages/dotnet/Runic.Navigation.ReactiveUI`          | `Runic.Navigation.ReactiveUI`          |
+| [`Runic.Navigation.ReactiveUI.Reactive`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Navigation.ReactiveUI.Reactive/README.md) | `packages/dotnet/Runic.Navigation.ReactiveUI.Reactive` | `Runic.Navigation.ReactiveUI.Reactive` |
 
 - [Incremental WPF migration](../migrations/wpf-incremental.md)
 - [ReactiveUI 26 capabilities and Avalonia comparison](reactiveui.md)
-- [Views build targets](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Views/build/Runic.Application.Views.targets), shipped in the `Runic.Application` package
-- [`dotnet runic`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/tools/dotnet-runic/README.md) development and doctor commands
-- [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/web/views/README.md): the shared browser runtime and mock Bridge for generated clients
-- [React package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/web/react/README.md), [Vue package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/web/vue/README.md), [Svelte package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/web/svelte/README.md) and [Angular package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/web/angular/README.md)
+- [Views build targets](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views/build/Runic.Application.Views.targets), shipped in the `Runic.Application` package
+- [`dotnet runic`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/tools/dotnet-runic/README.md) development and doctor commands
+- [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/web/views/README.md): the shared browser runtime and mock Bridge for generated clients
+- [React package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/web/react/README.md), [Vue package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/web/vue/README.md), [Svelte package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/web/svelte/README.md) and [Angular package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/web/angular/README.md)
 
 The examples show complete Window composition, generated client use, browser
 mount lifecycle, and frontend integration.
@@ -30,7 +30,7 @@ mount lifecycle, and frontend integration.
 ## Shared DTOs and serializer attributes
 
 The bridge generates its own contract readers and writers; it does not serialize
-DTOs through your `System.Text.Json` context. In published `0.7.0-preview.5`, a
+DTOs through your `System.Text.Json` context. By default, a
 public computed DTO property remains part of the bridge contract even when it
 has `[JsonIgnore]`. If it cannot be constructed from the contract fields, the
 generator reports `RUNICBRIDGE003` with the member path.
@@ -43,30 +43,26 @@ names, with `[RunicAlias]` taking precedence, but does not inherit a JSON
 context's naming defaults. Treat each consumer's generated wire contract as
 explicit rather than assuming serializer configuration controls both.
 
-SDK development adds the unreleased assembly-level
-[`RunicBridgeJsonIgnore`](https://github.com/Runic-Artifex/runic-sdk/blob/d230f42e391bf778649eb827191aa56edbeb1372/packages/dotnet/Runic.Application.Views/RunicPresentation.cs)
+SDK `0.7.0-preview.6` adds the assembly-level
+[`RunicBridgeJsonIgnore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views/RunicPresentation.cs)
 opt-in for shared DTOs. Put it in the assembly declaring the ViewModel; that
 ViewModel's policy follows its DTO graph, including DTOs in another assembly.
 It recognizes unconditional `[JsonIgnore]` and
 `[JsonIgnore(Condition = JsonIgnoreCondition.Always)]` on DTO properties.
 Conditional ignores remain included, and root ViewModel discovery keeps its
 existing rules. Existing assemblies have no behavior change unless they opt in.
-The opt-in is not available in published `0.7.0-preview.5`; choose it only after
-adopting a candidate or a release that contains it.
 
 ## Reuse domain contracts in a CLI
 
 Keep shared domain DTOs independent of the GUI and let both hosts call the same
-workflow. Runic Command Line has its own release train: published
-`0.6.0-preview.2` is not an Application `0.7.0-preview.5` package.
+workflow. Runic Command Line has its own release train: use its published
+`0.6.0-preview.3` packages independently of Application `0.7.0-preview.6`.
 
-In Command Line `0.6.0-preview.2`, generated result codecs do not preserve a
-source-generated JSON context's naming defaults. Explicit `[JsonPropertyName]`
-attributes on shared DTO fields preserve stable names in both the CLI and bridge.
-The context-default codec fix is in CLI development and is unreleased.
+Command Line `0.6.0-preview.3` generated result codecs preserve the
+source-generated JSON context's defaults. The bridge still uses its own
+contract. Explicit `[JsonPropertyName]` attributes preserve stable shared names.
 
-That published CLI release carries a typed payload only for success. CLI
-development adds optional declared failure data through
+Command Line `0.6.0-preview.3` adds optional declared failure data through
 `CommandFailureData.Create<T>` and `CommandOutcome.FailureWithData<T>` (or
 `CommandResponse.FailedWithData<T>`). The additive `fault.data` member carries
 an explicit type identity and bounded JSON payload; failures keep nonzero exits,
@@ -76,7 +72,6 @@ intended for the consumer, such as an exact retained directory, and decode only
 a recognized identity with `TryGet`. Failure data reports recovery state; it does
 not make automatic retry safe.
 
-These failure-data APIs are unreleased. Follow the independent
-[Command Line guide](https://github.com/Runic-Artifex/runic-cli-sdk/blob/645c7e7a12b314013958d7b6a5428ca8d51b6845/packages/dotnet/Runic.CommandLine/README.md)
-for the owning contract and adoption instructions; do not assume Application's
-development version publishes them.
+Follow the independent
+[Command Line guide](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/packages/dotnet/Runic.CommandLine/README.md)
+for the owning contract and adoption instructions.

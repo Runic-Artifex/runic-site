@@ -1,27 +1,22 @@
 # Operations, selection and cancellation
 
-Use the generated `start{Command}` API when the frontend needs to show an
-accepted operation's pending state, status, progress and Cancel action. Keep
-application recovery and shutdown tied to the actual domain task. They can
-outlive the generated invocation that admitted it.
+Use generated `start{Command}` handles for pending state, status and Cancel.
+Recovery and shutdown follow the actual domain task, which can outlive its
+generated invocation.
 
 ## Observe an accepted operation
 
-A Start receipt establishes admission. Retain the operation handle and observe
-it until terminal status, including after requesting cancellation. Show declared
-domain failure separately from a bridge or transport error, and inspect current
-application state when completion is unknown before retrying a mutation.
+A Start receipt establishes admission. Observe the handle until terminal status,
+including after Cancel. Distinguish declared domain failure from transport errors;
+inspect application state when completion is unknown before retrying a mutation.
 
-With published `Runic.Desktop` `0.7.0-preview.5`, an awaited WebUI callback can
-hold later callbacks, including Cancel. For that release, use Start followed
-by short `status()` calls; request `outcome()` after a terminal status. Do not
-hold a running `wait()`, `completion` or `outcome()` callback while the same
-surface needs control callbacks. The asynchronous callback fix is in SDK
-development and has not changed the published package contract.
+`Runic.Desktop` `0.7.0-preview.6` allows draft and Cancel callbacks while an
+awaited command or operation wait remains in flight. For earlier packages,
+use Start followed by short `status()` calls and request `outcome()` only
+after terminal status; a running wait can hold later callbacks.
 
-Released framework `useCommand`/`injectCommand` helpers track a call's pending
-and error state. They do not by themselves implement an operation observer,
-selection queue, mutation coordinator, or domain recovery policy.
+Framework `useCommand`/`injectCommand` helpers track a call's pending and error
+state. Operation observation, selection queues and recovery need their own policy.
 
 ## Choose a policy for the action
 
@@ -31,35 +26,28 @@ selection queue, mutation coordinator, or domain recovery policy.
 | File, commit or search-result selection   | Preserve the latest intent, cancel a superseded read, and admit the latest choice after the previous operation reaches terminal status. |
 | Repository/session replacement            | Invalidate queued intent and stale publication from the departing session. Drain its accepted work before releasing its resources.      |
 
-A running ReactiveUI command can reject a second Start as `unavailable`.
-Read epochs suppress stale results only after a read reaches the model; they
-cannot admit a click that the command rejected. A latest-selection policy
-therefore needs to retain intent outside that running command.
+A running ReactiveUI command can reject another Start as `unavailable`.
+Read epochs suppress stale results but cannot retain rejected clicks. Keep
+latest-selection intent outside the running command.
 
-Supersession can happen before Start returns its receipt. Once it arrives,
-cancel and observe the old handle before admitting the queued choice. Discard
-intermediate choices, and check both selection identity and repository/session
-identity before publishing. If terminal invocation status can precede real
-workflow cleanup, wait for that cleanup too. Do not start a replacement merely
-because a cancellation request was acknowledged.
+When superseded before its receipt arrives, cancel and observe the old handle
+once admitted. Discard intermediate choices; check selection and session identity
+before publishing. Wait for actual workflow cleanup when it can outlive terminal
+invocation status. Acknowledged cancellation alone does not permit replacement.
 
-An uncertain transport result can mean that work was accepted. Preserve that
-uncertainty until the owning application replaces the session or reconciles its
-state; automatically issuing another mutation can duplicate it.
+An uncertain transport result can mean accepted work. Block further admission
+until session replacement or reconciliation; retrying can duplicate a mutation.
 
 ## Cancellation and shutdown have different boundaries
 
-Generated ReactiveUI invocation cancellation can complete its wrapper and
-release its subscription before the underlying workflow finishes. Consequently,
-`WindowContentSession.BeginCloseAsync(...).Completion` establishes completion
-of tracked bridge invocations, not arbitrary domain work started by a model.
+ReactiveUI invocation cancellation can complete its wrapper before the workflow
+finishes. `WindowContentSession.BeginCloseAsync(...).Completion` observes tracked
+bridge invocations; application domain tasks need a separate drain.
 
-Keep an application-owned completion task for accepted work, including recovery
-after failure or cancellation. Stop accepting new work when the model closes,
-request cancellation according to the application's policy, and await that
-task in asynchronous disposal before releasing resources it still uses. Keep
-busy state until recovery has finished; an operation that ignores cancellation
-must still be observed.
+Retain accepted tasks through recovery after failure or cancellation. Stop
+admission on close, request cancellation according to policy, and await tasks
+in asynchronous disposal before releasing their resources. Keep busy state until
+recovery finishes, even when work ignores cancellation.
 
 For native close, `ConfirmCloseAsync` can refuse while a mutation is active or
 await draft persistence. `CloseAsync` and disposal bypass that decision, so
@@ -68,21 +56,16 @@ must release resources while their presentation dispatcher and event loop are
 still available. See [window close lifecycle](../../desktop/window-close-lifecycle.md)
 and [published-package desktop onboarding](../package-consumer.md).
 
-## Development APIs
+## Bind operation feedback
 
-The following helpers are unreleased SDK `0.7.0-preview.6` development APIs,
-absent from published `0.7.0-preview.5`. Use a deliberately built candidate or a
-release that contains them; a development version does not establish package
-availability.
+The following helpers are available in SDK `0.7.0-preview.6`.
 
-[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/d230f42e391bf778649eb827191aa56edbeb1372/packages/web/views/src/operation-controller.ts)
+[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/web/views/src/operation-controller.ts)
 and Svelte's
-[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/d230f42e391bf778649eb827191aa56edbeb1372/packages/web/svelte/src/views/use-operation.svelte.ts)
-bind generated
-Start handles to admission, pending state, status, terminal outcome, declared
-failure, unexpected error and Cancel. Progress remains application state in the
-generated View snapshot. Disposing a binding stops its observation;
-it does not cancel or drain the accepted domain task.
+[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/web/svelte/src/views/use-operation.svelte.ts)
+bind Start handles to admission, pending state, status, outcome, declared failure,
+error and Cancel. Progress stays in the generated View snapshot.
+Disposal detaches observation; the application still owns cancellation and drain.
 
 For a generated editor View, bind Save to its Start handle. The pending flag
 includes admission before the receipt arrives, so it also prevents an immediate
@@ -119,16 +102,14 @@ duplicate click:
 {#if save.cancelError}<p role="alert">{String(save.cancelError)}</p>{/if}
 ```
 
-Create `useOperation` during component initialization; its component cleanup
-detaches observation. Keep progress and recovery messages in the generated
-model state. Flush pending field writes before Save when your editor has a form
-write queue; see [typed domain failures](typed-failures.md#framework-command-helpers).
+Create `useOperation` during component initialization. Flush queued field writes
+before Save; see [typed domain failures](typed-failures.md#framework-command-helpers).
+For mutations, keep the model's `canSave` false through accepted work and recovery;
+the binding's `pending` flag tracks the invocation, not domain-task completion.
 
-`createLatestOperationController` coalesces the latest selection intent and
-waits for terminal status before the next admission in the same session. An intent can additionally
-supply a real-work barrier and a session-validity check. Cancellation and
-replacement clear queued intent. Transport uncertainty blocks further admission
-until an explicit replacement resolves ownership.
+`createLatestOperationController` coalesces selections and waits for terminal
+status before another admission in the same session. Intents can add a real-work
+barrier and session-validity check.
 
 For a workspace contract exposing `startSelectCommit` and a short `cancelRead`
 control command, pass the session that rendered the selected item:
@@ -165,12 +146,13 @@ Call `clear("replace")` only when the application establishes a replacement
 session. It detaches the old observation, suppresses cancellation against the
 departing identity and permits fresh-session admission; the application keeps
 ownership of the old work's drain. It also clears uncertain admission.
+Transport uncertainty otherwise blocks the controller's next admission.
 Add `waitForCompletion` when domain work or command
 availability must finish after terminal invocation status. Call `dispose()`
 when the selection owner leaves; it drops feedback and queued intent without
 requesting cancellation of accepted work.
 
-[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/d230f42e391bf778649eb827191aa56edbeb1372/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
+[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
 reserves application-owned work before invoking
 its factory. `DrainAsync` stops new admission and waits for accepted tasks;
 cancelling the caller's drain wait does not cancel those tasks. Asynchronous
@@ -179,24 +161,27 @@ observe failures through the original tasks. It tracks task lifetime; the app
 continues to own mutation ordering, recovery, cancellation and state publication.
 
 Return a task that includes recovery, cleanup and all work using the model's
-resources:
+resources. The package consumer wraps its mutation workflow and drains it before
+disposing commands and its model-context lease:
 
-```csharp docs-test=skip:illustrative-fragment
-private readonly AcceptedWorkScope _acceptedWork = new();
-
-public Task SaveAsync(CancellationToken cancellationToken) =>
-    _acceptedWork.RunAsync(() => SaveAndRecoverAsync(cancellationToken));
-
+```csharp docs-test=source:tests/fixtures/application/operations-consumer/OperationsViewModel.cs
+private readonly AcceptedWorkScope _accepted = new();
+...
+MutationCommand = ReactiveCommand.CreateFromTask<RxVoid, string>((_, token) =>
+    _accepted.RunAsync(() => MutateAsync(token)), scheduler);
+...
 public async ValueTask DisposeAsync()
 {
-    await _acceptedWork.DisposeAsync();
-    // Release the model's resources after its accepted tasks finish.
+    await _accepted.DisposeAsync();
+    ...
+    _lease.Dispose();
+    Disposed = true;
 }
 ```
 
-These development snippets are illustrative; published-package onboarding stays
-checked against the portal's pinned template. The
-[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/d230f42e391bf778649eb827191aa56edbeb1372/tests/fixtures/application/operations-consumer/README.md)
+The editor and workspace snippets illustrate application-specific contracts.
+The package onboarding snippets are checked against the pinned release template. The
+[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/tests/fixtures/application/operations-consumer/README.md)
 builds from packed NuGet/npm archives and exercises operation feedback, latest
 selection, session replacement, DTO opt-in and accepted-work disposal through the
 real Desktop bridge.

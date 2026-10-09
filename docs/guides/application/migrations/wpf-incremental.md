@@ -2,7 +2,7 @@
 
 An existing WPF application can adopt Runic one capability or screen at a time.
 Keep the WPF shell, application services and ViewModels. This guide follows
-Application SDK `0.7.0-preview.5` and independently versioned Translations
+Application SDK `0.7.0-preview.6` and independently versioned Translations
 `0.6.0-preview.5`; use exact versions within each product family.
 
 ## 1. Start with independent products
@@ -24,11 +24,11 @@ Neither product requires Views, navigation, a web frontend or a shell migration.
 
 ## 2. Share navigation, retain native MVVM
 
-Install `Runic.Navigation.Wpf` at `0.7.0-preview.5`. It brings the host-neutral
+Install `Runic.Navigation.Wpf` at `0.7.0-preview.6`. It brings the host-neutral
 `Runic.Navigation` engine and adds `DispatcherModelContext`, `NavigationHost`
 and `NavigationDialogHost`. Register `AddRunicWpfNavigation()` and map your
 native Views with `MapView`, a naming convention or data templates. Follow the
-[WPF navigation example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/examples/wpf-navigation/README.md)
+[WPF navigation example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/wpf-navigation/README.md)
 for typed page inputs, results from dialogs, nested tabs and departure guards.
 `NavigationSelector.Region` connects single selection to borrowed replacement;
 `ViewHost` presents a plain application-owned model without a navigation entry.
@@ -38,7 +38,7 @@ and ownership. CommunityToolkit models call its async operations from native
 `AsyncRelayCommand` or `[RelayCommand]` methods and forward their cancellation
 tokens. Handle `Committed`, `Rejected`, `Failed` and `Superseded` results as
 application policy. ReactiveUI models use the
-[navigation adapter's observables and native command recipes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#native-command-composition);
+[navigation adapter's observables and native command recipes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#native-command-composition);
 choose its `.Reactive` package for System.Reactive. Native commands retain their
 framework's behavior. There is no second navigation engine for a later web View.
 
@@ -51,10 +51,10 @@ does not create a new navigation entry or authorize resetting its draft.
 
 ## 3. Optionally replace one View with a web View
 
-Add `Runic.Application.Wpf` at `0.7.0-preview.5` for an embedded child WebView2.
+Add `Runic.Application.Wpf` at `0.7.0-preview.6` for an embedded child WebView2.
 Declare a logical `RunicView<TModel>`, register generated `AddRunicViews()`, and
 build the frontend and generated client. The application keeps its WPF `Window`.
-The [adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Application.Wpf/README.md)
+The [adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Wpf/README.md)
 shows `RunicWebView`, its `CreateWindowHostFactory()`, `DesktopHost.StartAsync`
 and `CreateWpfViewAsync`. Add the control to the WPF visual tree and open the
 binding after loading, with the dispatcher pumping.
@@ -67,7 +67,7 @@ removing its control or replacing its presentation. Closing the web session
 cancels its unfinished operations and drains accepted work; work started through
 native commands remains governed by the application's model lifetime.
 
-The [hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/examples/wpf-hybrid-editor/README.md)
+The [hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/wpf-hybrid-editor/README.md)
 switches a single editor between WPF controls and a generated web client while
 preserving model, navigation entry, store and draft. Reloading or recreating the
 presentation uses the same model; switching back to native controls can preserve
@@ -90,4 +90,4 @@ compile elsewhere; native WPF behavior must run on Windows.
 Do not block the live dispatcher on navigation or disposal with `.Wait()` or
 `.Result`. Synchronous provider disposal starts navigator shutdown without
 waiting; when cleanup must finish, follow the
-[WPF asynchronous exit recipe](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit).
+[WPF asynchronous exit recipe](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit).
