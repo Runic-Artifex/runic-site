@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "0ef2a51e2c03b47311093a979da823540db25ca6",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/0ef2a51e2c03b47311093a979da823540db25ca6.tar.gz",
+  "revision": "3ae26934626510c83e01aaf6d67bcdc5543d3d38",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/3ae26934626510c83e01aaf6d67bcdc5543d3d38.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -29,6 +29,7 @@
     "packages/dotnet/Runic.Desktop/pack/README.md",
     "packages/web/views-effect/README.md",
     "packages/web/views/README.md",
+    "tests/fixtures/application/operations-consumer/OperationsViewModel.cs",
     "tools/Runic.Application.Templates/content/runic-app/.template.config/dotnetcli.host.json",
     "tools/Runic.Application.Templates/content/runic-app/.template.config/template.json",
     "tools/Runic.Application.Templates/content/runic-app/Program.cs",
@@ -48,5 +49,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:65f663ca5290f22cb40a00cc83d18b0516cb7f087adce33a63de5be1e0f6bcb3"
+  "contentDigest": "sha256:62c03f65ec4de23c051fb2bb746e7101fb46bd6d77c6678d4a7ffd7339be3f3b"
 }

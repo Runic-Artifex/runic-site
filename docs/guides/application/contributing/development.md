@@ -2,5 +2,5 @@
 
 Read the root [contributor guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/CONTRIBUTING.md) and use the
 locked project development environment. Build the Views package and examples
-with the repository's standard commands. The [Views package README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.3/packages/dotnet/Runic.Application.Views/README.md)
+with the repository's standard commands. The [Views package README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views/README.md)
 records the generator and runtime behavior.

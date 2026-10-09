@@ -72,7 +72,7 @@ bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
 The script checks the checkout revision and source bytes before replacing the
 snapshot. Guides link SDK sources (`examples/`, `packages/`, `tools/`, `tests/`,
 `specs/`) and the current release notes at the active release tag, such as
-`blob/v0.7.0-preview.2/`, so the links match the quoted snapshot; move them to
+`blob/v0.7.0-preview.6/`, so the links match the quoted snapshot; move them to
 the new tag with the catalog. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
 
@@ -86,9 +86,9 @@ are compiled code. `readme:<path>` blocks are excerpts of SDK package READMEs;
 they only track the README text, which SDK CI does not compile. In each case a
 snapshot refresh that changes the quoted text fails here until the guide
 follows. `skip:<reason>` marks blocks that are not checked, such as SDK
-repository workflows; quickstart guides may not skip. The snapshot follows the SDK's
-`main` branch; guides mark APIs that are not in the published release as
-unreleased.
+repository workflows; quickstart guides may not skip. The snapshot follows the
+published SDK release tag. Guides explicitly mark any additional development
+APIs as unreleased and link their owning revision.
 
 Runic Translations owns canonical schemas. Preserve the existing pin and content
 digest in `sources/translations-schemas.json`. Synchronize a changed pin with:

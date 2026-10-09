@@ -10,7 +10,7 @@ describes workspace commands.
   [operations and cancellation](application/guides/operations-and-cancellation.md).
 - [Incremental WPF migration](application/migrations/wpf-incremental.md): independent Translations and Command Line, native navigation, then optional web Views.
 - [Runic Application Views](application/README.md) and [application architecture](application/architecture/README.md).
-- [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.5/examples/notes-reactive-views/README.md).
+- [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/notes-reactive-views/README.md).
 - [Desktop native services](desktop-services.md), [host selection](desktop/host-selection.md), and [window close lifecycle](desktop/window-close-lifecycle.md).
 - [Runic Translations guides](https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations).
 - [Migrating Svelte translation imports](migrations/translations-svelte.md).
