@@ -147,7 +147,14 @@
           href={resolve('/guides/[...path]', {
             path: 'desktop/host-selection',
           })}>host selection guide</a
-        > compares them.
+        >
+        compares them. To distribute a Desktop app, follow
+        <a
+          class="text-link"
+          href={resolve('/guides/[...path]', {
+            path: 'desktop/shipping',
+          })}>ship a Desktop application</a
+        >.
       </p>
     </ContentCard>
     <ContentCard eyebrow="Existing project" title="Add one capability">

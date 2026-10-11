@@ -28,3 +28,8 @@ installed; compare a `--host desktop` project to see the changes.
 connects generated Windows and Views to a Desktop surface. The
 [ReactiveUI first-window example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/first-window-desktop/README.md)
 shows the browser client and scoped native Window lifetime.
+
+To distribute a Desktop application, see
+[ship a Desktop application](shipping.md): publish modes, the WebView runtime
+each platform needs, macOS bundles with signing and notarization, Windows
+signing and installers, and Flatpak on Linux.
