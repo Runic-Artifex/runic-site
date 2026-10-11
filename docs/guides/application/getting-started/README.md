@@ -49,7 +49,9 @@ dotnet publish -c Release -r linux-x64
 
 Use `win-x64`, `osx-arm64` or another runtime identifier for other platforms.
 The publish folder contains the executable and a `www` folder with the built
-frontend; distribute the whole folder.
+frontend; distribute the whole folder. To publish self-contained or with
+NativeAOT, then bundle, sign and package a Desktop app for Windows, macOS and
+Linux, follow [ship a Desktop application](../../desktop/shipping.md).
 
 ## Next steps
 

@@ -147,6 +147,10 @@ export const products: Product[] = [
         href: '/guides/desktop-services/',
         label: 'Native desktop services',
       },
+      {
+        href: '/guides/desktop/shipping/',
+        label: 'Ship a Desktop application',
+      },
     ],
     name: 'Runic Desktop',
     shortName: 'Desktop',
