@@ -3,13 +3,13 @@
 Runic supports **ReactiveUI 26.0.1**, Binding **9.1.0**, Primitives **9.0.0**,
 and SourceGenerators **4.2.0**. The default integration uses
 `ReactiveUI.Primitives`; applications using the System.Reactive distribution select
-`Runic.Application.ReactiveUI.Reactive`. Select one flavor for an application,
+`Runic.Application.Views.ReactiveUI.Reactive`. Select one flavor for an application,
 then rebuild the application and its generated clients together when moving
 between ReactiveUI majors. ReactiveUI 26 keeps the ReactiveUI 25 public API; the
 [adapter migration notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#reactiveui-26)
 cover the Primitives 9 `SubscribeSafe` change and the namespace changes from
 ReactiveUI 24. If an interface-typed generic command leaves the
-flavor ambiguous, set `RunicBridgeReactiveUiFlavor=reactive` in the generating
+flavor ambiguous, set `RunicApplicationFrontendReactiveUiFlavor=reactive` in the generating
 project for the System.Reactive flavor.
 
 ReactiveUI remains the .NET ViewModel API. Runic generates a typed bridge for
@@ -19,19 +19,19 @@ into browser APIs.
 
 ## Supported contract surface
 
-| ReactiveUI feature                                               | Generated bridge behavior                                                                                                                                                                                                         |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ReactiveObject`, `[Reactive]`, OAPH / `ToProperty`              | Public model state is observed through `INotifyPropertyChanged`. The generated property is exported after ReactiveUI's source generator has run; observables themselves are not serialized.                                       |
-| `WhenAnyValue`, operators, validation                            | Use them normally in .NET. Export their resulting supported state. `INotifyDataErrorInfo` property errors are published; ReactiveUI.Validation alone is not an exported validation contract.                                      |
-| `IReactiveCommand<TInput, TResult>`                              | Discovers interface, base, concrete, and combined command shapes independently of the command factory. Generated input/result codecs determine whether its values are bridgeable.                                                 |
-| Plain `ICommand`                                                 | Add `[RunicCommandInput(typeof(TInput))]` to generate a typed argument. It remains synchronous fire-and-snapshot work: no retained result, operation handle, or invented cancellation contract.                                   |
-| `CanExecute` and `IsExecuting`                                   | No-input commands publish `canX`; typed ReactiveUI commands also publish `isXExecuting`. Parameterized availability is checked from the decoded input at admission and execution time.                                            |
-| `Interaction<TInput, TOutput>` / `IInteraction<TInput, TOutput>` | A getter-only interaction property becomes a typed browser handler surface. Requests use a selected mounted endpoint and preserve normal ReactiveUI .NET-handler/unhandled fallback when no browser handler is eligible.          |
-| `IViewFor<T>`, locating views                                    | `ReactiveRunicView<T>` and `ReactiveRunicWindow<T>` implement `IViewFor<T>`. `ReactiveRunicViewLocator` adapts explicit ReactiveUI mappings and contracts.                                                                        |
-| `RoutingState`                                                   | `ReactiveRoutedRegion<T>` projects `CurrentViewModel` to observable generated content. Navigation remains .NET code; Runic does not generate URL history or an Avalonia routed host.                                              |
-| `WhenActivated`                                                  | Every mounted Runic presentation holds an activation lease. A shared ViewModel remains active until its final presentation unmounts.                                                                                              |
-| `Bind`, `BindTo`, `BindCommand`, converters                      | These are still useful for .NET views. They do not bind DOM elements or frontend components; use the generated TypeScript client for that.                                                                                        |
-| Schedulers                                                       | `IRunicModelContext` owns short serialized model turns. The default adapter supplies a context-backed `ISequencer`; the System.Reactive flavor supplies an `IScheduler`, without changing ReactiveUI's process-global schedulers. |
+| ReactiveUI feature                                               | Generated bridge behavior                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ReactiveObject`, `[Reactive]`, OAPH / `ToProperty`              | Public model state is observed through `INotifyPropertyChanged`. The generated property is exported after ReactiveUI's source generator has run; observables themselves are not serialized.                                                                                  |
+| `WhenAnyValue`, operators, validation                            | Use them normally in .NET. Export their resulting supported state. `INotifyDataErrorInfo` property errors are published; ReactiveUI.Validation alone is not an exported validation contract.                                                                                 |
+| `IReactiveCommand<TInput, TResult>`                              | Discovers interface, base, concrete, and combined command shapes independently of the command factory. Generated input/result codecs determine whether its values are bridgeable.                                                                                            |
+| Plain `ICommand`                                                 | Add `[RunicCommandInput(typeof(TInput))]` to generate a typed argument. It remains synchronous fire-and-snapshot work: no retained result, operation handle, or invented cancellation contract.                                                                              |
+| `CanExecute` and `IsExecuting`                                   | No-input commands publish `canX`; typed ReactiveUI commands also publish `isXExecuting`. Parameterized availability is checked from the decoded input at admission and execution time.                                                                                       |
+| `Interaction<TInput, TOutput>` / `IInteraction<TInput, TOutput>` | A getter-only interaction property becomes a typed browser handler surface. Requests use a selected mounted endpoint and preserve normal ReactiveUI .NET-handler/unhandled fallback when no browser handler is eligible.                                                     |
+| `IViewFor<T>`, locating views                                    | `ReactiveRunicView<T>` implements `IViewFor<T>`; Windows are `RunicWindow<T>` with every MVVM library. `ReactiveRunicViewLocator` adapts explicit ReactiveUI mappings and contracts.                                                                                         |
+| `RoutingState`                                                   | `ReactiveRoutedRegion<T>` projects `CurrentViewModel` to observable generated content. Navigation remains .NET code; Runic does not generate URL history or an Avalonia routed host.                                                                                         |
+| `WhenActivated`                                                  | Every mounted Runic presentation holds an activation lease. A shared ViewModel remains active until its final presentation unmounts.                                                                                                                                         |
+| `Bind`, `BindTo`, `BindCommand`, converters                      | These are still useful for .NET views. They do not bind DOM elements or frontend components; use the generated TypeScript client for that.                                                                                                                                   |
+| Schedulers                                                       | `IRunicModelContext` owns short serialized model turns. `AddRunicReactiveModelContext()` installs a model-context main-thread scheduler, so commands need no scheduler argument, and supplies a context-backed `ISequencer` (an `IScheduler` in the System.Reactive flavor). |
 
 ## Data contracts
 

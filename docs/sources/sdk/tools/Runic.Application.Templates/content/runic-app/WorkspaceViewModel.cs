@@ -1,10 +1,6 @@
 #if (viewModels == "reactiveui")
 using ReactiveUI;
 using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Concurrency;
-using Runic.Application.Views;
-using Runic.Application.Views.ReactiveUI;
-using Runic.Navigation;
 
 namespace RunicWindowApp;
 
@@ -12,21 +8,16 @@ public interface IWorkspacePage { }
 
 public sealed class WorkspaceViewModel : ReactiveObject, IDisposable
 {
-    private readonly IRunicModelContextLease _modelContextLease;
     private IWorkspacePage _main;
 
-    // Commands run on the Window's model context, which orders their
-    // notifications with Bridge replies. Bind every presented ViewModel to it.
-    public WorkspaceViewModel(
-        WelcomeViewModel welcome,
-        CounterViewModel counter,
-        IRunicModelContext modelContext,
-        ISequencer scheduler)
+    // The Window runs these commands in its model turns, and AddRunicReactiveModelContext
+    // makes ReactiveUI deliver their notifications there, ordered with Bridge replies,
+    // so a command needs no scheduler argument.
+    public WorkspaceViewModel(WelcomeViewModel welcome, CounterViewModel counter)
     {
         _main = welcome;
-        _modelContextLease = RunicModelContextRegistry.Shared.Bind(modelContext, this, welcome, counter);
-        ShowWelcomeCommand = ReactiveCommand.Create(() => { Main = welcome; }, scheduler);
-        ShowCounterCommand = ReactiveCommand.Create(() => { Main = counter; }, scheduler);
+        ShowWelcomeCommand = ReactiveCommand.Create(() => { Main = welcome; });
+        ShowCounterCommand = ReactiveCommand.Create(() => { Main = counter; });
     }
 
     public IWorkspacePage Main
@@ -42,7 +33,6 @@ public sealed class WorkspaceViewModel : ReactiveObject, IDisposable
     {
         ShowWelcomeCommand.Dispose();
         ShowCounterCommand.Dispose();
-        _modelContextLease.Dispose();
     }
 }
 
@@ -54,14 +44,24 @@ public sealed class WelcomeViewModel : ReactiveObject, IWorkspacePage
 public sealed class CounterViewModel : ReactiveObject, IWorkspacePage, IDisposable
 {
     private int _count;
+    private int _step = 1;
 
-    public CounterViewModel(ISequencer scheduler) =>
-        IncrementCommand = ReactiveCommand.Create(() => { Count++; }, scheduler);
+    public CounterViewModel() =>
+        IncrementCommand = ReactiveCommand.Create(() => { Count += Step; });
 
+    // As for any MVVM View, the setter's accessibility decides what the web
+    // frontend may set: Count is read-only state, Step is a form field, so the
+    // generated client has setStep but no setCount.
     public int Count
     {
         get => _count;
         private set => this.RaiseAndSetIfChanged(ref _count, value);
+    }
+
+    public int Step
+    {
+        get => _step;
+        set => this.RaiseAndSetIfChanged(ref _step, value);
     }
 
     public ReactiveCommand<RxVoid, RxVoid> IncrementCommand { get; }
@@ -109,10 +109,18 @@ public sealed partial class WelcomeViewModel : ObservableObject, IWorkspacePage
 
 public sealed partial class CounterViewModel : ObservableObject, IWorkspacePage
 {
-    private int _count;
-    public int Count { get => _count; private set => SetProperty(ref _count, value); }
+    public CounterViewModel() => Step = 1;
+
+    // As for any MVVM View, the setter's accessibility decides what the web
+    // frontend may set: Count is read-only state, Step is a form field, so the
+    // generated client has setStep but no setCount.
+    [ObservableProperty]
+    public partial int Count { get; private set; }
+
+    [ObservableProperty]
+    public partial int Step { get; set; }
 
     [RelayCommand]
-    private void Increment() => Count++;
+    private void Increment() => Count += Step;
 }
 #endif

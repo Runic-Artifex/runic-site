@@ -194,8 +194,8 @@ contexts, operation retention, session routing, and transport validation. The
 optional default and System.Reactive adapters own ReactiveUI command execution,
 interaction attachment, view location, activation, and scheduler adaptation.
 
-Each `ReactiveRunicView<T>` or `ReactiveRunicWindow<T>` gets a separate mount
-activation lease. The ViewModel's `IActivatableViewModel.Activator` remains
+Each mounted `ReactiveRunicView<T>`, and each open `RunicWindow<T>`, gets a
+separate activation lease. The ViewModel's `IActivatableViewModel.Activator` remains
 active until the final lease releases it. `ReactiveRoutedRegion<T>` maps
 `RoutingState.CurrentViewModel` into generated content. This gives Runic the
 same useful activation and routing boundary as a native integration while the
@@ -204,7 +204,7 @@ frontend retains responsibility for visual layout and DOM binding.
 The two ReactiveUI flavors expose different namespaces and unit/scheduler
 types. An application selects exactly one adapter. The generated model tool
 uses the property contract to choose an adapter; when an interface-typed
-contract is ambiguous, set `RunicBridgeReactiveUiFlavor=reactive` for the
+contract is ambiguous, set `RunicApplicationFrontendReactiveUiFlavor=reactive` for the
 System.Reactive flavor.
 
 The exact generated codec/command path is covered by a ReactiveUI Native AOT

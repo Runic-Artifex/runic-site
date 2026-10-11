@@ -165,7 +165,7 @@ test('getting started offers the creator and the equivalent template commands', 
   assert.match(html, /cd MyApp dotnet tool restore dotnet runic dev/);
   assert.ok(
     html.includes(
-      `dotnet new install Runic.Application.Templates@${version} dotnet new runic-app --name MyApp --frontend react --package-manager npm --host cswebui --view-models toolkit`,
+      `dotnet new install Runic.Application.Templates@${version} dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --view-models reactiveui`,
     ),
   );
   assert.match(html, /dotnet runic doctor/);
@@ -179,14 +179,14 @@ test('create page prerenders the default project and every template choice', asy
   const version = activeSdkRelease.version;
   assert.ok(
     html.includes(
-      `dnx Runic.Create@${version} -- MyApp --frontend react --package-manager npm --host cswebui --view-models toolkit`,
+      `dnx Runic.Create@${version} -- MyApp --frontend react --package-manager npm --host desktop --view-models reactiveui`,
     ),
   );
   for (const [name, values] of [
     ['frontend', ['react', 'vue', 'svelte', 'angular']],
     ['packageManager', ['npm', 'pnpm', 'bun']],
-    ['host', ['cswebui', 'desktop', 'desktop-gtk4']],
-    ['viewModels', ['toolkit', 'reactiveui']],
+    ['host', ['desktop', 'desktop-gtk4', 'cswebui']],
+    ['viewModels', ['reactiveui', 'toolkit']],
   ]) {
     const radios = [
       ...markup.matchAll(new RegExp(`<input[^>]*name="${name}"[^>]*>`, 'g')),
@@ -206,9 +206,29 @@ test('create page prerenders the default project and every template choice', asy
   // The preview renders the template source for the default choices.
   assert.match(
     html,
-    /provider\.OpenWindow(?:&lt;|<)WorkspaceWindow, WorkspaceViewModel(?:&gt;|>)/,
+    /host\.OpenWindowAsync(?:&lt;|<)WorkspaceWindow(?:&gt;|>)/,
   );
-  assert.doesNotMatch(html, /#if|#endif|RunicWindowApp|DesktopHost/);
+  assert.match(
+    html,
+    /return RunicDesktopHost\.Run\(provider, options, RunAsync\);/,
+  );
+  assert.doesNotMatch(
+    html,
+    /#if|#endif|RunicWindowApp|return RunicCsWebUiHost/,
+  );
+  // The creator links the guide that explains the host and ViewModel choices.
+  assert.match(markup, /href="[^"]*\/guides\/application\/choosing\/?"/);
+});
+
+test('every guide links the glossary', async () => {
+  assert.match(
+    await render('/guides/application/tutorial'),
+    /class="guide-glossary"[\s\S]*?href="[^"]*\/guides\/application\/glossary\/?"/,
+  );
+  assert.doesNotMatch(
+    await render('/guides/application/glossary'),
+    /class="guide-glossary"/,
+  );
 });
 
 test('home page leads with the guided creator', async () => {
