@@ -8,6 +8,34 @@
   import { Separator } from '#lib/components/ui/separator/index.js';
   import { activeProducts } from '#lib/docs-data.js';
   import { currentRelease, releaseSummary } from '#lib/release-docs.js';
+
+  // One start page for each kind of reader.
+  const personas = [
+    {
+      title: 'A desktop app with a web frontend',
+      text: 'Create a Window with .NET ViewModels and a React, Vue, Svelte or Angular frontend.',
+      path: 'application/getting-started',
+      label: 'Get started',
+    },
+    {
+      title: 'An existing WPF app',
+      text: 'Keep your shell and adopt Translations, navigation and web Views one screen at a time.',
+      path: 'application/migrations/wpf-incremental',
+      label: 'Adopt Runic in WPF',
+    },
+    {
+      title: 'A command-line tool',
+      text: 'Turn typed C# methods into commands with help, validation and JSON output.',
+      path: 'command-line',
+      label: 'Get started with Command Line',
+    },
+    {
+      title: 'Translations for .NET or the web',
+      text: 'Compile message files into typed C# and TypeScript APIs.',
+      path: 'translations',
+      label: 'Get started with Translations',
+    },
+  ] as const;
 </script>
 
 <svelte:head>
@@ -36,6 +64,33 @@
 
 <div>
   <CreatorHero version={currentRelease.version} />
+
+  <section class="section shell" aria-labelledby="start-here">
+    <div class="section-heading">
+      <p class="eyebrow">Start here</p>
+      <h2 id="start-here">Pick the path for what you are building.</h2>
+      <p>
+        Each start page explains the concepts it needs and leads on from there.
+      </p>
+    </div>
+    <div class="persona-grid">
+      {#each personas as persona (persona.path)}
+        <Card.Root class="persona-card">
+          <Card.Header>
+            <Card.Title><h3>{persona.title}</h3></Card.Title>
+            <Card.Description>{persona.text}</Card.Description>
+          </Card.Header>
+          <Card.Content>
+            <a
+              class="text-link"
+              href={resolve('/guides/[...path]', { path: persona.path })}
+              >{persona.label} →</a
+            >
+          </Card.Content>
+        </Card.Root>
+      {/each}
+    </div>
+  </section>
 
   <section class="section shell">
     <div class="section-heading split-heading">

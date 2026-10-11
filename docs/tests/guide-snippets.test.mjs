@@ -40,6 +40,7 @@ import activeSdkRelease from '../src/lib/active-sdk-release.json' with { type: '
 import {
   creatorCommands,
   creatorOptions,
+  creatorToggles,
   defaultSelection,
   templateSourceName,
   templateSymbols,
@@ -111,6 +112,17 @@ export function parseBlocks(markdown) {
 function selectionFor(options) {
   const selection = defaultSelection();
   for (const [key, value] of Object.entries(options)) {
+    const toggle = creatorToggles.find(
+      (candidate) => candidate.symbol === key || candidate.flag === `--${key}`,
+    );
+    if (toggle) {
+      assert.ok(
+        value === 'true' || value === 'false',
+        `${key}=${value} is not true or false`,
+      );
+      selection[toggle.symbol] = value;
+      continue;
+    }
     const option = creatorOptions.find(
       (candidate) => candidate.symbol === key || candidate.flag === `--${key}`,
     );
@@ -187,8 +199,9 @@ const dotnetCommands = ['dotnet new tool-manifest'];
 
 function documentedCommands() {
   const commands = new Set(dotnetCommands);
-  // Creator and template commands for every selection the template declares.
-  const selections = creatorOptions.reduce(
+  // Creator and template commands for every selection the template declares,
+  // with each Boolean option such as --tests off and on.
+  const choices = creatorOptions.reduce(
     (all, option) =>
       all.flatMap((selection) =>
         option.choices.map((choice) => ({
@@ -197,6 +210,16 @@ function documentedCommands() {
         })),
       ),
     [{}],
+  );
+  const selections = creatorToggles.reduce(
+    (all, toggle) =>
+      all.flatMap((selection) =>
+        ['false', 'true'].map((value) => ({
+          ...selection,
+          [toggle.symbol]: value,
+        })),
+      ),
+    choices,
   );
   for (const selection of selections) {
     const generated = creatorCommands(versionSentinel, projectName, selection);

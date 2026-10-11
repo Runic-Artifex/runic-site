@@ -261,6 +261,10 @@
         ><a href="https://github.com/Runic-Artifex">GitHub organization</a><a
           href={resolve('/releases')}>Release notes</a
         ><a
+          href={resolve('/guides/[...path]', {
+            path: 'application/contributing',
+          })}>Contributing</a
+        ><a
           href="https://github.com/Runic-Artifex/.github/blob/main/SECURITY.md"
           >Security</a
         >

@@ -6,6 +6,7 @@
     choiceFor,
     creatorCommands,
     creatorOptions,
+    creatorToggles,
     defaultSelection,
     isValidProjectName,
   } from '#lib/creator.js';
@@ -58,7 +59,7 @@
       .filter((entry) => entry !== undefined),
   );
 
-  // Shareable links: ?frontend=svelte&host=desktop selects those choices.
+  // Shareable links: ?frontend=svelte&host=desktop&tests=true selects those choices.
   onMount(() => {
     const query = new URLSearchParams(window.location.search);
     const requestedName = query.get('name');
@@ -68,6 +69,11 @@
       const value = query.get(option.flag.slice(2));
       if (value && option.choices.some((choice) => choice.value === value))
         selection[option.symbol] = value;
+    }
+    for (const toggle of creatorToggles) {
+      const value = query.get(toggle.flag.slice(2));
+      if (value === 'true' || value === 'false')
+        selection[toggle.symbol] = value;
     }
     ready = true;
   });
@@ -81,6 +87,9 @@
       if (value !== option.defaultValue)
         query.push([option.flag.slice(2), value]);
     }
+    for (const toggle of creatorToggles)
+      if (selection[toggle.symbol] !== String(toggle.defaultValue))
+        query.push([toggle.flag.slice(2), selection[toggle.symbol]]);
     const search =
       query.length > 0
         ? `?${query.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&')}`
@@ -184,6 +193,26 @@
                 <span class="choice-description">{choice.description}</span>
               </label>
             {/each}
+          </div>
+        </fieldset>
+      {/each}
+
+      {#each creatorToggles as toggle (toggle.symbol)}
+        <fieldset class="creator-field">
+          <legend class="creator-legend">{toggle.label}</legend>
+          <div class="choice-grid">
+            <label class="choice-card">
+              <input
+                type="checkbox"
+                checked={selection[toggle.symbol] === 'true'}
+                onchange={(event) =>
+                  (selection[toggle.symbol] = String(
+                    event.currentTarget.checked,
+                  ))}
+              />
+              <span class="choice-label"><code>{toggle.flag}</code></span>
+              <span class="choice-description">{toggle.description}</span>
+            </label>
           </div>
         </fieldset>
       {/each}

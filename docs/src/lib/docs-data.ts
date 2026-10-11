@@ -245,6 +245,10 @@ export const products: Product[] = [
     slug: 'runic-translations',
     guides: [
       {
+        href: '/guides/translations/',
+        label: 'Get started with Translations',
+      },
+      {
         href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/quickstart-dotnet.md',
         label: '.NET quickstart',
       },
@@ -341,8 +345,12 @@ export const products: Product[] = [
     slug: 'runic-command-line',
     guides: [
       {
+        href: '/guides/command-line/',
+        label: 'Get started with Command Line',
+      },
+      {
         href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/README.md',
-        label: 'Command Line getting started',
+        label: 'Command Line repository README',
       },
       {
         href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.6.0-preview.3/specs/command-line',
