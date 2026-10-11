@@ -72,15 +72,23 @@ export function defaultSelection(): Record<string, string> {
 }
 
 /**
- * Adds the template's computed symbols, such as `desktopHost`, to a selection,
- * as `true` or `false`, in declaration order like the template engine.
+ * Adds the template's Boolean parameters that the selection leaves out, such
+ * as `tests`, at their defaults, and its computed symbols, such as
+ * `desktopHost`, as `true` or `false`, in declaration order like the template
+ * engine.
  */
 export function templateSymbols(
   selection: CreatorSelection,
 ): Record<string, string> {
   const result: Record<string, string> = { ...selection };
   for (const [name, symbol] of Object.entries(symbols))
-    if (symbol.type === 'computed')
+    if (
+      symbol.type === 'parameter' &&
+      symbol.datatype === 'bool' &&
+      !(name in result)
+    )
+      result[name] = symbol.defaultValue ?? 'false';
+    else if (symbol.type === 'computed')
       result[name] = String(evaluate(symbol.value ?? '', result));
   return result;
 }

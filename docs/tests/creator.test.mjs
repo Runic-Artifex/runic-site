@@ -23,8 +23,8 @@ test('picker options are the template choice parameters in order', () => {
     [
       ['--frontend', 'react'],
       ['--package-manager', 'npm'],
-      ['--host', 'cswebui'],
-      ['--view-models', 'toolkit'],
+      ['--host', 'desktop'],
+      ['--view-models', 'reactiveui'],
     ],
   );
   assert.ok(
@@ -37,12 +37,12 @@ test('commands match the creator and the template', () => {
   const commands = creatorCommands('1.2.3', 'MyApp', {
     ...defaultSelection(),
     frontend: 'svelte',
-    host: 'desktop',
+    host: 'cswebui',
   });
   assert.equal(commands.interactive, 'dnx Runic.Create@1.2.3');
   assert.equal(
     commands.creator,
-    'dnx Runic.Create@1.2.3 -- MyApp --frontend svelte --package-manager npm --host desktop --view-models toolkit',
+    'dnx Runic.Create@1.2.3 -- MyApp --frontend svelte --package-manager npm --host cswebui --view-models reactiveui',
   );
   assert.equal(
     commands.install,
@@ -50,7 +50,7 @@ test('commands match the creator and the template', () => {
   );
   assert.equal(
     commands.create,
-    'dotnet new runic-app --name MyApp --frontend svelte --package-manager npm --host desktop --view-models toolkit',
+    'dotnet new runic-app --name MyApp --frontend svelte --package-manager npm --host cswebui --view-models reactiveui',
   );
   assert.deepEqual(commands.nextSteps, [
     'cd MyApp',
@@ -117,6 +117,7 @@ test('computed template symbols follow the host choice', () => {
 test('every template file renders cleanly for every host and ViewModel choice', () => {
   const sources = [
     'Program.cs',
+    'WorkspaceServices.cs',
     'Views.cs',
     'WorkspaceViewModel.cs',
     'RunicWindowApp.csproj',
@@ -144,8 +145,12 @@ test('every template file renders cleanly for every host and ViewModel choice', 
             `${path} ${host} ${viewModels}`,
           );
         assert.equal(
-          files['Program.cs'].includes('DesktopEventLoop.Run'),
+          files['Program.cs'].includes('return RunicDesktopHost.Run('),
           desktop,
+        );
+        assert.equal(
+          files['Program.cs'].includes('return RunicCsWebUiHost.Run('),
+          !desktop,
         );
         assert.equal(
           files['Program.cs'].includes('.WithGtk4()'),
@@ -167,9 +172,17 @@ test('every template file renders cleanly for every host and ViewModel choice', 
         );
         assert.equal(
           files['RunicWindowApp.csproj'].includes(
-            'Runic.Application.ReactiveUI',
+            'Runic.Application.Views.ReactiveUI',
           ),
           viewModels === 'reactiveui',
         );
+        assert.equal(
+          files['WorkspaceServices.cs'].includes(
+            'AddRunicReactiveModelContext()',
+          ),
+          viewModels === 'reactiveui',
+        );
+        // The optional test project stays off unless --tests is passed.
+        assert.doesNotMatch(files['RunicWindowApp.csproj'], /Tests/);
       }
 });

@@ -47,6 +47,7 @@ import {
 import {
   createReleaseDocs,
   packageInstallCommand,
+  snapshotPackageRenames,
 } from '../src/lib/release-docs-core.ts';
 import { renderTemplate } from '../src/lib/template-conditions.ts';
 
@@ -223,15 +224,18 @@ function documentedCommands() {
       if (version !== versionPlaceholder)
         commands.add(`dotnet add package ${name} --version ${version}`);
   }
-  // Every catalog package at the release version.
+  // Every catalog package at the release version, and under its new ID when
+  // the pinned snapshot renamed it.
   const version = { state: 'published', value: versionSentinel };
   for (const row of createReleaseDocs(activeSdkRelease).catalogRows)
-    commands.add(
-      packageInstallCommand({ ...row, version }).replaceAll(
-        versionSentinel,
-        versionPlaceholder,
-      ),
-    );
+    for (const name of [row.name, snapshotPackageRenames[row.name]])
+      if (name)
+        commands.add(
+          packageInstallCommand({ ...row, name, version }).replaceAll(
+            versionSentinel,
+            versionPlaceholder,
+          ),
+        );
   return commands;
 }
 

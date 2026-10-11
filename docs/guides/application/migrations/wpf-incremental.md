@@ -51,10 +51,11 @@ does not create a new navigation entry or authorize resetting its draft.
 
 ## 3. Optionally replace one View with a web View
 
-Add `Runic.Application.Wpf` at `0.7.0-preview.6` for an embedded child WebView2.
+Add `Runic.Application.Views.Wpf` (`Runic.Application.Wpf` up to
+0.7.0-preview.6) for an embedded child WebView2.
 Declare a logical `RunicView<TModel>`, register generated `AddRunicViews()`, and
 build the frontend and generated client. The application keeps its WPF `Window`.
-The [adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Wpf/README.md)
+The [adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.Wpf/README.md)
 shows `RunicWebView`, its `CreateWindowHostFactory()`, `DesktopHost.StartAsync`
 and `CreateWpfViewAsync`. Add the control to the WPF visual tree and open the
 binding after loading, with the dispatcher pumping.

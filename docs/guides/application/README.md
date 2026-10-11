@@ -28,7 +28,7 @@ and models while adding native navigation and optional embedded web Views. The
 [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/notes-view-first/README.md) and
 [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the
-[`Runic.Application` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views/README.md).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md).
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.
@@ -37,12 +37,18 @@ types are in the `Runic.Application.Views` namespace; the
 
 Since 0.7.0-preview.4, navigation and model contexts live in
 [`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Navigation/README.md).
-It can be used independently of Views; `Runic.Application` references it
+It can be used independently of Views; `Runic.Application.Views` references it
 transitively. Add `using Runic.Navigation;` for `RunicNavigator`, regions,
 `IRunicModelContext`, `RunicModelContext` and `RunicModelContextRegistry`, then
-recompile. There are no type forwards. ReactiveUI navigation and scheduling
-helpers also moved to `Runic.Navigation.ReactiveUI` (or its `.Reactive` flavor);
-Views-specific adapters stay in their Application packages. The
+recompile. There are no type forwards. ReactiveUI navigation helpers are in
+`Runic.Navigation.ReactiveUI` (or its `.Reactive` flavor). The model-context
+scheduling helpers, `AddRunicReactiveModelContext()` and
+`RunicReactiveSchedulerProvider`, moved back to
+`Runic.Application.Views.ReactiveUI` in 0.7.0-preview.7; replace
+`using Runic.Navigation.ReactiveUI;` with
+`using Runic.Application.Views.ReactiveUI;` for them.
+[Pages and navigation](guides/pages-and-navigation.md) and
+[ViewModel state and threads](guides/model-context.md) show both in use. The
 [preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/eng/release/notes/0.7.0-preview.4.md)
 list the moved types.
 

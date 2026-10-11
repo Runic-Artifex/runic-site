@@ -6,6 +6,7 @@ import workspace from '../sources/sdk/eng/workspace.json' with { type: 'json' };
 import {
   createReleaseDocs,
   packageInstallCommand,
+  snapshotPackageRenames,
 } from '../src/lib/release-docs-core.ts';
 
 test('published catalog has unique installable packages and matching registry links', () => {
@@ -62,8 +63,16 @@ test('active catalog follows the SDK-owned package inventory only', () => {
     .map((entry) => entry.name)
     .sort();
   const catalog = activeSdkRelease.packages
-    .map((entry) => entry.identity)
+    .map((entry) => snapshotPackageRenames[entry.identity] ?? entry.identity)
     .sort();
+  for (const [published, renamed] of Object.entries(snapshotPackageRenames)) {
+    assert.ok(
+      activeSdkRelease.packages.some((entry) => entry.identity === published),
+      `${published} is not in the published catalog`,
+    );
+    assert.ok(inventory.includes(renamed), `${renamed} left the SDK inventory`);
+    assert.ok(!inventory.includes(published), `${published} was not renamed`);
+  }
   assert.ok(
     acceptedSnapshotVersions(activeSdkRelease.version).includes(
       workspace.version,

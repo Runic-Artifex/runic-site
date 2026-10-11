@@ -29,10 +29,14 @@
       bun: { text: 'Bun 1.4 or later', href: 'https://bun.sh' },
       cswebui: {
         text: 'A Chromium-based browser, or the platform WebView as a fallback',
-        href: '/guides/desktop/host-selection/',
+        href: '/guides/application/choosing/#cs-webui-best-effort',
       },
       desktop: {
         text: 'WebView2 on Windows, WKWebView on macOS, or GTK 3 with WebKitGTK 4.1 on Linux',
+        href: 'https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md',
+      },
+      'desktop-gtk4': {
+        text: 'WebView2 on Windows, WKWebView on macOS, or GTK 4.12 with WebKitGTK 6.0 on Linux',
         href: 'https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md',
       },
     };
@@ -126,6 +130,14 @@
       The command below creates exactly this project. It makes the same choices <code
         >dnx Runic.Create</code
       > asks for in your terminal.
+    </p>
+    <p class="lede">
+      The defaults, Runic Desktop and ReactiveUI, suit most apps.
+      <a
+        class="text-link"
+        href={resolve('/guides/[...path]', { path: 'application/choosing' })}
+        >Choosing a host and MVVM library</a
+      > explains when to pick another.
     </p>
   </section>
 

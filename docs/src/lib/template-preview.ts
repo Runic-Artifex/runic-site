@@ -12,6 +12,7 @@ import vueIndex from '../../sources/sdk/tools/Runic.Application.Templates/conten
 import program from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/Program.cs?raw';
 import project from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/RunicWindowApp.csproj?raw';
 import views from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/Views.cs?raw';
+import services from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/WorkspaceServices.cs?raw';
 import viewModels from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/WorkspaceViewModel.cs?raw';
 import {
   templateSourceName,
@@ -60,6 +61,11 @@ export function previewFiles(
       .replaceAll('__RUNIC_NUGET_VERSION__', version);
   return [
     { path: 'Program.cs', language: 'csharp', content: render(program) },
+    {
+      path: 'WorkspaceServices.cs',
+      language: 'csharp',
+      content: render(services),
+    },
     { path: 'Views.cs', language: 'csharp', content: render(views) },
     {
       path: 'WorkspaceViewModel.cs',

@@ -69,7 +69,7 @@
         through NuGet and npm. Command Line and Translations, including
         Translations Editor, have their own repositories and release lifecycles.
         CS-WebUI remains an independent upstream compatibility product; the SDK
-        includes the Runic.Application integrations.
+        includes its CS-WebUI integration, Runic.Application.Views.CsWebUi.
       </p>
     </ContentCard>
     <ContentCard

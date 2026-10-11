@@ -14,6 +14,8 @@
     guide.summary || `${guide.title} in the Runic Artifex guides.`,
   );
   let toc = $derived(guide.headings.filter((heading) => heading.depth === 2));
+  // Every guide links the glossary of the terms the guides share.
+  const glossaryFile = 'application/glossary.md';
 </script>
 
 <svelte:head>
@@ -106,6 +108,17 @@
             </a>
           {/if}
         </nav>
+        {#if guide.file !== glossaryFile}
+          <p class="guide-glossary">
+            New to a term such as Window, View or model context? See the
+            <a
+              class="text-link"
+              href={resolve('/guides/[...path]', {
+                path: 'application/glossary',
+              })}>glossary</a
+            >.
+          </p>
+        {/if}
         <a class="text-link" href={guide.sourceUrl}>View source on GitHub</a>
       </footer>
     </article>

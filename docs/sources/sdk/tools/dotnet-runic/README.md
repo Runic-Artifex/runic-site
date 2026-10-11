@@ -13,23 +13,44 @@ Both commands find the single `.csproj` in the current directory; pass
 selects the build configuration. `dotnet runic <command> --help` describes
 every option.
 
-`dev` requires `RunicViewsWindowProject=true` and a CS-WebUI
-(`Runic.Application.CsWebUi`) or Runic Desktop (`Runic.Application.Desktop`)
+`dev` requires `RunicApplicationFrontendWindowProject=true` and a CS-WebUI
+(`Runic.Application.Views.CsWebUi`) or Runic Desktop (`Runic.Application.Views.Desktop`)
 host. It restores the .NET and JavaScript dependencies, builds the project, and
 runs the native Window alongside the frontend's Vite or Angular development
 server. While the development server runs, the build skips the production
 frontend build and leaves the development document in `www/`
-(`RunicBridgeBuildFrontend=false`, `RunicBridgeCopyFrontend=false`); the Views
+(`RunicApplicationFrontendBuildEnabled=false`, `RunicApplicationFrontendCopyEnabled=false`); the Views
 MSBuild targets still generate the typed TypeScript clients. `dotnet watch`
 restarts the Window after C# edits. `--no-restore`, `--no-frontend-watch`,
-`--no-dotnet-watch`, and `--dry-run` select parts of that loop. `--no-restore`
-also passes `RunicBridgeInstallFrontend=false`, so the build does not install
-missing frontend packages either. Application arguments after `--` are passed
-to the Window process. When a restore, install or build step fails, the error
+`--no-dotnet-watch`, and `--dry-run` select parts of that loop. `dev` installs
+the frontend packages itself and passes
+`RunicApplicationFrontendInstallEnabled=false`, so the build does not install
+them a second time; with `--no-restore` nothing
+installs them, and a frontend that declares dependencies but has no
+`node_modules` stops with `RAPPDEV1008`. When `dotnet watch` restarts or `dev`
+stops the Window, the application's expected exit code after SIGTERM or Ctrl+C
+(143, 130) is not reported; any other exit code still is. Application
+arguments after `--` are passed to the Window process. When a restore, install
+or build step fails, the error
 names the program and its working directory and then points to `doctor`.
+With Vite, `dev` prepares a development document for every HTML page that
+`vite build` emits, so a second window with its own page (for example
+`settings.html` listed in `build.rolldownOptions.input` and opened with
+`new DesktopContent.Directory(www, "settings.html")`) loads in `dev` exactly
+as in build and publish. Before the build, `dev` reads the build inputs from
+the resolved Vite configuration with Node.js, or with Bun for a Bun frontend,
+and prints them as `[dev] Pages: index.html, settings.html`. An input whose
+file does not exist stops `dev` with `RAPPDEV1009: Window entry not found:
+'settings.html' …` instead of a window that times out waiting for its page.
 The Window runs with `DOTNET_ENVIRONMENT=Development` unless you set
 `DOTNET_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT` yourself, so failed Bridge
 calls carry the exception type, message and stack to the browser.
+Ctrl+C or SIGTERM stops `dev` the way closing the last window stops the
+application: the Window gets SIGTERM on Linux and macOS, or Ctrl+C on Windows,
+and up to 5 seconds to close its windows and finish its work before `dev` kills
+it. A restart after a C# or frontend compiler edit gets the same grace;
+`dev` sets `DOTNET_WATCH_PROCESS_CLEANUP_TIMEOUT_MS=5000` for `dotnet watch`
+unless you set it yourself.
 
 `doctor` checks the Views Window opt-in, the .NET SDK, the declared JavaScript
 runtime and package manager, the matching lock file, the configured
@@ -50,7 +71,20 @@ Fedora, Arch, openSUSE and NixOS, read from `/etc/os-release`, and the library
 file names on other distributions. The check also warns when the project
 restores `Runic.Platform.Linux`: its GTK 3 portal parent loads `libgtk-3`, and a
 GTK 4 process must not load GTK 3. With `--rid`, `target-presentation` reports
-the native libraries instead.
+the native libraries instead. A project on `Runic.Application.Views.Desktop` gets the
+platform providers from that package, and `services.AddRunicPlatformServices()`
+selects the GTK 4 one. For such a project the check lists only the native
+libraries, and warns about `Runic.Platform.Linux` only when the project
+references it directly.
+
+A project on `Runic.Application.Views.Desktop` or `Runic.Application.Views.CsWebUi` also
+gets a `platform-services` check. It names the provider that
+`AddRunicPlatformServices()` selects on this machine. On Linux, it warns when
+there is no D-Bus session bus or no installed `xdg-desktop-portal` (the
+`org.freedesktop.portal.Desktop` D-Bus service in `XDG_DATA_HOME` or
+`XDG_DATA_DIRS`), because the file dialogs and the file launcher use the portal.
+For CS-WebUI it reports that the services return `OwnerUnavailable`. The check
+describes this machine, so `--rid` skips it.
 
 ### Deployment checks for a target
 
@@ -60,10 +94,11 @@ global properties of `dotnet publish -r <rid>` (`RuntimeIdentifier=<rid>` and
 `_IsPublishing=true`), and in Release unless you pass `-c`, so RID-, publish- and
 configuration-conditioned `PublishAot`, `PublishSelfContained` and
 `SelfContained` settings apply. Doctor does not see properties passed to
-`dotnet publish` on its command line; `--aot` and `--self-contained` check a
-publish with `-p:PublishAot=true` or `--self-contained true`. A malformed RID, or
-`--aot` or `--self-contained` without `--rid`, is a usage error (`RAPPCLI1011`,
-exit code 2).
+`dotnet publish` on its command line; `--aot`, `--no-aot` and
+`--self-contained` check a publish with `-p:PublishAot=true`,
+`-p:PublishAot=false` or `--self-contained true`. A malformed RID, or `--aot`,
+`--no-aot` or `--self-contained` without `--rid`, is a usage error
+(`RAPPCLI1011`, exit code 2).
 
 | Check | What it reports |
 | --- | --- |
@@ -84,28 +119,23 @@ dotnet runic doctor --rid win-x64 --aot --fail-on fail
 
 `dotnet runic doctor --output json` (or `RUNIC_COMMANDLINE_OUTPUT=json`) writes
 one `runic.commandline/1` envelope. A `runic.commandline/1` envelope carries a
-payload only when it succeeds, so by default JSON output reports every completed
-inspection as a successful envelope (exit code 0) with the checks in the payload,
-even when checks fail; read `payload.healthy` to decide. Errors that stop the
-inspection, such as a missing project, produce a failed envelope with a `fault`
-and no payload.
+payload only when it succeeds. Errors that stop the inspection, such as a missing
+project, produce a failed envelope with a `fault` and no payload.
 
 `--fail-on <never|fail|warn>` selects when doctor fails, with the same meaning in
-both output modes. The default is `fail` for human output and `never` for JSON
-output. When a check reaches the threshold, doctor exits with code 1. In JSON
-mode that is a failed envelope with no payload: the fault has code
-`RAPPCLI1009` and `details` mapping each non-passing check id to `fail` or
-`warn`, and the diagnostics mark the checks at the threshold as errors.
+both output modes, and defaults to `fail` in both. When a check reaches the
+threshold, doctor exits with code 1. In JSON mode that is a failed envelope with
+no payload: the fault has code `RAPPCLI1009` and `details` mapping each
+non-passing check id to `fail` or `warn`, and the diagnostics mark the checks at
+the threshold as errors.
 
-Setting `RUNIC_COMMANDLINE_OUTPUT=json` therefore changes doctor's exit code:
-failing checks exit 0 unless `--fail-on` is given. Pass `--fail-on fail` in CI
-when the exit code must reflect the checks.
-
-In CI, either let the exit code decide or check the payload:
+A failing check therefore exits 1 in JSON mode too. To read every check from
+the payload even when some fail, pass `--fail-on never` and decide on
+`payload.healthy`:
 
 ```bash
-dotnet runic doctor --output json --fail-on fail > doctor.json
-dotnet runic doctor --output json | jq -e '.payload.healthy'
+dotnet runic doctor --output json > doctor.json
+dotnet runic doctor --output json --fail-on never | jq -e '.payload.healthy'
 ```
 
 The payload type is `runic.application.tool.doctor/1`:
@@ -170,14 +200,14 @@ none of them; the defaults follow the frontend directory.
 
 | Property | Default |
 | --- | --- |
-| `RunicBridgeFrontendDir` | `Frontend` |
+| `RunicApplicationFrontendDirectory` | `Frontend` |
 | `RunicApplicationFrontendPackageDirectory` | the frontend directory |
 | `RunicApplicationFrontendOutputDirectory` | `<frontend>/dist` |
 | `RunicApplicationFrontendWebRoot` | `www`, relative to the build output |
 | `RunicApplicationFrontendDevServerKind` | `angular` with `angular.json`, `vite` with a `vite.config.*`, otherwise none |
 | `RunicApplicationFrontendViteDevServerEntry` | the first of `/src/main.ts`, `/src/main.tsx`, `/src/main.js`, `/src/main.jsx` |
 | `RunicApplicationFrontendViteConfiguration` | the frontend's `vite.config.*` |
-| `RunicApplicationFrontendDevServerDocument` | `index.html`; separate several documents with `;` |
+| `RunicApplicationFrontendDevServerDocument` | every HTML build input with Vite, `index.html` with Angular; set it to override the list and separate several documents with `;` |
 | `RunicApplicationFrontendDevWatchTarget` | none; an MSBuild target to run as the frontend watcher without a development server |
 
 The package manager comes from `packageManager` in the frontend `package.json`,
@@ -192,6 +222,9 @@ result into a JSON report:
 ```bash
 dotnet runic size --project path/to/App.csproj --runtime linux-x64 --report measurements/linux.json
 ```
+
+As in `doctor`, the runtime identifier is `--runtime`, `--rid` or `-r`. `size`
+publishes with Native AOT unless you pass `--no-aot`; `--aot` states the default.
 
 `--verify` names any executable to run after a successful publish: a path or a
 command on `PATH`, such as `node` or `bun`. It is not looked up in the publish

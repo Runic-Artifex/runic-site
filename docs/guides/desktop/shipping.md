@@ -52,10 +52,12 @@ names the WebView runtime each target needs. For size options such as
 
 ### Know what the publish folder contains
 
-The template opens its frontend from a `www` folder next to the executable:
+The template opens its Window with `RunicWindowOptions`, which serve the
+frontend from a `www` folder next to the executable unless you set another
+content root:
 
 ```csharp docs-test=template:Program.cs host=desktop
-        new DesktopSurfaceOptions { Content = new DesktopContent.Directory(Path.Combine(AppContext.BaseDirectory, "www"), "index.html") },
+await using var window = await host.OpenWindowAsync<WorkspaceWindow>(new RunicWindowOptions { Width = 1000, Height = 700 });
 ```
 
 Ship the executable and `www` together, or embed the frontend in the
@@ -64,7 +66,8 @@ executable with [Runic Assets](../assets/README.md) and serve it with
 writes debug symbols (`.pdb` on Windows, `.dbg` on Linux, `.dSYM` on macOS).
 Leave them out of the package but keep them per release for crash analysis.
 
-The window icon at run time comes from `DesktopWindowOptions.IconFile`:
+The window icon at run time comes from `DesktopWindowOptions.IconFile`, which
+an application sets through the `WindowOptions` of its `RunicDesktopHost`:
 WebView2 loads an `.ico` file, and the GTK 3 host and macOS load the image
 file you pass. GTK 4 windows reject `IconFile`; their icon comes from the
 installed desktop entry (see [Linux](#linux)). The icon that a file manager,

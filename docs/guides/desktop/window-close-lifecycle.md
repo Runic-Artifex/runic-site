@@ -114,3 +114,4 @@ application owns the service lifetime and disposes services while the native
 event loop remains active. On macOS use
 `DesktopEventLoop.Run(Func<Task>)` when composing asynchronous cleanup around
 Desktop directly so AppKit stays on its main thread until disposal completes.
+Applications built on Views get the same from `RunicDesktopHost.Run`.

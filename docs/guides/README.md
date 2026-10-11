@@ -5,7 +5,8 @@ under the same paths; for example, `application/tutorial/README.md` is
 `/guides/application/tutorial/`. The [SDK contributor guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/CONTRIBUTING.md)
 describes workspace commands.
 
-- [Getting started](application/getting-started/README.md), [Windows and Views, step by step](application/tutorial/README.md) and [adding Runic to an existing app](application/existing-app.md).
+- [Getting started](application/getting-started/README.md), [choosing a host and MVVM library](application/choosing.md), [Windows and Views, step by step](application/tutorial/README.md) and [adding Runic to an existing app](application/existing-app.md).
+- [Pages and navigation](application/guides/pages-and-navigation.md), [ViewModel state and threads](application/guides/model-context.md) and the [glossary](application/glossary.md).
 - [Published-package desktop consumer](application/package-consumer.md) and
   [operations and cancellation](application/guides/operations-and-cancellation.md).
 - [Incremental WPF migration](application/migrations/wpf-incremental.md): independent Translations and Command Line, native navigation, then optional web Views.
