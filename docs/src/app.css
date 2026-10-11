@@ -403,6 +403,16 @@ p {
   gap: 15px;
 }
 
+.persona-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+}
+
+.persona-card h3 {
+  font-size: 1.05rem;
+}
+
 .product-card-link {
   grid-column: span 4;
   text-decoration: none;
@@ -1218,6 +1228,22 @@ pre {
 
 .guide-pager small {
   color: var(--muted-foreground);
+}
+
+.guide-contributors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.guide-contributors a {
+  color: var(--muted-foreground);
+}
+
+.guide-contributors a:hover {
+  color: var(--foreground);
 }
 
 .search-form {

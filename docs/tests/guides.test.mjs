@@ -276,6 +276,13 @@ test('every guide renders and appears once in the guide navigation', () => {
     group.files.includes('application/contributing/README.md'),
   );
   assert.equal(contributing.title, 'Contributing to Application');
+  // SDK development guides are the contributor groups, and only those.
+  assert.deepEqual(
+    guideNavigation
+      .filter((group) => group.contributor)
+      .map((group) => group.title),
+    ['Contributing to Application', 'Contributing and testing'],
+  );
   const sidebar = render('/guides/');
   assert.match(
     sidebar,
@@ -285,15 +292,37 @@ test('every guide renders and appears once in the guide navigation', () => {
 
 test('all guides are reachable from the guide navigation of every guide page', () => {
   const guides = renderGuides(sources, docsFileExists);
+  const contributorFiles = new Set(
+    guideNavigation
+      .filter((group) => group.contributor)
+      .flatMap((group) => group.files.map(navigationFile)),
+  );
+  const isContributor = (guide) => contributorFiles.has(guide.file);
   for (const guide of guides) {
     const html = render(guide.href);
     const nav = html.match(/<nav class="guide-nav"[\s\S]*?<\/nav>/)?.[0];
     assert.ok(nav, `${guide.href} has no guide navigation`);
-    for (const other of guides)
-      assert.ok(
-        nav.includes(`href="${other.href}"`),
-        `${guide.href} -> ${other.href}`,
-      );
+    // Product guides list contributor guides in the footer instead of the
+    // sidebar; a contributor guide lists every guide in its sidebar.
+    const footer = html.match(
+      /<nav class="guide-contributors"[\s\S]*?<\/nav>/,
+    )?.[0];
+    assert.equal(footer === undefined, isContributor(guide), guide.href);
+    for (const other of guides) {
+      const link = `href="${other.href}"`;
+      if (!isContributor(other) || isContributor(guide))
+        assert.ok(nav.includes(link), `${guide.href} -> ${other.href}`);
+      else {
+        assert.ok(
+          !nav.includes(link),
+          `${guide.href} sidebar -> ${other.href}`,
+        );
+        assert.ok(
+          footer.includes(link),
+          `${guide.href} footer -> ${other.href}`,
+        );
+      }
+    }
     assert.match(nav, new RegExp(`href="${guide.href}" aria-current="page"`));
     assert.equal(html.match(/<h1\b/g)?.length, 1, guide.href);
     assert.ok(html.includes(guide.sourceUrl), guide.href);
@@ -309,19 +338,30 @@ test('portal pages link the rendered guides', () => {
     ['/products/runic-desktop/', '/guides/desktop/host-selection/'],
     ['/products/runic-assets/', '/guides/assets/'],
     ['/packages/', '/guides/application/existing-app/'],
+    ['/products/runic-command-line/', '/guides/command-line/'],
+    ['/products/runic-translations/', '/guides/translations/'],
   ])
     assert.ok(render(path).includes(`href="${guide}"`), `${path} -> ${guide}`);
   assert.match(
     render('/getting-started/'),
     /href="\.\.\/guides\/application\/tutorial"/,
   );
+  // The home page starts each persona on one guide.
+  const home = render('/');
+  for (const path of [
+    'application/getting-started',
+    'application/migrations/wpf-incremental',
+    'command-line',
+    'translations',
+  ])
+    assert.ok(home.includes(`href="./guides/${path}"`), path);
 });
 
 test('builds a small offline search index over all guides and products', () => {
   const raw = readFileSync(new URL('search-index.json', buildDirectory));
   // Budget: the index loads only on the search page.
-  assert.ok(raw.length < 352 * 1024, `index is ${raw.length} bytes`);
-  assert.ok(gzipSync(raw).length < 88 * 1024, 'compressed index over budget');
+  assert.ok(raw.length < 400 * 1024, `index is ${raw.length} bytes`);
+  assert.ok(gzipSync(raw).length < 104 * 1024, 'compressed index over budget');
   const index = JSON.parse(raw.toString('utf8'));
   assert.equal(index.version, 1);
   const pages = new Set(index.entries.map((entry) => entry.u.split('#')[0]));

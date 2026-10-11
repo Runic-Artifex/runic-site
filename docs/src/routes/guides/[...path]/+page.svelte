@@ -16,6 +16,23 @@
   let toc = $derived(guide.headings.filter((heading) => heading.depth === 2));
   // Every guide links the glossary of the terms the guides share.
   const glossaryFile = 'application/glossary.md';
+  // SDK development guides stay out of the product sidebar. Product guides
+  // list them in the footer; a contributor guide shows them in the sidebar.
+  let onContributorGuide = $derived(
+    data.navigation.some(
+      (group) =>
+        group.contributor &&
+        group.guides.some((entry) => entry.href === guide.href),
+    ),
+  );
+  let sidebarGroups = $derived(
+    data.navigation.filter((group) => !group.contributor || onContributorGuide),
+  );
+  let contributorGuides = $derived(
+    data.navigation
+      .filter((group) => group.contributor)
+      .flatMap((group) => group.guides),
+  );
 </script>
 
 <svelte:head>
@@ -52,7 +69,7 @@
     <aside class="guide-sidebar">
       <SearchForm />
       <nav class="guide-nav" aria-label="Guides">
-        {#each data.navigation as group, groupIndex (group.title)}
+        {#each sidebarGroups as group, groupIndex (group.title)}
           <div class="guide-nav-group">
             <h2 class="guide-nav-heading" id={`guide-nav-${groupIndex}`}>
               {group.title}
@@ -118,6 +135,14 @@
               })}>glossary</a
             >.
           </p>
+        {/if}
+        {#if !onContributorGuide}
+          <nav class="guide-contributors" aria-label="Contributor guides">
+            <span>Working on the SDK itself?</span>
+            {#each contributorGuides as entry (entry.href)}
+              <a href={entry.href}>{entry.title}</a>
+            {/each}
+          </nav>
         {/if}
         <a class="text-link" href={guide.sourceUrl}>View source on GitHub</a>
       </footer>
