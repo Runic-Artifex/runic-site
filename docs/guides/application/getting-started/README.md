@@ -20,21 +20,25 @@ dotnet new install Runic.Application.Templates@<VERSION>
 dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --view-models reactiveui
 ```
 
-| Option              | Choices                                         | Default   |
-| ------------------- | ----------------------------------------------- | --------- |
-| `--frontend`        | `react`, `vue`, `svelte`, `angular`             | `react`   |
-| `--package-manager` | `npm`, `pnpm`, `bun`                            | `npm`     |
-| `--host`            | `cswebui`, `desktop`, `desktop-gtk4`            | `cswebui` |
-| `--view-models`     | `toolkit` (CommunityToolkit.Mvvm), `reactiveui` | `toolkit` |
+| Option              | Choices                                         | Default      |
+| ------------------- | ----------------------------------------------- | ------------ |
+| `--frontend`        | `react`, `vue`, `svelte`, `angular`             | `react`      |
+| `--package-manager` | `npm`, `pnpm`, `bun`                            | `npm`        |
+| `--host`            | `desktop`, `desktop-gtk4`, `cswebui`            | `desktop`    |
+| `--view-models`     | `reactiveui`, `toolkit` (CommunityToolkit.Mvvm) | `reactiveui` |
+
+Runic Desktop, the default host, opens a native window with the embedded
+WebView and native file dialogs. CS-WebUI opens a browser window and is
+supported on a best-effort basis. ReactiveUI is the primary ViewModel library;
+CommunityToolkit.Mvvm has its own idiomatic path.
+[Choosing a host and MVVM library](../choosing.md) explains when to pick each.
 
 Replace `<VERSION>` with the current release from the
 [package catalog](https://docs.runic-artifex.eu/packages/). You need the .NET 10
 SDK and Node.js 24 with npm or pnpm, or Bun 1.4.
 
 `dotnet runic dev` restores the .NET and frontend packages, builds the app,
-starts the frontend development server, and opens the app. The CS-WebUI host
-uses an installed browser's app mode, falling back to the platform WebView; the
-Runic Desktop host opens a native window with the embedded WebView.
+starts the frontend development server, and opens the app.
 `dotnet runic doctor` checks the prerequisites at any point. The generated
 README describes the project layout, the ignored `Frontend/src/generated`
 clients, publishing, and the project settings. The
@@ -67,8 +71,9 @@ operation lifetime.
   GTK 4, generated assets, scoped services, native ownership and shutdown.
 - [Embed and serve assets](../../assets/README.md) to ship a frontend inside
   the executable or serve it from ASP.NET Core.
-- [Host selection](../../desktop/host-selection.md) compares CS-WebUI and Runic
-  Desktop for native windows and platform services.
+- [Choosing a host and MVVM library](../choosing.md) compares the hosts and
+  ViewModel libraries, and the [glossary](../glossary.md) defines the terms
+  the guides share.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see

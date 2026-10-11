@@ -30,6 +30,20 @@ const productLabels: Readonly<Record<string, string>> = {
   'views-effect': 'Effect bindings',
   vite: 'Vite plugin',
 };
+// Package IDs that the pinned SDK snapshot (sources/sdk) renamed after the
+// active release, so each package ID is its namespace. The guides follow the
+// snapshot; the catalog, package goals and API reference keep the published
+// IDs until `bun run docs:release` and the API sync publish the new ones.
+// Empty this map then.
+export const snapshotPackageRenames: Readonly<Record<string, string>> = {
+  'Runic.Application': 'Runic.Application.Views',
+  'Runic.Application.CsWebUi': 'Runic.Application.Views.CsWebUi',
+  'Runic.Application.Desktop': 'Runic.Application.Views.Desktop',
+  'Runic.Application.ReactiveUI': 'Runic.Application.Views.ReactiveUI',
+  'Runic.Application.ReactiveUI.Reactive':
+    'Runic.Application.Views.ReactiveUI.Reactive',
+  'Runic.Application.Wpf': 'Runic.Application.Views.Wpf',
+};
 export function productLabel(product: string) {
   return productLabels[product] ?? product;
 }

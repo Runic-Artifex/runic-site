@@ -54,12 +54,11 @@
         The creator asks which one to use.
       </p>
       <p>
-        The default CS-WebUI host opens your app in an installed browser in app
-        mode; Chrome, Edge and other Chromium-based browsers work best, and
-        Firefox works without app mode. Without a browser it falls back to the
-        platform WebView: the Edge WebView2 Runtime on Windows, GTK 3 with
-        WebKitGTK 4.1 on Linux, or WKWebView on macOS. The Runic Desktop host
-        uses that WebView in a native window. Run
+        The default Runic Desktop host opens your app in a native window with
+        the platform WebView: the Edge WebView2 Runtime on Windows, WKWebView on
+        macOS, or GTK 3 with WebKitGTK 4.1 on Linux. The CS-WebUI host opens a
+        browser window instead, in an installed browser in app mode, on a
+        best-effort basis. Run
         <code>dotnet runic doctor</code> in the generated project to check your setup.
       </p>
     </ContentCard>
@@ -134,19 +133,21 @@
         platform WebView.
       </p>
     </ContentCard>
-    <ContentCard eyebrow="Native windows" title="Choose a host">
+    <ContentCard eyebrow="Your choices" title="Choose a host and MVVM library">
       <p>
-        The creator asks for the host. CS-WebUI is the default. Choose Runic
-        Desktop (<code>--host desktop</code>, or
-        <code>--host desktop-gtk4</code>
-        for GTK 4 on Linux) for native windows, embedded WebViews, file dialogs and
-        other platform services; existing projects can add
-        <code>Runic.Application.Desktop</code>. The
+        The creator asks for the host and the ViewModel library. Runic Desktop
+        is the default and first-class host: native windows, embedded WebViews,
+        file dialogs and other platform services (<code
+          >--host desktop-gtk4</code
+        >
+        uses GTK 4 on Linux). CS-WebUI opens a browser window and is supported on
+        a best-effort basis. ReactiveUI is the default ViewModel library; CommunityToolkit.Mvvm
+        is supported too.
         <a
           class="text-link"
           href={resolve('/guides/[...path]', {
-            path: 'desktop/host-selection',
-          })}>host selection guide</a
+            path: 'application/choosing',
+          })}>Choosing a host and MVVM library</a
         >
         compares them. To distribute a Desktop app, follow
         <a

@@ -9,8 +9,8 @@ Factories such as `WindowsPlatformProvider.CreateNotifications(...)` and
 `LinuxPlatformProvider.CreateSettings()` return services that the caller owns and
 disposes. Native file dialogs, file launchers, and clipboard providers also need
 a verified presentation owner. For an embedded Runic Desktop window, use the
-shipped owner in `Runic.Application.Desktop`: each opened Window exposes
-`DesktopBridgeWindow<TViewModel>.NativeOwner`, and
+shipped owner in `Runic.Application.Views.Desktop`: each opened Window's `Host`
+is a `DesktopBridgeWindow<TViewModel>` that exposes `NativeOwner`, and
 `new DesktopNativeOwner(desktopWindow)` creates one for a `DesktopWindow` opened
 without Views. Pass it to the provider, for example
 `LinuxPlatformProvider.CreateFileDialogs(workspace.NativeOwner)`, where
@@ -21,6 +21,14 @@ dispatch, such as an installed browser after fallback or a custom host without a
 native handle. Do not retain native handles beyond the callback or send native
 handles and leases to the browser. Non-Desktop hosts, such as CS-WebUI and custom window
 hosts, still implement `INativePickerOwner` over their own dispatcher.
+
+In a Runic Application Views app, `services.AddRunicPlatformServices()` does
+this for you, as the template does. It registers `IFileDialogs`,
+`ITextClipboard`, `IDesktopFileLauncher` and `IWindowPlatformServices` per
+Window; a ViewModel takes them in its constructor, and they bind to the
+Window's native owner when it opens, with the provider for the running platform
+and backend. Until then, and on CS-WebUI, which has no native owner, they
+report `OwnerUnavailable`.
 
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native

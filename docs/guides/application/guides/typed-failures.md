@@ -100,7 +100,7 @@ outcome `domain_failed`. A misplaced, repeated or unsupported declaration is
 the build error `RUNICBRIDGE012`. A synchronous plain `ICommand` reports only a
 failure thrown before `Execute` returns; use an asynchronous command for
 failures that happen after an `await`. The
-[Runic.Application README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
 has the full rules.
 
 ## Handle the outcome in TypeScript
@@ -272,7 +272,7 @@ A `ReactiveCommand` reports every exception on `ThrownExceptions`, including a
 declared `RunicFailureException` that the Bridge already sent to the client.
 Without a subscriber, ReactiveUI's default handler breaks into the debugger and
 throws. Give every bridged `ReactiveCommand` a subscriber.
-`ObserveBridgeExceptions` from `Runic.Application.ReactiveUI` (or its
+`ObserveBridgeExceptions` from `Runic.Application.Views.ReactiveUI` (or its
 `.Reactive` flavor) ignores declared failures and cancellations and logs
 everything else as `ReactiveCommandFailed` (event 1042):
 

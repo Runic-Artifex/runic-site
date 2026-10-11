@@ -19,16 +19,14 @@ listener, sessions, and a platform presentation at once.
 The common server-only migration is:
 
 ```csharp docs-test=source:examples/first-window-desktop/Program.cs
-await using var desktop = await DesktopHost.StartAsync(new DesktopHostOptions
-{
-    ...
-});
-var surfaceOptions = new DesktopSurfaceOptions
+var hostOptions = new DesktopHostOptions { WaitForConnection = !serveOnly && !probeOwner };
+...
+await using var desktop = await DesktopHost.StartAsync(hostOptions);
+...
+await using var surface = await desktop.CreateSurfaceAsync(new DesktopSurfaceOptions
 {
     Content = new DesktopContent.Directory(Path.Combine(AppContext.BaseDirectory, "www"), "index.html"),
-};
-...
-await using var surface = await desktop.CreateSurfaceAsync(surfaceOptions);
+});
 ```
 
 `Content` takes one `DesktopContent` case: `Directory(root, entry?)` for local
@@ -47,11 +45,14 @@ using var greeting = surface.RegisterCapability(
     static (invocation, _) =>
         ValueTask.FromResult<PresentationResult>($"Hello, {invocation.GetString()}!"));
 await using var window = await surface.OpenWindowAsync();
-window.WaitForClose();
+await window.WaitForCloseAsync();
 ```
 
-`WaitForClose` keeps the platform window loop responsive while synchronously
-holding the process open, including AppKit's main-thread loop on macOS.
+`WaitForCloseAsync` completes when the window closes, while the platform
+window loop stays responsive, including AppKit's main-thread loop on macOS.
+Applications built on Runic Application Views open Windows with
+`RunicDesktopHost.Run` and `host.OpenWindowAsync<TWindow>()` instead, which
+create the host and surface for them.
 
 Security is intentionally stricter. The default bridge handshake requires the
 surface's 256-bit bootstrap credential and a canonical same origin. Public

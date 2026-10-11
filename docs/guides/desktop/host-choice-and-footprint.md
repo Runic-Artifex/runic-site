@@ -2,12 +2,17 @@
 
 The September 2026 assessment on this page is historical context, not an active
 implementation plan. Current host capabilities and platform limits are documented
-in [host selection](host-selection.md) and the package READMEs.
+in [choosing a host and MVVM library](../application/choosing.md),
+[host selection](host-selection.md) and the package READMEs.
 
 Runic Application Views declares Window and View contracts independently from a
-presentation host. The current template integration targets CS-WebUI. Runic
-Desktop is a separate library for installed-browser and embedded-WebView
-presentations; it does not make the CS-WebUI integration switch hosts implicitly.
+presentation host. The template starts from Runic Desktop and ReactiveUI: Runic
+Desktop is the default, first-class host, with native windows, the embedded
+WebView and platform services. CS-WebUI opens a browser window and is supported
+on a best-effort basis; it is the smaller runtime, as the measurement below
+shows. The same Window declaration and application body run on both, and a
+project changes host only through its `Run` call, host package and host
+script.
 
 ## Historical Linux footprint measurement
 
