@@ -213,14 +213,20 @@ inside its turns: synchronous bridge routes run nested work inline in that case
 and otherwise block until `InvokeAsync` completes. Snapshot delivery is ordered after its model turn so a
 synchronous host callback cannot run while the model gate is held.
 
-The default adapter's `RunicReactiveSchedulerProvider.For(context)` produces
-an `ISequencer`; the System.Reactive flavor provides the analogous
-`IScheduler`. They are delivery tools, not a replacement for the async command
-body, host UI dispatcher, browser event loop, or application-wide ReactiveUI
-main-thread scheduler.
+`AddRunicReactiveModelContext()` installs a model-context main-thread
+scheduler as `RxSchedulers.MainThreadScheduler`, the scheduler a
+`ReactiveCommand` uses when none is passed, so commands need no scheduler
+argument. Register the model context before the ViewModels create their
+commands, because a command reads the scheduler when it is created. A
+scheduler that the application or UI platform set, such as WPF's dispatcher
+or a test scheduler, is kept.
 
-Create and bind the context before constructing commands, then pass its
-scheduler as the positional scheduler argument to the ReactiveUI factory:
+For an explicit scheduler, for example an `ObserveOn` in a DynamicData
+pipeline, inject `ISequencer` (an `IScheduler` in the System.Reactive flavor)
+or call `RunicReactiveSchedulerProvider.For(context)`. Both return the
+context's own sequencer, which the main-thread scheduler also uses. They are
+delivery tools, not a replacement for the async command body, host UI
+dispatcher or browser event loop.
 
 ```csharp docs-test=skip:illustrative-fragment
 using Runic.Navigation;
@@ -228,18 +234,15 @@ using Runic.Navigation.ReactiveUI;
 
 services.AddRunicReactiveModelContext();
 
-public EditorViewModel(
-    EditorSession session,
-    IRunicModelContext modelContext,
-    ISequencer scheduler)
+public EditorViewModel(EditorSession session, IRunicModelContext modelContext)
 {
-    _scheduler = scheduler;
-    Workspace = new EditorWorkspaceViewModel(session, this, _scheduler);
+    Workspace = new EditorWorkspaceViewModel(session, this);
     _contextLease = RunicModelContextRegistry.Shared.Bind(modelContext, this, Workspace);
 }
 
+// No scheduler argument: commands deliver on the turn's model context.
 protected ReactiveCommand<string, RxVoid> CreateCommand(Func<string, Task> work) =>
-    ReactiveCommand.CreateFromTask<string>(work, _scheduler);
+    ReactiveCommand.CreateFromTask<string>(work);
 ```
 
 Bind every independently presented child, including dynamically routed document
