@@ -19,6 +19,16 @@ export type CreatorOption = {
   readonly choices: readonly CreatorChoice[];
 };
 
+/** A Boolean template parameter, such as `--tests`, passed as a bare flag. */
+export type CreatorToggle = {
+  readonly symbol: string;
+  readonly flag: string;
+  readonly label: string;
+  readonly description: string;
+  readonly defaultValue: boolean;
+};
+
+/** Choice values, and `'true'` or `'false'` for toggles, by template symbol. */
 export type CreatorSelection = Readonly<Record<string, string>>;
 
 type TemplateSymbol = {
@@ -62,13 +72,42 @@ export const creatorOptions: readonly CreatorOption[] = Object.entries(symbols)
     })),
   }));
 
+// Runic.Create offers the same Boolean parameters and appends them after the
+// choices (TemplateToggle in CreatePlan.cs).
+export const creatorToggles: readonly CreatorToggle[] = Object.entries(symbols)
+  .filter(
+    ([name, symbol]) =>
+      symbol.type === 'parameter' &&
+      symbol.datatype === 'bool' &&
+      !symbolInfo[name]?.isHidden,
+  )
+  .map(([name, symbol]) => ({
+    symbol: name,
+    flag: `--${symbolInfo[name]?.longName ?? name}`,
+    label: symbol.displayName ?? name,
+    description: symbol.description ?? '',
+    defaultValue: symbol.defaultValue === 'true',
+  }));
+
 export const templateSourceName: string = templateJson.sourceName;
 export const templateShortName: string = templateJson.shortName;
 
 export function defaultSelection(): Record<string, string> {
-  return Object.fromEntries(
-    creatorOptions.map((option) => [option.symbol, option.defaultValue]),
-  );
+  return Object.fromEntries([
+    ...creatorOptions.map((option) => [option.symbol, option.defaultValue]),
+    ...creatorToggles.map((toggle) => [
+      toggle.symbol,
+      String(toggle.defaultValue),
+    ]),
+  ]);
+}
+
+export function isEnabled(
+  toggle: CreatorToggle,
+  selection: CreatorSelection,
+): boolean {
+  const value = selection[toggle.symbol];
+  return value === undefined ? toggle.defaultValue : value === 'true';
 }
 
 /**
@@ -121,10 +160,15 @@ function format(argumentsList: readonly string[]): string {
 }
 
 function optionArguments(selection: CreatorSelection): string[] {
-  return creatorOptions.flatMap((option) => [
-    option.flag,
-    choiceFor(option, selection).value,
-  ]);
+  return [
+    ...creatorOptions.flatMap((option) => [
+      option.flag,
+      choiceFor(option, selection).value,
+    ]),
+    ...creatorToggles
+      .filter((toggle) => isEnabled(toggle, selection))
+      .map((toggle) => toggle.flag),
+  ];
 }
 
 export type CreatorCommands = {
@@ -170,6 +214,12 @@ export function creatorCommands(
       format(['cd', name]),
       'dotnet tool restore',
       'dotnet runic dev',
+      // As Runic.Create prints after creating a project with --tests.
+      ...(creatorToggles.some(
+        (toggle) => toggle.symbol === 'tests' && isEnabled(toggle, selection),
+      )
+        ? [format(['dotnet', 'test', '--project', `${name}.Tests`])]
+        : []),
     ],
   };
 }

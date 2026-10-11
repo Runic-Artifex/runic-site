@@ -14,6 +14,7 @@ import project from '../../sources/sdk/tools/Runic.Application.Templates/content
 import views from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/Views.cs?raw';
 import services from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/WorkspaceServices.cs?raw';
 import viewModels from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/WorkspaceViewModel.cs?raw';
+import windowTests from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/RunicWindowApp.Tests/WorkspaceWindowTests.cs?raw';
 import {
   templateSourceName,
   templateSymbols,
@@ -83,5 +84,15 @@ export function previewFiles(
       language: 'html',
       content: render(frontend.index[1]),
     },
+    // The optional test project, added by --tests.
+    ...(symbols.tests === 'true'
+      ? [
+          {
+            path: `${name}.Tests/WorkspaceWindowTests.cs`,
+            language: 'csharp',
+            content: render(windowTests),
+          },
+        ]
+      : []),
   ];
 }

@@ -36,6 +36,8 @@ export type GuideLink = { readonly href: string; readonly title: string };
 
 export type GuideNavigation = readonly {
   readonly title: string;
+  /** SDK development guides, kept out of the product sidebar. */
+  readonly contributor: boolean;
   readonly guides: readonly GuideLink[];
   readonly external: readonly {
     readonly href: string;
@@ -45,6 +47,7 @@ export type GuideNavigation = readonly {
 
 export const navigation: GuideNavigation = guideNavigation.map((group) => ({
   title: group.title,
+  contributor: group.contributor ?? false,
   guides: group.files.map((entry) => {
     const file = navigationFile(entry);
     const guide = byFile.get(file);
@@ -55,9 +58,19 @@ export const navigation: GuideNavigation = guideNavigation.map((group) => ({
   external: group.external ?? [],
 }));
 
-/** Previous and next guide in navigation order. */
+/**
+ * Previous and next guide in navigation order. Product and contributor guides
+ * page separately, so a product guide never leads into SDK development.
+ */
 export function neighbours(guide: Guide) {
-  const ordered = navigation.flatMap((group) => group.guides);
+  const contributor = navigation.some(
+    (group) =>
+      group.contributor &&
+      group.guides.some((entry) => entry.href === guide.href),
+  );
+  const ordered = navigation
+    .filter((group) => group.contributor === contributor)
+    .flatMap((group) => group.guides);
   const index = ordered.findIndex((entry) => entry.href === guide.href);
   return {
     previous: index > 0 ? ordered[index - 1] : null,

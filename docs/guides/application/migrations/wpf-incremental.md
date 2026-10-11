@@ -17,7 +17,7 @@ resource dictionaries. Optional `TranslationsXamlCatalog` assertions enable
 build-time checks of static XAML declarations. Locale switching remains separate
 from the WPF culture and `FrameworkElement.Language` you configure.
 
-[Runic Command Line](https://docs.runic-artifex.eu/products/runic-command-line/)
+[Runic Command Line](../../command-line/README.md)
 can supply a separate automation or maintenance tool using existing application
 services. It owns parsing and command output and has its own package version.
 Neither product requires Views, navigation, a web frontend or a shell migration.
@@ -55,7 +55,12 @@ Add `Runic.Application.Views.Wpf` (`Runic.Application.Wpf` up to
 0.7.0-preview.6) for an embedded child WebView2.
 Declare a logical `RunicView<TModel>`, register generated `AddRunicViews()`, and
 build the frontend and generated client. The application keeps its WPF `Window`.
-The [adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.Wpf/README.md)
+[Host Runic Views in a WPF app](wpf-hybrid.md) walks through this step: the
+project layout, the page's `webui.js` script, how the frontend is copied into
+the output, window-close guards and why to start windows in code rather than
+with `StartupUri`. It uses `RunicViewHost`, which is newer than
+0.7.0-preview.6. With 0.7.0-preview.6, the
+[adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.6/packages/dotnet/Runic.Application.Wpf/README.md)
 shows `RunicWebView`, its `CreateWindowHostFactory()`, `DesktopHost.StartAsync`
 and `CreateWpfViewAsync`. Add the control to the WPF visual tree and open the
 binding after loading, with the dispatcher pumping.

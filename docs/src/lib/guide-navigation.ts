@@ -1,5 +1,7 @@
 // The guide sidebar. Every file in docs/guides appears exactly once;
 // tests/guides.test.mjs fails when a guide is added without a place here.
+// Contributor groups stay out of the product sidebar: guide pages list them in
+// their footer, and show them in the sidebar only on a contributor guide.
 
 /** A guide file below docs/guides, optionally with a sidebar label. */
 export type GuideNavigationEntry =
@@ -9,6 +11,8 @@ export type GuideNavigationGroup = {
   readonly title: string;
   /** Guides in reading order. */
   readonly files: readonly GuideNavigationEntry[];
+  /** SDK development guides rather than product usage. */
+  readonly contributor?: boolean;
   /** Guides that their owning product publishes elsewhere. */
   readonly external?: readonly {
     readonly href: string;
@@ -31,6 +35,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'application/existing-app.md',
       'application/package-consumer.md',
       'application/migrations/wpf-incremental.md',
+      'application/migrations/wpf-hybrid.md',
       'application/README.md',
       'application/guides/README.md',
       'application/guides/pages-and-navigation.md',
@@ -43,6 +48,15 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'application/glossary.md',
       'application/architecture/README.md',
       'application/architecture/reactiveui-expansion.md',
+    ],
+  },
+  {
+    title: 'Samples',
+    files: [
+      'application/samples/files.md',
+      'application/samples/settings.md',
+      'application/samples/prompts.md',
+      'application/samples/cross-window.md',
     ],
   },
   {
@@ -65,10 +79,12 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'assets/adr/0013-framework-neutral-asset-boundary.md',
     ],
   },
+  { title: 'Command Line', files: ['command-line/README.md'] },
   {
     title: 'Translations',
-    files: ['migrations/translations-svelte.md'],
-    // Runic Translations owns its consumer guides (plans/documentation-ownership.md).
+    files: ['translations/README.md', 'migrations/translations-svelte.md'],
+    // Runic Translations owns its detailed consumer guides
+    // (plans/documentation-ownership.md); the start page links them at a release.
     external: [
       {
         href: 'https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations',
@@ -78,6 +94,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
   },
   {
     title: 'Contributing to Application',
+    contributor: true,
     files: [
       'application/contributing/README.md',
       'application/contributing/development.md',
@@ -87,6 +104,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
   {
     // SDK development and test infrastructure rather than product usage.
     title: 'Contributing and testing',
+    contributor: true,
     files: [
       'desktop/nixos-development.md',
       'desktop/container-automation.md',

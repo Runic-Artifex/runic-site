@@ -5,6 +5,7 @@ import test from 'node:test';
 import {
   creatorCommands,
   creatorOptions,
+  creatorToggles,
   defaultSelection,
   isValidProjectName,
   templateSymbols,
@@ -30,6 +31,47 @@ test('picker options are the template choice parameters in order', () => {
   assert.ok(
     creatorOptions.every((option) => option.choices.length >= 2),
     'every option is a choice',
+  );
+});
+
+test('picker toggles are the template Boolean parameters', () => {
+  assert.deepEqual(
+    creatorToggles.map((toggle) => [toggle.flag, toggle.defaultValue]),
+    [['--tests', false]],
+  );
+  assert.equal(defaultSelection().tests, 'false');
+});
+
+test('the tests toggle adds its flag and the test command', () => {
+  const commands = creatorCommands('1.2.3', 'MyApp', {
+    ...defaultSelection(),
+    tests: 'true',
+  });
+  assert.equal(
+    commands.creator,
+    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --view-models reactiveui --tests',
+  );
+  assert.equal(
+    commands.create,
+    'dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --view-models reactiveui --tests',
+  );
+  assert.deepEqual(commands.nextSteps, [
+    'cd MyApp',
+    'dotnet tool restore',
+    'dotnet runic dev',
+    'dotnet test --project MyApp.Tests',
+  ]);
+  const project = renderTemplate(
+    read('RunicWindowApp.csproj'),
+    templateSymbols({ ...defaultSelection(), tests: 'true' }),
+  );
+  assert.match(project, /Tests/);
+  assert.doesNotMatch(
+    renderTemplate(
+      read('RunicWindowApp.Tests/WorkspaceWindowTests.cs'),
+      templateSymbols({ ...defaultSelection(), tests: 'true' }),
+    ),
+    /^\s*(#|<!--#)(if|elif|else|endif)\b/m,
   );
 });
 
