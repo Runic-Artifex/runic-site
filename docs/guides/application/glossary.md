@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
@@ -74,8 +74,8 @@ clients and these guides. The first seven follow the glossary of the
 - **Region**: a `NavigationRegion<TContent>` from `Runic.Navigation`, a
   navigable place in a Window, such as the main page or a dialog, with Back
   history, departure guards and owned content. Exposed as a get-only property,
-  it is a content slot like any ViewModel content. Navigation is experimental
-  (`RUNICNAV001`); see [pages and navigation](guides/pages-and-navigation.md).
+  it is a content slot like any ViewModel content. See
+  [pages and navigation](guides/pages-and-navigation.md).
 - **Entry**: one visit in a region's history. A borrowed entry presents a
   ViewModel that someone else owns, such as the Window's scope; an owned
   entry's ViewModel belongs to the entry, usually created for the visit, and is

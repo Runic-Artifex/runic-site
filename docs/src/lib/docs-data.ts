@@ -278,11 +278,11 @@ export const products: Product[] = [
     description:
       'Runic Translations discovers one translations/runic.json project with locale-scoped MessageFormat 2 files. Its deterministic compiler generates identifier-safe message calls, locale metadata, request-local SSR support, typed C# and tree-shakable ESM while keeping its runtime ABI portable and NativeAOT-ready.',
     releaseProduct: null,
-    version: '0.6.0-preview.5',
+    version: '0.6.0-preview.7',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.5',
+      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.6.0-preview.7',
     source: 'https://github.com/Runic-Artifex/runic-translations-sdk',
     bestFor: [
       'Deterministic localization builds',
@@ -349,11 +349,11 @@ export const products: Product[] = [
         label: 'Get started with Command Line',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/README.md',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/README.md',
         label: 'Command Line repository README',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.6.0-preview.3/specs/command-line',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.6.0-preview.4/specs/command-line',
         label: 'Command Line specifications',
       },
     ],
@@ -366,11 +366,11 @@ export const products: Product[] = [
     description:
       'Runic Command Line generates NativeAOT-ready commands from ordinary typed C# methods. Help, validation, completion, environment fallbacks and shared options work in standalone tools and hosted Runic applications. Add Runic.CommandLine.Spectre for styled help, progress and prompts; machine output remains structured and predictable.',
     releaseProduct: null,
-    version: '0.6.0-preview.3',
+    version: '0.6.0-preview.4',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-cli-sdk/releases/tag/v0.6.0-preview.3',
+      'https://github.com/Runic-Artifex/runic-cli-sdk/releases/tag/v0.6.0-preview.4',
     source: 'https://github.com/Runic-Artifex/runic-cli-sdk',
     bestFor: [
       'NativeAOT command applications',

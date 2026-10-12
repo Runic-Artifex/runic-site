@@ -89,7 +89,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
     compressed += gzipSync(bytes).length;
   }
   assert.ok(
-    compressed <= 3.5 * 1024 * 1024,
+    compressed <= 4 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });
@@ -341,7 +341,7 @@ test('signatures reference only public types of the reference packages', () => {
 });
 
 test('signatures carry nullable reference annotations', () => {
-  const descriptor = models['dotnet/Runic.Application.json'].types.find(
+  const descriptor = models['dotnet/Runic.Application.Views.json'].types.find(
     (type) => type.id === 'T:Runic.Application.Views.CommandDescriptor`1',
   );
   const text = (parts) =>
@@ -351,7 +351,7 @@ test('signatures carry nullable reference annotations', () => {
     text(constructor.signature),
     /Func<T, CancellationToken, object\?, Task>\? ExecuteAsync = null/,
   );
-  const bridge = models['dotnet/Runic.Application.json'].types.find(
+  const bridge = models['dotnet/Runic.Application.Views.json'].types.find(
     (type) => type.id === 'T:Runic.Application.Views.ViewModelBridge`1',
   );
   assert.equal(

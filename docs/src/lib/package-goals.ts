@@ -44,15 +44,15 @@ export const packageGoals: readonly PackageGoal[] = [
       'Reference one host adapter in the .NET project and the shared runtime plus your framework binding in the frontend.',
     packages: [
       {
-        name: 'Runic.Application.CsWebUi',
+        name: 'Runic.Application.Views.CsWebUi',
         note: 'Host adapter for a browser or WebView window, or:',
       },
       {
-        name: 'Runic.Application.Desktop',
+        name: 'Runic.Application.Views.Desktop',
         note: 'Host adapter for Runic Desktop native windows.',
       },
       {
-        name: 'Runic.Application.ReactiveUI',
+        name: 'Runic.Application.Views.ReactiveUI',
         note: 'Only for ReactiveUI ViewModels.',
       },
       {
@@ -100,7 +100,7 @@ export const packageGoals: readonly PackageGoal[] = [
       'Embed a web presentation in the existing WPF shell and retain the same application-owned model, services and navigation entry.',
     packages: [
       {
-        name: 'Runic.Application.Wpf',
+        name: 'Runic.Application.Views.Wpf',
         note: 'Experimental child WebView2 host; includes the Desktop bridge.',
       },
       {

@@ -104,7 +104,13 @@ code instead of generating again. Views and ViewModels cannot depend on WPF
 types; the generator skips such types. When the Views live in a WPF-free model
 project that references `Runic.Application.Views`, that project generates and builds
 the frontend, and the WPF application copies its `dist` to `www/`. The
-application can then set `RunicApplicationFrontendGenerationEnabled` to `false`. See the
+application can then set `RunicApplicationFrontendGenerationEnabled` to `false`. If
+the model's composition has the application's default name
+(`<application project>.RunicBridgeComposition`, common in apps from
+0.7.0-preview.6), the application's `AddRunicViews()` call uses it. An application
+that also declares Views gets
+[RUNICBRIDGE018](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge018)
+until one of the two compositions is renamed. See the
 `Runic.Application.Views` README's build properties for the frontend folder and
 diagnostics.
 
@@ -130,7 +136,8 @@ move, or resize the shell. Window layout options report warnings and are
 configured on the WPF shell instead. Browser fallback is not supported by
 `WpfBridgeView.OpenAsync`. Standard HWND airspace constraints apply; WPF overlays
 cannot draw over the child WebView. Tab enters the document's first or last tab
-stop. Returning from the document's tab boundary to the surrounding WPF controls
+stop. WebView2 moves that focus asynchronously: the document's focused element
+changes shortly after `TabInto` returns, not during the call. Returning from the document's tab boundary to the surrounding WPF controls
 is not yet integrated; mouse focus and explicit shell focus actions remain
 available. Native authentication, reload, focus and unload checks run on Windows;
 Linux can compile the Windows target and run the linked portable session checks.

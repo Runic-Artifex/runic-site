@@ -104,14 +104,14 @@ const queries = {
     '/api/Runic.Navigation/Runic.Navigation.RunicNavigator/',
   ],
   ReactiveLeaveConfirmation: [
+    '/api/Runic.Navigation.ReactiveUI.Reactive/Runic.Navigation.ReactiveUI.Reactive.ReactiveLeaveConfirmation/',
+    '/api/Runic.Navigation.ReactiveUI/Runic.Navigation.ReactiveUI.ReactiveLeaveConfirmation/',
     '/guides/application/glossary/#navigation',
-    '/guides/application/guides/pages-and-navigation/#coming-from-reactiveui-navigation',
-    '/guides/application/guides/pages-and-navigation/#guard-against-leaving',
   ],
   IRunicWindowService: [
+    '/api/Runic.Application.Views/Runic.Application.Views.IRunicWindowService/',
     '/guides/application/samples/cross-window/',
-    '/guides/application/glossary/#hosts-and-windows',
-    '/guides/application/samples/cross-window/#open-a-window-from-a-viewmodel',
+    '/api/Runic.Application.Views/Runic.Application.Views.RunicWindowServiceCollectionExtensions/',
   ],
   DynamicData: ['/guides/application/guides/dynamicdata/'],
   MessageFormat: [

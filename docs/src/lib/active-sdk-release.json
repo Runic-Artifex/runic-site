@@ -1,6 +1,6 @@
 {
-  "version": "0.7.0-preview.6",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.6",
+  "version": "0.7.0-preview.7",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.7",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -57,7 +57,7 @@
       "installKind": "nuget-package"
     },
     {
-      "identity": "Runic.Application",
+      "identity": "Runic.Application.Views",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"
@@ -69,31 +69,31 @@
       "installKind": "nuget-package"
     },
     {
-      "identity": "Runic.Application.ReactiveUI",
+      "identity": "Runic.Application.Views.ReactiveUI",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"
     },
     {
-      "identity": "Runic.Application.ReactiveUI.Reactive",
+      "identity": "Runic.Application.Views.ReactiveUI.Reactive",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"
     },
     {
-      "identity": "Runic.Application.CsWebUi",
+      "identity": "Runic.Application.Views.CsWebUi",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"
     },
     {
-      "identity": "Runic.Application.Desktop",
+      "identity": "Runic.Application.Views.Desktop",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"
     },
     {
-      "identity": "Runic.Application.Wpf",
+      "identity": "Runic.Application.Views.Wpf",
       "ecosystem": "nuget",
       "product": "application-wpf",
       "installKind": "nuget-package"

@@ -4,8 +4,8 @@ Runic Command Line turns typed C# methods into commands with help, validation
 and human or JSON output. This page takes you from an empty folder to a
 working command.
 
-It covers release `0.6.0-preview.3`. Every link to the
-[Command Line repository](https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.6.0-preview.3)
+It covers release `0.6.0-preview.4`. Every link to the
+[Command Line repository](https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.6.0-preview.4)
 points at that release, so the code matches the packages you install.
 
 ## What it is
@@ -40,11 +40,11 @@ Create a console project and add the core package:
 ```sh docs-test=skip:cli-repository
 dotnet new console --framework net10.0 --name HelloCli
 cd HelloCli
-dotnet add package Runic.CommandLine --version 0.6.0-preview.3
+dotnet add package Runic.CommandLine --version 0.6.0-preview.4
 ```
 
 Replace `Program.cs` with this program. It is the maintained
-[`hello-world/Program.cs`](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/examples/command-line/hello-world/Program.cs)
+[`hello-world/Program.cs`](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/hello-world/Program.cs)
 example:
 
 ```csharp docs-test=skip:cli-repository
@@ -110,7 +110,7 @@ Input is checked in two places:
   `[Command]` method it cannot use, for example a parameter without
   `[Argument]`, `[Option]` or `[FromServices]`. The command is skipped until you
   fix the error. Each ID is explained in
-  [source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/docs/guides/command-line/diagnostics.md).
+  [source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/diagnostics.md).
 - **At run time.** Unknown options, missing required values, values outside
   `Minimum`/`Maximum`, `Choices`, `MustExist` paths and `Requires` or
   `ConflictsWith` rules fail before the method runs. The error names the
@@ -121,7 +121,7 @@ Input is checked in two places:
 An option can fall back to an environment variable. An explicit argument wins
 over the environment, which wins over the C# default. This command comes from
 the release's
-[command tree example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/examples/command-line/Program.cs):
+[command tree example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/Program.cs):
 
 ```csharp docs-test=skip:cli-repository
 [Command("config show", Description = "Show the chosen environment.")]
@@ -148,7 +148,7 @@ progress, to stderr, so stdout stays parseable.
 Results other than strings declare a payload identity and a source-generated
 JSON context with `[CommandResult("example.result/1", typeof(JsonContext))]`.
 The
-[protocol specification](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/specs/command-line/protocol/README.md)
+[protocol specification](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/specs/command-line/protocol/README.md)
 describes every field.
 
 ## Exit codes
@@ -193,25 +193,25 @@ An application that already owns its startup, services and UI can run the
 same generated commands with `CommandLineHostingAdapter`. It decides whether
 the arguments ask for a command, help or the UI, and runs a command in a
 service scope that your application supplies. The
-[hosted example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/examples/command-line/HostedExample.cs)
+[hosted example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/HostedExample.cs)
 shows the full flow, and
-[adding a CLI to a WPF application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/docs/guides/command-line/wpf.md)
+[adding a CLI to a WPF application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/wpf.md)
 applies it to a desktop app.
 
 ## Next steps
 
-- [From one command to an application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/examples/command-line/README.md)
+- [From one command to an application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/README.md)
   grows the example step by step: command trees, file input, services,
   progress, tests, child processes and localized help.
 - The
-  [`Runic.CommandLine` package README](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/packages/dotnet/Runic.CommandLine/README.md)
+  [`Runic.CommandLine` package README](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/packages/dotnet/Runic.CommandLine/README.md)
   lists every supported parameter type and attribute property.
 - The
-  [grammar](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/specs/command-line/grammar.md)
+  [grammar](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/specs/command-line/grammar.md)
   and
-  [protocol](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/specs/command-line/protocol/README.md)
+  [protocol](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/specs/command-line/protocol/README.md)
   specifications define parsing and the JSON response.
-- [Source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/docs/guides/command-line/diagnostics.md)
+- [Source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/diagnostics.md)
   explains each `RCLI9xxx` error.
-- [Release notes for 0.6.0-preview.3](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.3/eng/release/notes/0.6.0-preview.3.md)
+- [Release notes for 0.6.0-preview.4](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/eng/release/notes/0.6.0-preview.4.md)
   list what changed in this release.
