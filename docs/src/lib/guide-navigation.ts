@@ -25,7 +25,7 @@ export function navigationFile(entry: GuideNavigationEntry) {
 }
 
 export const guideNavigation: readonly GuideNavigationGroup[] = [
-  { title: 'Overview', files: ['README.md'] },
+  { title: 'Overview', files: ['README.md', 'troubleshooting.md'] },
   {
     title: 'Application',
     files: [

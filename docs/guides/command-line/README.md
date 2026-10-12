@@ -198,6 +198,120 @@ shows the full flow, and
 [adding a CLI to a WPF application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/wpf.md)
 applies it to a desktop app.
 
+## Translate a CLI
+
+Help, parse errors and faults are English by default. The
+`Runic.Translations.CommandLine` adapter, which Runic Translations publishes,
+translates them with a [Translations](../translations/README.md) catalog. It
+ships English and German text for every framework key, and it looks up your
+own command descriptions in your catalog. Translations `0.6.0-preview.7` works
+with Command Line `0.6.0-preview.4`. Add the adapter and the build package to
+the project from [your first command](#your-first-command):
+
+```sh docs-test=skip:translations-repository
+dotnet add package Runic.Translations.CommandLine --version 0.6.0-preview.7
+dotnet add package Runic.Translations.Build --version 0.6.0-preview.7
+```
+
+The build package compiles a `translations/` folder next to the project file.
+Create `translations/runic.json`:
+
+```json docs-test=skip:translations-repository
+{
+  "schemaVersion": 1,
+  "catalog": "hello",
+  "code": { "namespace": "HelloCli.Translations", "className": "HelloText" },
+  "baseLocale": "en",
+  "locales": ["en", "de"]
+}
+```
+
+`translations/en.rmf2` defines every message in English:
+
+```rmf2 docs-test=skip:translations-repository
+commands {
+  greet = Say hello.
+}
+greeting =
+  .input {$name :string}
+  {{Hello, {$name}!}}
+```
+
+`translations/de.rmf2` has the same keys in German:
+
+```rmf2 docs-test=skip:translations-repository
+commands {
+  greet = Grüßt eine Person.
+}
+greeting =
+  .input {$name :string}
+  {{Hallo, {$name}!}}
+```
+
+Then give `CommandApp` the resolver and the commands a translation manager:
+
+```csharp docs-test=skip:translations-repository
+using System.Globalization;
+using HelloCli.Translations;
+using Runic.CommandLine;
+using Runic.CommandLine.Generated;
+using Runic.Translations;
+using Runic.Translations.CommandLine;
+
+// The invariant culture, for example with LANG=C, has no name: use the base locale.
+string? locale = CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : null;
+ITranslationManager manager = HelloTextCatalog.CreateManager(initialLocale: locale);
+
+return await new CommandApp(GeneratedCommandCatalog.Create())
+{
+    Name = "hello",
+    TextResolver = new TranslationCommandTextResolver(manager),
+    ScopeFactory = CommandScopes.FromServices(CommandServices.Empty.With(manager)),
+}.RunAsync(args);
+
+internal static class Commands
+{
+    [Command("greet", Description = "Say hello.", DescriptionKey = "commands.greet"), DefaultCommand]
+    internal static string Greet([Argument] string name, [FromServices] ITranslationManager translations) =>
+        new HelloText(translations).Messages.greeting(name);
+}
+```
+
+With a German display language, `hello --help` starts with
+`Aufruf: hello <Befehl> [Optionen]` and lists `greet` as `Grüßt eine Person.`,
+and `hello Ada` prints `Hallo, Ada!`. A locale the catalog does not have, such
+as French, gets English. The same text appears in the JSON `message` fields;
+command names, option spellings, codes and `messageKey` values never change.
+
+- **Resolver.** `TranslationCommandTextResolver` looks up each key in your
+  catalog first, so the catalog can also override framework text, then in its
+  English and German text, and otherwise leaves Command Line's English text.
+  Pass the manager to follow locale switches, or an `ITranslationSnapshot` for
+  one fixed locale. A message name is the key with each hyphen removed and the
+  next letter capitalized: `help.show-help` is `help.showHelp`. The
+  [framework text keys](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/text-keys.md)
+  list every key and its arguments.
+- **`CommandScopes`.** `CommandScopes.FromServices` makes application-owned
+  objects available to `[FromServices]` parameters without a
+  dependency-injection package. Use `CommandScopes.FromServices(provider)` for
+  an existing `IServiceProvider`, or
+  `CommandScopes.Create(provider.CreateAsyncScope, scope => scope.ServiceProvider)`
+  for one scope per invocation. Take `ITranslationManager` and create
+  `HelloText` in the method: the Command Line generator cannot use a type that
+  another source generator creates, such as `HelloText`, as a parameter
+  (`RCLI9003`).
+- **`RUNIC_COMMANDLINE_DEBUG`.** A `DescriptionKey` that the catalog does not
+  have falls back to `Description` without an error. Set
+  `RUNIC_COMMANDLINE_DEBUG=1` to have help print each one to stderr as an
+  `RCLI0023` warning. In a test,
+  `new CommandTextContext(culture, resolver).ValidateDescriptionKeys(catalog)`
+  returns the same issues. The same
+  variable writes the exception of an `RCLI5000` host failure to stderr.
+
+The
+[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/packages/dotnet/Runic.Translations.CommandLine/README.md)
+describes the resolver in full.
+
 ## Next steps
 
 - [From one command to an application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/README.md)
