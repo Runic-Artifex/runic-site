@@ -55,35 +55,51 @@ history. It adds what a page property leaves to you:
 - Back history, with `CanGoBack`, `BackAsync` and a ready-made Back command.
 - Pages created for one visit and disposed when you leave them.
 - Departure guards that can refuse to leave a page, for example while it has
-  unsaved changes.
+  unsaved changes, also when the user closes the Window.
 - Typed results: a refused, superseded or failed navigation is a value, not an
-  exception.
+  exception, and a page can return a value to the code that opened it.
 
 Navigation is experimental. Every navigation type is marked
 `[Experimental("RUNICNAV001")]`, so code that uses it must suppress
 `RUNICNAV001`, and the API may change before it is supported. The code that
 Runic generates for a region needs no suppression. The
 [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md)
-is the reference for every operation, hook and ownership rule.
+is the reference for every operation, hook and ownership rule, and the
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+covers the adapter.
+
+The entry context as a constructor parameter, `INavigationAware`,
+`WhenNavigatedTo`, the result commands, `ReactiveLeaveConfirmation` and
+`GuardClose` are newer than SDK `0.7.0-preview.6`. This guide follows
+runic-sdk `main` at
+[`ce194583`](https://github.com/Runic-Artifex/runic-sdk/tree/ce194583d721c48dfb6785fc51dc1a71580234c7).
 
 ### Coming from ReactiveUI navigation
 
-Regions replace ReactiveUI's `RoutingState` rather than wrap it. If you know
-host-based ReactiveUI navigation from CrissCross, the shape is familiar: you
-navigate to a ViewModel type, the container builds it, and you go back, ask
-whether you can, or veto leaving. The differences are that a region is a plain
-ViewModel property rather than a View host, that each request returns a result
-you can inspect, and that the navigator, not the View, owns the pages it
-created.
+Regions replace ReactiveUI's `RoutingState` rather than wrap it: pages need no
+`IScreen` or `IRoutableViewModel`, only an interface of your own that the
+region's pages implement. If you know host-based ReactiveUI navigation from
+CrissCross, the shape is familiar: you navigate to a ViewModel type, the
+container builds it, and you go back, ask whether you can, or veto leaving.
+The differences are that a region is a plain ViewModel property rather than a
+View host, that each request returns a result you can inspect, and that the
+navigator, not the View, owns the pages it created.
 
-| Task                               | With a region                                               |
-| ---------------------------------- | ----------------------------------------------------------- |
-| Show a page built by the container | `await Main.PushAsync<DocumentViewModel>()`                 |
-| Go back                            | `Main.CreateBackCommand()`, or `await Main.BackAsync()`     |
-| Enable a Back button               | `Main.WhenCanGoBackChanged()`, included in the Back command |
-| Show a busy state                  | `Main.WhenIsTransitioningChanged()`                         |
-| Refuse to leave a page             | Implement `INavigationDepartureGuard` on its ViewModel      |
-| Run code once per visit            | Implement `INavigationInitialize` on its ViewModel          |
+| Task                                      | With a region                                                              |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| Show a page built by the container        | `await Main.PushAsync<DocumentViewModel>()`                                |
+| Pass the page an input                    | `PushAsync<NoteDetailViewModel, int>(id)` and `INavigationInitialize<int>` |
+| Go back                                   | `Main.CreateBackCommand()`, or `await Main.BackAsync()`                    |
+| Enable a Back button                      | `Main.WhenCanGoBackChanged()`, included in the Back command                |
+| Show a busy state                         | `Main.WhenIsTransitioningChanged()`                                        |
+| Run code each time a page becomes current | `entry.WhenNavigatedTo(...)`, or `INavigationAware`                        |
+| Refuse to leave a page                    | `INavigationDepartureGuard` with `ReactiveLeaveConfirmation`               |
+| Return a value to the caller              | `PushForResult<TPage, TResult>()` and `entry.CreateCompleteCommand()`      |
+| Ask before the Window closes              | `GuardClose = true` on the `RunicWindow<T>`                                |
+
+`ReactiveRoutedRegion<T>` in `Runic.Application.Views.ReactiveUI` still
+presents an existing `RoutingState` for an app that keeps one, without guards,
+results or owned pages.
 
 ### Set up
 
@@ -93,15 +109,39 @@ Add the ReactiveUI adapter, which brings `Runic.Navigation`:
 dotnet add package Runic.Navigation.ReactiveUI --version <VERSION>
 ```
 
-Register the navigator with the Window's other services. `AddRunicNavigation()`
-adds one model context and one navigator per Window scope; it keeps the model
-context that `AddRunicReactiveModelContext()` registers:
+Register the navigator with the Window's other services.
+`AddRunicNavigation()` adds one navigator per Window scope, on the model
+context that `AddRunicReactiveModelContext()` registers. The
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-reactive-views),
+which this guide follows, registers:
 
-```csharp docs-test=source:tests/fixtures/application/navigation-consumer/Program.cs
+```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
+// A window scope owns one execution lane for the whole reactive graph, and
+// ReactiveUI commands deliver their notifications on it without a scheduler.
+services.AddRunicReactiveModelContext();
+// One navigator per window scope, on that model context. It constructs each
+// DocumentViewModel from the window's services and owns it.
 services.AddRunicNavigation();
 services.AddScoped<HomeViewModel>();
+services.AddScoped<EditorViewModel>();
+services.AddScoped<PreviewViewModel>();
 services.AddScoped<ShellViewModel>();
-services.AddRunicViews();
+```
+
+No command in this guide takes a scheduler: the model context is ReactiveUI's
+main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
+is built; the
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/wpf-navigation/README.md#the-reactiveui-variant)
+registers the navigator with `AddRunicWpfNavigation()`:
+
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
+// ReactiveUI's WPF platform, once per process: commands deliver on the dispatcher, and Views activate.
+static App() => RxAppBuilder.CreateReactiveUIBuilder().WithWpf().BuildApp();
+// ...
+public static IServiceCollection AddNotes(IServiceCollection services) => services
+    .AddRunicWpfNavigation(options => options.UseViewNamingConvention()) // NotesListViewModel -> NotesListView
+    .AddSingleton<NoteStore>()
+    .AddSingleton<AppRegions>();
 ```
 
 Suppress the experimental warning in the files that use navigation, or for the
@@ -111,68 +151,75 @@ whole project with `<NoWarn>$(NoWarn);RUNICNAV001</NoWarn>`:
 #pragma warning disable RUNICNAV001 // The experimental navigation API (docs/experimental.md).
 ```
 
-### A region in the Window ViewModel
+## With ReactiveUI
 
-Create the region in the Window ViewModel with the injected `RunicNavigator`,
-and expose it as a get-only property. The region starts on a borrowed home
-page; the Window's scope owns that ViewModel, so the navigator never disposes
-it. The adapter turns the region's state into ReactiveUI observables and
-commands:
+### A region in the shell
 
-```csharp docs-test=source:tests/dotnet/Runic.Application.Testing.Tests/ReactiveNavigationFixture.cs
-public ReactiveNavShellViewModel(RunicNavigator navigator, IRunicModelContext context, NavHomeViewModel home)
+Create the region in the Window's ViewModel with the injected
+`RunicNavigator`, and expose it as a get-only property. The region starts on a
+borrowed home page; the Window's scope owns that ViewModel, so the navigator
+never disposes it. The adapter in `Runic.Navigation.ReactiveUI` turns the
+region's state into observables and commands:
+
+```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
+public ShellViewModel(RunicNavigator navigator, HomeViewModel home, EditorViewModel editor, ILogger<ShellViewModel> logger)
 {
-    Main = navigator.CreateRegion<INavPageViewModel>(this, NavigationTarget.Borrow<INavPageViewModel>(home));
     // ...
-    _busyHelper = Main.WhenIsTransitioningChanged().ToProperty(this, model => model.Busy);
+    Main = navigator.CreateRegion<IMainPage>(this, NavigationTarget.Borrow<IMainPage>(home));
+    // Back runs the document's leave guard; it is enabled while Main has history.
+    OpenHomeCommand = Main.CreateBackCommand().DisposeWith(_disposables);
+    OpenDocumentCommand = ReactiveCommand.CreateFromTask(OpenDocumentAsync,
+        Main.WhenCurrentChanged().Select(page => page is HomeViewModel)).DisposeWith(_disposables);
+    OpenHomeCommand.ObserveBridgeExceptions(logger).DisposeWith(_disposables);
+    OpenDocumentCommand.ObserveBridgeExceptions(logger).DisposeWith(_disposables);
     // ...
-    // No scheduler: AddRunicReactiveModelContext or InstallMainThreadScheduler routes it to the turn's context.
-    BackCommand = Main.CreateBackCommand();
 }
 
-public NavigationRegion<INavPageViewModel> Main { get; }
-
-[ObservableAsProperty]
-public partial bool Busy { get; }
+public NavigationRegion<IMainPage> Main { get; }
 // ...
-// A NavigationOutcome crosses the Bridge without RUNICBRIDGE003 (W250-014).
-public ReactiveCommand<RxVoid, NavigationOutcome> BackCommand { get; }
+public ReactiveCommand<RxVoid, NavigationOutcome> OpenHomeCommand { get; }
+public ReactiveCommand<RxVoid, RxVoid> OpenDocumentCommand { get; }
 ```
 
 `CreateBackCommand()` can execute while the region has history and no
 transition is running. Its output is a `NavigationOutcome`, the kind of result
-without any .NET content, so the frontend can read it. Dispose the commands and
-the property helper with the ViewModel, and observe each command's
-`ThrownExceptions`, for example with `ObserveBridgeExceptions`.
+without any .NET content, so the frontend can read it. Dispose the commands
+with the ViewModel, and observe each command's `ThrownExceptions`, here with
+`ObserveBridgeExceptions`.
 
 ### Navigate in a command
 
-Navigate in an ordinary `ReactiveCommand`. Compose its availability from the
-region's observables and your own conditions:
+Navigate in an ordinary `ReactiveCommand`. `PushAsync<TPage>()` asks the
+navigator to build the page from the Window's services; the new entry owns it,
+and the navigator disposes it when the entry retires. A page that needs an
+input receives it in `INavigationInitialize<TInput>`, as the WPF example's
+note page does:
 
-```csharp docs-test=readme:packages/dotnet/Runic.Navigation.ReactiveUI/README.md
-var canOpen = Main.WhenIsTransitioningChanged()
-    .CombineLatest(this.WhenAnyValue(vm => vm.HasSelection),
-        (busy, selected) => !busy && selected);
-
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NotesListViewModel.cs
+// The ViewModel type and its typed input are the parameter contract; no string keys.
 OpenCommand = ReactiveCommand.CreateFromTask(async token =>
-{
-    var result = await Main.PushAsync<DocumentViewModel>(cancellationToken: token);
-    HandleNavigationOutcome(result); // resumes on the model context
-}, canOpen).DisposeWith(disposables);
+    { await regions.Main.PushAsync<NoteDetailViewModel, int>(Selected!.Id, cancellationToken: token); }, hasSelection);
 ```
 
-`PushAsync<DocumentViewModel>()` asks the navigator to build the page from the
-Window's services. The new entry owns it, and the navigator disposes it when
-the entry retires, for example when the user goes Back. Other operations
-replace the current page, go back to an earlier entry, or reset the history;
-`NavigationTarget` chooses who owns the page:
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailViewModel.cs
+// Runs once, before the page is shown. A retained page keeps its note and edits.
+public ValueTask InitializeAsync(NavigationEntryContext entry, int id, CancellationToken cancellationToken)
+{
+    _note = _store.Get(id);
+    Title = _note.Title;
+    return ValueTask.CompletedTask;
+}
+```
+
+Other operations replace the current page, go back to an earlier entry, or
+reset the history. `NavigationTarget` chooses who owns the page:
 
 - `NavigationTarget.Borrow<TContent>(model)` presents a ViewModel that someone else owns,
   such as a Window-scoped page that keeps its state across visits.
 - `NavigationTarget.Own<TContent>(model)` hands an existing ViewModel to the entry.
 - `NavigationTarget.Create<TContent>(factory)` builds the ViewModel during the
-  navigation, from the Window's services, and hands it to the entry.
+  navigation and hands it to the entry. The factory receives the Window's
+  services and the new entry's context.
 
 Every request returns a `NavigationResult<TContent>`: `Committed`, `Rejected`
 with a reason such as `Guard` or `NoHistory`, `Superseded` by a later request,
@@ -181,34 +228,223 @@ a completed command task does not mean the page changed. After the `await`,
 the command is back on the Window's model context, so it sets state directly.
 [ViewModel state and threads](model-context.md) explains why.
 
+### The page and its entry
+
+Each visit is an entry with a `NavigationEntryContext`: its id, its state, and
+the operations it performs on itself. A page that the navigator constructs
+takes it as a constructor parameter, next to its services:
+
+```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
+public sealed class DocumentViewModel : ReactiveObject, IMainPage, INavigationDepartureGuard, IDisposable
+{
+    // ...
+    public DocumentViewModel(NavigationEntryContext entry, RunicNavigator navigator, EditorViewModel editor,
+        PreviewViewModel preview, ILogger<DocumentViewModel> logger)
+```
+
+- The navigator passes the context to the content it constructs: with
+  `PushAsync<TPage>()`, `ReplaceAsync<TPage>()`, `ResetAsync<TPage>()`,
+  `PushForResult<TPage, TResult>()`, and as the second argument of a
+  `NavigationTarget.Create` factory. The container never resolves it, so a
+  service that asks for one fails to resolve; pass it on from the page.
+- The page is constructed while its entry is still pending. Keep the context
+  for commands and subscriptions; don't navigate from the constructor.
+- A page you create yourself and pass with `Own` or `Borrow` exists before its
+  entry, so it receives the context in `INavigationInitialize.InitializeAsync`.
+
+`entry.WhenNavigatedTo` runs each time the entry becomes current: when it is
+first shown and after every Back to it. Its second argument is a scope that
+ends when the entry stops being current, so per-visit subscriptions go there:
+
+```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
+// Per visit, not per mounted View: follow the draft while this entry is current.
+entry.WhenNavigatedTo((_, visit) => editor.WhenAnyValue(model => model.IsDirty)
+    .Subscribe(dirty => Status = dirty ? "Unsaved changes" : "No unsaved changes")
+    .DisposeWith(visit)).DisposeWith(_disposables);
+```
+
+The WPF example's list refreshes itself whenever the user returns to it:
+
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NotesListViewModel.cs
+// Each time the list becomes current again, for example after Back from a note. Ends when the entry retires.
+entry.WhenNavigatedTo((_, _) => Notes.ReplaceWith(store.All));
+```
+
+`WhenNavigatedFrom()` emits each departure. Without the adapter, a page
+implements `INavigationAware`, whose `OnNavigatedTo` and `OnNavigatedFrom` the
+navigator calls at the same moments, in the turn that commits the navigation.
+ReactiveUI's `WhenActivated` follows a mounted View instead, not the entry: a
+page that another page covers stays alive with its state while its View is
+unmounted. Put per-View subscriptions in `WhenActivated` and per-visit ones in
+`WhenNavigatedTo`.
+
 ### Guard against leaving
 
 A page that must not be left silently implements `INavigationDepartureGuard`.
-The navigator asks it before the page is left, and a `false` answer rejects
-the request with `NavigationRejection.Guard`:
+The navigator asks it before every exit: Back, a push from code, a parent
+region leaving and a guarded Window close. `ReactiveLeaveConfirmation.WithInteraction`
+implements the common case, asking through a ReactiveUI `Interaction` when
+there are unsaved changes:
 
-```csharp docs-test=source:tests/fixtures/application/navigation-consumer/Shell.cs
-// Created per visit and owned: its guard can veto leaving, and retiring disposes it.
-public sealed class EditorViewModel(string title) : IPageViewModel, INavigationDepartureGuard, IDisposable
-{
-    public string Title { get; } = title;
-
-    [RunicIgnore]
-    public bool CanLeave { get; set; }
+```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
+// Leaving with unsaved edits asks through ConfirmLeave. The edits are reverted
+// only when the departure commits; a No, or a superseded departure, keeps them.
+_leave = ReactiveLeaveConfirmation.WithInteraction(ConfirmLeave,
+    () => new DiscardNoteRequest(editor.Title, editor.Body.Length), () => editor.IsDirty, editor.RevertChanges);
+// The web View answers for its own Close. The shell's Back has no handler there:
+// keep the edits rather than fail the departure (ReactiveUI asks the latest handler first).
+ConfirmLeave.RegisterHandler(context => context.SetOutput(false)).DisposeWith(_disposables);
 // ...
-    public ValueTask<bool> CanDepartAsync(NavigationDeparture departure, CancellationToken cancellationToken) =>
-        ValueTask.FromResult(departure.Kind == NavigationDepartureKind.Retain || CanLeave);
+public ValueTask<bool> CanDepartAsync(NavigationDeparture departure, CancellationToken cancellationToken) =>
+    _leave.CanDepartAsync(departure, cancellationToken);
 ```
 
-A `Retain` departure is a push on top of the page, which keeps it in the
-history, so this guard only refuses when the page would retire. A guard can also ask
-the user in another region, such as a dialog; the
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first)
-does that with `LeaveConfirmation`.
+A web View answers the interaction with its generated client while it is
+mounted, for a navigation that one of this ViewModel's commands started, such
+as its Close:
 
-Guards, factories and initialize hooks are not commands: they run outside the
-model context's turns. Don't set ViewModel state in them without committing it
-with `IRunicModelContext.InvokeAsync`.
+<!-- prettier-ignore -->
+```ts docs-test=source:examples/notes-reactive-views/Frontend/src/document.ts
+// The leave guard asks here when this View's Close or Save and close leaves
+// unsaved edits. Answering false keeps the document and its edits.
+const removeLeaveHandler = view.interactions.confirmLeave.handle(async (request, { signal }) => {
+  if (signal.aborted) throw signal.reason;
+  return window.confirm(`Close “${request.title}” and lose its unsaved changes?`);
+});
+```
+
+A WPF View answers in `WhenActivated`. Its XAML sets
+`ViewModel="{Binding}"`, so the ReactiveUI View receives the page that the
+region presents:
+
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailView.xaml.cs
+// Answers the ViewModel's leave confirmation while this View is shown.
+this.WhenActivated((MultipleDisposable disposables) => ViewModel!.ConfirmDiscard.RegisterHandler(context => context.SetOutput(
+    MessageBox.Show(context.Input, "Notes", MessageBoxButton.OKCancel) == MessageBoxResult.OK)).DisposeWith(disposables));
+```
+
+The guard fails closed:
+
+- Without unsaved changes it doesn't ask, and a push that keeps the page in
+  the history leaves it without asking.
+- With no handler that answers, ReactiveUI's `UnhandledInteractionException`
+  fails the departure: the result is `Failed`, the navigator logs event 1060,
+  and the page stays. So does a handler that throws. A navigation that the
+  View didn't start, such as the shell's Back or a Window close, never reaches
+  the browser; register a .NET fallback handler, as the example does, to give
+  it an answer. ReactiveUI asks the latest handler first, so a mounted View
+  still answers before the fallback.
+- A superseded or cancelled departure ends at once; the browser handler's
+  `signal` aborts, and a late answer is ignored. The discard runs only when
+  the departure commits.
+
+Guards, factories and initialize hooks run outside the model context's turns.
+Don't set ViewModel state in them without committing it with
+`IRunicModelContext.InvokeAsync`.
+
+### Return a result
+
+A caller that needs to know how a visit ended pushes for a result.
+`PushForResult` returns a request with two tasks: `Transition` settles when the
+page is shown, and `Completion` when the entry ends. The Notes shell awaits the
+completion outside its command, so the command ends once the document is
+shown:
+
+```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
+private async Task OpenDocumentAsync()
+{
+    var request = Main.PushForResult<DocumentViewModel, string>();
+    if ((await request.Transition).IsCommitted) _ = ShowResultAsync(request.Completion);
+}
+
+// Completion never faults: it ends Dismissed on every path but Save and close,
+// including a closing window. The continuation resumes on the model context.
+private async Task ShowResultAsync(Task<NavigationCompletion<string>> completion) =>
+    _home.LastResult = await completion is NavigationCompletion<string>.Completed(var title)
+        ? $"Saved and closed {title}"
+        : "Closed the document.";
+```
+
+The page ends its entry with result commands that the View binds like any
+other command. `CreateCompleteCommand` produces the result and goes back, and
+`CreateCloseCommand` goes back without one; both run the leave guard, and a
+veto keeps the page and the request open:
+
+```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
+// Result commands end the entry: Save and close completes the request with the
+// title; Close goes back, asking first when there are unsaved edits.
+SaveAndCloseCommand = entry.CreateCompleteCommand(async token =>
+{
+    await editor.SaveAsync(token);
+    return editor.Title;
+}).DisposeWith(_disposables);
+CloseCommand = entry.CreateCloseCommand().DisposeWith(_disposables);
+```
+
+A confirm dialog in a dialog region answers the same way, with
+`CreateDismissCommand` for its No, which ends the request at once:
+
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/Dialogs/ConfirmViewModel.cs
+public sealed class ConfirmViewModel(NavigationEntryContext entry, string message) : ReactiveObject
+{
+    public string Message { get; } = message;
+    public ReactiveCommand<RxVoid, NavigationOutcome> YesCommand { get; } = entry.CreateCompleteCommand(_ => Task.FromResult(true));
+    public ReactiveCommand<RxVoid, NavigationOutcome> NoCommand { get; } = entry.CreateDismissCommand();
+}
+```
+
+Its caller waits for the answer inside the command, so it passes the
+command's token; cancelling the command then also closes the dialog. Don't pass
+the token from a command that ends when the push commits, as the Notes shell's
+does, because cancelling it later would close the page. The `// [S2]` comments
+mark the example's second comparison scenario:
+
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NotesListViewModel.cs
+var answer = await regions.Dialog.PushForResult<bool>(NavigationTarget.Create<ConfirmViewModel>( // [S2]
+    (_, dialog) => new ConfirmViewModel(dialog, $"Delete '{note.Title}'?")), cancellationToken: token).Completion; // [S2]
+if (answer is NavigationCompletion<bool>.Completed { Value: true }) // [S2]
+```
+
+`Completion` never faults. It ends `Completed` with the value, or `Dismissed`
+on every other path, including a closing Window. Await it directly; it needs
+no conversion and no scheduler.
+
+### Guard the Window close
+
+Disposing a navigator retires its entries without asking their guards, so by
+default closing the Window loses unsaved edits. To ask the guards first, set
+`GuardClose` on the Window, as the SDK's close-guard tests do:
+
+```csharp docs-test=source:tests/dotnet/Runic.Application.Views.Desktop.Tests/CloseGuardTests.cs
+sealed class GuardedWindow : RunicWindow<GuardedShellModel>
+{
+    public GuardedWindow() => GuardClose = true;
+}
+```
+
+- Before a close that the user starts, the Window calls `CanCloseAsync`. Its
+  default clears each region its ViewModel exposes, so the departure guards
+  decide, and a guard that refuses or fails keeps the Window open. Override it
+  to add a check, and call the base method to keep the guards.
+- `RequestCloseAsync()` closes the Window from code as its close button does,
+  and returns `false` when the guards kept it open:
+
+  ```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+  [RelayCommand]
+  private async Task CloseEditorAsync()
+  {
+      if (!await _editor.RequestCloseAsync()) StatusText = "The editor has unsaved changes.";
+  }
+  ```
+
+- The close is not one of the View's commands, so the browser handler is not
+  asked: the .NET fallback handler answers it.
+- Runic Desktop's embedded window asks. CS-WebUI and a browser window can't
+  keep their window open: the Window opens unguarded and logs warning 1053
+  `WindowCloseGuardUnavailable`, and a user close doesn't ask. Save drafts as
+  the user edits where that matters. `RequestCloseAsync` still asks there.
+- `CloseAsync`, disposal and a host shutdown don't ask.
+- In WPF, set `GuardWindowClose="True"` on the `NavigationHost` instead.
 
 ### Render a region
 
@@ -247,10 +483,15 @@ public Task OpenNotesAsync() => !CanNavigate || Main.Current is DocumentViewMode
 
 `NavigationRequestOptions.ExpectedCurrent`, the entry id passed here, makes a
 request conditional: a double click, or an answer that arrives after the user
-moved on, is rejected instead of opening a second page. The
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first)
-adds a child region for the document's panes and a dialog region for the
-leave confirmation.
+moved on, is rejected instead of opening a second page.
+
+CommunityToolkit.Mvvm has no interaction type, so the leave guard asks in the
+dialog region with `LeaveConfirmation.InDialog`. The confirm dialog takes its
+entry context in its constructor, as the ReactiveUI pages do, and answers with
+`CompleteAsync` and `DismissAsync`; see
+[Ask the user from a ViewModel](../samples/prompts.md#with-communitytoolkitmvvm-a-dialog-region-experimental).
+Toolkit pages implement `INavigationAware` instead of the adapter's
+`WhenNavigatedTo`, and use `GuardClose` the same way.
 
 ## Next steps
 
@@ -259,4 +500,5 @@ leave confirmation.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
 - The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md)
-  documents transitions, results from an entry, window close and testing.
+  documents transitions, entry state, results and testing with a real
+  navigator.

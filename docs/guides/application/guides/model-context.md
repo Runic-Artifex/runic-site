@@ -29,14 +29,17 @@ With ReactiveUI, a `ReactiveCommand.CreateFromTask` body reads and sets state
 around its `await`:
 
 ```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
-private async Task SaveAsync(CancellationToken token)
+internal async Task SaveAsync(CancellationToken token)
 {
     // The bridge starts the body in a model-context turn, and every await
     // resumes in that context, so the body reads and sets state directly.
     var title = Title;
+    var body = Body;
     if (string.IsNullOrWhiteSpace(title)) throw new RunicFailureException(new TitleRequired());
     if (title.Length > MaximumTitleLength) throw new RunicFailureException(new TitleTooLong(MaximumTitleLength));
     await Task.Delay(120, token);
+    (_savedTitle, _savedBody) = (title, body);
+    this.RaisePropertyChanged(nameof(IsDirty));
     SavedMessage = $"Saved {title}";
 }
 ```
@@ -106,7 +109,8 @@ finally
   outside any turn. The command still finishes, but nothing presents its later
   writes.
 - Navigation hooks, such as departure guards and initialize hooks, are not
-  commands: they run outside turns. See
+  commands: they run outside turns. `INavigationAware` and `WhenNavigatedTo`
+  callbacks run in the turn that commits the navigation. See
   [pages and navigation](pages-and-navigation.md).
 
 ## Injecting the model context

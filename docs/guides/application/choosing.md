@@ -140,8 +140,9 @@ If you know ReactiveUI from System.Reactive: `RxVoid` replaces `Unit`,
 `using ReactiveUI.Primitives.Signals;`. Applications that must stay on
 System.Reactive use `Runic.Application.Views.ReactiveUI.Reactive` instead;
 never reference both flavours in one application. Navigation has a ReactiveUI
-adapter with observable region state and reactive commands; see
-[pages and navigation](guides/pages-and-navigation.md).
+adapter with observable region state, Back and result commands, and leave
+guards asked through an `Interaction`; see
+[pages and navigation](guides/pages-and-navigation.md#with-reactiveui).
 
 ### CommunityToolkit.Mvvm
 

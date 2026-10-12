@@ -108,31 +108,30 @@ public WorkspaceNavigation(RunicNavigator navigator, HomeViewModel home)
 }
 ```
 
-The dialog's ViewModel receives its `NavigationEntryContext` when it is pushed.
-Its commands answer through it: `CompleteAsync(true)` ends the request with a
-value, and `DismissAsync()` ends it without one. Either leaves the region empty
-again:
+The navigator constructs the dialog's ViewModel and passes it its
+`NavigationEntryContext` as a constructor parameter, so the ViewModel holds its
+entry from the start. Its commands answer through it: `CompleteAsync(true)`
+ends the request with a value, and `DismissAsync()` ends it without one.
+Either leaves the region empty again:
 
 ```csharp docs-test=source:examples/notes-view-first/ViewModels.cs
-public partial class ConfirmNavigationViewModel(string message) : ObservableObject, IDialogViewModel, INavigationInitialize
+public partial class ConfirmNavigationViewModel(NavigationEntryContext entry, string message) : ObservableObject, IDialogViewModel
 {
-    private NavigationEntryContext? _entry;
-
     public string Message => message;
-
-    ValueTask INavigationInitialize.InitializeAsync(NavigationEntryContext entry, CancellationToken cancellationToken)
-    {
-        _entry = entry;
-        return ValueTask.CompletedTask;
-    }
     // ...
     [RelayCommand]
-    private Task Confirm() => _entry is { } entry ? entry.CompleteAsync(true).AsTask() : Task.CompletedTask;
+    private Task Confirm() => entry.CompleteAsync(true).AsTask();
 
     [RelayCommand]
-    private Task Cancel() => _entry is { } entry ? entry.DismissAsync().AsTask() : Task.CompletedTask;
+    private Task Cancel() => entry.DismissAsync().AsTask();
 }
 ```
+
+A constructor parameter of type `NavigationEntryContext` is filled by the
+navigator, never by the container: a service that asks for one fails to
+resolve. Content you create yourself and pass with `NavigationTarget.Own` or
+`Borrow` exists before its entry, so it receives the context in
+`INavigationInitialize.InitializeAsync` instead.
 
 A command asks with `PushForResult`. The navigator creates the dialog's
 ViewModel with its input, here the message:
@@ -154,9 +153,13 @@ dialog region and discards the changes only when the user confirms:
 
 ```csharp docs-test=source:examples/notes-view-first/ViewModels.cs
 _leave = LeaveConfirmation.InDialog(navigation.Dialog,
-    () => NavigationTarget.Own<IDialogViewModel>(new ConfirmNavigationViewModel("Discard the unsaved edits and return Home?")),
+    () => NavigationTarget.Create<IDialogViewModel>((_, entry) =>
+        new ConfirmNavigationViewModel(entry, "Discard the unsaved edits and return Home?")),
     () => Editor.IsDirty, Editor.DiscardChanges);
 ```
+
+The factory target's second argument is the new entry's context, which the
+dialog takes in its constructor.
 
 The frontend renders the dialog region like any other ViewModel content: an
 outlet with one View per dialog kind, hidden while the region is empty. The
@@ -181,7 +184,10 @@ for the dialog region in the same way.
 ## Which one to use
 
 - ReactiveUI apps: use an `Interaction`. It needs no navigation and keeps the
-  question inside the View that is already on screen.
+  question inside the View that is already on screen. With navigation,
+  `ReactiveLeaveConfirmation.WithInteraction` asks "discard unsaved changes?"
+  through one; see
+  [Guard against leaving](../guides/pages-and-navigation.md#guard-against-leaving).
 - CommunityToolkit.Mvvm apps that use navigation: use a dialog region.
 - A CommunityToolkit.Mvvm app without navigation can model the question as
   ViewModel state: a nullable property holding the question, set by the
