@@ -474,7 +474,8 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   `WindowCloseGuardUnavailable`, and a user close doesn't ask. Save drafts as
   the user edits where that matters. `RequestCloseAsync` still asks there.
 - `CloseAsync`, disposal and a host shutdown don't ask.
-- In WPF, set `GuardWindowClose="True"` on the `NavigationHost` instead.
+- In WPF, set `GuardWindowClose="True"` on the `NavigationHost` instead. It
+  also guards a host on an unselected tab.
 
 ### Render a region
 

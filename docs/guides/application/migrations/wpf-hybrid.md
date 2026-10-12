@@ -233,7 +233,7 @@ their departure guards, so a dirty draft would be lost. Set `GuardWindowClose` o
 ```
 
 Closing the window, with the close button, Alt+F4 or `Close()`, is then
-cancelled while the region has entries, and the host clears the region
+cancelled while the region has entries, and the region is cleared
 instead. Each entry's guard can ask in the dialog region, for example with
 `LeaveConfirmation.InDialog`. When the clear commits, the window closes; when
 a guard refuses, it stays open. Two cases skip the guards:
@@ -242,6 +242,21 @@ a guard refuses, it stays open. Two cases skip the guards:
   instead of calling `Shutdown()`.
 - WPF doesn't raise `Closing` when the Windows session ends. Handle
   `Application.SessionEnding` yourself if drafts must survive a log-off.
+
+The guard belongs to the window, not to the loaded host. A host on an
+unselected tab is unloaded and its View discarded, but the window keeps
+guarding its region, so a draft on a hidden tab is still asked about:
+
+```xml docs-test=skip:illustrative-fragment
+<!-- CustomersTabView.xaml, the View of a tab in a TabControl bound with NavigationSelector.Region -->
+<rn:NavigationHost Region="{Binding Pages}" GuardWindowClose="True" />
+```
+
+Selecting another tab asks nothing, because nothing is lost: the tab's page
+region keeps its entries. Closing the window clears every region a guarding
+host has loaded with, one after another, and stops at the first that a guard
+keeps. See the Runic.Navigation.Wpf README,
+["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
 
 ## Start windows in code, not with `StartupUri`
 
