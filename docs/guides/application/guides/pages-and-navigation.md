@@ -186,41 +186,32 @@ When the root page pushes into its own region, as a list pushes its detail
 page, it needs the service that holds the region. That service can't create
 the region with the page as its initial target, because building the page
 would need the service again. Create the region empty in the service, and
-start it in the Window's ViewModel, where both exist. The SDK's region-start
-tests do this for both MVVM flavors; the ReactiveUI shell:
+start it in the Window's ViewModel, where both exist:
 
-```csharp docs-test=source:tests/dotnet/Runic.Application.Testing.Tests/RegionStartFixture.cs
-public sealed class StartNavigation
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+public sealed class AppNavigation // registered per window scope
 {
-    public StartNavigation(RunicNavigator navigator) => Main = navigator.CreateRegion<INavPageViewModel>(this);
+    public AppNavigation(RunicNavigator navigator) => Main = navigator.CreateRegion<IPage>(this);
 
-    internal NavigationRegion<INavPageViewModel> Main { get; }
+    public NavigationRegion<IPage> Main { get; }
 }
-// ...
-/// <summary>The root page: it pushes the detail page into the region that shows it.</summary>
-public sealed class StartListViewModel(StartNavigation navigation, StartListSource source) : INavPageViewModel
+
+public sealed class ListViewModel(AppNavigation navigation) : IPage { /* pushes into navigation.Main */ }
+
+public sealed class ShellViewModel
 {
-// ...
-    internal ValueTask<NavigationResult<INavPageViewModel>> OpenDetailAsync() =>
-        navigation.Main.PushAsync(NavigationTarget.Own<INavPageViewModel>(new NavEditorViewModel("detail")));
-// ...
-public sealed partial class ReactiveStartShellViewModel : ReactiveObject, IDisposable
-{
-    public ReactiveStartShellViewModel(StartNavigation navigation)
+    public ShellViewModel(AppNavigation navigation, ListViewModel list)
     {
         Main = navigation.Main;
-        // ...
-        Main.Start(NavigationTarget.Create<StartListViewModel>());
+        Main.Start(NavigationTarget.Borrow<IPage>(list)); // or NavigationTarget.Create<ListViewModel>()
     }
+
+    public NavigationRegion<IPage> Main { get; }
+}
 ```
 
-Register the holder per Window scope, for example with
-`services.AddScoped<StartNavigation>()`. `NavigationTarget.Create` builds the
-list from the Window's services, and the region owns it. To start with a page
-the shell already has, such as an injected list, pass
-`NavigationTarget.Borrow<INavPageViewModel>(list)` instead, as the
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Navigation/README.md#the-root-page)
-shows.
+`NavigationTarget.Create<ListViewModel>()` instead builds the list from the
+Window's services, and the region owns it.
 
 `Start` commits the root page before it returns, like an initial target of
 `CreateRegion`: the page's `OnNavigatedTo` and the region's change
@@ -230,8 +221,8 @@ notifications run on the calling thread, and `Main.Current` is the list when
 once, before any other navigation of the region; use `ResetAsync` after that.
 Don't use `_ = Main.ResetAsync(...)` in the constructor instead: its failure is
 only logged, and the region stays empty until a later model turn. `Start` is
-new in SDK `0.7.0-preview.8`. A CommunityToolkit.Mvvm shell calls it the same
-way.
+new in SDK `0.7.0-preview.8`. A CommunityToolkit.Mvvm or ReactiveUI shell
+calls it the same way.
 
 ### Navigate in a command
 

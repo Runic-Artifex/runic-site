@@ -58,7 +58,6 @@
     "packages/web/views-effect/README.md",
     "packages/web/views/README.md",
     "tests/dotnet/Runic.Application.Testing.Tests/LeaveGuardRoutingTests.cs",
-    "tests/dotnet/Runic.Application.Testing.Tests/RegionStartFixture.cs",
     "tests/dotnet/Runic.Application.Views.Desktop.Tests/CloseGuardTests.cs",
     "tests/dotnet/Runic.Application.Views.Desktop.Tests/PlatformServicesChecks.cs",
     "tests/dotnet/Runic.Navigation.Wpf.Tests/Support.cs",
@@ -90,5 +89,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:6f82bdf50d59ce9944f8a5de33f1d617a2cccc9f64c48bd399e74eb4650b879a"
+  "contentDigest": "sha256:fba6a51b428c61da6ba945fc9c789e5df53d336edef633af09fa06e2ce2051af"
 }
