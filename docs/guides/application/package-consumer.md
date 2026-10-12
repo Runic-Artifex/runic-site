@@ -19,8 +19,8 @@ dotnet runic dev
 ```
 
 Install .NET 10 and the frontend tools reported by `dotnet runic doctor`.
-The creator uses `--directory` for its destination and `--output` for output
-format. Commit generated versions and lockfiles. The
+The creator takes its destination with `--output` (`-o`), as `dotnet new` does;
+`--directory` is its former name. Its `--format json` option selects JSON output. Commit generated versions and lockfiles. The
 [creator](https://docs.runic-artifex.eu/create/) previews other choices; see
 [existing-app setup](existing-app.md) to add Runic to an app.
 

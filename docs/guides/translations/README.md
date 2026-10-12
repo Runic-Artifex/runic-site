@@ -204,6 +204,9 @@ Each quick start starts from an empty folder and ends with a running app:
 - **SvelteKit**: the
   [SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/quickstart-sveltekit.md)
   adds localized routes, a language switcher and server rendering per request.
+- **Command line**: [translate a CLI](../command-line/README.md#translate-a-cli)
+  with the `Runic.Translations.CommandLine` adapter, which translates Runic
+  Command Line help, errors and faults.
 - **Runic Desktop**: there is no separate adapter. Use the .NET runtime and the
   Vite plugin as above; the
   [Runic Desktop note](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/runic-desktop.md)

@@ -29,6 +29,7 @@ needs and leads on from there:
 - [Runic Command Line](command-line/README.md).
 - [Runic Translations](translations/README.md), the [Translations repository's guides](https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations) and [migrating Svelte translation imports](migrations/translations-svelte.md).
 - [Embed and serve assets](assets/README.md) with Runic Assets.
+- [Troubleshooting and diagnostic IDs](troubleshooting.md): which product owns an ID such as `RUNICBRIDGE016`, `RCLI5000` or `RTR0011`, and where to start.
 
 ## Contributing
 
