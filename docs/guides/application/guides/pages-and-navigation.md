@@ -72,7 +72,7 @@ The entry context as a constructor parameter, `INavigationAware`,
 `WhenNavigatedTo`, the result commands, `ReactiveLeaveConfirmation` and
 `GuardClose` are newer than SDK `0.7.0-preview.6`. This guide follows
 runic-sdk `main` at
-[`ce194583`](https://github.com/Runic-Artifex/runic-sdk/tree/ce194583d721c48dfb6785fc51dc1a71580234c7).
+[`05e09790`](https://github.com/Runic-Artifex/runic-sdk/tree/05e097900e2508a6cef6167b40c80a70bbeb0af2).
 
 ### Coming from ReactiveUI navigation
 
@@ -162,16 +162,14 @@ never disposes it. The adapter in `Runic.Navigation.ReactiveUI` turns the
 region's state into observables and commands:
 
 ```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
-public ShellViewModel(RunicNavigator navigator, HomeViewModel home, EditorViewModel editor, ILogger<ShellViewModel> logger)
+public ShellViewModel(RunicNavigator navigator, HomeViewModel home, EditorViewModel editor)
 {
     // ...
     Main = navigator.CreateRegion<IMainPage>(this, NavigationTarget.Borrow<IMainPage>(home));
     // Back runs the document's leave guard; it is enabled while Main has history.
-    OpenHomeCommand = Main.CreateBackCommand().DisposeWith(_disposables);
+    OpenHomeCommand = Main.CreateBackCommand();
     OpenDocumentCommand = ReactiveCommand.CreateFromTask(OpenDocumentAsync,
-        Main.WhenCurrentChanged().Select(page => page is HomeViewModel)).DisposeWith(_disposables);
-    OpenHomeCommand.ObserveBridgeExceptions(logger).DisposeWith(_disposables);
-    OpenDocumentCommand.ObserveBridgeExceptions(logger).DisposeWith(_disposables);
+        Main.WhenCurrentChanged().Select(page => page is HomeViewModel));
     // ...
 }
 
@@ -183,9 +181,17 @@ public ReactiveCommand<RxVoid, RxVoid> OpenDocumentCommand { get; }
 
 `CreateBackCommand()` can execute while the region has history and no
 transition is running. Its output is a `NavigationOutcome`, the kind of result
-without any .NET content, so the frontend can read it. Dispose the commands
-with the ViewModel, and observe each command's `ThrownExceptions`, here with
-`ObserveBridgeExceptions`.
+without any .NET content, so the frontend can read it.
+
+The commands need no `ThrownExceptions` subscription. The generated Bridge
+observes each bridged command and logs an unexpected exception once, as
+`ReactiveCommandFailed` (event 1042) through the Window's logger factory. A
+declared failure reaches the frontend instead.
+[Typed failures](typed-failures.md#reactiveui-thrownexceptions) has the details.
+
+They also need no disposal. Like any ReactiveUI subscription, dispose a command
+only when its `canExecute` observes an object that outlives the ViewModel.
+These observe `Main`, the shell's own region.
 
 ### Navigate in a command
 
@@ -235,11 +241,11 @@ the operations it performs on itself. A page that the navigator constructs
 takes it as a constructor parameter, next to its services:
 
 ```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
-public sealed class DocumentViewModel : ReactiveObject, IMainPage, INavigationDepartureGuard, IDisposable
+public sealed class DocumentViewModel : ReactiveObject, IMainPage, INavigationDepartureGuard
 {
     // ...
     public DocumentViewModel(NavigationEntryContext entry, RunicNavigator navigator, EditorViewModel editor,
-        PreviewViewModel preview, ILogger<DocumentViewModel> logger)
+        PreviewViewModel preview)
 ```
 
 - The navigator passes the context to the content it constructs: with
@@ -254,13 +260,15 @@ public sealed class DocumentViewModel : ReactiveObject, IMainPage, INavigationDe
 
 `entry.WhenNavigatedTo` runs each time the entry becomes current: when it is
 first shown and after every Back to it. Its second argument is a scope that
-ends when the entry stops being current, so per-visit subscriptions go there:
+ends when the entry stops being current, so per-visit subscriptions go there.
+`WhenNavigatedTo` itself ends when the entry retires:
 
 ```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
-// Per visit, not per mounted View: follow the draft while this entry is current.
+// Per visit, not per mounted View: follow the window-scoped draft while this entry
+// is current. The visit scope ends that subscription when the entry is left.
 entry.WhenNavigatedTo((_, visit) => editor.WhenAnyValue(model => model.IsDirty)
     .Subscribe(dirty => Status = dirty ? "Unsaved changes" : "No unsaved changes")
-    .DisposeWith(visit)).DisposeWith(_disposables);
+    .DisposeWith(visit));
 ```
 
 The WPF example's list refreshes itself whenever the user returns to it:
@@ -291,22 +299,24 @@ there are unsaved changes:
 // only when the departure commits; a No, or a superseded departure, keeps them.
 _leave = ReactiveLeaveConfirmation.WithInteraction(ConfirmLeave,
     () => new DiscardNoteRequest(editor.Title, editor.Body.Length), () => editor.IsDirty, editor.RevertChanges);
-// The web View answers for its own Close. The shell's Back has no handler there:
-// keep the edits rather than fail the departure (ReactiveUI asks the latest handler first).
-ConfirmLeave.RegisterHandler(context => context.SetOutput(false)).DisposeWith(_disposables);
+// The web View answers for its Close and the shell's Back. ReactiveUI asks the latest handler
+// first, so this fallback answers only when no View is mounted or .NET code starts the departure:
+// keep the edits rather than fail it.
+ConfirmLeave.RegisterHandler(context => context.SetOutput(false));
 // ...
 public ValueTask<bool> CanDepartAsync(NavigationDeparture departure, CancellationToken cancellationToken) =>
     _leave.CanDepartAsync(departure, cancellationToken);
 ```
 
 A web View answers the interaction with its generated client while it is
-mounted, for a navigation that one of this ViewModel's commands started, such
-as its Close:
+mounted, for a departure that its own window starts: the page's Close, the
+shell's Back, or a guarded Window close:
 
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-reactive-views/Frontend/src/document.ts
-// The leave guard asks here when this View's Close or Save and close leaves
-// unsaved edits. Answering false keeps the document and its edits.
+// The leave guard asks here when this window leaves the document with unsaved
+// edits: its Close or the shell's Home (Back).
+// Answering false keeps the document and its edits.
 const removeLeaveHandler = view.interactions.confirmLeave.handle(async (request, { signal }) => {
   if (signal.aborted) throw signal.reason;
   return window.confirm(`Close “${request.title}” and lose its unsaved changes?`);
@@ -329,18 +339,32 @@ The guard fails closed:
   the history leaves it without asking.
 - With no handler that answers, ReactiveUI's `UnhandledInteractionException`
   fails the departure: the result is `Failed`, the navigator logs event 1060,
-  and the page stays. So does a handler that throws. A navigation that the
-  View didn't start, such as the shell's Back or a Window close, never reaches
-  the browser; register a .NET fallback handler, as the example does, to give
-  it an answer. ReactiveUI asks the latest handler first, so a mounted View
-  still answers before the fallback.
+  and the page stays. So does a handler that throws, and so does a question
+  whose View unmounts or disconnects before it answers.
+- The browser is asked only from the page's own window, and never from another
+  window or browser connection. A command of any View in that window, such as
+  the shell's Back, asks the page's View on the connection that invoked it. A
+  guarded Window close asks the page's View when it is the only mounted View
+  with that handler. Navigation that .NET code starts, such as from a timer,
+  never reaches the browser; register a .NET fallback handler, as the example
+  does, to give it an answer. ReactiveUI asks the latest handler first: a
+  mounted web View answers before a fallback registered in the constructor,
+  and a WPF View's `WhenActivated` handler answers before both.
 - A superseded or cancelled departure ends at once; the browser handler's
   `signal` aborts, and a late answer is ignored. The discard runs only when
   the departure commits.
 
 Guards, factories and initialize hooks run outside the model context's turns.
-Don't set ViewModel state in them without committing it with
-`IRunicModelContext.InvokeAsync`.
+An initialize hook may set state directly on a page that was created for its
+entry, with `PushAsync<TPage>()`, `NavigationTarget.Create` or a new instance
+handed over with `Own`. Nothing presents that page before its entry commits,
+and the commit turn runs after the awaited hook. That is why the WPF note
+page's `InitializeAsync` above sets `Title` directly. Commit everything else
+with `IRunicModelContext.InvokeAsync`: state that is already presented or
+shared, such as a borrowed page, a service or another page, and any state
+that a guard or `ResumeAsync` sets. Don't schedule work on ReactiveUI's
+main-thread scheduler from a hook, for example with a command's
+`Execute().Subscribe()`; outside a turn it falls back (Views event 1043).
 
 ### Return a result
 
@@ -377,9 +401,11 @@ SaveAndCloseCommand = entry.CreateCompleteCommand(async token =>
 {
     await editor.SaveAsync(token);
     return editor.Title;
-}).DisposeWith(_disposables);
-CloseCommand = entry.CreateCloseCommand().DisposeWith(_disposables);
+});
+CloseCommand = entry.CreateCloseCommand();
 ```
+
+The entry disposes its result commands when it retires, so the page doesn't.
 
 A confirm dialog in a dialog region answers the same way, with
 `CreateDismissCommand` for its No, which ends the request at once:
@@ -437,8 +463,12 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   }
   ```
 
-- The close is not one of the View's commands, so the browser handler is not
-  asked: the .NET fallback handler answers it.
+- The page's web View asks the user, as it does for its Close: the close is the
+  Window's own departure, so the guard's interaction reaches the View mounted
+  in that Window. If the View unmounts during the question, the Window stays
+  open. If the application closes the Window meanwhile (`CloseAsync`), the
+  question is cancelled and the guard's discard doesn't run. A .NET fallback
+  handler answers only when no View is mounted.
 - Runic Desktop's embedded window asks. CS-WebUI and a browser window can't
   keep their window open: the Window opens unguarded and logs warning 1053
   `WindowCloseGuardUnavailable`, and a user close doesn't ask. Save drafts as

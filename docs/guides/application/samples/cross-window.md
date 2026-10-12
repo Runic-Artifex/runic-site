@@ -41,8 +41,8 @@ The host is passed only to that callback; it isn't registered in the
 container. To open Windows from a command or a service, register
 `IRunicWindowService` with `AddRunicWindowService()`. It is newer than SDK
 `0.7.0-preview.6`; the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/ce194583d721c48dfb6785fc51dc1a71580234c7/examples/multi-window)
-is at runic-sdk `ce194583`.
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/05e097900e2508a6cef6167b40c80a70bbeb0af2/examples/multi-window)
+is at runic-sdk `05e09790`.
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
 // IRunicWindowService, which ProjectViewModel uses to open more Windows.
@@ -56,7 +56,7 @@ A ViewModel takes it in its constructor and opens a Window from a command:
 NewWindowCommand = ReactiveCommand.CreateFromTask(async token =>
 {
     await windows.OpenWindowAsync<ProjectWindow>(cancellationToken: token);
-}).DisposeWith(_disposables);
+});
 ```
 
 - `OpenWindowAsync<TWindow>()` takes the same options and runs the same checks
@@ -137,7 +137,7 @@ it:
 
 ```csharp docs-test=source:examples/multi-window/ProjectViewModel.cs
 public ProjectViewModel(ProjectService project, SettingsStore settings, IDesktopSettings desktop,
-    IRunicWindowService windows, IRunicModelContext context, ILogger<ProjectViewModel> logger)
+    IRunicWindowService windows, IRunicModelContext context)
 {
     _project = project;
     _context = context;
