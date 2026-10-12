@@ -136,30 +136,37 @@ property that the frontend renders.
 
 ## When atomic save is unavailable
 
-Atomic replacement needs permission to create a file next to the target. Some
-platforms grant access to the chosen file only:
+Atomic replacement needs permission to create a file next to the target.
 
-- **Linux.** Both GTK backends use xdg-desktop-portal file dialogs. A portal
-  selection grants access to the chosen file, not to its folder.
-- **Sandboxed macOS apps.** A selection doesn't grant access to the folder
-  either.
+- **Windows, Linux and unsandboxed macOS.** The save is available. On Linux,
+  a portal selection in an unsandboxed application is the real host path, so
+  the staged sibling and rename work as usual. Inside Flatpak, the
+  portal returns a document whose private view stages the sibling as a host
+  tempfile and renames it onto the chosen file. Either way the file is
+  replaced atomically, never overwritten in place.
+- **Sandboxed macOS apps.** A selection doesn't grant access to the folder, so
+  the save is unavailable.
+- **Read-only or revoked grants.** On Linux, a document grant that can't be
+  written is unavailable.
 
-In these cases `BeginWriteAsync` returns `Unavailable(AtomicReplaceUnavailable)`
-before it changes anything, and `GetSnapshot()` reports the same reason for
-`platform.files.save`. The sample's `SaveAsync` then returns `false`, and the
-file keeps its old content. Treat it as "not saved" and tell the user; never
-report success.
-
-This preview has no other write policy: `FileWritePolicy` has only
-`RequireAtomicReplace`. So with the registered services, a Linux application
-can open files through the dialog but can't save through it yet. An
-unsandboxed application on GTK 3 can choose GTK's own file chooser instead of
-the portal with `LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`,
-which keeps the staged save. That is a lower-level provider API that you
-compose yourself, and there is no automatic fallback. The
+Portal saves are newer than SDK `0.7.0-preview.6`, where a Linux portal
+selection was always unavailable for saving. They arrived in runic-sdk
+`f0d143e2` (W250-039). With the preview.6 packages, a Linux application can
+open files through the dialog but can't save through it, and an unsandboxed
+application on GTK 3 can choose GTK's own file chooser with
+`LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That is a
+lower-level provider API that you compose yourself, with no automatic fallback.
+The
 [portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
-describes it. Check the release notes of later SDK versions before you rely
-on any other Linux save behavior.
+describes both mechanisms.
+
+When the save is unavailable, `BeginWriteAsync` returns
+`Unavailable(AtomicReplaceUnavailable)` before it changes anything, and
+`GetSnapshot()` reports the same reason for `platform.files.save`. The sample's
+`SaveAsync` then returns `false`, and the file keeps its old content. Treat it
+as "not saved", tell the user and offer Save As to another destination; never
+report success. This SDK has no other write policy: `FileWritePolicy` has only
+`RequireAtomicReplace`.
 
 ## Next steps
 
