@@ -226,7 +226,45 @@ scheduler as `RxSchedulers.MainThreadScheduler`, the scheduler a
 argument. Register the model context before the ViewModels create their
 commands, because a command reads the scheduler when it is created. A
 scheduler that the application or UI platform set, such as WPF's dispatcher
-or a test scheduler, is kept.
+or a test scheduler, is kept. To opt out, set
+`RxSchedulers.MainThreadScheduler`, or call `WithMainThreadScheduler` on
+ReactiveUI's builder, before `AddRunicReactiveModelContext()`, or replace it
+afterwards.
+
+The scheduler routes work by the running turn, not by thread: work scheduled
+outside a turn, for example by an `ObserveOn(RxSchedulers.MainThreadScheduler)`
+after a timer or a background source, runs on the scheduler it replaced,
+ReactiveUI's task pool, and is logged as `ReactiveSchedulerOutsideModelTurn`
+(Views event 1043, Warning). Observe such a source on an injected scheduler,
+as shown below.
+
+**Unreleased, after 0.7.0-preview.7**
+([runic-sdk#230](https://github.com/Runic-Artifex/runic-sdk/pull/230)): an
+application that builds ReactiveUI with `RxAppBuilder` adds
+`WithRunicModelContext()` (namespace `ReactiveUI.Builder`, or
+`ReactiveUI.Reactive.Builder` in the System.Reactive flavor) to that builder,
+as Avalonia, MAUI and WPF applications add `WithAvalonia()`, `WithMaui()` or
+`WithWpf()`. It still calls `AddRunicReactiveModelContext()`. Without it,
+`BuildApp()` with `WithPlatformServices()` replaces the scheduler with
+ReactiveUI's default outside a test runner.
+
+```csharp docs-test=skip:pending-sdk-sync
+services.AddRunicReactiveModelContext();
+
+RxAppBuilder.CreateReactiveUIBuilder()
+    .WithPlatformServices()
+    .WithRunicModelContext()
+    .BuildApp();
+```
+
+In the same release, Runic Desktop, CS-WebUI and `RunicWindowTestHost.Create`
+pass the application's `ILoggerFactory` to the scheduler when a window opens,
+so event 1043 reaches the application's logs. It is logged once per ViewModel
+type found on the call stack, named in its `Source` property. When a window
+opens while another scheduler is in effect, Runic logs `ReactiveSchedulerKept`
+(1090, Information) for one set before `AddRunicReactiveModelContext()`, or
+`ReactiveSchedulerReplaced` (1091, Warning) for one that replaced it, once per
+scheduler type. A UI dispatcher's scheduler, such as WPF's, is not logged.
 
 For an explicit scheduler, for example an `ObserveOn` in a DynamicData
 pipeline, inject `ISequencer` (an `IScheduler` in the System.Reactive flavor)

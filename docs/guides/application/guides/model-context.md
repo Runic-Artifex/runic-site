@@ -70,6 +70,13 @@ context, so commands need no scheduler argument:
 services.AddRunicReactiveModelContext();
 ```
 
+A scheduler that the application or UI platform set, such as WPF's dispatcher
+or a test scheduler, is kept. To opt out, set
+`RxSchedulers.MainThreadScheduler`, or call `WithMainThreadScheduler` on
+ReactiveUI's builder, before `AddRunicReactiveModelContext()`, or replace it
+afterwards. The [ReactiveUI reference](../reference/reactiveui.md) describes
+the scheduler in full.
+
 ## Leaving the context
 
 Code after `ConfigureAwait(false)`, in `Task.Run`, in a timer or in another
@@ -130,6 +137,31 @@ one of their own when none is registered:
 together they register one context per Window scope, and they keep one you
 registered before them. Neither the model context types nor the navigation
 types are experimental.
+
+## Coming from Avalonia or MAUI
+
+Most ReactiveUI code works as it does on a UI thread. The difference is that
+Runic has one model context per Window instead of one UI thread, so
+`RxSchedulers.MainThreadScheduler` means "the context of the running turn".
+Work scheduled outside a turn has no Window to go to and runs on ReactiveUI's
+task pool, which Runic logs as a warning (Views event 1043).
+
+| Intent                                   | Avalonia                                        | MAUI                                                                   | Runic                                                                                                                                               |
+| ---------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Create a command                         | `ReactiveCommand.CreateFromTask(SaveAsync)`     | Same                                                                   | Same, without a scheduler argument                                                                                                                  |
+| Set state after `await` in a command     | Directly                                        | Directly                                                               | Directly                                                                                                                                            |
+| Install the main-thread scheduler        | `UseReactiveUI()`, which calls `WithAvalonia()` | `UseReactiveUI(dispatcher)`, which calls `WithMaui()`                  | `AddRunicReactiveModelContext()`; with `RxAppBuilder`, also `WithRunicModelContext()` (unreleased, see the [reference](../reference/reactiveui.md)) |
+| Commit from a timer or service callback  | `Dispatcher.UIThread.InvokeAsync(...)`          | `MainThread.InvokeOnMainThreadAsync(...)` or an injected `IDispatcher` | An injected `IRunicModelContext` and its `InvokeAsync(...)`                                                                                         |
+| Check that code runs on the right thread | `Dispatcher.UIThread.CheckAccess()`             | `MainThread.IsMainThread`                                              | `context.IsExecuting`                                                                                                                               |
+| Observe a background source              | `.ObserveOn(RxSchedulers.MainThreadScheduler)`  | Same                                                                   | `.ObserveOn(scheduler)` with an `ISequencer` (an `IScheduler` in the System.Reactive flavor) injected in the constructor                            |
+| Use a deterministic scheduler in tests   | Set `RxSchedulers.MainThreadScheduler`          | Same                                                                   | Same, before `AddRunicReactiveModelContext()`                                                                                                       |
+
+The background-source row is the one habit that gives a different result.
+After a timer, a background `SourceCache` edit or a service event,
+`ObserveOn(RxSchedulers.MainThreadScheduler)` does not reach the Window. The
+injected scheduler is the Window's own, resolved before the ViewModel is
+constructed, so it also serves a source that replays when the constructor
+subscribes.
 
 ## Translations in ViewModels
 
