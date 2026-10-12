@@ -180,6 +180,45 @@ They also need no disposal. Like any ReactiveUI subscription, dispose a command
 only when its `canExecute` observes an object that outlives the ViewModel.
 These observe `Main`, the shell's own region.
 
+### A root page that navigates its region
+
+When the root page pushes into its own region, as a list pushes its detail
+page, it needs the service that holds the region. That service can't create
+the region with the page as its initial target, because building the page
+would need the service again. Create the region empty in the service, and
+start it in the Window's ViewModel, where both exist:
+
+```csharp docs-test=skip:pending-sdk-sync
+public sealed class AppNavigation // services.AddScoped<AppNavigation>()
+{
+    public AppNavigation(RunicNavigator navigator) => Main = navigator.CreateRegion<IPage>(this);
+
+    public NavigationRegion<IPage> Main { get; }
+}
+
+public sealed class ListViewModel(AppNavigation navigation) : ReactiveObject, IPage
+{
+    // OpenCommand pushes the detail page into navigation.Main.
+}
+
+public ShellViewModel(AppNavigation navigation, ListViewModel list)
+{
+    Main = navigation.Main;
+    Main.Start(NavigationTarget.Borrow<IPage>(list));
+}
+```
+
+`Start` commits the root page before it returns, like an initial target of
+`CreateRegion`: the page's `OnNavigatedTo` and the region's change
+notifications run on the calling thread, and `Main.Current` is the list when
+`OpenWindowAsync` returns. If the page can't be created, `Start` throws, so
+`OpenWindowAsync` fails instead of opening an empty Window. `Start` is allowed
+once, before any other navigation of the region; use `ResetAsync` after that.
+Don't use `_ = Main.ResetAsync(...)` in the constructor instead: its failure is
+only logged, and the region stays empty until a later model turn. `Start` is
+new in the next SDK preview. A CommunityToolkit.Mvvm shell calls it the same
+way.
+
 ### Navigate in a command
 
 Navigate in an ordinary `ReactiveCommand`. `PushAsync<TPage>()` asks the
