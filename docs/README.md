@@ -46,9 +46,18 @@ Add each new guide to `src/lib/guide-navigation.ts`, which orders the guide
 sidebar; the build fails while a guide is missing from it. Runic Translations
 consumer guides stay in their repository and appear in the sidebar as links.
 
-The build also writes `search-index.json` with the text of each guide section
-and product summary. The `/search/` page loads it and ranks results in the
-browser; there is no search service. `tests/link-check.test.mjs` resolves every
+The build also writes a search index of every guide section, product summary
+and API type; there is no search service. `search-index.json` holds titles,
+headings, paths and texts of up to 200 characters. Longer section texts are in
+`search-index/text/<entry>.json`, and `search-index/terms/<key>.json` shards map
+each of their words to the entries containing it, keyed by the first two or
+three characters of a query term. The `/search/` page loads the index on the
+first search, then only its terms' shards, the texts that may still gain the
+phrase bonus and the texts of the results shown, and ranks them in the browser.
+One-character terms match titles, headings and paths only.
+`tests/search.test.mjs` checks representative queries against a full-text
+search and the 400 KiB raw and 104 KiB gzip budget for what one search loads.
+`tests/link-check.test.mjs` resolves every
 internal `href`, `src`, `srcset` and social image in `build/`, and every
 fragment against the target page's `id` attributes. It checks the syntax of
 external links without fetching them.

@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { gzipSync } from 'node:zlib';
 import test from 'node:test';
 
 import {
@@ -15,7 +14,6 @@ import {
   resolveGuideLink,
   siteHrefForGitHubGuide,
 } from '../src/lib/guides-core.ts';
-import { prepareIndex, search, searchTerms } from '../src/lib/search-core.ts';
 
 const guidesRoot = new URL('../guides/', import.meta.url);
 const buildDirectory = new URL('../build/', import.meta.url);
@@ -357,43 +355,27 @@ test('portal pages link the rendered guides', () => {
     assert.ok(home.includes(`href="./guides/${path}"`), path);
 });
 
-test('builds a small offline search index over all guides and products', () => {
-  const raw = readFileSync(new URL('search-index.json', buildDirectory));
-  // Budget: the index loads only on the search page.
-  assert.ok(raw.length < 400 * 1024, `index is ${raw.length} bytes`);
-  assert.ok(gzipSync(raw).length < 104 * 1024, 'compressed index over budget');
-  const index = JSON.parse(raw.toString('utf8'));
-  assert.equal(index.version, 1);
+test('the offline search index covers all guides and products', () => {
+  const index = JSON.parse(
+    readFileSync(new URL('search-index.json', buildDirectory), 'utf8'),
+  );
+  assert.equal(index.version, 2);
   const pages = new Set(index.entries.map((entry) => entry.u.split('#')[0]));
   for (const guide of renderGuides(sources, docsFileExists))
     assert.ok(pages.has(guide.href), guide.href);
   assert.ok(pages.has('/products/runic-translations/'));
-  for (const entry of index.entries) {
+  index.entries.forEach((entry, id) => {
     assert.equal(typeof entry.t, 'string');
-    assert.equal(typeof entry.x, 'string');
-  }
-
-  const prepared = prepareIndex(index);
-  const [first] = search(prepared, 'host selection');
-  assert.equal(first.entry.u, '/guides/desktop/host-selection/');
-  assert.ok(
-    search(prepared, 'DynamicData').some((r) =>
-      r.entry.u.startsWith('/guides/application/guides/dynamicdata/'),
-    ),
-  );
-  assert.deepEqual(search(prepared, 'zzzz-not-a-word'), []);
-  assert.deepEqual(search(prepared, '   '), []);
-  assert.deepEqual(searchTerms('Runic.Assets  <VERSION> c#'), [
-    'runic.assets',
-    'version',
-    'c#',
-  ]);
-  const [result] = search(prepared, 'MessageFormat');
-  assert.ok(
-    result.excerpt.some(
-      (part) => part.match && /messageformat/i.test(part.text),
-    ),
-  );
+    const text =
+      entry.x ??
+      JSON.parse(
+        readFileSync(
+          new URL(`search-index/text/${id}.json`, buildDirectory),
+          'utf8',
+        ),
+      );
+    assert.equal(typeof text, 'string');
+  });
 });
 
 test('the search page works from a plain GET form', () => {

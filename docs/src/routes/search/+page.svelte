@@ -1,26 +1,45 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import { replaceState } from '$app/navigation';
-  import { prepareIndex, search, type SearchIndex } from '#lib/search-core.js';
+  import { SiteSearch, type SearchResponse } from '#lib/search-core.js';
   import SearchIcon from '@lucide/svelte/icons/search';
   import { onMount } from 'svelte';
 
   let query = $state('');
-  let index = $state<ReturnType<typeof prepareIndex> | null>(null);
+  let response = $state<SearchResponse | null>(null);
   let failed = $state(false);
   const shown = 20;
-  let matches = $derived(index ? search(index, query, Infinity) : []);
-  let results = $derived(matches.slice(0, shown));
+  let results = $derived(response?.results ?? []);
+
+  // The index loads on the first search, then only the files a query needs.
+  const site = new SiteSearch(async (path) => {
+    const reply = await fetch(`${resolve('/')}${path}`);
+    if (!reply.ok) throw new Error(`HTTP ${reply.status}`);
+    return reply.json();
+  });
 
   onMount(() => {
     query = new URLSearchParams(window.location.search).get('q') ?? '';
-    fetch(resolve('/search-index.json'))
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json() as Promise<SearchIndex>;
-      })
-      .then((data) => (index = prepareIndex(data)))
-      .catch(() => (failed = true));
+  });
+
+  $effect(() => {
+    const current = query;
+    if (!current.trim()) {
+      response = null;
+      return;
+    }
+    let active = true;
+    site.search(current, shown).then(
+      (next) => {
+        if (active) [response, failed] = [next, false];
+      },
+      () => {
+        if (active) failed = true;
+      },
+    );
+    return () => {
+      active = false;
+    };
   });
 
   function updateUrl() {
@@ -88,11 +107,11 @@
   <div aria-live="polite">
     {#if failed}
       <p class="search-status">The search index could not be loaded.</p>
-    {:else if query.trim() && index}
+    {:else if query.trim() && response}
       <p class="search-status">
-        {matches.length === 0
+        {response.total === 0
           ? 'No results.'
-          : `${matches.length > shown ? `${shown}+` : matches.length} result${matches.length === 1 ? '' : 's'}`}
+          : `${response.total > shown ? `${shown}+` : response.total} result${response.total === 1 ? '' : 's'}`}
       </p>
     {/if}
   </div>
