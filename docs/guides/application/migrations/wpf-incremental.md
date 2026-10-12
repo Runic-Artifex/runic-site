@@ -54,6 +54,31 @@ unselected tab. In `NavigationDialogHost`, `Button.IsDefault` and
 `Button.IsCancel` work as in `ShowDialog`. Both are new in SDK
 `0.7.0-preview.7`.
 
+Which departures ask a page's guard in a tabbed shell:
+
+- **Back, Replace, Clear and the other retiring operations** ask every page
+  they retire, and every page in the regions that a retired owned page owns.
+- **A window close** with `GuardWindowClose` clears the guarded regions, so it
+  asks their pages as retiring, whichever tab is selected.
+- **A tab switch** through `NavigationSelector.Region` asks the tab model's own
+  guard. It does not ask the tab's pages in SDK `0.7.0-preview.7`. From the
+  next SDK preview
+  ([runic-sdk#229](https://github.com/Runic-Artifex/runic-sdk/pull/229), not
+  yet released), it first asks the current page of each region that the tab
+  model owns, as a retained departure. A guard that keeps its page then keeps
+  the tab selected, and the pages keep their drafts when the switch commits.
+  `LeaveConfirmation` asks on a retained departure only with
+  `askOnRetain: true`.
+
+Only regions owned by the tab model are its pages. A region of the
+application that the tab merely exposes is not asked when the tab is left, so
+create a tab's page region with the tab model as its owner:
+
+```csharp docs-test=skip:pending-sdk-sync
+public CustomersTab(RunicNavigator navigator) =>
+    Pages = navigator.CreateRegion<object>(this, NavigationTarget.Own<object>(new CustomerListViewModel()));
+```
+
 ## 3. Optionally replace one View with a web View
 
 Add `Runic.Application.Views.Wpf` (`Runic.Application.Wpf` up to
