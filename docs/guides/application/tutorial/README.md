@@ -224,7 +224,7 @@ editor.Set(vm => vm.Title, "Groceries").EnsureOk();
 editor.Set(vm => vm.Body, "Milk, eggs").EnsureOk();
 
 var save = editor.Start(vm => vm.SaveCommand);
-Assert.Equal("accepted", save.Admission);
+await Assert.That(save.Admission).IsEqualTo("accepted");
 ```
 
 The frontend tests run the generated clients against generated typed mocks and

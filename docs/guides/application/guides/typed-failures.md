@@ -277,8 +277,8 @@ throws. Give every bridged `ReactiveCommand` a subscriber.
 everything else as `ReactiveCommandFailed` (event 1042):
 
 ```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
-SaveCommand = ReactiveCommand.CreateFromTask(SaveAsync, scheduler);
-DiscardCommand = ReactiveCommand.CreateFromTask(DiscardAsync, scheduler);
+SaveCommand = ReactiveCommand.CreateFromTask(SaveAsync);
+DiscardCommand = ReactiveCommand.CreateFromTask(DiscardAsync);
 // A ReactiveCommand also reports its exceptions on ThrownExceptions. The
 // Bridge already delivered declared failures; log anything else.
 _saveExceptions = SaveCommand.ObserveBridgeExceptions(logger);
@@ -299,13 +299,13 @@ reply and the operation status carry the encoded failure:
 
 ```csharp docs-test=source:examples/notes-view-first/Tests/NotesWindowTests.cs
 var reply = await editor.ExecuteAsync(vm => vm.SaveCommand);
-Assert.Equal("domain-failed", reply.ErrorKind);
-Assert.Equal("""{"$case":"titleTaken","existingTitle":"Groceries"}""", reply.Failure?.GetRawText());
+await Assert.That(reply.ErrorKind).IsEqualTo("domain-failed");
+await Assert.That(reply.Failure?.GetRawText()).IsEqualTo("""{"$case":"titleTaken","existingTitle":"Groceries"}""");
 
 // The operation path reports the same failure.
 var status = await editor.Start(vm => vm.SaveCommand).WaitAsync();
-Assert.Equal("domain-failed", status.Kind);
-Assert.Equal("titleTaken", status.Failure?.GetProperty("$case").GetString());
+await Assert.That(status.Kind).IsEqualTo("domain-failed");
+await Assert.That(status.Failure?.GetProperty("$case").GetString()).IsEqualTo("titleTaken");
 ```
 
 In the frontend, the generated typed mock fails with a declared failure in

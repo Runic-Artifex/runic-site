@@ -131,11 +131,14 @@ is synchronously publishing JavaScript. Full snapshots can coalesce at the
 delivery boundary; operation terminals and interaction requests do not use the
 broadcast channel.
 
-The `Runic.Navigation.ReactiveUI` adapters expose a context-backed scheduler
-provider. The default flavor returns `ReactiveUI.Primitives.Concurrency.ISequencer`; the System.Reactive
-flavor returns `System.Reactive.Concurrency.IScheduler`. Neither modifies a
-process-wide main-thread scheduler. Native UI dispatch and browser rendering
-remain owned by their hosts.
+The `Runic.Application.Views.ReactiveUI` adapters expose a context-backed
+scheduler provider. The default flavor returns `ReactiveUI.Primitives.Concurrency.ISequencer`; the System.Reactive
+flavor returns `System.Reactive.Concurrency.IScheduler`.
+`AddRunicReactiveModelContext()` also installs a main-thread scheduler that
+delivers on the model context of the running turn, so commands need no
+scheduler argument; a scheduler the application or UI platform set, such as
+WPF's dispatcher, is kept. Native UI dispatch and browser rendering remain
+owned by their hosts.
 
 `services.AddRunicReactiveModelContext()` is the DI setup for either selected
 adapter. It uses `TryAdd` for the scoped `IRunicModelContext`, singleton

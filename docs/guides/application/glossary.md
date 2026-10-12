@@ -40,6 +40,10 @@ clients and these guides. The first seven follow the glossary of the
   `RunicViewHost` hosts one View inside the visual tree. An open Window's
   `Host` property returns its per-Window adapter, an `IBridgeWindow`.
   [Choosing a host and MVVM library](choosing.md) compares the hosts.
+- **Window service**: `IRunicWindowService`, registered with
+  `AddRunicWindowService()`, opens another Window from a ViewModel or service,
+  in its own DI scope on the host that runs the application; see
+  [opening a Window from a ViewModel](samples/cross-window.md#open-a-window-from-a-viewmodel).
 - **Presentation**: what shows a Window's or View's web content on screen: an
   embedded WebView or an installed browser window, such as
   `DesktopBridgeWindow.Presentation` (a `DesktopWindow`). A presentation closes
@@ -76,5 +80,24 @@ clients and these guides. The first seven follow the glossary of the
   ViewModel that someone else owns, such as the Window's scope; an owned
   entry's ViewModel belongs to the entry, usually created for the visit, and is
   disposed when the entry retires.
+- **Entry context**: the `NavigationEntryContext` of one entry, with its id,
+  state and the operations it performs on itself, such as completing with a
+  result or going back. A ViewModel that the navigator constructs takes it as a
+  constructor parameter; one you create yourself receives it in
+  `INavigationInitialize`. The container never resolves it.
+- **Navigated to and from**: an entry becoming its region's current entry, on
+  its first commit and after every Back to it, and stopping being current.
+  `INavigationAware`, or `entry.WhenNavigatedTo` with ReactiveUI, reports both.
+  Unlike ReactiveUI activation, which follows a mounted View, they follow the
+  entry.
 - **Departure guard**: an `INavigationDepartureGuard` ViewModel that can refuse
-  to be left, for example while it has unsaved changes.
+  to be left, for example while it has unsaved changes. A leave confirmation,
+  `ReactiveLeaveConfirmation.WithInteraction` or `LeaveConfirmation.InDialog`,
+  asks the user; when nothing answers, the departure fails and the page stays.
+- **Result**: the value an entry pushed with `PushForResult` ends with.
+  `Completion` is `Completed` with the value, or `Dismissed` on every other
+  path.
+- **Close guard**: a Window with `GuardClose` asks `CanCloseAsync`, by default
+  the departure guards of its regions, before the user closes it.
+  `RequestCloseAsync()` asks the same way from code. CS-WebUI and browser
+  windows can't stay open, so they open unguarded with warning 1053.

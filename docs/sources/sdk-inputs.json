@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "e3e02e675e3072e120a51c9cc0487f980f26d7b3",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/e3e02e675e3072e120a51c9cc0487f980f26d7b3.tar.gz",
+  "revision": "ce194583d721c48dfb6785fc51dc1a71580234c7",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/ce194583d721c48dfb6785fc51dc1a71580234c7.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -10,7 +10,16 @@
     "examples/first-window-desktop/Program.cs",
     "examples/first-window/CounterViewModel.cs",
     "examples/first-window/Frontend/src/app.ts",
+    "examples/multi-window/Program.cs",
+    "examples/multi-window/ProjectService.cs",
+    "examples/multi-window/ProjectServices.cs",
+    "examples/multi-window/ProjectViewModel.cs",
+    "examples/multi-window/ProjectWindow.cs",
+    "examples/multi-window/SettingsStore.cs",
+    "examples/multi-window/Tests/ProjectWindowTests.cs",
+    "examples/notes-reactive-views/Frontend/src/document.ts",
     "examples/notes-reactive-views/Frontend/src/editor.ts",
+    "examples/notes-reactive-views/NotesApplication.cs",
     "examples/notes-reactive-views/ViewModels.cs",
     "examples/notes-view-first/Angular/src/app/bound-editor.ts",
     "examples/notes-view-first/Effect/src/editor.ts",
@@ -31,6 +40,12 @@
     "examples/wpf-hybrid-editor/App/MainWindow.xaml",
     "examples/wpf-hybrid-editor/Frontend/index.html",
     "examples/wpf-hybrid-editor/Model/EditorViewModel.cs",
+    "examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs",
+    "examples/wpf-navigation/NotesNavigation.ReactiveUI/Dialogs/ConfirmViewModel.cs",
+    "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailView.xaml",
+    "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailView.xaml.cs",
+    "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailViewModel.cs",
+    "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NotesListViewModel.cs",
     "packages/dotnet/Runic.Application.Views.ReactiveUI/README.md",
     "packages/dotnet/Runic.Application.Views.Wpf/README.md",
     "packages/dotnet/Runic.Application.Views/README.md",
@@ -42,10 +57,9 @@
     "packages/dotnet/Runic.Navigation/README.md",
     "packages/web/views-effect/README.md",
     "packages/web/views/README.md",
-    "tests/dotnet/Runic.Application.Testing.Tests/ReactiveNavigationFixture.cs",
+    "tests/dotnet/Runic.Application.Views.Desktop.Tests/CloseGuardTests.cs",
     "tests/dotnet/Runic.Application.Views.Desktop.Tests/PlatformServicesChecks.cs",
     "tests/dotnet/Runic.Platform.Windows.Tests/SettingsTests.cs",
-    "tests/fixtures/application/navigation-consumer/Program.cs",
     "tests/fixtures/application/navigation-consumer/Shell.cs",
     "tests/fixtures/application/operations-consumer/OperationsViewModel.cs",
     "tests/fixtures/application/wpf-bridge-consumer/Single/WpfSingle.csproj",
@@ -72,5 +86,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:c5dccbfabe66e39ca3fd257c168d9884f290e2777d28f82e0de665844e13103d"
+  "contentDigest": "sha256:1c7d972e622cc7547cd458fb7f2234ea54e0810a84938dfb2296b04f0102a0fe"
 }

@@ -4,6 +4,11 @@ Use `DesktopWindowOptions.ConfirmCloseAsync` when closing a native window can di
 application state. The application owns the decision and its UI; Desktop owns native
 interception and window lifetime. No viewmodel or CommunityToolkit adapter is involved.
 
+In a Runic Application Views app, set `GuardClose` on the `RunicWindow<T>`
+instead, so the departure guards of its navigation regions decide; see
+[Guard the Window close](../application/guides/pages-and-navigation.md#guard-the-window-close).
+A Window that has both asks its own guard first, then `ConfirmCloseAsync`.
+
 ```csharp docs-test=skip:illustrative-fragment
 await using var window = await surface.OpenWindowAsync(new DesktopWindowOptions
 {

@@ -28,7 +28,9 @@ this for you, as the template does. It registers `IFileDialogs`,
 Window; a ViewModel takes them in its constructor, and they bind to the
 Window's native owner when it opens, with the provider for the running platform
 and backend. Until then, and on CS-WebUI, which has no native owner, they
-report `OwnerUnavailable`.
+report `OwnerUnavailable`. It also registers `IDesktopSettings` once for
+the application, created from the provider for the running platform; see
+[App settings and desktop preferences](application/samples/settings.md).
 
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native

@@ -32,6 +32,10 @@ It registers these services:
 | `IDesktopFileLauncher`    | Open a file in its app, or show it in its folder.   |
 | `IWindowPlatformServices` | All of the above, plus `GetSnapshot()`.             |
 
+It also registers `IDesktopSettings`, the desktop's appearance preferences.
+That one belongs to the application, not to a Window;
+[App settings and desktop preferences](settings.md) covers it.
+
 A ViewModel takes them in its constructor, like any other service. The
 constructor runs before the Window opens, so the services can't show a dialog
 yet:

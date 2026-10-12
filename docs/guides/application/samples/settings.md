@@ -6,13 +6,13 @@ preferences, such as dark mode.
 
 ## Two different things
 
-|                | App settings                        | `IDesktopSettings`                                   |
-| -------------- | ----------------------------------- | ---------------------------------------------------- |
-| Owner          | Your application                    | The operating system and the user's desktop          |
-| Examples       | Recent files, window size, a theme  | Light or dark scheme, accent color, reduced motion   |
-| Read or write  | Both                                | Read only                                            |
-| Where it lives | A file in the app's data folder     | Windows settings, macOS AppKit, xdg-desktop-portal   |
-| Runic API      | None needed: plain .NET file access | `Runic.Platform`, created from the platform provider |
+|                | App settings                        | `IDesktopSettings`                                           |
+| -------------- | ----------------------------------- | ------------------------------------------------------------ |
+| Owner          | Your application                    | The operating system and the user's desktop                  |
+| Examples       | Recent files, window size, a theme  | Light or dark scheme, accent color, reduced motion           |
+| Read or write  | Both                                | Read only                                                    |
+| Where it lives | A file in the app's data folder     | Windows settings, macOS AppKit, xdg-desktop-portal           |
+| Runic API      | None needed: plain .NET file access | `Runic.Platform`, registered by `AddRunicPlatformServices()` |
 
 A setting such as "Theme: follow the system, light or dark" uses both: the app
 stores the user's choice, and when the choice is "follow the system", it reads
@@ -26,28 +26,31 @@ after your app. Your app owns that folder, so it can write the file directly,
 without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
-This minimal store loads the settings once and saves them by writing a
-temporary file and moving it over the old one, so a crash never leaves a
-half-written file. It uses System.Text.Json's source generator, so it works
-with NativeAOT:
+This store, from the
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window),
+loads the settings on demand and saves them by writing a temporary file and
+moving it over the old one, so a crash never leaves a half-written file. It
+uses System.Text.Json's source generator, so it works with NativeAOT:
 
-```csharp docs-test=skip:missing-sdk-example
+```csharp docs-test=source:examples/multi-window/SettingsStore.cs
 public sealed record AppSettings(string Theme = "system", string? LastFolder = null);
 
 [JsonSerializable(typeof(AppSettings))]
 internal sealed partial class SettingsJson : JsonSerializerContext;
-
-public sealed class SettingsStore
+// ...
+public sealed class SettingsStore(string path)
 {
-    private readonly string _path = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MyApp", "settings.json");
     private readonly Lock _gate = new();
+
+    // The per-user application data folder, in a folder named after the app.
+    public static string DefaultPath { get; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RunicMultiWindow", "settings.json");
 
     public AppSettings Load()
     {
         lock (_gate)
-            return File.Exists(_path)
-                ? JsonSerializer.Deserialize(File.ReadAllText(_path), SettingsJson.Default.AppSettings) ?? new()
+            return File.Exists(path)
+                ? JsonSerializer.Deserialize(File.ReadAllText(path), SettingsJson.Default.AppSettings) ?? new()
                 : new();
     }
 
@@ -55,19 +58,21 @@ public sealed class SettingsStore
     {
         lock (_gate)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            var temporary = _path + ".tmp";
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var temporary = path + ".tmp";
             File.WriteAllText(temporary, JsonSerializer.Serialize(settings, SettingsJson.Default.AppSettings));
-            File.Move(temporary, _path, overwrite: true);
+            File.Move(temporary, path, overwrite: true);
         }
     }
 }
 ```
 
-Register it as a singleton, so every Window reads and writes the same file:
+The path is a constructor parameter, so a test can point the store at a
+temporary file. Register it as a singleton, so every Window reads and writes
+the same file:
 
-```csharp docs-test=skip:missing-sdk-example
-services.AddSingleton<SettingsStore>();
+```csharp docs-test=source:examples/multi-window/ProjectServices.cs
+services.AddSingleton(new SettingsStore(SettingsStore.DefaultPath));
 ```
 
 - The lock matters. Each Window has its own model context, and two Windows can
@@ -99,8 +104,28 @@ the platform doesn't report is `null`, not `false`. Every read returns a
 value that you handle, not an exception.
 
 Unlike the file dialogs, `IDesktopSettings` belongs to the application, not to
-a Window, and `AddRunicPlatformServices()` doesn't register it. Create it from
-the provider for your platform. You own it and dispose it at shutdown:
+a Window. Since runic-sdk
+[`ce194583`](https://github.com/Runic-Artifex/runic-sdk/tree/ce194583d721c48dfb6785fc51dc1a71580234c7),
+newer than SDK `0.7.0-preview.6`, `AddRunicPlatformServices()` registers it as one singleton, which it
+creates from the provider for the running platform when it is first resolved;
+the service provider disposes it. Windows reads its settings, macOS reads
+AppKit, and Linux reads xdg-desktop-portal with either GTK version, without
+loading GTK. On other systems, and with CS-WebUI's registration, every read
+returns `Unavailable(ProviderNotConfigured)`. To replace it, for example in a
+test, register your own `IDesktopSettings` before calling
+`AddRunicPlatformServices()`, or after it as the multi-window tests do:
+
+```csharp docs-test=source:examples/multi-window/Tests/ProjectWindowTests.cs
+_services = new ServiceCollection()
+    .AddProject()
+    .AddSingleton<IRunicWindowService>(_windows)
+    .AddSingleton(new SettingsStore(_settingsPath))
+    .AddSingleton<IDesktopSettings>(new FixedDesktopSettings(DesktopColorScheme.Dark))
+    .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+```
+
+With SDK `0.7.0-preview.6`, or outside a Runic Views app, create it from the
+platform provider yourself; you own it and dispose it at shutdown:
 
 | Platform     | Factory                                                          |
 | ------------ | ---------------------------------------------------------------- |
@@ -119,13 +144,36 @@ if (await settings.ReadAsync() is not PlatformResult<DesktopAppearance>.Success 
     throw new InvalidOperationException("Windows appearance read failed.");
 ```
 
-To follow changes, watch them in a background loop and commit each value to a
-ViewModel with the model context, because the values arrive outside it:
+A ViewModel takes `IDesktopSettings` in its constructor. To follow changes,
+watch them in a background loop and commit each value with the Window's model
+context, because the values arrive outside it. The multi-window example's
+ViewModel starts the loop in its constructor and stops it in `Dispose`:
 
-```csharp docs-test=skip:missing-sdk-example
-await foreach (var result in settings.WatchAsync(cancellationToken))
-    if (result is PlatformResult<DesktopAppearance>.Success { Value: var appearance })
-        await context.InvokeAsync(() => ColorScheme = appearance.ColorScheme, cancellationToken);
+```csharp docs-test=source:examples/multi-window/ProjectViewModel.cs
+// The values arrive outside the model context, so each one is committed in a turn of it.
+private async Task WatchAppearanceAsync(IDesktopSettings settings, CancellationToken cancellationToken)
+{
+    try
+    {
+        await foreach (var result in settings.WatchAsync(cancellationToken))
+            if (result is PlatformResult<DesktopAppearance>.Success { Value: var appearance })
+                await _context.InvokeAsync(() => DesktopScheme = appearance.ColorScheme.ToString(), cancellationToken);
+    }
+    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+    {
+    }
+}
+```
+
+Its theme command saves the user's choice in the settings file, and the View
+uses `DesktopScheme` while the choice is "system":
+
+```csharp docs-test=source:examples/multi-window/ProjectViewModel.cs
+ChooseThemeCommand = ReactiveCommand.Create<string>(theme =>
+{
+    settings.Save(settings.Load() with { Theme = theme });
+    Theme = theme;
+}).DisposeWith(_disposables);
 ```
 
 The frontend can also read `prefers-color-scheme` and
