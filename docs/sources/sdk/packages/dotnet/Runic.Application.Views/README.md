@@ -247,6 +247,27 @@ or a service, register `IRunicWindowService` and take it in a constructor:
 services.AddRunicWindowService();
 ```
 
+With ReactiveUI, as in the
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window):
+
+```csharp
+public sealed class ProjectViewModel : ReactiveObject
+{
+    public ProjectViewModel(IRunicWindowService windows)
+    {
+        // Opens another Window on the same project, in its own scope. The service releases it when it closes.
+        NewWindowCommand = ReactiveCommand.CreateFromTask(async token =>
+        {
+            await windows.OpenWindowAsync<ProjectWindow>(cancellationToken: token);
+        });
+    }
+
+    public ReactiveCommand<RxVoid, RxVoid> NewWindowCommand { get; }
+}
+```
+
+With CommunityToolkit.Mvvm:
+
 ```csharp
 public sealed partial class ProjectViewModel(IRunicWindowService windows) : ObservableObject
 {
@@ -276,6 +297,49 @@ public sealed partial class ProjectViewModel(IRunicWindowService windows) : Obse
 - The interface has one method, so a test registers a fake that records the
   requested Window types after the application's services.
 
+### A Window with its own page
+
+Every Window opens `index.html` unless `RunicWindowOptions.StartPage` names
+another page. With Vite, each page is a build input, and listing inputs replaces
+the default `index.html`, so keep it in the list. The `runic-app` template's
+`vite.config.ts` already lists it; add the second page next to it:
+
+```ts
+// Frontend/vite.config.ts (Vite 8)
+export default defineConfig({
+  plugins: [svelte(), runic({ desktop: true })],
+  build: {
+    rolldownOptions: { input: ["index.html", "settings.html"] },
+    outDir: "dist",
+    emptyOutDir: true,
+    target: "es2022"
+  }
+});
+```
+
+Create `Frontend/settings.html` beside `index.html`, for example as a copy that
+loads its own entry script, and open it with:
+
+```csharp
+await windows.OpenWindowAsync<SettingsWindow>(new RunicWindowOptions { StartPage = "settings.html" });
+```
+
+The build writes `www/settings.html` beside `www/index.html`, and
+`dotnet runic dev` serves both. Vite resolves inputs against its root, the
+frontend directory. The object form, `input: { main: "index.html", settings:
+"settings.html" }`, names the output chunks; `rollupOptions` still works in
+Vite 8 but is deprecated. A page in a folder, such as `pages/settings.html`,
+works the same way with `StartPage = "pages/settings.html"`:
+`@runic-artifex/vite-plugin-runic` points its host scripts (`webui.js` and the
+Runic client script) at the web root.
+
+A page that the build does not emit fails before a window waits for it: on
+Runic Desktop, opening the Window throws `RunicWindowConfigurationException`
+with the code `content-entry-not-found`, which names the page and the pages the
+content root has; `dotnet runic dev` stops with `RAPPDEV1009` when a build
+input's file is missing. CS-WebUI does not check the page before it opens
+the window.
+
 ### Guarding a user close
 
 A Window that sets `GuardClose` asks `CanCloseAsync` before a close the user
@@ -290,6 +354,8 @@ public sealed partial class EditorWindow : RunicWindow<EditorViewModel>
 }
 ```
 
+The declaration is the same for ReactiveUI and CommunityToolkit.Mvvm
+ViewModels; only the guards and the commands below differ.
 The default `CanCloseAsync` clears each `NavigationRegion<T>` the Window's
 ViewModel exposes, in declaration order, so the departure guards of their
 entries decide, as WPF's `NavigationHost.GuardWindowClose` does (see
@@ -312,7 +378,21 @@ To close a Window from code the way the close button does, call
 closed and `false` when `CanCloseAsync` kept it open, like `Window.Close()`
 in WPF and Avalonia, which raises the cancellable `Closing`, but awaitable.
 Without `GuardClose` it closes. Keep the Window that `OpenWindowAsync`
-returned, including from `IRunicWindowService`, to call it from a command:
+returned, including from `IRunicWindowService`, to call it from a command; a
+ViewModel closes its own Window through `IRunicWindowContext` (see
+[Closing a ViewModel's own Window](#closing-a-viewmodels-own-window)).
+With ReactiveUI, the command passes its token to the request. The Bridge starts
+the command in a turn of its own Window's model context, so the body sets state
+directly after `await`:
+
+```csharp
+CloseEditorCommand = ReactiveCommand.CreateFromTask(async token =>
+{
+    if (!await _editor.RequestCloseAsync(token)) StatusText = "The editor has unsaved changes.";
+});
+```
+
+With CommunityToolkit.Mvvm:
 
 ```csharp
 [RelayCommand]
@@ -342,6 +422,68 @@ after a user close.
   Save drafts as the user edits, or handle the close afterwards, where that
   matters. `RequestCloseAsync` still asks there, because the application is
   the one closing.
+
+### Closing a ViewModel's own Window
+
+A Quit or Done command closes the Window its ViewModel belongs to through
+`IRunicWindowContext`, which `AddRunicWindowService()` registers per scope.
+`OpenWindowAsync` binds it to the Window it opens before it resolves the
+Window's ViewModel, so the ViewModel takes it in its constructor and needs no
+holder that the code calling `OpenWindowAsync` fills in:
+
+```csharp
+services.AddRunicWindowService();
+```
+
+With ReactiveUI:
+
+```csharp
+public sealed partial class EditorViewModel : ReactiveObject
+{
+    public EditorViewModel(IRunicWindowContext window)
+    {
+        // Closes this Window as its close button does: GuardClose and the navigation guards decide.
+        QuitCommand = ReactiveCommand.CreateFromTask(async token =>
+        {
+            if (!await window.RequestCloseAsync(token)) StatusText = "Save or discard the draft first.";
+        });
+    }
+
+    [Reactive] public partial string StatusText { get; set; } = "";
+
+    public ReactiveCommand<RxVoid, RxVoid> QuitCommand { get; }
+}
+```
+
+With CommunityToolkit.Mvvm:
+
+```csharp
+public sealed partial class EditorViewModel(IRunicWindowContext window) : ObservableObject
+{
+    [ObservableProperty] private string _statusText = "";
+
+    [RelayCommand]
+    private async Task QuitAsync()
+    {
+        if (!await window.RequestCloseAsync()) StatusText = "Save or discard the draft first.";
+    }
+}
+```
+
+- `RequestCloseAsync(cancellationToken)` is the Window's own
+  `RequestCloseAsync`: it asks `CanCloseAsync` when the Window sets
+  `GuardClose`, returns `false` with the Window open when that keeps it, and
+  `true` once it closed. It works on Runic Desktop and on CS-WebUI, where the
+  request is guarded although the browser's own close is not.
+- The context belongs to the Window's DI scope. A scoped service that the
+  ViewModel takes shares it; a navigation entry created with
+  `RunicNavigatorOptions.CreateEntryScopes` has a scope of its own, so pass the context to it from
+  the Window's ViewModel. Resolved outside a Window's scope, or called before
+  the Window has opened, for example from the ViewModel's constructor, it
+  throws `InvalidOperationException`.
+- The interface has one method, so a test registers a fake that answers
+  `true` or `false` after the application's services, or opens the Window and
+  lets its guards decide.
 
 ### Moved and renamed since 0.7.0-preview.6
 
@@ -612,7 +754,10 @@ generation; every other code fails the build.
 The build targets run the generator and the frontend install and build
 commands without wrapping their failures in MSB3073. Errors and warnings that a
 command prints in the canonical `file(line,column): error CODE: text` form, such
-as the generator's and `tsc`'s, are logged once with their code and location. A
+as the generator's, `tsc`'s and `vue-tsc`'s, are logged once with their code and location.
+When `svelte-check` fails, its errors and warnings are logged at their file, line and
+column too, without a code, from its default output or `--output machine`; warnings
+of a check that passes stay in the command output. A
 failed command that reports no such error gets one summary error instead:
 `RUNICBRIDGE001` for the generator, `RUNICBRIDGE016` for the frontend
 commands.
@@ -634,7 +779,7 @@ commands.
 | `RUNICBRIDGE013` (warning) | A public, concrete ViewModel in the application assembly can be put in a ViewModel content property, ViewModel collection or `NavigationRegion<TContent>` slot, but has no View, so pushing or presenting it throws `NotSupportedException` naming the slot and the type. Broad slot types are not checked: framework types (System, ReactiveUI, CommunityToolkit), a type the slot's owner or a Window's ViewModel also derives from or implements, and a type that more than eight ViewModels without a View could fill. | Add a View, such as `public sealed partial class SettingsView : RunicView<SettingsViewModel>;` (with the slot's `[RunicViewContract]`, if any). If the type is never presented there, suppress the warning with `<NoWarn>$(NoWarn);RUNICBRIDGE013</NoWarn>`. |
 | `RUNICBRIDGE014` | A project declares Runic Views, but `RunicApplicationFrontendDirectory` does not exist or, with the default build command, has no `package.json`. Reported by the build targets. | Create the frontend there, point `RunicApplicationFrontendDirectory` at your frontend package, or set `RunicApplicationFrontendBuildEnabled=false` when another tool builds it. |
 | `RUNICBRIDGE015` (warning) | A project declares a Runic Window or View, but generation is off because it references no host adapter and not `Runic.Application.Views` directly, so no bridge, `AddRunicViews()` or client is generated. Reported by the build targets. | Set `RunicApplicationFrontendGenerationEnabled=true` to generate in that project, or `false` when another project generates its Views. |
-| `RUNICBRIDGE016` | The frontend install or build command failed without reporting an error in the canonical `file(line,column): error CODE: text` form (a Vite or package-manager error, for example), or the install created no `node_modules` for declared dependencies. The command's own output is printed above the error. Reported by the build targets. | Fix the problem the command reports, or run `dotnet runic doctor` to check the package manager and lock file. |
+| `RUNICBRIDGE016` | The frontend install or build command failed without reporting an error in the canonical `file(line,column): error CODE: text` form or as a `svelte-check` error (a Vite or package-manager error, for example), or the install created no `node_modules` for declared dependencies. The command's own output is printed above the error. Reported by the build targets. | Fix the problem the command reports, or run `dotnet runic doctor` to check the package manager and lock file. |
 | `RUNICBRIDGE017` (warning) | The project, an import or the command line sets a build property or item by its 0.7.0-preview.6 name (`RunicBridge*`, `RunicViewsWindowProject`). The old name still applies in this preview. Reported by the build targets. | Rename it to the `RunicApplicationFrontend*` name in the message; see the [rename table](#moved-and-renamed-since-070-preview6). |
 
 ## Build properties
@@ -954,13 +1099,16 @@ output accordingly. The message properties are listed per event.
 | 1040 | `RoutedRegionRouteIncompatible` | Error | A ReactiveUI `ReactiveRoutedRegion<T>` receives a ViewModel that is not a `T`, so it presents no content. | `Region`, `Model` |
 | 1041 | `RoutedRegionRouterFailed` | Error | The router observed by a `ReactiveRoutedRegion<T>` fails; the region keeps its last content. | `Region`, `ErrorType` |
 | 1042 | `ReactiveCommandFailed` | Error | A bridged ReactiveUI command reports on `ThrownExceptions` an exception that no Bridge call received, while a generated Bridge presents it, or a command or object observed with `ObserveBridgeExceptions(logger)` reports one; declared `RunicFailureException`s and cancellations are not logged. | `Source` (`Model.Command` for the Bridge; the command expression or `sourceName` for `ObserveBridgeExceptions`), `ErrorType` |
-| 1043 | `ReactiveSchedulerOutsideModelTurn` | Warning | Work is scheduled on the model-context main-thread scheduler that `AddRunicReactiveModelContext()` installs, outside a model turn, so it runs on the scheduler it replaced. Logged once per process; to `Trace` unless `InstallMainThreadScheduler(loggerFactory)` received a logger factory. | `Fallback` |
+| 1043 | `ReactiveSchedulerOutsideModelTurn` | Warning | Work is scheduled on the model-context main-thread scheduler that `AddRunicReactiveModelContext()` installs, outside a model turn, so it runs on the scheduler it replaced. Logged once per ViewModel type found on the call stack, and once for work with no ViewModel there, such as a timer. Runic Desktop, CS-WebUI and `RunicWindowTestHost.Create` pass the application's logger factory when a window opens; before that, or without one, it goes to `Trace`. | `Source`, `Fallback` |
 | 1050 | `WindowRegistrationMissing` | Error | `ValidateWindow` or `OpenWindowAsync` finds a Window's generated Bridge unregistered, on any host. | `Code`, `DiagnosticMessage`, `Remediation` |
 | 1051 | `WindowReleaseFailed` | Error | `IRunicWindowService` fails to release a Window it opened, after that Window closed. | `Window`, `ErrorType` |
 | 1052 | `WindowCloseGuardFailed` | Error | A guarded Window's `CanCloseAsync` throws; the window stays open. A departure guard that throws is logged by the navigator as 1060 instead. | `Window`, `ErrorType` |
 | 1053 | `WindowCloseGuardUnavailable` | Warning | A Window with `GuardClose` opens on a presentation that cannot keep its window open, such as CS-WebUI or a browser, so a user close does not ask `CanCloseAsync`. | `Window`, `Presentation` |
+| 1090 | `ReactiveSchedulerKept` | Information | A Runic Desktop, CS-WebUI or test-host window opens while ReactiveUI's main-thread scheduler is one set before `AddRunicReactiveModelContext()`, so Runic's was not installed. Once per scheduler type; a UI dispatcher's scheduler, such as WPF's, is not logged. | `Scheduler` |
+| 1091 | `ReactiveSchedulerReplaced` | Warning | Such a window opens after another scheduler replaced the installed one, for example a later `RxAppBuilder` `BuildApp()` with `WithPlatformServices()`. Call `WithRunicModelContext()` on that builder. Once per scheduler type; a UI dispatcher's scheduler is not logged. | `Scheduler` |
 | 2000 | `DesktopSnapshotDeliveryFailed` | Error | Runic Desktop cannot run a state delivery script. | `Route`, `ErrorType` |
 | 2002 | `DesktopWindowCloseAfterOpen` | Warning | `RUNIC_APPLICATION_CLOSE_AFTER_OPEN=1` closed a Desktop window right after it opened. | `Variable` |
+| 2003 | `DesktopPortalDiagnostic` | Warning or Debug | On Linux, xdg-desktop-portal reports a diagnostic for the notifications `AddRunicPlatformServices()` registers: Warning for a rejected identity, an unavailable portal or a denied request, Debug for an accepted request or registration. | `Code`, `DiagnosticMessage`, `Remediation` |
 | 3000 | `WindowCloseCancellationCallbackFailed` | Error | A Runic Desktop close-cancellation callback throws. | `ErrorType` |
 | 3001 | `WindowCloseConfirmationFailed` | Error | A Runic Desktop close confirmation throws; the Window stays open. | `ErrorType` |
 | 3002 | `DesktopConfigurationInvalid` | Error | `DesktopHost.Validate` finds a check that fails the window request. | `Code`, `Option`, `DiagnosticMessage`, `Remediation` |
@@ -984,7 +1132,7 @@ Navigation (1060-1075) and the model context (1030-1033) log under
 section. Events 2000 and 2002 use `Runic.Application.Views.Desktop`. Events 3000-3005
 use `Runic.Desktop` and need `DesktopHostOptions.LoggerFactory`.
 
-Events 1040-1042 come from `Runic.Application.Views.ReactiveUI` (and its `.Reactive`
+Events 1040-1043, 1090 and 1091 come from `Runic.Application.Views.ReactiveUI` (and its `.Reactive`
 flavor) and also use `Runic.Application.Views`. Events 1040 and 1041 need the
 `ReactiveRoutedRegion<T>(router, loggerFactory)` constructor, which a
 ViewModel can call with an `ILoggerFactory` injected from DI, as

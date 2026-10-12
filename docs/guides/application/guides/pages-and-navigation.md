@@ -59,14 +59,14 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
 `WhenNavigatedTo`, the result commands, `ReactiveLeaveConfirmation` and
-`GuardClose` are new in SDK `0.7.0-preview.7`, which this guide follows.
+`GuardClose` are new in SDK `0.7.0-preview.7`. This guide follows `0.7.0-preview.8`.
 
 ### Coming from ReactiveUI navigation
 
@@ -106,7 +106,7 @@ dotnet add package Runic.Navigation.ReactiveUI --version <VERSION>
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.7/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.8/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -125,7 +125,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -188,25 +188,30 @@ the region with the page as its initial target, because building the page
 would need the service again. Create the region empty in the service, and
 start it in the Window's ViewModel, where both exist:
 
-```csharp docs-test=skip:pending-sdk-sync
-public sealed class AppNavigation // services.AddScoped<AppNavigation>()
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+public sealed class AppNavigation // registered per window scope
 {
     public AppNavigation(RunicNavigator navigator) => Main = navigator.CreateRegion<IPage>(this);
 
     public NavigationRegion<IPage> Main { get; }
 }
 
-public sealed class ListViewModel(AppNavigation navigation) : ReactiveObject, IPage
-{
-    // OpenCommand pushes the detail page into navigation.Main.
-}
+public sealed class ListViewModel(AppNavigation navigation) : IPage { /* pushes into navigation.Main */ }
 
-public ShellViewModel(AppNavigation navigation, ListViewModel list)
+public sealed class ShellViewModel
 {
-    Main = navigation.Main;
-    Main.Start(NavigationTarget.Borrow<IPage>(list));
+    public ShellViewModel(AppNavigation navigation, ListViewModel list)
+    {
+        Main = navigation.Main;
+        Main.Start(NavigationTarget.Borrow<IPage>(list)); // or NavigationTarget.Create<ListViewModel>()
+    }
+
+    public NavigationRegion<IPage> Main { get; }
 }
 ```
+
+`NavigationTarget.Create<ListViewModel>()` instead builds the list from the
+Window's services, and the region owns it.
 
 `Start` commits the root page before it returns, like an initial target of
 `CreateRegion`: the page's `OnNavigatedTo` and the region's change
@@ -216,8 +221,8 @@ notifications run on the calling thread, and `Main.Current` is the list when
 once, before any other navigation of the region; use `ResetAsync` after that.
 Don't use `_ = Main.ResetAsync(...)` in the constructor instead: its failure is
 only logged, and the region stays empty until a later model turn. `Start` is
-new in the next SDK preview. A CommunityToolkit.Mvvm shell calls it the same
-way.
+new in SDK `0.7.0-preview.8`. A CommunityToolkit.Mvvm or ReactiveUI shell
+calls it the same way.
 
 ### Navigate in a command
 
@@ -486,12 +491,18 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   and returns `false` when the guards kept it open. Keep the Window that
   `OpenWindowAsync` returned and call it from a `ReactiveCommand`:
 
-  ```csharp docs-test=skip:pending-sdk-sync
+  ```csharp docs-test=source:tests/dotnet/Runic.Application.Testing.Tests/LeaveGuardRoutingTests.cs
   CloseEditorCommand = ReactiveCommand.CreateFromTask(async token =>
   {
       if (!await _editor.RequestCloseAsync(token)) StatusText = "The editor has unsaved changes.";
   });
   ```
+
+  A ViewModel closes its own Window, for example from a Quit command, by
+  taking `IRunicWindowContext` in its constructor and calling its
+  `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
+  it is new in SDK `0.7.0-preview.8`; see
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -570,6 +581,6 @@ private async Task CloseEditorAsync()
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.
