@@ -310,6 +310,10 @@ const removeLeaveHandler = view.interactions.confirmLeave.handle(async (request,
 });
 ```
 
+The View registers its handler when it mounts. A departure during the page's
+first render, such as a Window close just as the page opened, therefore gets
+the ViewModel's .NET fallback above, which keeps the edits.
+
 A WPF View answers in `WhenActivated`. Its XAML sets
 `ViewModel="{Binding}"`, so the ReactiveUI View receives the page that the
 region presents:
@@ -440,14 +444,14 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   decide, and a guard that refuses or fails keeps the Window open. Override it
   to add a check, and call the base method to keep the guards.
 - `RequestCloseAsync()` closes the Window from code as its close button does,
-  and returns `false` when the guards kept it open:
+  and returns `false` when the guards kept it open. Keep the Window that
+  `OpenWindowAsync` returned and call it from a `ReactiveCommand`:
 
-  ```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
-  [RelayCommand]
-  private async Task CloseEditorAsync()
+  ```csharp docs-test=skip:pending-sdk-sync
+  CloseEditorCommand = ReactiveCommand.CreateFromTask(async token =>
   {
-      if (!await _editor.RequestCloseAsync()) StatusText = "The editor has unsaved changes.";
-  }
+      if (!await _editor.RequestCloseAsync(token)) StatusText = "The editor has unsaved changes.";
+  });
   ```
 
 - The page's web View asks the user, as it does for its Close: the close is the
@@ -455,7 +459,8 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   in that Window. If the View unmounts during the question, the Window stays
   open. If the application closes the Window meanwhile (`CloseAsync`), the
   question is cancelled and the guard's discard doesn't run. A .NET fallback
-  handler answers only when no View is mounted.
+  handler answers only when no View is mounted, which includes a close during
+  the page's first render, before its View has registered its handler.
 - Runic Desktop's embedded window asks. CS-WebUI and a browser window can't
   keep their window open: the Window opens unguarded and logs warning 1053
   `WindowCloseGuardUnavailable`, and a user close doesn't ask. Save drafts as
@@ -509,7 +514,16 @@ entry context in its constructor, as the ReactiveUI pages do, and answers with
 `CompleteAsync` and `DismissAsync`; see
 [Ask the user from a ViewModel](../samples/prompts.md#with-communitytoolkitmvvm-a-dialog-region).
 Toolkit pages implement `INavigationAware` instead of the adapter's
-`WhenNavigatedTo`, and use `GuardClose` the same way.
+`WhenNavigatedTo`, and use `GuardClose` the same way. A `[RelayCommand]`
+closes a kept Window with `RequestCloseAsync`:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+[RelayCommand]
+private async Task CloseEditorAsync()
+{
+    if (!await _editor.RequestCloseAsync()) StatusText = "The editor has unsaved changes.";
+}
+```
 
 ## Next steps
 

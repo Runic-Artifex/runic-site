@@ -132,12 +132,20 @@ resolve. Content you create yourself and pass with `NavigationTarget.Own` or
 `Borrow` exists before its entry, so it receives the context in
 `INavigationInitialize.InitializeAsync` instead.
 
-A command asks with `PushForResult`. The navigator creates the dialog's
-ViewModel with its input, here the message:
+A command asks with `PushForResult`. A dialog that takes its entry and a
+message in its constructor, as `ConfirmNavigationViewModel` does, is created
+with the factory overload of `NavigationTarget.Create`: the navigator calls the
+factory with the window's services and the new entry's context. The SDK's
+ReactiveUI WPF example deletes a note this way:
 
-```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
-var picked = dialog.PushForResult<bool>(NavigationTarget.Create<ConfirmViewModel, string>("Discard?")); // input and a result
+```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NotesListViewModel.cs
+var answer = await regions.Dialog.PushForResult<bool>(NavigationTarget.Create<ConfirmViewModel>( // [S2]
+    (_, dialog) => new ConfirmViewModel(dialog, $"Delete '{note.Title}'?")), cancellationToken: token).Completion; // [S2]
+if (answer is NavigationCompletion<bool>.Completed { Value: true }) // [S2]
 ```
+
+`NavigationTarget.Create<TDialog, TInput>(input)` is for a dialog that takes
+its input in `INavigationInitialize<TInput>` instead of its constructor.
 
 `PushForResult` returns a request whose `Completion` task ends as
 `NavigationCompletion<bool>.Completed` with the value when the dialog called
