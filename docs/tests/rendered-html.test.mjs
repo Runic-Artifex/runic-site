@@ -412,7 +412,7 @@ test('product documentation areas link to their owning guides', async () => {
     ],
     [
       'runic-command-line',
-      `${github}runic-cli-sdk/blob/v0.6.0-preview.4/README.md`,
+      `${github}runic-cli-sdk/blob/v0.6.0-preview.5/README.md`,
     ],
   ]) {
     const html = await render(`/products/${slug}`);

@@ -27,10 +27,29 @@ this for you, as the template does. It registers `IFileDialogs`,
 `ITextClipboard`, `IDesktopFileLauncher` and `IWindowPlatformServices` per
 Window; a ViewModel takes them in its constructor, and they bind to the
 Window's native owner when it opens, with the provider for the running platform
-and backend. Until then, and on CS-WebUI, which has no native owner, they
-report `OwnerUnavailable`. It also registers `IDesktopSettings` once for
+and backend. Until then, on CS-WebUI, which has no native owner, and in a
+`RunicDesktopHost` run with `RUNIC_APPLICATION_SERVE_ONLY=1`, which opens no
+window, they report `OwnerUnavailable`. It also registers `IDesktopSettings` once for
 the application, created from the provider for the running platform; see
 [App settings and desktop preferences](application/samples/settings.md).
+An application that targets `net10.0-windows`, such as a WPF application, gets
+an assembly of `Runic.Application.Views.Desktop` that references only
+`Runic.Platform.Windows`, so it doesn't ship the Linux and macOS providers.
+
+`AddRunicPlatformServices()` also registers one `IDesktopNotifications` for the
+application, so a ViewModel takes it in its constructor without an
+`OperatingSystem` branch. Pass the application ID, as in
+`services.AddRunicPlatformServices("org.example.Notes")`: on Windows the
+AppUserModelID your installer registers with the shell, on Linux the
+reverse-DNS ID of the installed desktop entry (`org.example.Notes` for
+`org.example.Notes.desktop`); macOS uses the bundle identifier. Without an ID,
+the Linux portal infers the identity from the desktop session, which suits
+development, and Windows requests return `Unavailable(ProviderNotConfigured)`,
+as do requests through CS-WebUI's registration. Portal diagnostics of these
+notifications are logged as event 2003. To compose the service yourself, call
+`PlatformServices.CreateNotifications(applicationId)`. Notifications through
+`AddRunicPlatformServices()` are new in SDK `0.7.0-preview.8`; see the
+[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Application.Views.Desktop/README.md).
 
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native
@@ -51,7 +70,7 @@ applications should use the GTK 4 portal adapter, for example
 and must not load GTK 3 just to open a file. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
@@ -74,4 +93,4 @@ selection unavailable. Treat an unavailable provider or browser-only owner as
 an application state, and retain an appropriate fallback.
 
 Use the provider matching the presentation backend; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Platform/README.md).
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Platform/README.md).

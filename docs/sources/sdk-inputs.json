@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "d274acebd19284557ad6a3d02562ddfac93ae4e1",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/d274acebd19284557ad6a3d02562ddfac93ae4e1.tar.gz",
+  "revision": "39655f2c894d611c794fe7378ef5a953ab082118",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/39655f2c894d611c794fe7378ef5a953ab082118.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -57,11 +57,15 @@
     "packages/dotnet/Runic.Navigation/README.md",
     "packages/web/views-effect/README.md",
     "packages/web/views/README.md",
+    "tests/dotnet/Runic.Application.Testing.Tests/LeaveGuardRoutingTests.cs",
+    "tests/dotnet/Runic.Application.Testing.Tests/RegionStartFixture.cs",
     "tests/dotnet/Runic.Application.Views.Desktop.Tests/CloseGuardTests.cs",
     "tests/dotnet/Runic.Application.Views.Desktop.Tests/PlatformServicesChecks.cs",
+    "tests/dotnet/Runic.Navigation.Wpf.Tests/Support.cs",
     "tests/dotnet/Runic.Platform.Windows.Tests/SettingsTests.cs",
     "tests/fixtures/application/navigation-consumer/Shell.cs",
     "tests/fixtures/application/operations-consumer/OperationsViewModel.cs",
+    "tests/fixtures/application/reactiveui-behavioral-conformance/Conformance.cs",
     "tests/fixtures/application/wpf-bridge-consumer/Single/WpfSingle.csproj",
     "tests/fixtures/application/wpf-bridge-consumer/Split/App/SplitApp.csproj",
     "tests/fixtures/application/wpf-bridge-consumer/Split/Model/SplitModel.csproj",
@@ -86,5 +90,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:4094f9c7430f7d1f45777548d4d63b8e98c1acafe59bac70bcc36754b0861193"
+  "contentDigest": "sha256:6f82bdf50d59ce9944f8a5de33f1d617a2cccc9f64c48bd399e74eb4650b879a"
 }

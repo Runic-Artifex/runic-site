@@ -4,8 +4,8 @@ Runic Command Line turns typed C# methods into commands with help, validation
 and human or JSON output. This page takes you from an empty folder to a
 working command.
 
-It covers release `0.6.0-preview.4`. Every link to the
-[Command Line repository](https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.6.0-preview.4)
+It covers release `0.6.0-preview.5`. Every link to the
+[Command Line repository](https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.6.0-preview.5)
 points at that release, so the code matches the packages you install.
 
 ## What it is
@@ -40,11 +40,11 @@ Create a console project and add the core package:
 ```sh docs-test=skip:cli-repository
 dotnet new console --framework net10.0 --name HelloCli
 cd HelloCli
-dotnet add package Runic.CommandLine --version 0.6.0-preview.4
+dotnet add package Runic.CommandLine --version 0.6.0-preview.5
 ```
 
 Replace `Program.cs` with this program. It is the maintained
-[`hello-world/Program.cs`](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/hello-world/Program.cs)
+[`hello-world/Program.cs`](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/examples/command-line/hello-world/Program.cs)
 example:
 
 ```csharp docs-test=skip:cli-repository
@@ -110,7 +110,7 @@ Input is checked in two places:
   `[Command]` method it cannot use, for example a parameter without
   `[Argument]`, `[Option]` or `[FromServices]`. The command is skipped until you
   fix the error. Each ID is explained in
-  [source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/diagnostics.md).
+  [source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/docs/guides/command-line/diagnostics.md).
 - **At run time.** Unknown options, missing required values, values outside
   `Minimum`/`Maximum`, `Choices`, `MustExist` paths and `Requires` or
   `ConflictsWith` rules fail before the method runs. The error names the
@@ -121,7 +121,7 @@ Input is checked in two places:
 An option can fall back to an environment variable. An explicit argument wins
 over the environment, which wins over the C# default. This command comes from
 the release's
-[command tree example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/Program.cs):
+[command tree example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/examples/command-line/Program.cs):
 
 ```csharp docs-test=skip:cli-repository
 [Command("config show", Description = "Show the chosen environment.")]
@@ -148,7 +148,7 @@ progress, to stderr, so stdout stays parseable.
 Results other than strings declare a payload identity and a source-generated
 JSON context with `[CommandResult("example.result/1", typeof(JsonContext))]`.
 The
-[protocol specification](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/specs/command-line/protocol/README.md)
+[protocol specification](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/specs/command-line/protocol/README.md)
 describes every field.
 
 ## Exit codes
@@ -192,10 +192,15 @@ Colors are turned off for redirected output, `NO_COLOR` and `TERM=dumb`.
 An application that already owns its startup, services and UI can run the
 same generated commands with `CommandLineHostingAdapter`. It decides whether
 the arguments ask for a command, help or the UI, and runs a command in a
-service scope that your application supplies. The
-[hosted example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/HostedExample.cs)
+service scope that your application supplies. When the first word is a close
+match for a visible command, such as `lst` for `list`, the launch still opens
+the UI, and `decision.SuggestedCommand` names the command. Call
+`adapter.WriteSuggestionAsync(decision)` before opening the UI to write the
+standalone "Did you mean 'list'?" line to standard error. This is new in
+`0.6.0-preview.5`. The
+[hosted example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/examples/command-line/HostedExample.cs)
 shows the full flow, and
-[adding a CLI to a WPF application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/wpf.md)
+[adding a CLI to a WPF application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/docs/guides/command-line/wpf.md)
 applies it to a desktop app.
 
 ## Translate a CLI
@@ -204,9 +209,10 @@ Help, parse errors and faults are English by default. The
 `Runic.Translations.CommandLine` adapter, which Runic Translations publishes,
 translates them with a [Translations](../translations/README.md) catalog. It
 ships English and German text for every framework key, and it looks up your
-own command descriptions in your catalog. Translations `0.6.0-preview.7` works
-with Command Line `0.6.0-preview.4`. Add the adapter and the build package to
-the project from [your first command](#your-first-command):
+own command descriptions in your catalog. Translations `0.6.0-preview.7` needs
+Command Line `0.6.0-preview.4` or later, so it works with `0.6.0-preview.5`.
+Add the adapter and the build package to the project from
+[your first command](#your-first-command):
 
 ```sh docs-test=skip:translations-repository
 dotnet add package Runic.Translations.CommandLine --version 0.6.0-preview.7
@@ -289,7 +295,7 @@ command names, option spellings, codes and `messageKey` values never change.
   Pass the manager to follow locale switches, or an `ITranslationSnapshot` for
   one fixed locale. A message name is the key with each hyphen removed and the
   next letter capitalized: `help.show-help` is `help.showHelp`. The
-  [framework text keys](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/text-keys.md)
+  [framework text keys](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/docs/guides/command-line/text-keys.md)
   list every key and its arguments.
 - **`CommandScopes`.** `CommandScopes.FromServices` makes application-owned
   objects available to `[FromServices]` parameters without a
@@ -314,18 +320,18 @@ describes the resolver in full.
 
 ## Next steps
 
-- [From one command to an application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/examples/command-line/README.md)
+- [From one command to an application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/examples/command-line/README.md)
   grows the example step by step: command trees, file input, services,
   progress, tests, child processes and localized help.
 - The
-  [`Runic.CommandLine` package README](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/packages/dotnet/Runic.CommandLine/README.md)
+  [`Runic.CommandLine` package README](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/packages/dotnet/Runic.CommandLine/README.md)
   lists every supported parameter type and attribute property.
 - The
-  [grammar](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/specs/command-line/grammar.md)
+  [grammar](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/specs/command-line/grammar.md)
   and
-  [protocol](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/specs/command-line/protocol/README.md)
+  [protocol](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/specs/command-line/protocol/README.md)
   specifications define parsing and the JSON response.
-- [Source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/docs/guides/command-line/diagnostics.md)
+- [Source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/docs/guides/command-line/diagnostics.md)
   explains each `RCLI9xxx` error.
-- [Release notes for 0.6.0-preview.4](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.4/eng/release/notes/0.6.0-preview.4.md)
+- [Release notes for 0.6.0-preview.5](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.6.0-preview.5/eng/release/notes/0.6.0-preview.5.md)
   list what changed in this release.
