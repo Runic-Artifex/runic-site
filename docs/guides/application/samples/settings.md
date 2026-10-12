@@ -27,7 +27,7 @@ without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
 This store, from the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window),
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.7/examples/multi-window),
 loads the settings on demand and saves them by writing a temporary file and
 moving it over the old one, so a crash never leaves a half-written file. It
 uses System.Text.Json's source generator, so it works with NativeAOT:
@@ -104,10 +104,9 @@ the platform doesn't report is `null`, not `false`. Every read returns a
 value that you handle, not an exception.
 
 Unlike the file dialogs, `IDesktopSettings` belongs to the application, not to
-a Window. Since runic-sdk
-[`ce194583`](https://github.com/Runic-Artifex/runic-sdk/tree/ce194583d721c48dfb6785fc51dc1a71580234c7),
-newer than SDK `0.7.0-preview.6`, `AddRunicPlatformServices()` registers it as one singleton, which it
-creates from the provider for the running platform when it is first resolved;
+a Window. Since SDK `0.7.0-preview.7`, `AddRunicPlatformServices()` registers
+it as one singleton, which it creates from the provider for the running
+platform when it is first resolved;
 the service provider disposes it. Windows reads its settings, macOS reads
 AppKit, and Linux reads xdg-desktop-portal with either GTK version, without
 loading GTK. On other systems, and with CS-WebUI's registration, every read

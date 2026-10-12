@@ -89,12 +89,11 @@ ConfirmDiscard.RegisterHandler(context =>
 
 A test can register its own handler to answer `true` or `false`.
 
-## With CommunityToolkit.Mvvm: a dialog region (experimental)
+## With CommunityToolkit.Mvvm: a dialog region
 
 CommunityToolkit.Mvvm has no interaction type. The SDK's Toolkit examples ask
 through a second navigation region of the Window, used only for dialogs. The
-question is a ViewModel, pushed into that region for a result. Navigation is
-experimental (`RUNICNAV001`); read
+question is a ViewModel, pushed into that region for a result. Read
 [Pages and navigation](../guides/pages-and-navigation.md) first.
 
 The CommunityToolkit Notes example creates the region next to the main page

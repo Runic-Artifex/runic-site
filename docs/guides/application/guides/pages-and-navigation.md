@@ -44,10 +44,9 @@ const pages = { counter: CounterPage, welcome: WelcomePage } satisfies ViewRegis
 Each page View connects to its own ViewModel. When `Main` changes, the outlet
 unmounts the old View and mounts the new one; the ViewModels keep their state,
 so returning to the counter shows the same count. Keep a page property while
-the pages are fixed and switching between them is all you need. It is stable
-API, and the rest of this guide is not.
+the pages are fixed and switching between them is all you need.
 
-## Navigation regions (experimental)
+## Navigation regions
 
 A `NavigationRegion<TContent>` from `Runic.Navigation` is a page property with
 history. It adds what a page property leaves to you:
@@ -59,20 +58,15 @@ history. It adds what a page property leaves to you:
 - Typed results: a refused, superseded or failed navigation is a value, not an
   exception, and a page can return a value to the code that opened it.
 
-Navigation is experimental. Every navigation type is marked
-`[Experimental("RUNICNAV001")]`, so code that uses it must suppress
-`RUNICNAV001`, and the API may change before it is supported. The code that
-Runic generates for a region needs no suppression. The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md)
+The
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
 `WhenNavigatedTo`, the result commands, `ReactiveLeaveConfirmation` and
-`GuardClose` are newer than SDK `0.7.0-preview.6`. This guide follows
-runic-sdk `main` at
-[`05e09790`](https://github.com/Runic-Artifex/runic-sdk/tree/05e097900e2508a6cef6167b40c80a70bbeb0af2).
+`GuardClose` are new in SDK `0.7.0-preview.7`, which this guide follows.
 
 ### Coming from ReactiveUI navigation
 
@@ -112,7 +106,7 @@ dotnet add package Runic.Navigation.ReactiveUI --version <VERSION>
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.7/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -131,7 +125,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -142,13 +136,6 @@ public static IServiceCollection AddNotes(IServiceCollection services) => servic
     .AddRunicWpfNavigation(options => options.UseViewNamingConvention()) // NotesListViewModel -> NotesListView
     .AddSingleton<NoteStore>()
     .AddSingleton<AppRegions>();
-```
-
-Suppress the experimental warning in the files that use navigation, or for the
-whole project with `<NoWarn>$(NoWarn);RUNICNAV001</NoWarn>`:
-
-```csharp docs-test=source:tests/fixtures/application/navigation-consumer/Shell.cs
-#pragma warning disable RUNICNAV001 // The experimental navigation API (docs/experimental.md).
 ```
 
 ## With ReactiveUI
@@ -520,7 +507,7 @@ CommunityToolkit.Mvvm has no interaction type, so the leave guard asks in the
 dialog region with `LeaveConfirmation.InDialog`. The confirm dialog takes its
 entry context in its constructor, as the ReactiveUI pages do, and answers with
 `CompleteAsync` and `DismissAsync`; see
-[Ask the user from a ViewModel](../samples/prompts.md#with-communitytoolkitmvvm-a-dialog-region-experimental).
+[Ask the user from a ViewModel](../samples/prompts.md#with-communitytoolkitmvvm-a-dialog-region).
 Toolkit pages implement `INavigationAware` instead of the adapter's
 `WhenNavigatedTo`, and use `GuardClose` the same way.
 
@@ -530,6 +517,6 @@ Toolkit pages implement `INavigationAware` instead of the adapter's
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.

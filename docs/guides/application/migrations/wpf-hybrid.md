@@ -6,10 +6,9 @@ frontend build, close guards and startup.
 
 It builds on step 3 of [Adopt Runic incrementally in WPF](wpf-incremental.md).
 `RunicViewHost`, `GuardWindowClose` and the package-only project layouts below
-are newer than SDK `0.7.0-preview.6`. With that release, compose `RunicWebView`,
-`DesktopHost` and `CreateWpfViewAsync` yourself, as the incremental guide
-describes. The WPF web adapter is experimental (`RUNICWPF001`), and so is
-navigation (`RUNICNAV001`); suppress them where you use them.
+are new in SDK `0.7.0-preview.7`. With `0.7.0-preview.6`, compose `RunicWebView`,
+`DesktopHost` and `CreateWpfViewAsync` yourself. The WPF web adapter is
+experimental (`RUNICWPF001`); suppress it where you use it.
 
 ## What stays in WPF
 
@@ -20,7 +19,7 @@ that a native WPF View can bind to, so the user can switch between the two
 without losing a draft.
 
 The
-[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/wpf-hybrid-editor)
+[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.7/examples/wpf-hybrid-editor)
 is the complete application this guide quotes. Its notes list and dialogs are
 WPF; its editor page can switch between WPF controls and a web View.
 
@@ -61,7 +60,7 @@ folder:
   <TargetFramework>net10.0-windows</TargetFramework>
   <UseWPF>true</UseWPF>
   ...
-  <NoWarn>$(NoWarn);RUNICWPF001;RUNICNAV001</NoWarn>
+  <NoWarn>$(NoWarn);RUNICWPF001</NoWarn>
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(RunicContainerVersion)" />
@@ -91,7 +90,7 @@ project receives the generated client:
   <TargetFramework>net10.0-windows</TargetFramework>
   <UseWPF>true</UseWPF>
   ...
-  <NoWarn>$(NoWarn);RUNICWPF001;RUNICNAV001</NoWarn>
+  <NoWarn>$(NoWarn);RUNICWPF001</NoWarn>
   ...
 </PropertyGroup>
 <ItemGroup>
@@ -114,10 +113,10 @@ and ViewModels that use the typed `AppText` class need to reference it. In the
 split layout these pull in different directions:
 
 - **Catalog in the model project.** ViewModels use `AppText` directly.
-  Translations releases newer than `0.6.0-preview.5` check the WPF project's
+  Translations `0.6.0-preview.7` and later check the WPF project's
   XAML against a catalog in a directly referenced project. With
   `0.6.0-preview.5`, the XAML keys are checked only at run time.
-- **Catalog in the WPF project.** The XAML checks work with
+- **Catalog in the WPF project.** The XAML checks also work with
   `0.6.0-preview.5`, but ViewModels in the model project can't use `AppText`;
   they receive their texts through an interface that the WPF project
   implements.
@@ -172,7 +171,7 @@ On `dotnet build`, the project that generates the client:
 application copies the model project's `dist` to its own `www/`.
 `RunicViewHost` opens `www/index.html` next to the application by default; its
 `ContentRoot` and `EntryPage` properties change that. The
-[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md)
+[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Application.Views/README.md)
 change the frontend folder, the package manager and the build command.
 
 ## Place a `RunicViewHost`
@@ -256,7 +255,7 @@ Selecting another tab asks nothing, because nothing is lost: the tab's page
 region keeps its entries. Closing the window clears every region a guarding
 host has loaded with, one after another, and stops at the first that a guard
 keeps. See the Runic.Navigation.Wpf README,
-["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
+["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
 
 ## Start windows in code, not with `StartupUri`
 
@@ -293,13 +292,13 @@ If you keep `StartupUri`, everything the window needs when it loads must exist
 when `OnStartup` returns: build the services synchronously, give the window
 its services from its constructor, and create a Translations manager with the
 synchronous `CreateManager` instead of an awaited `CreateManagerAsync`. Only
-Translations releases newer than `0.6.0-preview.5` have `CreateManager`.
+Translations `0.6.0-preview.7` and later have `CreateManager`.
 `StartupUri` remains fine for a window that needs no services when it loads.
 
 `ServiceProvider.Dispose()` in `OnExit` starts the navigator's shutdown but
 doesn't wait for it. When owned cleanup must finish, dispose the provider
 asynchronously after `app.Run()` returns in a custom `Main`, as the
-[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
+[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
 shows. Never block the dispatcher on `DisposeAsync` while it runs.
 
 ## Limits
@@ -321,5 +320,5 @@ shows. Never block the dispatcher on `DisposeAsync` while it runs.
 - [Pages and navigation](../guides/pages-and-navigation.md) explains regions,
   guards and dialog results.
 - The
-  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.Wpf/README.md)
+  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Application.Views.Wpf/README.md)
   lists every `RunicViewHost` property and the lower-level API.

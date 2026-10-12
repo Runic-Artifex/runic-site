@@ -17,9 +17,11 @@ test('published catalog has unique installable packages and matching registry li
     assert.ok(row.registryUrl.endsWith(`/${activeSdkRelease.version}`));
   }
   assert.ok(rows.some((row) => row.name === 'Runic.Application.Templates'));
-  assert.ok(rows.some((row) => row.name === 'Runic.Application'));
+  assert.ok(rows.some((row) => row.name === 'Runic.Application.Views'));
   assert.ok(rows.some((row) => row.name === 'Runic.Application.Testing'));
-  assert.ok(rows.some((row) => row.name === 'Runic.Application.ReactiveUI'));
+  assert.ok(
+    rows.some((row) => row.name === 'Runic.Application.Views.ReactiveUI'),
+  );
   assert.ok(rows.some((row) => row.name === '@runic-artifex/svelte'));
   assert.ok(!rows.some((row) => row.name === 'Runic.CommandLine'));
   assert.ok(!rows.some((row) => row.name === 'Runic.Translations'));

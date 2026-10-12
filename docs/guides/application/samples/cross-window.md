@@ -21,7 +21,7 @@ services.AddSingleton<RowStore>();
 services.AddScoped<RowsViewModel>();
 ```
 
-The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
+The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.7/examples/multi-window)
 opens its first Window from the host callback. The application ends when that
 Window closes:
 
@@ -39,10 +39,9 @@ return RunicDesktopHost.Run(provider, async host =>
 
 The host is passed only to that callback; it isn't registered in the
 container. To open Windows from a command or a service, register
-`IRunicWindowService` with `AddRunicWindowService()`. It is newer than SDK
-`0.7.0-preview.6`; the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/05e097900e2508a6cef6167b40c80a70bbeb0af2/examples/multi-window)
-is at runic-sdk `05e09790`.
+`IRunicWindowService` with `AddRunicWindowService()`. It is new in SDK
+`0.7.0-preview.7`, as is the
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.7/examples/multi-window).
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
 // IRunicWindowService, which ProjectViewModel uses to open more Windows.

@@ -128,8 +128,8 @@ one of their own when none is registered:
 
 `AddRunicReactiveModelContext()` and `AddRunicNavigation()` use `TryAdd`, so
 together they register one context per Window scope, and they keep one you
-registered before them. The model context types are stable API; only the navigation types are
-experimental.
+registered before them. Neither the model context types nor the navigation
+types are experimental.
 
 ## Translations in ViewModels
 
@@ -180,17 +180,17 @@ public sealed class WelcomeViewModel : ReactiveObject, IDisposable
 With CommunityToolkit.Mvvm, call `OnPropertyChanged(nameof(Greeting))` in the
 posted action instead. A command that switches the locale awaits
 `SetLocaleAsync` like any other work and needs nothing more: the event, not
-the command, refreshes the text. `CreateManager()` is newer than Runic
-Translations 0.6.0-preview.5; with that release, create the manager with
-`await AppTextCatalog.CreateManagerAsync()` before building the service
-provider and register the instance.
+the command, refreshes the text. `CreateManager()` needs Runic
+Translations 0.6.0-preview.7 or later; with 0.6.0-preview.5, create the
+manager with `await AppTextCatalog.CreateManagerAsync()` before building the
+service provider and register the instance.
 
 ## Next steps
 
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands, progress and cancellation.
 - The
-  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
+  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
   and
-  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
+  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.7/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
   in the SDK guides cover the details, including WPF's dispatcher context.

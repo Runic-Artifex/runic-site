@@ -81,7 +81,7 @@ bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
 The script checks the checkout revision and source bytes before replacing the
 snapshot. Guides link SDK sources (`examples/`, `packages/`, `tools/`, `tests/`,
 `specs/`) and the current release notes at the active release tag, such as
-`blob/v0.7.0-preview.6/`, so the links match the quoted snapshot; move them to
+`blob/v0.7.0-preview.7/`, so the links match the quoted snapshot; move them to
 the new tag with the catalog. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
 
@@ -167,7 +167,7 @@ direnv exec <runic-sdk-checkout> bun docs/scripts/test-api-extractor.mjs
 
 Site CI has no .NET, so this test runs by hand. Search has one entry per type.
 `tests/api-reference.test.mjs` checks the pins, digest and size budgets: at
-most 1.5 MB of inputs, 160 KB of HTML per page, and 3.5 MB for all reference
+most 1.5 MB of inputs, 160 KB of HTML per page, and 4 MB for all reference
 pages and their `__data.json` payloads gzipped. The link check covers every
 reference page.
 

@@ -326,7 +326,7 @@ test('uses the canonical Runic Translations identifiers', async () => {
   assert.match(html, /runic-translations-sdk/);
   assert.match(stripMarkup(html), /released independently from the Runic SDK/);
   assert.ok(
-    html.includes('runic-translations-sdk/releases/tag/v0.6.0-preview.5'),
+    html.includes('runic-translations-sdk/releases/tag/v0.6.0-preview.7'),
   );
   assert.doesNotMatch(html, /independent preview is not yet published/);
 });
@@ -373,9 +373,9 @@ test('links SDK release notes and renders active SDK install commands', async ()
   );
   const applicationHtml = await render('/products/runic-application');
   for (const name of [
-    'Runic.Application',
+    'Runic.Application.Views',
     'Runic.Application.Testing',
-    'Runic.Application.ReactiveUI',
+    'Runic.Application.Views.ReactiveUI',
     'Runic.Application.Templates',
     'Runic.Create',
     '@runic-artifex/svelte',
@@ -412,7 +412,7 @@ test('product documentation areas link to their owning guides', async () => {
     ],
     [
       'runic-command-line',
-      `${github}runic-cli-sdk/blob/v0.6.0-preview.3/README.md`,
+      `${github}runic-cli-sdk/blob/v0.6.0-preview.4/README.md`,
     ],
   ]) {
     const html = await render(`/products/${slug}`);
