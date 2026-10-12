@@ -266,31 +266,41 @@ operation:
 A declared failure is a terminal outcome, so `operation`'s `retry` never
 retries it.
 
-## ReactiveUI: observe ThrownExceptions
+## ReactiveUI: ThrownExceptions
 
 A `ReactiveCommand` reports every exception on `ThrownExceptions`, including a
 declared `RunicFailureException` that the Bridge already sent to the client.
 Without a subscriber, ReactiveUI's default handler breaks into the debugger and
-throws. Give every bridged `ReactiveCommand` a subscriber.
-`ObserveBridgeExceptions` from `Runic.Application.Views.ReactiveUI` (or its
-`.Reactive` flavor) ignores declared failures and cancellations and logs
-everything else as `ReactiveCommandFailed` (event 1042):
+throws.
 
-```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
-SaveCommand = ReactiveCommand.CreateFromTask(SaveAsync);
-DiscardCommand = ReactiveCommand.CreateFromTask(DiscardAsync);
-// A ReactiveCommand also reports its exceptions on ThrownExceptions. The
-// Bridge already delivered declared failures; log anything else.
-_saveExceptions = SaveCommand.ObserveBridgeExceptions(logger);
-_discardExceptions = DiscardCommand.ObserveBridgeExceptions(logger);
-```
+While a generated Bridge presents a ViewModel, it subscribes to the
+`ThrownExceptions` of each bridged `ReactiveCommand`, so the ViewModel needs no
+subscription of its own. This is newer than SDK `0.7.0-preview.6`, at runic-sdk
+[`05e09790`](https://github.com/Runic-Artifex/runic-sdk/tree/05e097900e2508a6cef6167b40c80a70bbeb0af2);
+with `0.7.0-preview.6`, observe each command with `ObserveBridgeExceptions`.
+Each exception is reported once:
 
-Dispose the returned subscriptions with the ViewModel. To handle the other
-exceptions yourself, pass a callback instead of a logger:
+| Exception                                                                                  | Reported by                                                                                                                 |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Declared failure or cancellation                                                           | The reply to the client (`domain-failed`, `cancelled`); not logged as an error                                              |
+| Unexpected exception of a Bridge call                                                      | The Views runtime: the reply and event 1000 (awaited call) or 1004 (operation)                                              |
+| Unexpected exception that no Bridge call received, such as `Execute().Subscribe()` in .NET | The Bridge: `ReactiveCommandFailed` (event 1042) in category `Runic.Application.Views`, through the Window's logger factory |
+
+Two Bridges that present one ViewModel log an exception once. A command that no
+Bridge presents keeps ReactiveUI's behaviour; subscribe to it yourself, or set
+ReactiveUI's handler with `WithExceptionHandler`.
+
+To handle a command's exceptions yourself, use `ObserveBridgeExceptions` from
+`Runic.Application.Views.ReactiveUI` (or its `.Reactive` flavor). While it observes a
+command, the Bridge doesn't log that command's exceptions. It ignores declared
+failures and cancellations, and passes everything else to your callback, or
+logs it as event 1042 when you pass a logger:
 
 ```csharp docs-test=readme:packages/dotnet/Runic.Application.Views.ReactiveUI/README.md
-_discardExceptions = DiscardCommand.ObserveBridgeExceptions(error => status.Report(error));
+DiscardCommand.ObserveBridgeExceptions(error => status.Report(error));
 ```
+
+A raw `ThrownExceptions` subscription doesn't stop the Bridge's logging.
 
 ## Test declared failures
 

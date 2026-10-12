@@ -132,9 +132,16 @@ The disposer, replacement handler, view disposal, unmount, disconnect, the
 cancellation of the command that asked, and the end of a navigation guard that
 asked (see [Leave confirmation in a web View](#leave-confirmation-in-a-web-view))
 abort the handler signal as appropriate. Requests go only to a selected mounted
-endpoint through a pull route. With no eligible browser handler, the adapter
-does not consume the interaction, preserving normal ReactiveUI .NET handler
-precedence and unhandled behavior.
+endpoint through a pull route, and never to another window or browser
+connection. With no eligible browser handler, the adapter does not consume the
+interaction, preserving normal ReactiveUI .NET handler precedence and unhandled
+behavior.
+
+The browser handler is a ReactiveUI handler registered when the View's bridge
+attaches. ReactiveUI asks the latest handler first, so a .NET handler registered
+after the View attached, such as a WPF View's in `WhenActivated`, answers before
+it, and a fallback registered in the ViewModel's constructor answers only when
+no browser handler is eligible.
 
 ## Model-context scheduling
 
@@ -225,29 +232,61 @@ A `ReactiveCommand` reports every exception on `ThrownExceptions`, including a
 declared `RunicFailureException` (`[RunicFailure]`) that the Bridge already sent
 to the client as `domain-failed`. Without a subscriber, ReactiveUI routes it to
 `RxState.DefaultExceptionHandler`, which breaks into the debugger and throws
-`UnhandledErrorException`. Every bridged `ReactiveCommand` therefore needs a
-`ThrownExceptions` subscriber: this helper, or the application's own.
+`UnhandledErrorException`.
+
+While a generated Bridge presents a ViewModel, it subscribes to the
+`ThrownExceptions` of each bridged `ReactiveCommand`, so the ViewModel needs no
+subscription of its own. Each exception is reported exactly once:
+
+| Exception | Reported by |
+| --- | --- |
+| Declared failure (`RunicFailureException`) or cancellation | The reply to the client (`domain-failed`, `cancelled`); not logged as an error |
+| Unexpected exception of a Bridge call | The Views runtime: the reply and event 1000 (awaited call) or 1004 (operation) |
+| Unexpected exception of an execution no Bridge call received, such as `command.Execute().Subscribe()` in .NET or a failing `canExecute` | The Bridge: `ReactiveCommandFailed` (event 1042, Error), in category `Runic.Application.Views` through the Window's `ILoggerFactory`, with `Model.Command` as `Source` |
+
+Two Bridges that present one ViewModel log an exception once. The Bridge
+unsubscribes when it detaches; a command that no Bridge presents, such as one
+on a retained page or in a WPF View, keeps ReactiveUI's behaviour. Subscribe to
+its `ThrownExceptions`, or set ReactiveUI's handler with the builder's
+`WithExceptionHandler`, for those.
+
+To handle a command's exceptions yourself, use `ObserveBridgeExceptions` or
+your own `ThrownExceptions` subscription:
 
 ```csharp
-_saveExceptions = SaveCommand.ObserveBridgeExceptions(logger);
-_discardExceptions = DiscardCommand.ObserveBridgeExceptions(error => status.Report(error));
+DiscardCommand.ObserveBridgeExceptions(error => status.Report(error));
 ```
 
-`ObserveBridgeExceptions` ignores `RunicFailureException` and
-`OperationCanceledException` (ReactiveUI also reports a cancelled operation on
-`ThrownExceptions`; the client already received both) and reports every other
-exception: the `ILogger` overload logs it at Error as `ReactiveCommandFailed`
-(event 1042) with the command's expression, such as `SaveCommand`, as `Source`
+While `ObserveBridgeExceptions` observes a command, the Bridge does not log
+that command's exceptions: the handler replaces the logging. It ignores
+`RunicFailureException` and `OperationCanceledException`, also one that is not
+the Bridge's, such as an `HttpClient` timeout when the command runs outside the
+Bridge, and reports every other exception: the `ILogger` overload logs it as
+event 1042 with the command's expression, such as `SaveCommand`, as `Source`
 (pass `sourceName` to choose another), and the callback overload passes it on.
-Both overloads, including the logger, also ignore an `OperationCanceledException`
-that is not the Bridge's, such as an `HttpClient` timeout when the command runs
-outside the Bridge; subscribe to `ThrownExceptions` yourself to report those. While it is attached, no
-exception of that command reaches
-`RxState.DefaultExceptionHandler`. An exception thrown by the callback surfaces
-from `ThrownExceptions.OnNext`, inside ReactiveUI. Dispose the returned
-subscription with the ViewModel. An unexpected exception from a Bridge call is
-also logged by the Views runtime (event 1000 or 1004). The helper works on any
-`IHandleObservableErrors`, such as a `ReactiveObject`.
+An unexpected exception of a Bridge call is still logged by the Views runtime
+(event 1000 or 1004) as well. An exception thrown by the callback surfaces from
+`ThrownExceptions.OnNext`, inside ReactiveUI. A raw `ThrownExceptions`
+subscription does not stop the Bridge's logging. Dispose the returned
+subscription only when the command outlives the handler's owner. The helper
+works on any `IHandleObservableErrors`, such as a `ReactiveObject`.
+
+## Command disposal
+
+ReactiveUI does not require disposing a command: `Dispose` only ends its
+`canExecute` subscription. Follow ReactiveUI's rule for subscriptions and
+dispose a command only when its `canExecute` observes an object that outlives
+the command's owner, such as a service, another page or a parent's region.
+
+- A command without `canExecute`, or whose `canExecute` observes the
+  ViewModel's own properties (`this.WhenAnyValue(...)`), needs no disposal.
+- The entry commands (`CreateCompleteCommand`, `CreateDismissCommand`,
+  `CreateCloseCommand`) are disposed by their entry when it retires.
+- `CreateBackCommand()` on a region of the same ViewModel, such as a shell's
+  `Main`, needs no disposal. Dispose it when a page creates it on its parent's
+  region.
+- A handler registered on the ViewModel's own `Interaction` needs no disposal.
+  Put View-scoped work in `WhenActivated`.
 
 ## Navigation (experimental)
 
@@ -270,14 +309,14 @@ slot. Suppress `RUNICNAV001` to use the adapter.
 
 `CreateBackCommand()` needs no scheduler: with `AddRunicReactiveModelContext()`
 its notifications arrive on the Window's model context. Its output is a
-`NavigationOutcome`, so a View can bind it. In a Views app, observe its
-`ThrownExceptions` with `ObserveBridgeExceptions` (see above):
+`NavigationOutcome`, so a View can bind it. The Bridge logs its unexpected
+exceptions, and on the shell's own region it needs no disposal (see
+[command disposal](#command-disposal)):
 
 ```csharp
 using Runic.Navigation.ReactiveUI;
 
-BackCommand = Main.CreateBackCommand().DisposeWith(disposables);
-BackCommand.ObserveBridgeExceptions(logger).DisposeWith(disposables);
+BackCommand = Main.CreateBackCommand();
 ```
 
 ReactiveUI activation follows a mounted View, not a navigation entry's lifetime:
@@ -286,7 +325,7 @@ adapter's `entry.WhenNavigatedTo(...)`.
 
 The adapter's entry commands (`CreateCompleteCommand`, `CreateDismissCommand`,
 `CreateCloseCommand`) also output a `NavigationOutcome`, so a View binds them
-without `RUNICBRIDGE003`; see
+without `RUNICBRIDGE003`, and their entry disposes them when it retires; see
 [entry lifecycle and result commands](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#entry-lifecycle-and-result-commands-experimental).
 
 ### Leave confirmation in a web View
@@ -334,17 +373,34 @@ const settled = await close.outcome();
 if (settled.ok && settled.value.kind === "Rejected") showStillEditing(); // the user said no
 ```
 
-- The browser is asked only for a navigation that one of this ViewModel's
-  bridged commands started, such as `close()` or `startClose()`, and only on the
-  connection that started it, like any interaction. A navigation started
-  elsewhere, such as the shell's Back command or .NET code, is not routed to this
-  View: register a .NET handler for it, or it fails closed.
+The browser is asked when the page's own window starts the departure:
+
+| Departure | Who answers |
+| --- | --- |
+| A bridged command of this View, such as `close()` or `startClose()` | This View, mounted by the browser connection that ran the command |
+| A bridged command of another View in the same window, such as the shell's Back | This View, mounted by the browser connection that ran the command |
+| A guarded window close: the close button with `GuardClose`, or `RequestCloseAsync()` | This View, when it is the only presentation in the window with a mounted handler |
+| Navigation that .NET code starts outside a command, such as a timer or startup | .NET handlers only |
+| A command of another window that navigates this window's region | .NET handlers only |
+
+- An interaction never crosses windows or browser connections. A command's
+  question goes only to the connection and client that ran the command. A
+  close has no browser caller, so it asks only when exactly one presentation in
+  the window, from any connection, has mounted a handler; with several, as in a
+  multi-client CS-WebUI window, none is asked.
+- A .NET handler keeps ReactiveUI's order: the latest registered is asked first.
+  A fallback registered in the ViewModel's constructor answers only when no
+  browser handler is eligible, for example when the View isn't mounted or the
+  departure came from .NET code.
 - When the departure is superseded (another navigation of the region wins),
-  cancelled or its navigator closes, the request ends and `signal` aborts. Close
-  the dialog when it does; a late answer is ignored.
-- With no mounted handler, the question falls back to .NET handlers, and with
-  none it fails closed: the command's outcome is `Failed`, and the navigator
-  logs event 1060 with the `UnhandledInteractionException` type.
+  cancelled or its navigator closes, the request ends and `signal` aborts. So
+  does the close decision when the window closes without asking. Close the
+  dialog when it does; a late answer is ignored.
+- A View that unmounts or disconnects while it asks fails the departure closed:
+  the page stays, and a close keeps the window open.
+- With no handler that answers, the departure fails closed: the command's
+  outcome is `Failed`, a close keeps the window open, and the navigator logs
+  event 1060 with the `UnhandledInteractionException` type.
 
 ## System.Reactive flavor
 

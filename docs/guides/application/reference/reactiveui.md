@@ -129,9 +129,13 @@ and stream reads. Reusing a request ID cannot let a handle for one command read
 or cancel another command's operation, even where the command shapes match.
 
 Runic cancels the subscription for an individual command execution. Task work
-must honor its cancellation token. Continue observing `ThrownExceptions` in
-the application: the bridge's rejected/failed reply does not replace
-ReactiveUI's command error policy.
+must honor its cancellation token. Since runic-sdk `05e09790`, newer than SDK
+`0.7.0-preview.6`, while a generated Bridge presents the ViewModel, it observes
+each bridged command's `ThrownExceptions` and logs an unexpected exception
+that no Bridge call reported as `ReactiveCommandFailed` (event 1042); a Bridge
+call's own failure is logged by the Views runtime. To apply your own policy to
+a command, observe it with `ObserveBridgeExceptions`, which replaces that
+logging. A command that no Bridge presents keeps ReactiveUI's default handler.
 
 Use a plain synchronous command where its fire-and-snapshot contract is the
 right fit:

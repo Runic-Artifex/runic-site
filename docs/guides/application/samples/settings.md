@@ -173,7 +173,7 @@ ChooseThemeCommand = ReactiveCommand.Create<string>(theme =>
 {
     settings.Save(settings.Load() with { Theme = theme });
     Theme = theme;
-}).DisposeWith(_disposables);
+});
 ```
 
 The frontend can also read `prefers-color-scheme` and

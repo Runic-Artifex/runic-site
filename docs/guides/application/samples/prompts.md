@@ -78,7 +78,7 @@ Register a .NET handler with a safe default, so that a headless run declines
 instead of throwing an unhandled interaction exception:
 
 ```csharp docs-test=source:examples/notes-reactive-views/ViewModels.cs
-_fallbackDiscardHandler = ConfirmDiscard.RegisterHandler(context =>
+ConfirmDiscard.RegisterHandler(context =>
 {
     // A native or headless invocation has no mounted browser endpoint.
     // Keep ReactiveUI's normal handler precedence and decline the discard.
