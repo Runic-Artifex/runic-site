@@ -45,8 +45,11 @@ Declare the Window and Views in C#. `dotnet build` generates clients under
 into `www` beside the application. Ignore generated clients; missing imports
 before the first .NET build are expected. Rebuild after contract or package changes.
 
-Vite's `runic({ desktop: true })` from `@runic-artifex/vite-plugin-runic` loads
-the Desktop bootstrap and builds relative asset URLs for each surface path.
+Since SDK `0.7.0-preview.9`, the page loads `webui.js` and the host-neutral
+`runic-views.js`, and Vite's `runic()` from `@runic-artifex/vite-plugin-runic`
+with `base: "./"` builds relative asset URLs for each surface path. Before
+`0.7.0-preview.9`, `runic({ desktop: true })` loaded the Desktop bootstrap;
+those pages keep working.
 App code imports public `@runic-artifex/views`; generated modules own its
 generated-code entries.
 

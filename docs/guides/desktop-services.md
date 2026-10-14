@@ -49,7 +49,7 @@ as do requests through CS-WebUI's registration. Portal diagnostics of these
 notifications are logged as event 2003. To compose the service yourself, call
 `PlatformServices.CreateNotifications(applicationId)`. Notifications through
 `AddRunicPlatformServices()` are new in SDK `0.7.0-preview.8`; see the
-[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Application.Views.Desktop/README.md).
+[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views.Desktop/README.md).
 
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native
@@ -70,7 +70,7 @@ applications should use the GTK 4 portal adapter, for example
 and must not load GTK 3 just to open a file. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
@@ -93,4 +93,4 @@ selection unavailable. Treat an unavailable provider or browser-only owner as
 an application state, and retain an appropriate fallback.
 
 Use the provider matching the presentation backend; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Platform/README.md).
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Platform/README.md).

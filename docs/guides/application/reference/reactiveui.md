@@ -6,7 +6,7 @@ and SourceGenerators **4.2.0**. The default integration uses
 `Runic.Application.Views.ReactiveUI.Reactive`. Select one flavor for an application,
 then rebuild the application and its generated clients together when moving
 between ReactiveUI majors. ReactiveUI 26 keeps the ReactiveUI 25 public API; the
-[adapter migration notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#reactiveui-26)
+[adapter migration notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#reactiveui-26)
 cover the Primitives 9 `SubscribeSafe` change and the namespace changes from
 ReactiveUI 24. If an interface-typed generic command leaves the
 flavor ambiguous, set `RunicApplicationFrontendReactiveUiFlavor=reactive` in the generating
@@ -50,15 +50,19 @@ interfaces; `ImmutableArray`, `ImmutableList`, `ObservableCollection`, and
 
 The wire format is intentionally exact:
 
-| CLR value                        | TypeScript value and wire form                                                                           |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 64-bit integers and `BigInteger` | `bigint`, encoded as an invariant decimal JSON string                                                    |
-| `decimal`                        | string, encoded as an invariant exact decimal string                                                     |
-| finite floats                    | `number`; NaN and infinities are rejected                                                                |
-| enum                             | declared stable name string                                                                              |
-| GUID and date/time values        | validated round-trip string; `DateTime` preserves its CLR kind and `DateTimeOffset` is normalized to UTC |
-| `TimeSpan`                       | invariant `c` duration string                                                                            |
-| observable collection            | snapshot array; collection changes and supported nested DTO/item notifications publish a new snapshot    |
+| CLR value                        | TypeScript value and wire form                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 64-bit integers and `BigInteger` | `bigint`, encoded as an invariant decimal JSON string                                                                  |
+| `decimal`                        | string, encoded as an invariant exact decimal string                                                                   |
+| finite floats                    | `number`; NaN and infinities are rejected                                                                              |
+| enum                             | declared stable name string                                                                                            |
+| GUID and date/time values        | validated round-trip string; `DateTime` preserves its CLR kind and `DateTimeOffset` keeps its offset, such as `+02:00` |
+| `TimeSpan`                       | invariant `c` duration string                                                                                          |
+| observable collection            | snapshot array; collection changes and supported nested DTO/item notifications publish a new snapshot                  |
+
+The [wire types table](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views/README.md#wire-types)
+in the Views README lists every supported C# type with its generated
+TypeScript type and wire form, with examples.
 
 DTO members include inherited application members and stop before framework
 base classes. A public constructor must be usable to reconstruct a decoded DTO.
@@ -196,7 +200,7 @@ them next to `Runic.Application.Views.ReactiveUI`, which doesn't bring them.
 The scheduler helpers, `AddRunicReactiveModelContext()` and
 `RunicReactiveSchedulerProvider`, are in `Runic.Application.Views.ReactiveUI`
 (same namespace) since W250. See the
-[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/eng/release/notes/0.7.0-preview.4.md).
+[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/eng/release/notes/0.7.0-preview.4.md).
 
 `RunicModelContext` queues short synchronous reads and mutations. Await I/O or
 an interaction outside a turn, then use a later turn to commit state:
@@ -316,11 +320,11 @@ explicit content maps, generated frontend contracts, and a host-neutral model
 context. It intentionally does not add Avalonia as a dependency or copy its
 control/template/converter APIs.
 
-The implementation boundaries are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/tools/Runic.Application.Views.Codegen/OperationTypeScriptEmitter.cs),
-[interaction emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/tools/Runic.Application.Views.Codegen/InteractionCodeEmitter.cs),
-[bridge runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Application.Views/BridgeRuntime.cs),
-and [ReactiveUI adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactivePresentation.cs).
+The implementation boundaries are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/tools/Runic.Application.Views.Codegen/OperationTypeScriptEmitter.cs),
+[interaction emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/tools/Runic.Application.Views.Codegen/InteractionCodeEmitter.cs),
+[bridge runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views/BridgeRuntime.cs),
+and [ReactiveUI adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactivePresentation.cs).
 
 The ReactiveUI-specific Native AOT fixture exercises the direct generated
 codecs and command bridge without warnings. It is focused contract coverage;
