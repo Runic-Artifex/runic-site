@@ -10,13 +10,41 @@ A Start receipt establishes admission. Observe the handle until terminal status,
 including after Cancel. Distinguish declared domain failure from transport errors;
 inspect application state when completion is unknown before retrying a mutation.
 
-`Runic.Desktop` `0.7.0-preview.6` allows draft and Cancel callbacks while an
-awaited command or operation wait remains in flight. For earlier packages,
+Since `Runic.Desktop` `0.7.0-preview.6`, draft and Cancel callbacks run while
+an awaited command or operation wait remains in flight. With earlier packages,
 use Start followed by short `status()` calls and request `outcome()` only
 after terminal status; a running wait can hold later callbacks.
 
 Framework `useCommand`/`injectCommand` helpers track a call's pending and error
 state. Operation observation, selection queues and recovery need their own policy.
+
+## Results and parameterised queries
+
+A call resolves to the ViewModel's state after the command, `can{Command}(input)`
+to whether the command can run with that argument, and `start{Command}(input)`
+to a `BridgeOperation<TResult>` handle. Only a ReactiveUI
+`ReactiveCommand<TInput, TResult>` has a typed result: its `outcome()` resolves
+to `{ ok: true, value }`. A CommunityToolkit command's operation is
+`BridgeOperation<void>`, and a `[RelayCommand]` method's `Task<T>` result is
+not delivered.
+
+Return a result through state instead. Publish it in a read-only property
+together with the input it answers, and a second property for the phase of
+the work. The page then shows a result only when it answers the current
+choice, and shows progress, cancellation and failure from the phase. A
+question that takes parameters works the same way: there is no query route
+that returns a computed value, so run a command with the parameters and read
+the answer from the state it publishes. Start each question with
+`createLatestOperationController` (see [below](#bind-operation-feedback)) so a
+newer choice cancels the one it supersedes.
+
+The Views README on SDK main walks through a complete example, a cleanup
+estimate in C# and TypeScript, in
+[Operation results and parameterised queries](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#operation-results-and-parameterised-queries).
+It applies to SDK `0.7.0-preview.8` as well. Its
+[wire types](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#wire-types)
+explain why a result such as a byte count shown in the UI is better a `double`
+than a `long`, which becomes a `bigint`.
 
 ## Choose a policy for the action
 
@@ -58,7 +86,7 @@ and [published-package desktop onboarding](../package-consumer.md).
 
 ## Bind operation feedback
 
-The following helpers are available since SDK `0.7.0-preview.6`.
+The following helpers are new in SDK `0.7.0-preview.6`.
 
 [`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/web/views/src/operation-controller.ts)
 and Svelte's

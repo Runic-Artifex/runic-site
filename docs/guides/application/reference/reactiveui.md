@@ -50,15 +50,20 @@ interfaces; `ImmutableArray`, `ImmutableList`, `ObservableCollection`, and
 
 The wire format is intentionally exact:
 
-| CLR value                        | TypeScript value and wire form                                                                           |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 64-bit integers and `BigInteger` | `bigint`, encoded as an invariant decimal JSON string                                                    |
-| `decimal`                        | string, encoded as an invariant exact decimal string                                                     |
-| finite floats                    | `number`; NaN and infinities are rejected                                                                |
-| enum                             | declared stable name string                                                                              |
-| GUID and date/time values        | validated round-trip string; `DateTime` preserves its CLR kind and `DateTimeOffset` is normalized to UTC |
-| `TimeSpan`                       | invariant `c` duration string                                                                            |
-| observable collection            | snapshot array; collection changes and supported nested DTO/item notifications publish a new snapshot    |
+| CLR value                        | TypeScript value and wire form                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 64-bit integers and `BigInteger` | `bigint`, encoded as an invariant decimal JSON string                                                                  |
+| `decimal`                        | string, encoded as an invariant exact decimal string                                                                   |
+| finite floats                    | `number`; NaN and infinities are rejected                                                                              |
+| enum                             | declared stable name string                                                                                            |
+| GUID and date/time values        | validated round-trip string; `DateTime` preserves its CLR kind and `DateTimeOffset` keeps its offset, such as `+02:00` |
+| `TimeSpan`                       | invariant `c` duration string                                                                                          |
+| observable collection            | snapshot array; collection changes and supported nested DTO/item notifications publish a new snapshot                  |
+
+The [wire types table](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#wire-types)
+in the Views README on SDK main lists every supported C# type with its
+generated TypeScript type and wire form, with examples. It also describes
+SDK `0.7.0-preview.8`.
 
 DTO members include inherited application members and stop before framework
 base classes. A public constructor must be usable to reconstruct a decoded DTO.

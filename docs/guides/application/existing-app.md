@@ -168,6 +168,14 @@ frontend with relative asset URLs (Vite's `base: "./"`) so the `www` folder can
 move. The [tutorial](tutorial/README.md#5-render-the-views) shows how the
 generated clients are used from components.
 
+To add a Window to an existing web app, for example a frontend in a monorepo
+that reuses the app's components, styles and translations, see
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+in the Views README on SDK main. It covers Vite `resolve.alias` and
+`resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
+`RunicApplicationFrontendInput` items that make `dotnet build` rebuild the
+frontend when shared sources outside its folder change.
+
 ## 6. Run it
 
 ```sh docs-test=commands
