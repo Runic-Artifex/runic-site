@@ -76,7 +76,9 @@ namespace MyApp;
 
 public sealed partial class CounterViewModel : ObservableObject
 {
-    [ObservableProperty] private int count;
+    // A private setter keeps Count read-only to the page; Increment changes it.
+    [ObservableProperty]
+    public partial int Count { get; private set; }
 
     [RelayCommand]
     private void Increment() => Count++;
@@ -124,8 +126,10 @@ the current state first, calls reject with the runtime's `BridgeError`, and
 `@runic-artifex/angular` (`injectView()`) bind clients to component
 lifetimes.
 
-`Frontend/index.html` loads `webui.js` and the host's client script
-(`runic-cswebui.js` or `runic-desktop-views.js`) before the module. The
+`Frontend/index.html` loads `webui.js` and `runic-views.js` before the module.
+The host serves `webui.js`, and the host package copies its Views client into
+`www/` as `runic-views.js`, so the page names no host and one frontend build runs
+on Runic Desktop and CS-WebUI (see [The host of a page](#the-host-of-a-page)). The
 [First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/first-window)
 is this application with a complete frontend.
 
@@ -307,7 +311,8 @@ the default `index.html`, so keep it in the list. The `runic-app` template's
 ```ts
 // Frontend/vite.config.ts (Vite 8)
 export default defineConfig({
-  plugins: [svelte(), runic({ desktop: true })],
+  base: "./",
+  plugins: [svelte(), runic()],
   build: {
     rolldownOptions: { input: ["index.html", "settings.html"] },
     outDir: "dist",
@@ -449,7 +454,7 @@ public sealed partial class EditorViewModel : ReactiveObject
         });
     }
 
-    [Reactive] public partial string StatusText { get; set; } = "";
+    [Reactive] public partial string StatusText { get; private set; } = "";
 
     public ReactiveCommand<RxVoid, RxVoid> QuitCommand { get; }
 }
@@ -460,7 +465,8 @@ With CommunityToolkit.Mvvm:
 ```csharp
 public sealed partial class EditorViewModel(IRunicWindowContext window) : ObservableObject
 {
-    [ObservableProperty] private string _statusText = "";
+    [ObservableProperty]
+    public partial string StatusText { get; private set; } = "";
 
     [RelayCommand]
     private async Task QuitAsync()
@@ -619,8 +625,12 @@ public sealed partial class EditorViewModel : ObservableObject
 }
 ```
 
-A field such as `[ObservableProperty] private bool isDirty;` generates a
-property with a public setter, so the web frontend could set it too. With
+The examples in this README use partial properties. `[ObservableProperty]`
+on a field, such as `[ObservableProperty] private bool isDirty;`, is still
+supported, but the property it generates always has a public setter, so the
+web frontend could set it too. A field suits a form field, such as the First
+Window example's `step`. For status, use a partial property with a private
+setter, or write the property out with `SetProperty` and a private setter. With
 ReactiveUI, give the property a private setter, either written out with
 `RaiseAndSetIfChanged` or generated with `[Reactive]`:
 
@@ -679,12 +689,8 @@ public DocumentPane ActivePane => ...;
 export type DocumentPane = "Editor" | "Preview";
 ```
 
-- Numbers follow JavaScript's precision: `int`, `double` and smaller numeric
-  types are `number`, but `long`, `ulong` and `BigInteger` are `bigint`,
-  because a `number` is exact only up to 2^53, and `decimal` is a `string`.
-  The wire carries 64-bit and big integers as strings; the generated client
-  converts them, and the member's TSDoc says so. Use `BigInt(value)` and
-  `Number(value)` to convert at the edges, or model a small count as `int`.
+- Every C# type has one TypeScript form; [Wire types](#wire-types) lists them.
+  Numbers follow JavaScript's precision, so `long` is a `bigint`.
 - An enum is a union of its wire names (the C# names, or `[RunicAlias]`), so
   a `switch` over it can be exhaustive.
 - A DTO is an interface with its wire member names. A `[RunicUnion]` is a
@@ -738,6 +744,52 @@ The generated C# bridge calls public runtime types such as `ViewModelBridge<T>`,
 `ReactiveCommandExecution`. They are marked `[EditorBrowsable(Never)]`, so they
 stay out of completion lists; they are not application API.
 
+### Wire types
+
+State, DTO members, command arguments and results use these TypeScript types in
+the generated client. The client checks every value it receives against them,
+so a malformed reply never reaches application state.
+
+| C# | TypeScript | On the wire |
+| --- | --- | --- |
+| `bool` | `boolean` | |
+| `int`, `uint`, `short`, `ushort`, `byte`, `sbyte` | `number` | A number; the client rejects one outside the C# type's range. |
+| `double`, `float` | `number` | A finite number. |
+| `long`, `ulong`, `BigInteger` | `bigint` | A decimal string, such as `"9007199254740993"`. |
+| `decimal` | `string` | Invariant decimal text, such as `"12.50"`, so no digit is lost. |
+| `string` | `string` | |
+| `Guid` | `string` | `"d3b07384-d9a0-4c9b-8f1e-2a6c0e5f7b11"`, in lower case. |
+| `DateTimeOffset` | `string` | ISO 8601 with its offset: `"2026-10-03T12:30:00.0000000+02:00"`. The browser's `new Date().toISOString()` is accepted. |
+| `DateTime` | `string` | ISO 8601 round-trip text: `Z` for UTC, an offset for local time, none for an unspecified kind. A value ending in `Z` reads back as UTC. |
+| `DateOnly` | `string` | `"2026-10-03"` |
+| `TimeOnly` | `string` | `"08:15:00.0000000"`; `"08:15:00"` is accepted. |
+| `TimeSpan` | `string` | .NET's invariant `c` format, `[-][d.]hh:mm:ss[.fffffff]`, such as `"1.02:03:04"`. |
+| An enum | A union of its wire names, such as `"Editor" \| "Preview"` | The C# name, or its `[RunicAlias]`. A `[Flags]` enum needs a `[RunicBridgeCodec]`. |
+| `T?`, for a value or a reference type | `T \| null` | `null`. The member is always present: it is never optional and never `undefined`. |
+| `T` with nullable reference types enabled | `T` | Never `null`. Without annotations (`#nullable disable`), a reference type is `T` too. |
+| `T[]`, `List<T>`, `IReadOnlyList<T>`, `IReadOnlyCollection<T>`, `IList<T>`, `ICollection<T>`, `IEnumerable<T>`, `ImmutableArray<T>`, `ImmutableList<T>`, `ObservableCollection<T>`, `ReadOnlyObservableCollection<T>`, `ReadOnlyCollection<T>` | `readonly T[]` | An array. `string?[]` is `readonly (string \| null)[]`. Multi-dimensional arrays and other collections fail the build. |
+| `Dictionary<string, T>`, `IDictionary<string, T>`, `IReadOnlyDictionary<string, T>` | `Readonly<Record<string, T>>` | An object. Other key types fail the build. |
+| A record, class or struct (DTO) | An `interface` with `readonly` members | A member's name starts with a lower-case letter (`MeasuredAt` is `measuredAt`), unless `[RunicAlias]` or `[JsonPropertyName]` names it. |
+| A `[RunicUnion]` | A union discriminated by `$case` | |
+| A type with `[RunicBridgeCodec]` | The codec's TypeScript type | Whatever the codec writes. |
+
+Other framework types, such as `object`, `char`, `Uri` and tuples, fail the
+build with a `RUNICBRIDGE` diagnostic that names the member.
+
+A `number` is exact only up to 2^53 (`Number.MAX_SAFE_INTEGER`). A `long` can
+be larger, and an id or a version above that would silently change if it were
+a `number`, so `long`, `ulong` and `BigInteger` are `bigint`. The generated
+TSDoc of such a member says so. A `bigint` does not mix with `number` in
+arithmetic or `Math`, and `JSON.stringify` rejects it, so a formatter written
+for numbers needs `Number(value)` first; `BigInt(value)` converts back.
+For a value the UI formats, such as a byte count or a duration in
+milliseconds, prefer `double` in C#: it is a `number` in TypeScript and exact
+for every whole number up to 2^53, which is 8 PiB as a byte count. Keep `long`
+for ids and counters that must stay exact. Use `int` for a small count.
+
+A frontend whose own types use optional members (`version?: string`) maps the
+`T | null` members at its edge, for example with `value ?? undefined`.
+
 ## Generator diagnostics
 
 The generator reports every ViewModel's first problem in one build. An error
@@ -786,9 +838,9 @@ commands.
 
 The build targets ship in this package and apply to every project that
 references a host adapter. A project needs none of these properties unless it
-departs from the conventional `Frontend` folder. Every property starts with
-`RunicApplicationFrontend`, as do the development-server properties of
-`dotnet runic dev`. The `RunicBridge*` and `RunicViewsWindowProject` names of
+departs from the conventional `Frontend` folder. Every property except
+`RunicApplicationHost` starts with `RunicApplicationFrontend`, as do the
+development-server properties of `dotnet runic dev`. The `RunicBridge*` and `RunicViewsWindowProject` names of
 0.7.0-preview.6 and earlier still apply in this preview with warning
 `RUNICBRIDGE017`; the [rename table](#moved-and-renamed-since-070-preview6)
 maps them. Underscore-prefixed properties, `RunicApplicationHostAdapter` (which
@@ -803,7 +855,8 @@ the host adapters set) and the `RunicViews*` target names are not settings.
 | `RunicApplicationFrontendInstallCommand` | `npm ci`, `pnpm install --frozen-lockfile`, or `bun install --frozen-lockfile`, each with `--ignore-scripts` | Runs before the frontend build when `package.json` or a lock file changed since the last install (stamp: `obj/runic-bridge-frontend-install.stamp`), or when declared dependencies have no `node_modules`. A `package.json` without dependencies needs no `node_modules`. |
 | `RunicApplicationFrontendInstallEnabled` | `true` | Set `false` when a workspace install owns the frontend packages. |
 | `RunicApplicationFrontendBuildEnabled` | `true` | Set `false` when another tool owns the frontend build. TypeScript is still generated. |
-| `RunicApplicationFrontendCopyEnabled` | `true` | Copies `<frontend>/dist` to `www/` in the build output. Publish always copies it. |
+| `RunicApplicationFrontendCopyEnabled` | `true` | Mirrors `<frontend>/dist` to `www/` in the build output: a file that an earlier copy wrote and `dist` no longer has is deleted. Publish always mirrors it. |
+| `RunicApplicationHost` | the only host adapter referenced | `desktop` or `cswebui`: whose Views client the build copies to `www/runic-views.js`. Set it when a project references both hosts. The frontend build receives it as `RUNIC_APPLICATION_HOST`. |
 | `RunicApplicationFrontendCompositionType` | `<project name>.RunicBridgeComposition` (host adapters) | Generated composition class. |
 | `RunicApplicationFrontendModelAssembly` | the project itself | Inspect a separately built ViewModel assembly instead of a bootstrap build. |
 | `RunicApplicationFrontendReactiveUiFlavor` | none | `primitives` or `reactive` for ReactiveUI projects. |
@@ -818,6 +871,27 @@ the host adapters set) and the `RunicViews*` target names are not settings.
 the frontend. The
 [`dotnet runic` README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/dotnet-runic/README.md)
 lists the development-server properties it reads.
+
+Two items extend the frontend build. `RunicApplicationFrontendInput` adds an
+input outside the frontend directory, such as a monorepo's shared components
+that the frontend imports through a Vite alias; a change rebuilds the frontend:
+
+```xml
+<ItemGroup>
+  <RunicApplicationFrontendInput Include="../ui/lib/**/*;../src/locales/**/*" />
+</ItemGroup>
+```
+
+`RunicApplicationFrontendBuildEnvironment` names an environment variable that
+changes the built frontend, such as a `VITE_*` variable set in the shell, in
+addition to `NODE_ENV`, which is always tracked. `.env` files in the frontend
+directory are inputs already (see [Incremental generation](#incremental-generation)):
+
+```xml
+<ItemGroup>
+  <RunicApplicationFrontendBuildEnvironment Include="APP_FLAVOR" />
+</ItemGroup>
+```
 
 Bridge generation turns on by default for a project that references
 `Runic.Application.Views` directly, references a host adapter
@@ -863,6 +937,159 @@ A single-project application is compiled twice: a bootstrap pass with an empty
 generated composition, which the generator inspects, then the real build with
 the generated code. `RunicApplicationFrontendBootstrap` is `true` only in the bootstrap pass.
 
+### The host of a page
+
+A page loads `webui.js`, which the host serves, and `runic-views.js`, the host's
+Views client, which the host package copies into `www/`:
+`Runic.Application.Views.Desktop` (and so `Runic.Application.Views.Wpf`) copies
+`runic-desktop-views.js`, `Runic.Application.Views.CsWebUi` copies
+`runic-cswebui.js`. Both are also copied under those names, so a page that loads
+one of them directly keeps working. Neither `index.html` nor the Vite
+configuration names a host, so the same `dist/` runs on every host, and
+switching hosts changes the host package and `Program.cs`, not the frontend.
+`runic({ desktop: true })` from `@runic-artifex/vite-plugin-runic` is not needed
+for Views: it adds the Runic Desktop bootstrap script, which CS-WebUI does not
+serve.
+
+A project that references both hosts, for example to ship on CS-WebUI and
+compare on Runic Desktop, chooses the client with `RunicApplicationHost`:
+
+```sh
+dotnet run -p:RunicApplicationHost=desktop
+```
+
+Without it, such a project copies no `www/runic-views.js`, and gets warning
+`RUNICBRIDGE019` when a copied page loads `runic-views.js`. A page that loads
+`runic-cswebui.js` or `runic-desktop-views.js` itself builds without the
+warning. The frontend build receives the host as the `RUNIC_APPLICATION_HOST`
+environment variable and is part of its build state, so a Vite configuration
+that still needs a host-specific build can read it and is rebuilt when it
+changes. A frontend that a referenced project builds, such as the model project
+of a WPF application, sees that project's host, which is empty when it
+references no host package; such a frontend cannot depend on the application's
+host.
+
+## Adding a Window to an existing web app
+
+A Window's frontend can reuse the components, styles and translations of a web
+app in the same repository, without copying them. The frontend stays a package
+of its own; Vite, TypeScript, Tailwind and the .NET build each need to be told
+about the files outside it. This layout puts a Svelte and Tailwind app in `ui/`
+and the Runic project next to it:
+
+```text
+my-app/
+├── ui/                  the existing web app
+│   ├── lib/             components, formatters and t() ($lib)
+│   ├── locales/         message tables
+│   └── app.css          the Tailwind theme
+└── runic/
+    ├── MyApp.Runic.csproj
+    └── Frontend/        the Window's frontend package
+        ├── package.json
+        ├── tsconfig.json
+        ├── vite.config.ts
+        └── src/app.css
+```
+
+`resolve.alias` points the app's import paths at its files. An alias can also
+replace a module that the page does not want, such as a global store that
+owns the app's HTTP session, with a small stand-in; list it before the
+general alias. `resolve.dedupe` resolves the shared files' bare imports from
+this package. Without it, a file in `ui/lib` resolves `svelte` from `ui/`,
+which gives the page a second Svelte runtime, or fails when `ui/` has no
+`node_modules`. List every package that both the shared files and the page
+import, and add those packages to this frontend's `package.json`:
+
+```ts
+// runic/Frontend/vite.config.ts
+import { resolve } from "node:path";
+import tailwindcss from "@tailwindcss/vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
+import { runic } from "@runic-artifex/vite-plugin-runic";
+import { defineConfig } from "vite";
+
+const ui = resolve(import.meta.dirname, "../../ui");
+
+export default defineConfig({
+  base: "./",
+  plugins: [tailwindcss(), svelte(), runic()],
+  resolve: {
+    alias: [
+      // The app's global store is not used here; its readers get a stand-in.
+      { find: /^\$lib\/app\.svelte$/, replacement: resolve(import.meta.dirname, "src/app-shim.svelte.ts") },
+      { find: /^\$lib/, replacement: resolve(ui, "lib") },
+    ],
+    dedupe: ["svelte", "clsx", "tailwind-merge", "tailwind-variants", "@lucide/svelte"],
+  },
+  build: {
+    rolldownOptions: { input: ["index.html"] },
+    outDir: "dist",
+    emptyOutDir: true,
+    target: "es2022",
+  },
+});
+```
+
+TypeScript needs the same paths, in the same order:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "$lib/app.svelte": ["./src/app-shim.svelte.ts"],
+      "$lib": ["../../ui/lib"],
+      "$lib/*": ["../../ui/lib/*"]
+    }
+  }
+}
+```
+
+Tailwind generates only the classes it finds in the files it scans, and it
+does not scan outside this package, so the classes that only the shared
+components use would be missing. Import the app's theme and name the shared
+files with `@source`:
+
+```css
+/* runic/Frontend/src/app.css */
+@import "../../../ui/app.css";
+@source "../../../ui/lib";
+```
+
+The .NET build rebuilds the frontend when a file under its frontend directory
+changes. Add the shared files as `RunicApplicationFrontendInput` items, so a
+change there rebuilds the page too, and name any environment variable that the
+shared code or the Vite configuration reads as a
+`RunicApplicationFrontendBuildEnvironment` item; see
+[Build properties](#build-properties):
+
+```xml
+<ItemGroup>
+  <RunicApplicationFrontendInput Include="../ui/lib/**/*;../ui/app.css;../ui/locales/**/*" />
+  <RunicApplicationFrontendBuildEnvironment Include="VITE_DEFAULT_LOCALE" />
+</ItemGroup>
+```
+
+- **Translations.** The page can import the app's `t()` and its message
+  tables through the alias, and take the locale from `navigator.language`,
+  which usually follows the system language (`LANG` on Linux). Include the
+  message tables in `RunicApplicationFrontendInput`, so an edited translation
+  rebuilds the page.
+- **Hosts.** The page loads `runic-views.js`, so it needs no host-specific
+  script or Vite configuration; see [The host of a page](#the-host-of-a-page).
+- **Type checking.** `svelte-check` or `tsc` in the Runic frontend also checks
+  the shared files it imports, without the app's own dependencies and type
+  declarations, and can report errors in them that the app's own check does
+  not. Check the shared files in the app that owns them.
+- **Lock files.** The frontend has its own `package.json` and lock file unless
+  it joins the app's package manager workspace. In a workspace, set
+  `RunicApplicationFrontendInstallEnabled` to `false`, because the workspace
+  install owns `node_modules`.
+- **Lists.** Tailwind removes list markers from every list, and Runic Desktop's
+  WebKitGTK then no longer reports such a list as a list to a screen reader;
+  see [Runic.Desktop accessibility](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Desktop#accessibility).
+
 ## Typed commands and checked writes
 
 CommunityToolkit `IRelayCommand<T>` and `IAsyncRelayCommand<T>` use the same
@@ -892,6 +1119,124 @@ Each field retains at most 64 receipts within a default 256 KiB encoded-value
 and receipt-metadata budget. Evicted or oversized receipts leave bounded
 request-ID tombstones; reconcile authoritative state before issuing a new ID.
 The write may have succeeded even when its receipt could not be retained.
+
+## Operation results and parameterised queries
+
+What a call gives the page back depends on the command:
+
+| Generated member | Resolves to |
+| --- | --- |
+| `estimate(choice)` | The ViewModel's state after the command finished (`Promise<CleanupState>`), or a `BridgeOutcome` of that state and a [declared failure](#declared-failures). |
+| `canEstimate(choice)` | Whether the command can run with that argument (`Promise<boolean>`). Generated for a command with a parameter, instead of a `canEstimate` state property. |
+| `startEstimate(choice)` | A `BridgeOperation<TResult>` handle for status, Cancel and `outcome()`. |
+
+Only a ReactiveUI command has a typed result route. A public
+`ReactiveCommand<TInput, TResult>` generates `BridgeOperation<TResult>`, and
+`outcome()` resolves to `{ ok: true, value }`; see
+[Generated ReactiveUI contracts](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views.ReactiveUI#generated-reactiveui-contracts).
+A CommunityToolkit command has none. Its operation is a `BridgeOperation<void>`,
+and a `[RelayCommand]` method that returns `Task<T>` does not deliver its `T`.
+With CommunityToolkit.Mvvm, a command hands its result back through ViewModel
+state.
+
+Publish such a result in a read-only property, together with the input it
+answers. The page can then tell whether the result still matches its current
+choice. A second property tells where the work is, so the page can show
+progress, cancellation and failure. This is a simplified version of a cleanup
+estimate that measures in .NET what keeping the newest restore points would
+free:
+
+```csharp
+/// <summary>What to measure.</summary>
+public sealed record CleanupChoice(int Retention);
+
+/// <summary>What a cleanup keeping the newest <c>Retention</c> restore points frees.</summary>
+public sealed record CleanupEstimate(int Retention, double Bytes, DateTimeOffset MeasuredAt);
+
+public enum EstimatePhase { Idle, Measuring, Measured, Cancelled, Failed }
+
+public sealed partial class CleanupViewModel(ICleanupEstimator estimator) : ObservableObject
+{
+    /// <summary>The last measurement, with the choice it answers.</summary>
+    [ObservableProperty]
+    public partial CleanupEstimate? Estimate { get; private set; }
+
+    [ObservableProperty]
+    public partial EstimatePhase Phase { get; private set; }
+
+    [ObservableProperty]
+    public partial string? Error { get; private set; }
+
+    /// <summary>Measures what a cleanup keeping <paramref name="choice"/> frees.</summary>
+    [RelayCommand(IncludeCancelCommand = true)]
+    private async Task EstimateAsync(CleanupChoice choice, CancellationToken token)
+    {
+        Phase = EstimatePhase.Measuring;
+        Error = null;
+        try
+        {
+            var bytes = await estimator.FreedBytesAsync(choice.Retention, token);
+            // The result is state, published with the input it answers.
+            Estimate = new CleanupEstimate(choice.Retention, bytes, DateTimeOffset.Now);
+            Phase = EstimatePhase.Measured;
+        }
+        catch (OperationCanceledException)
+        {
+            Phase = EstimatePhase.Cancelled;
+            throw;
+        }
+        catch (Exception e)
+        {
+            Phase = EstimatePhase.Failed;
+            Error = e.Message;
+            throw;
+        }
+    }
+}
+```
+
+The page starts each measurement with `startEstimate`, through
+`createLatestOperationController` from `@runic-artifex/views`, so a newer choice
+cancels the measurement it supersedes. It shows an estimate only when the
+estimate answers the current choice:
+
+```ts
+import { createLatestOperationController } from "@runic-artifex/views";
+import { connectCleanup } from "./generated/cleanup.js";
+
+const cleanup = await connectCleanup();
+const measuring = createLatestOperationController();
+let retention = 3;
+
+function choose(keep: number) {
+  retention = keep;
+  return measuring.run({ start: () => cleanup.startEstimate({ retention: keep }) });
+}
+
+cleanup.subscribe(state => {
+  // An estimate answers the choice it was measured for, so ignore an older one.
+  const estimate = state.estimate?.retention === retention ? state.estimate : undefined;
+  if (state.phase === "Measuring") render("Measuring…");
+  else if (state.phase === "Failed") render(`Measuring failed: ${state.error}`);
+  else if (estimate) render(`Frees about ${formatBytes(estimate.bytes)}.`);
+});
+```
+
+A question that takes parameters works the same way. There is no query route
+that returns a computed value: run a command with the parameters, and read the
+answer from the state it publishes. `await cleanup.estimate({ retention: 5 })`
+resolves with the state after the command, so `(await cleanup.estimate(...)).estimate`
+is the answer for a caller that awaits it. Only availability is a query:
+`canEstimate(choice)` asks the command's `CanExecute` with that argument, and
+nothing pushes a change of its answer. An answer that the page can compute
+from state it already has, such as how many restore points a retention
+removes, needs no round trip. For progress, Cancel and stale-selection
+handling, see the
+[operations guide](https://docs.runic-artifex.eu/guides/application/guides/operations-and-cancellation/)
+and [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#operation-feedback-and-latest-selection).
+
+`Bytes` is a `double` because a `long` would be a `bigint` in TypeScript; see
+[Wire types](#wire-types).
 
 ## Batch synchronous model updates
 
@@ -1064,6 +1409,16 @@ show the old View or nothing. The next capture converges.
 
 ## Logging and telemetry
 
+Registering logging is all an application needs: with `services.AddLogging(...)`,
+for example `AddLogging(logging => logging.AddSerilog(...))`, or the Generic
+Host, Runic logs every runtime message through that `ILoggerFactory`, with the
+categories and event IDs below. `RunicDesktopHost.Run` also passes it to the Desktop host when
+`DesktopHostOptions.LoggerFactory` is not set, until `Run` returns, and
+`RunicViewHost` takes it from its `Services` when it opens. A host message
+after that, such as a browser profile that a minute later still cannot be
+deleted, or one from a factory that was disposed meanwhile, goes to `Trace`. Without a registered factory, Runic falls back to
+`System.Diagnostics.Trace`.
+
 `OpenWindowAsync` passes the scope's
 `ILoggerFactory` to the Window's `WindowContentSession` when one is registered,
 for example with `services.AddLogging(...)`. A session constructed directly
@@ -1106,6 +1461,14 @@ output accordingly. The message properties are listed per event.
 | 1053 | `WindowCloseGuardUnavailable` | Warning | A Window with `GuardClose` opens on a presentation that cannot keep its window open, such as CS-WebUI or a browser, so a user close does not ask `CanCloseAsync`. | `Window`, `Presentation` |
 | 1090 | `ReactiveSchedulerKept` | Information | A Runic Desktop, CS-WebUI or test-host window opens while ReactiveUI's main-thread scheduler is one set before `AddRunicReactiveModelContext()`, so Runic's was not installed. Once per scheduler type; a UI dispatcher's scheduler, such as WPF's, is not logged. | `Scheduler` |
 | 1091 | `ReactiveSchedulerReplaced` | Warning | Such a window opens after another scheduler replaced the installed one, for example a later `RxAppBuilder` `BuildApp()` with `WithPlatformServices()`. Call `WithRunicModelContext()` on that builder. Once per scheduler type; a UI dispatcher's scheduler is not logged. | `Scheduler` |
+| 1100 | `HotReloadRestartRequired` | Error | A Hot Reload edit changed a generated Bridge contract; restart the application. The `RUNIC_IDE_CONTRACT_RESTART_REQUIRED` line also goes to standard error. | `Mismatch` |
+| 1101 | `HotReloadRestartNotificationFailed` | Warning | A `RunicBridgeHotReload.RestartRequired` handler throws. | `ErrorType` |
+| 1102 | `HotReloadRefreshFailed` | Warning | Refreshing a Bridge after a Hot Reload update throws. | `Model`, `ErrorType` |
+| 1110 | `ViewHostFallbackShown` | Warning | A WPF `RunicViewHost` cannot open its web presentation and shows its `Fallback`. | `ErrorType` |
+| 1111 | `ViewHostFallbackFailed` | Error | Showing that fallback throws. | `ErrorType` |
+| 1112 | `ViewHostPresentationChangeFailed` | Error | A `RunicViewHost` presentation change throws outside its open. | `ErrorType` |
+| 1113 | `ViewHostCleanupFailed` | Error | Releasing a `RunicViewHost` presentation throws. | `ErrorType` |
+| 1114 | `ChildViewCleanupFailed` | Error | A `WpfBridgeView` fails to release after its presentation closed. | `ErrorType` |
 | 2000 | `DesktopSnapshotDeliveryFailed` | Error | Runic Desktop cannot run a state delivery script. | `Route`, `ErrorType` |
 | 2002 | `DesktopWindowCloseAfterOpen` | Warning | `RUNIC_APPLICATION_CLOSE_AFTER_OPEN=1` closed a Desktop window right after it opened. | `Variable` |
 | 2003 | `DesktopPortalDiagnostic` | Warning or Debug | On Linux, xdg-desktop-portal reports a diagnostic for the notifications `AddRunicPlatformServices()` registers: Warning for a rejected identity, an unavailable portal or a denied request, Debug for an accepted request or registration. | `Code`, `DiagnosticMessage`, `Remediation` |
@@ -1115,22 +1478,29 @@ output accordingly. The message properties are listed per event.
 | 3003 | `DesktopConfigurationLimited` | Warning | `DesktopHost.Validate` finds an option the presentation ignores or narrows, or a browser fallback opens without a permission grant. | `Code`, `Option`, `DiagnosticMessage`, `Remediation` |
 | 3004 | `BrowserLaunchStalled` | Warning | A browser was still running but had requested nothing after `ConnectionTimeout`, so Runic Desktop relaunched it (`DesktopHostOptions.BrowserLaunchAttempts`). | `Attempt` (the attempt that stalled), `Attempts`, `TimeoutSeconds` |
 | 3005 | `BridgeHandshakeExpired` | Warning | A Bridge WebSocket sent no token check, so Runic Desktop closed it and the page reconnects: after 10 seconds, or after 2 seconds when a newer WebSocket needs the only connection. | `ConnectionId`, `SilentSeconds`, `Reason` |
+| 3006 | `DesktopShutdownRequested` | Information | Ctrl+C, SIGTERM or SIGHUP asks `DesktopEventLoop.Run` to close the Desktop windows. | `Reason` |
+| 3007 | `DesktopShutdownFailed` | Error | Closing the Desktop windows for that shutdown throws. | `ErrorType` |
+| 3008 | `BrowserProfileNotDeleted` | Warning | A generated browser profile still cannot be deleted a minute after its browser closed; it stays in the temporary folder. | |
+| 3009 | `DesktopDiagnosticSinkFailed` | Warning | `DesktopHostOptions.DiagnosticSink` throws for a diagnostic. | `Code`, `ErrorType` |
 
 `Model` is the ViewModel type name, `Member` the command or property, and
 `Route` the Bridge route (a content presentation's route is per instance, such
 as `content12`). A declared failure is an expected outcome, so it is logged at
 Debug, still with its exception; `FailureType` is the failure value's type.
 
-Events 1000-1012, 1020, 1021 and 1050-1052 use the category `Runic.Application.Views`
-(`RunicViewsTelemetry.LogCategory`). Event 1033 here is a window session's
+Events 1000-1012, 1020, 1021, 1050-1053 and 1100-1102 use the category `Runic.Application.Views`
+(`RunicViewsTelemetry.LogCategory`); the Hot Reload events 1100-1102 use the
+logger of the window session that owns the Bridge. Events 1110-1114 use
+`Runic.Application.Views.Wpf` and the factory of the host's `Services`. Event 1033 here is a window session's
 own model context failing to shut down, and uses the session's logger.
 Events 1013 and 1014 use the logger passed to `new AcceptedWorkScope(logger)`,
 or `Trace` without one.
 Navigation (1060-1075) and the model context (1030-1033) log under
 `Runic.Navigation` and `Runic.Navigation.RunicModelContext`; see the
 [Runic.Navigation logging](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md#logging)
-section. Events 2000 and 2002 use `Runic.Application.Views.Desktop`. Events 3000-3005
-use `Runic.Desktop` and need `DesktopHostOptions.LoggerFactory`.
+section. Events 2000 and 2002 use `Runic.Application.Views.Desktop`. Events 3000-3009
+use `Runic.Desktop` and `DesktopHostOptions.LoggerFactory`, which `RunicDesktopHost.Run`
+and `RunicViewHost` fill from the application's services.
 
 Events 1040-1043, 1090 and 1091 come from `Runic.Application.Views.ReactiveUI` (and its `.Reactive`
 flavor) and also use `Runic.Application.Views`. Events 1040 and 1041 need the
@@ -1194,15 +1564,33 @@ outputs invalidate the cache; unchanged generated files keep their timestamps.
 Set `RUNIC_BRIDGE_CODEGEN_FORCE=1` or `RUNIC_BRIDGE_CODEGEN_CACHE=0` to bypass it.
 
 The configured frontend build command (`RunicApplicationFrontendBuildCommand`) runs
-only when one of its inputs is newer than
-`obj/<Configuration>/<TargetFramework>/runic-bridge-frontend.stamp`: files under
+when one of its inputs is newer than
+`obj/<Configuration>/<TargetFramework>/runic-bridge-frontend.stamp`, when a file
+that the last build left in `<frontend>/dist` is missing (a deleted `dist`
+included), or when its build state changed. The inputs are the files under
 `RunicApplicationFrontendDirectory` (excluding `node_modules`, `dist`, `build`, `bin`, `obj`
-and dot-directories), the generated TypeScript, and the project file. Generated
-TypeScript is rewritten only when its content changes, so C#-only edits skip the
-frontend build. Add `RunicApplicationFrontendInput` items, from a target that runs
-before `RunicViewsGenerateBridge`, for inputs outside the frontend directory such
-as workspace packages or generated assets; the translations editor is an example.
-Delete the stamp or rebuild to force a frontend build. Set
+and dot-directories), the generated TypeScript, the project file and
+`RunicApplicationFrontendInput` items. The build state is a hash of the build
+command, `RunicApplicationHost`, `NODE_ENV` and the environment variables named by
+`RunicApplicationFrontendBuildEnvironment` items; only the hash is written, to
+`obj/runic-bridge-frontend.state`. `dist` serves every configuration and target
+framework, so a build whose state differs from the one that last built `dist`
+builds it again, for example Debug after a Release build with other variables. Generated TypeScript is rewritten only when its
+content changes, so C#-only edits skip the frontend build.
+`RunicApplicationFrontendInput` items are the extension point for inputs outside
+the frontend directory, such as workspace packages, shared components imported
+through a Vite alias, or generated assets; declare them in the project, or add
+them from a target that runs before `RunicViewsGenerateBridge` (the translations
+editor is an example). Delete the stamp or rebuild to force a frontend build.
+
+The copy to `www/` mirrors `dist`. Each copy records the files it wrote, with
+their last write times, in `obj/`, and the next one deletes those that no
+frontend has any more, such as assets with an earlier hash, or a
+`runic-views.js` that no host copies any more. A recorded file whose time has
+changed since, because someone else wrote it, stays. Nothing else is deleted:
+the host-specific client scripts, a `dotnet runic dev` document and files the
+application puts in `www/` itself stay. Files that a build before 0.7.0-preview.9 left behind are not recorded;
+delete `www/` once to drop them. Set
 `RunicApplicationFrontendBuildEnabled=false` when another tool, such as a running dev server,
 owns the frontend build; `dotnet runic dev` does this while its development
 server runs.

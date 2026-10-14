@@ -139,18 +139,27 @@ npm install --save-exact @runic-artifex/react@<VERSION>
 Use `@runic-artifex/vue`, `@runic-artifex/svelte` or `@runic-artifex/angular`
 for those frameworks, or only `@runic-artifex/views` for plain TypeScript. Vite
 projects can add `@runic-artifex/vite-plugin-runic` as a development
-dependency for Runic diagnostics; with Runic Desktop, `runic({ desktop: true })`
-also loads the Desktop bootstrap.
+dependency for Runic diagnostics.
 
-The page loads the host's scripts before your module. With Runic Desktop:
+The page loads the host's scripts before your module. The template on SDK
+main loads a host-neutral Views client:
 
 <!-- prettier-ignore -->
 ```html docs-test=template:frontends/react/index.html
 <script src="webui.js"></script>
-<script src="runic-desktop-views.js"></script>
+<!-- The host copies its Views client to runic-views.js, so one build runs on every host. -->
+<script src="runic-views.js"></script>
 ```
 
-With CS-WebUI, load `runic-cswebui.js` instead of `runic-desktop-views.js`.
+`runic-views.js` is new in the next SDK preview
+([runic-sdk#256](https://github.com/Runic-Artifex/runic-sdk/pull/256), not yet
+released). Both host packages copy their Views client to that name, so one
+frontend build runs on Runic Desktop and CS-WebUI, and the Vite configuration
+is `runic()` with `base: "./"` on every host. A project that references both
+host packages sets `RunicApplicationHost` to `desktop` or `cswebui`. With SDK
+`0.7.0-preview.8`, load `runic-desktop-views.js` with Runic Desktop and use
+`runic({ desktop: true })`, which also loads the Desktop bootstrap, or load
+`runic-cswebui.js` with CS-WebUI. Those pages keep working after the change.
 
 `dotnet build` now writes the typed clients to `Frontend/src/generated`, builds
 the frontend with its `build` script and copies `Frontend/dist` to `www` next

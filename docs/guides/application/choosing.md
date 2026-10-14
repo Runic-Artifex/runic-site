@@ -97,9 +97,13 @@ return RunicCsWebUiHost.Run(provider, RunAsync);
 ```
 
 To switch, change that line and its `using`, the host package in the project
-file, and the host script in `index.html`. Generate a project with the other
-`--host` in the [creator](https://docs.runic-artifex.eu/create/) to compare the
-files.
+file, and, with SDK `0.7.0-preview.8`, the host script in `index.html`. From
+the next SDK preview
+([runic-sdk#256](https://github.com/Runic-Artifex/runic-sdk/pull/256), not yet
+released), both hosts also provide their Views client as `runic-views.js`. A
+page that loads it, as the template on SDK main does, names no host and needs
+no change. Generate a project with the other `--host` in the
+[creator](https://docs.runic-artifex.eu/create/) to compare the files.
 
 ## ViewModel library
 

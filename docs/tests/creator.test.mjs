@@ -202,12 +202,17 @@ test('every template file renders cleanly for every host and ViewModel choice', 
           files['RunicWindowApp.csproj'].includes('Runic.Desktop.Gtk4'),
           host === 'desktop-gtk4',
         );
-        assert.equal(
-          files['frontends/react/index.html'].includes(
-            'runic-desktop-views.js',
-          ),
-          desktop,
-        );
+        // Every host loads the host-neutral Views client.
+        for (const index of [
+          'frontends/react/index.html',
+          'frontends/angular/src/index.html',
+        ]) {
+          assert.match(files[index], /<script src="runic-views\.js">/);
+          assert.doesNotMatch(
+            files[index],
+            /runic-desktop-views\.js|runic-cswebui\.js/,
+          );
+        }
         assert.equal(
           files['WorkspaceViewModel.cs'].includes('ReactiveObject'),
           viewModels === 'reactiveui',
