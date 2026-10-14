@@ -156,7 +156,7 @@ through it, and an unsandboxed application on GTK 3 can choose GTK's own file ch
 `LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That is a
 lower-level provider API that you compose yourself, with no automatic fallback.
 The
-[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
+[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
 describes both mechanisms.
 
 When the save is unavailable, `BeginWriteAsync` returns
@@ -176,5 +176,5 @@ report success. This SDK has no other write policy: `FileWritePolicy` has only
 - [Desktop preferences, notifications, file handoff, and clipboard](../../desktop-services.md)
   covers the providers behind these services.
 - The
-  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.8/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views.Desktop/README.md)
   lists every per-Window service and owner.

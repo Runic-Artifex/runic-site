@@ -1,6 +1,6 @@
 {
-  "version": "0.7.0-preview.8",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.8",
+  "version": "0.7.0-preview.9",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.9",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",

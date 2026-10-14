@@ -60,14 +60,14 @@ runtime is smaller: in one
 application was 5.16 MiB with CS-WebUI and 10.42 MiB with Runic Desktop,
 excluding the browser.
 
-|                                        | Runic Desktop                                                          | CS-WebUI                                                    |
-| -------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Window                                 | Native window with the embedded WebView; installed browser as fallback | Installed browser in app mode; platform WebView as fallback |
-| File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                           | Report `OwnerUnavailable`                                   |
-| Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                 | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1        |
-| .NET package                           | `Runic.Application.Views.Desktop`                                      | `Runic.Application.Views.CsWebUi`                           |
-| Host script in `index.html`            | `runic-desktop-views.js`                                               | `runic-cswebui.js`                                          |
-| Support                                | First-class                                                            | Best effort                                                 |
+|                                        | Runic Desktop                                                          | CS-WebUI                                                      |
+| -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Window                                 | Native window with the embedded WebView; installed browser as fallback | Installed browser in app mode; platform WebView as fallback   |
+| File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                           | Report `OwnerUnavailable`                                     |
+| Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                 | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1          |
+| .NET package                           | `Runic.Application.Views.Desktop`                                      | `Runic.Application.Views.CsWebUi`                             |
+| Host script in `index.html`            | `runic-views.js` (before 0.7.0-preview.9: `runic-desktop-views.js`)    | `runic-views.js` (before 0.7.0-preview.9: `runic-cswebui.js`) |
+| Support                                | First-class                                                            | Best effort                                                   |
 
 ### Switching host later
 
@@ -97,12 +97,10 @@ return RunicCsWebUiHost.Run(provider, RunAsync);
 ```
 
 To switch, change that line and its `using`, the host package in the project
-file, and, with SDK `0.7.0-preview.8`, the host script in `index.html`. From
-the next SDK preview
-([runic-sdk#256](https://github.com/Runic-Artifex/runic-sdk/pull/256), not yet
-released), both hosts also provide their Views client as `runic-views.js`. A
-page that loads it, as the template on SDK main does, names no host and needs
-no change. Generate a project with the other `--host` in the
+file, and, before SDK `0.7.0-preview.9`, the host script in `index.html`.
+Since `0.7.0-preview.9`, both hosts also provide their Views client as
+`runic-views.js`. A page that loads it, as the template does, names no host
+and needs no change. Generate a project with the other `--host` in the
 [creator](https://docs.runic-artifex.eu/create/) to compare the files.
 
 ## ViewModel library

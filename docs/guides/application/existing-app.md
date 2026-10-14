@@ -141,8 +141,8 @@ for those frameworks, or only `@runic-artifex/views` for plain TypeScript. Vite
 projects can add `@runic-artifex/vite-plugin-runic` as a development
 dependency for Runic diagnostics.
 
-The page loads the host's scripts before your module. The template on SDK
-main loads a host-neutral Views client:
+The page loads the host's scripts before your module. The template loads a
+host-neutral Views client:
 
 <!-- prettier-ignore -->
 ```html docs-test=template:frontends/react/index.html
@@ -151,15 +151,14 @@ main loads a host-neutral Views client:
 <script src="runic-views.js"></script>
 ```
 
-`runic-views.js` is new in the next SDK preview
-([runic-sdk#256](https://github.com/Runic-Artifex/runic-sdk/pull/256), not yet
-released). Both host packages copy their Views client to that name, so one
-frontend build runs on Runic Desktop and CS-WebUI, and the Vite configuration
-is `runic()` with `base: "./"` on every host. A project that references both
-host packages sets `RunicApplicationHost` to `desktop` or `cswebui`. With SDK
-`0.7.0-preview.8`, load `runic-desktop-views.js` with Runic Desktop and use
-`runic({ desktop: true })`, which also loads the Desktop bootstrap, or load
-`runic-cswebui.js` with CS-WebUI. Those pages keep working after the change.
+Since SDK `0.7.0-preview.9`, both host packages copy their Views client to
+`runic-views.js`, so one frontend build runs on Runic Desktop and CS-WebUI,
+and the Vite configuration is `runic()` with `base: "./"` on every host. A
+project that references both host packages sets `RunicApplicationHost` to
+`desktop` or `cswebui`. Before `0.7.0-preview.9`, pages loaded
+`runic-desktop-views.js` with Runic Desktop and used `runic({ desktop: true })`,
+which also loads the Desktop bootstrap, or loaded `runic-cswebui.js` with
+CS-WebUI. Those pages keep working.
 
 `dotnet build` now writes the typed clients to `Frontend/src/generated`, builds
 the frontend with its `build` script and copies `Frontend/dist` to `www` next
@@ -170,8 +169,8 @@ generated clients are used from components.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
-in the Views README on SDK main. It covers Vite `resolve.alias` and
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the
 frontend when shared sources outside its folder change.
