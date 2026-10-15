@@ -31,7 +31,28 @@ see [CONTRIBUTING.md](CONTRIBUTING.md). Report vulnerabilities as described in
 
 ## Maintain content
 
-Keep the homepage focused on capabilities, templates, and examples. Update product links in `src/lib/products.ts`; preserve existing guide URLs where they serve as stable routes. Installation details, package availability, and portal guides live in [docs/](docs/README.md), published at [docs.runic-artifex.eu](https://docs.runic-artifex.eu/). Package READMEs, specifications and canonical Translations guides remain product-owned and are linked from the portal. The marketing site has no generated release or CI state to synchronize.
+The homepage explains what Runic does, shows it working, and links into the
+documentation. Update product names, descriptions and links in
+`src/lib/products.ts`. The first screen shows the application template's
+counter page: `src/lib/seam.ts` holds excerpts of its C# ViewModel and of each
+frontend, so update them when the template's counter page changes.
+
+Installation details, package availability, and portal guides live in
+[docs/](docs/README.md), published at
+[docs.runic-artifex.eu](https://docs.runic-artifex.eu/). Package READMEs,
+specifications and canonical Translations guides remain product-owned and are
+linked from the portal. The marketing site has no generated release or CI
+state to synchronize.
+
+## Brand
+
+The palette, fonts, wordmark and product glyphs come from
+[runic-brand](https://github.com/Runic-Artifex/runic-brand), whose guidelines
+explain the system. Its sync script writes `src/lib/brand/tokens.css`,
+`src/lib/brand/marks.json`, `static/brand/marks/`, `static/favicon.svg`,
+`static/icon.png` and `static/og.png` here, and the same files under `docs/`.
+Do not edit those files by hand; change the brand source and run
+`npm run sync:workspace` in `runic-brand`.
 
 ## Deployment contract
 

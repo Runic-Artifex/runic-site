@@ -1,65 +1,93 @@
+import type { MarkName } from '$lib/brand/Mark.svelte';
+
 export type Product = {
   slug: string;
   name: string;
-  shortName: string;
-  capability: string;
+  mark: MarkName;
   description: string;
   docs: string;
   source: string;
 };
 
+export type ProductGroup = {
+  name: string;
+  repository: string;
+  summary: string;
+  products: Product[];
+};
+
 const github = 'https://github.com/Runic-Artifex';
 const docs = 'https://docs.runic-artifex.eu/products';
 
-export const products: Product[] = [
+export const productGroups: ProductGroup[] = [
   {
-    slug: 'runic-application',
-    name: 'Runic Application',
-    shortName: 'Application',
-    capability: 'Application composition',
-    description:
-      'Compose typed .NET Windows and Views with generated frontend clients and scoped ViewModel lifetimes.',
-    docs: `${docs}/runic-application/`,
-    source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views`,
+    name: 'Runic SDK',
+    repository: `${github}/runic-sdk`,
+    summary: 'Released together, usable apart.',
+    products: [
+      {
+        slug: 'runic-application',
+        name: 'Runic Application',
+        mark: 'application',
+        description:
+          'Declare Windows, Views and navigation over your .NET ViewModels. The build generates a typed TypeScript client for each View, and your frontend framework renders it.',
+        docs: `${docs}/runic-application/`,
+        source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views`,
+      },
+      {
+        slug: 'runic-desktop',
+        name: 'Runic Desktop',
+        mark: 'desktop',
+        description:
+          'Open the frontend in a native window through WebView2, WKWebView or WebKitGTK, with file dialogs, notifications and other desktop services.',
+        docs: `${docs}/runic-desktop/`,
+        source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Desktop`,
+      },
+      {
+        slug: 'runic-assets',
+        name: 'Runic Assets',
+        mark: 'assets',
+        description:
+          'Package static files into one validated manifest, then serve it embedded, from a development source or from a server.',
+        docs: `${docs}/runic-assets/`,
+        source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Assets`,
+      },
+    ],
   },
   {
-    slug: 'runic-desktop',
-    name: 'Runic Desktop',
-    shortName: 'Desktop',
-    capability: 'Desktop presentation',
-    description:
-      'Host web-powered native windows, choose GTK3 or GTK4 on Linux, and add desktop services through platform adapters.',
-    docs: `${docs}/runic-desktop/`,
-    source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Desktop`,
-  },
-  {
-    slug: 'runic-assets',
-    name: 'Runic Assets',
-    shortName: 'Assets',
-    capability: 'Portable assets',
-    description:
-      'Package static assets once and carry the same validated manifest across hosts.',
-    docs: `${docs}/runic-assets/`,
-    source: `${github}/runic-sdk/tree/main/packages/dotnet/Runic.Assets`,
-  },
-  {
-    slug: 'runic-translations',
     name: 'Runic Translations',
-    shortName: 'Translations',
-    capability: 'Deterministic localization',
-    description:
-      'Turn portable translation resources, from short messages to structured documents, into strongly typed, NativeAOT-ready APIs.',
-    docs: `${docs}/runic-translations/`,
-    source: `${github}/runic-translations-sdk/tree/main/packages/dotnet/Runic.Translations`,
+    repository: `${github}/runic-translations-sdk`,
+    summary: 'Its own repository and release cycle.',
+    products: [
+      {
+        slug: 'runic-translations',
+        name: 'Runic Translations',
+        mark: 'translations',
+        description:
+          'Write messages in MessageFormat 2 and call them through generated, typed C# and TypeScript APIs. A desktop editor is included.',
+        docs: `${docs}/runic-translations/`,
+        source: `${github}/runic-translations-sdk/tree/main/packages/dotnet/Runic.Translations`,
+      },
+    ],
   },
   {
-    slug: 'runic-command-line',
     name: 'Runic Command Line',
-    shortName: 'Command Line',
-    capability: 'Command applications',
-    description:
-      'Generate NativeAOT-ready commands from typed C# methods, with help, validation, completion, and optional Spectre.Console presentation.',
-    docs: `${docs}/runic-command-line/`,
-    source: `${github}/runic-cli-sdk/tree/main/packages/dotnet/Runic.CommandLine`,
+    repository: `${github}/runic-cli-sdk`,
+    summary: 'Its own repository and release cycle.',
+    products: [
+      {
+        slug: 'runic-command-line',
+        name: 'Runic Command Line',
+        mark: 'command-line',
+        description:
+          'Turn typed C# methods into a NativeAOT command-line application with help, validation and shell completion.',
+        docs: `${docs}/runic-command-line/`,
+        source: `${github}/runic-cli-sdk/tree/main/packages/dotnet/Runic.CommandLine`,
+      },
+    ],
   },
 ];
+
+export const products: Product[] = productGroups.flatMap(
+  (group) => group.products,
+);

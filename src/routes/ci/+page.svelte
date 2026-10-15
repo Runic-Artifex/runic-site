@@ -1,16 +1,33 @@
 <svelte:head>
-  <title>Build status · Runic Artifex</title>
+  <title>Build status: Runic Artifex</title>
   <meta name="robots" content="noindex" />
 </svelte:head>
-<section class="section shell">
-  <p class="eyebrow">Runic SDK</p>
+
+<section class="status page">
   <h1>Build status</h1>
   <p>
-    Current checks and workflow results are available in the SDK repository.
+    Checks and workflow results for the Runic SDK are on GitHub, next to the
+    code they verify.
   </p>
   <a
-    class="button button--primary"
+    rel="external"
+    class="action action--primary"
     href="https://github.com/Runic-Artifex/runic-sdk/actions"
-    >View SDK Actions <span aria-hidden="true">↗</span></a
+    >Open the SDK workflow results</a
   >
 </section>
+
+<style>
+  .status {
+    display: grid;
+    justify-items: start;
+    gap: 1.25rem;
+    padding-block: clamp(3rem, 10vw, 7rem) 2rem;
+  }
+
+  p {
+    max-width: 34rem;
+    font-size: var(--text-lede);
+    color: var(--rune-ink-soft);
+  }
+</style>
