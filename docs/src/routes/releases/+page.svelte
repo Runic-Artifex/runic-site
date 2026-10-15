@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import ContentCard from '#lib/components/ContentCard.svelte';
+  import DocSection from '#lib/components/DocSection.svelte';
   import {
     currentRelease,
     historicalRelease,
@@ -25,49 +25,37 @@
     content="Published Runic SDK versions, release notes and upgrade guidance."
   />
 </svelte:head>
-<div>
-  <section class="page-hero shell">
-    <p class="eyebrow">Releases</p>
+<div class="shell">
+  <div class="page-head">
     <h1>Install a published SDK release.</h1>
     <p class="lede">{releaseSummary}</p>
-  </section>
-  <section class="content-grid shell">
-    <ContentCard
-      eyebrow="Published release"
-      title={currentRelease.version}
-      full
-    >
+  </div>
+  <div class="doc-sections">
+    <DocSection title={`Runic SDK ${currentRelease.version}`}>
       <p>
         SDK libraries, tools and templates are published together from the
         runic-sdk repository. Copy exact installation commands from the <a
-          class="text-link"
           href={resolve('/packages')}>package catalog</a
         >, or
-        <a class="text-link" href={resolve('/getting-started')}
-          >create your first app</a
-        >.
+        <a href={resolve('/getting-started')}>create your first app</a>.
       </p>
       <p>
-        <a class="text-link" href={currentRelease.url} rel="external"
-          >Read the release notes</a
-        >
+        <a href={currentRelease.url} rel="external">Read the release notes</a>
         for changes, migration steps and known issues.
-        <a
-          class="text-link"
-          href="https://github.com/Runic-Artifex/runic-sdk/releases"
+        <a href="https://github.com/Runic-Artifex/runic-sdk/releases"
           >All releases</a
         > remain available on GitHub.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Upgrading" title="Update the components you use">
+    </DocSection>
+    <DocSection title="Update the components you use">
       <p>
         Keep SDK packages on the same preview version, restore dependencies and
         rebuild to regenerate bridge code. Check the behavior your application
         relies on. Preview APIs can change; release notes describe any required
         migration.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Other projects" title="Separate availability">
+    </DocSection>
+    <DocSection title="Separate availability">
       <p>
         Command Line and Translations, including Translations Editor, are moving
         to their own repositories and release lifecycles. Their first
@@ -80,6 +68,6 @@
           >CS-WebUI releases</a
         > are maintained separately.
       </p>
-    </ContentCard>
-  </section>
+    </DocSection>
+  </div>
 </div>

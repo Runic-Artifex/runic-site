@@ -1,16 +1,18 @@
 <script lang="ts">
-  import { Button } from '#lib/components/ui/button/index.js';
   import type { Snippet } from 'svelte';
 
+  // A page's actions: one primary (ink, painted on hover), the rest outlined.
   let {
     href,
-    variant = 'default',
+    variant = 'secondary',
     children,
   }: {
     href: string;
-    variant?: 'default' | 'outline' | 'secondary' | 'ghost' | 'link';
+    variant?: 'primary' | 'secondary';
     children: Snippet;
   } = $props();
 </script>
 
-<Button {href} {variant} size="lg">{@render children()}</Button>
+<a class={['button', variant === 'primary' && 'button--primary']} {href}
+  >{@render children()}</a
+>

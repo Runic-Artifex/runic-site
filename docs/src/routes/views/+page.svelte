@@ -1,7 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import ActionLink from '#lib/components/ActionLink.svelte';
-  import ContentCard from '#lib/components/ContentCard.svelte';
+  import DocSection from '#lib/components/DocSection.svelte';
 </script>
 
 <svelte:head>
@@ -22,9 +22,8 @@
   />
 </svelte:head>
 
-<div>
-  <section class="page-hero shell">
-    <p class="eyebrow">Runic Application</p>
+<div class="shell">
+  <div class="page-head">
     <h1>Compose typed Windows and Views. Render with your frontend.</h1>
     <p class="lede">
       Runic Application connects explicit .NET Window and View types to ordinary
@@ -33,41 +32,41 @@
     </p>
     <div class="actions">
       <ActionLink
+        variant="primary"
         href={resolve('/guides/[...path]', { path: 'application/tutorial' })}
         >Follow the tutorial</ActionLink
       >
       <ActionLink
-        variant="outline"
         href="https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md"
         >Read the package guide</ActionLink
       >
     </div>
-  </section>
-  <section class="content-grid shell">
-    <ContentCard eyebrow="Composition" title="Select a Window explicitly" full>
+  </div>
+  <div class="doc-sections">
+    <DocSection title="Select a Window explicitly">
       <p>
         A partial <code>RunicWindow&lt;TViewModel&gt;</code> declares the logical
         window boundary. Dependency injection owns the Window's ViewModel scope; a
         host adapter supplies native presentation and lifecycle.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Content" title="Views carry typed context">
+    </DocSection>
+    <DocSection title="Views carry typed context">
       <p>
         A partial <code>RunicView&lt;TViewModel&gt;</code> selects a content
         contract and exposes a typed <code>DataContext</code>. The browser
         acknowledges mount and unmount so .NET can create and dispose logical
         Views as routes change.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Frontend" title="Keep rendering in the framework">
+    </DocSection>
+    <DocSection title="Keep rendering in the framework">
       <p>
         The build emits normal TypeScript modules from the compiled .NET
         application. Use them from React, Vue, Svelte, Angular, plain
         TypeScript, or another frontend without adding a framework-owned
         transport layer.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Bindings" title="Connect Views to components">
+    </DocSection>
+    <DocSection title="Connect Views to components">
       <p>
         Generated clients share one runtime, <code>@runic-artifex/views</code>,
         which includes a mock Bridge for frontend work without .NET.
@@ -78,15 +77,15 @@
         helpers (<code>useCommand</code>, <code>injectCommand</code>) arrive
         with SDK 0.7.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Calls" title="Use typed commands and writes">
+    </DocSection>
+    <DocSection title="Use typed commands and writes">
       <p>
         Generated clients expose snapshots, subscriptions, commands, property
         writes, and disposal. Writes return receipts and version conflicts;
         accepted operations stay owned by .NET through a browser reload.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Testing" title="Test both sides without a window">
+    </DocSection>
+    <DocSection title="Test both sides without a window">
       <p>
         <code>Runic.Application.Testing</code> drives the real ViewModels and
         generated Bridges in a .NET test, without a browser or native window.
@@ -94,12 +93,8 @@
         <code>@runic-artifex/views</code>. Typed drivers and generated mocks
         arrive with SDK 0.7.
       </p>
-    </ContentCard>
-    <ContentCard
-      eyebrow="Examples"
-      title="Compare Window and View patterns"
-      full
-    >
+    </DocSection>
+    <DocSection title="Compare Window and View patterns">
       <p>
         The first Window introduces a single ViewModel and generated client.
         CommunityToolkit Notes exercises nested content and scoped Views.
@@ -112,16 +107,14 @@
           >First Window</ActionLink
         >
         <ActionLink
-          variant="outline"
           href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first"
           >CommunityToolkit Notes</ActionLink
         >
         <ActionLink
-          variant="outline"
           href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-reactive-views"
           >Reactive Notes</ActionLink
         >
       </div>
-    </ContentCard>
-  </section>
+    </DocSection>
+  </div>
 </div>

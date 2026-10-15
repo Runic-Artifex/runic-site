@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -20,24 +21,24 @@
   <meta name="twitter:description" content={description} />
 </svelte:head>
 
-<div>
-  <section class="doc-hero guide-hero shell">
-    <nav class="api-breadcrumb" aria-label="Breadcrumb">
-      <a href={resolve('/api')}>API reference</a>
-      <span aria-hidden="true">/</span>
-      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- package paths come from the prerendered reference -->
-      <a href={type.package.href}>{type.package.id}</a>
-    </nav>
+<div class="shell">
+  <div class="page-head api-head">
+    <Breadcrumbs
+      items={[
+        { label: 'API reference', href: resolve('/api') },
+        { label: type.package.id, href: type.package.href },
+      ]}
+    />
     <h1><code>{type.name}</code> <span class="api-kind">{type.kind}</span></h1>
     <p class="api-meta">
-      Namespace <code>{type.namespace}</code> · {type.package.id}
+      Namespace <code>{type.namespace}</code> in {type.package.id}
       {type.package.version}
     </p>
-  </section>
-  <div class="api-layout shell">
+  </div>
+  <div class="api-layout">
     {#if type.groups.length}
       <nav class="api-toc" aria-label="Members">
-        <strong>Members</strong>
+        <p class="guide-toc-title">Members</p>
         <ul>
           {#each type.groups as group (group.id)}
             <li><a href={`#${group.id}`}>{group.title}</a></li>

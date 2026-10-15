@@ -1,20 +1,15 @@
 <script lang="ts">
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { cn } from '#lib/utils.js';
   import CheckIcon from '@lucide/svelte/icons/check';
   import CopyIcon from '@lucide/svelte/icons/copy';
-  import type { Snippet } from 'svelte';
 
   let {
     command,
     label = 'Copy command',
     class: className,
-    leading,
   }: {
     command: string;
     label?: string;
     class?: string;
-    leading?: Snippet;
   } = $props();
 
   let copied = $state(false);
@@ -28,15 +23,13 @@
   }
 </script>
 
-<div class={cn('command-block', className)}>
-  {#if leading}
-    <div class="command-leading">{@render leading()}</div>
-  {/if}
-  <pre><code>{command}</code></pre>
-  <Button
+<!-- The command scrolls in its own cell, so the copy button never covers it. -->
+<div class={['command-block', className]}>
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <pre tabindex="0"><code>{command}</code></pre>
+  <button
     class="command-copy"
-    variant="ghost"
-    size="icon-sm"
+    type="button"
     aria-label={copied ? 'Copied' : label}
     title={copied ? 'Copied' : label}
     onclick={copy}
@@ -44,7 +37,7 @@
     {#if copied}<CheckIcon aria-hidden="true" />{:else}<CopyIcon
         aria-hidden="true"
       />{/if}
-  </Button>
+  </button>
   <span class="sr-only" role="status"
     >{copied ? 'Copied to clipboard' : ''}</span
   >
@@ -52,39 +45,56 @@
 
 <style>
   .command-block {
-    position: relative;
     display: flex;
-    align-items: stretch;
-    border: 1px solid var(--border);
-    border-radius: calc(var(--radius) * 1.4);
-    background: color-mix(in oklch, var(--muted) 65%, var(--background));
-  }
-
-  .command-leading {
-    display: flex;
-    align-items: center;
-    padding-left: 8px;
-    border-right: 1px solid var(--border);
-  }
-
-  pre {
-    flex: 1;
+    align-items: flex-start;
     min-width: 0;
+    border: var(--rule);
+    border-radius: var(--radius-pane);
+    background: var(--code-ground, var(--rune-raised));
+  }
+
+  .command-block pre {
+    min-width: 0;
+    flex: 1;
     margin: 0;
-    padding: 14px 52px 14px 18px;
-    font-size: 0.86rem;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    overflow-wrap: break-word;
+    overflow-x: auto;
+    padding: 0.95rem 0.5rem 0.95rem 1.15rem;
+    border: 0;
+    border-radius: var(--radius-pane) 0 0 var(--radius-pane);
+    background: none;
+    font-size: var(--text-code);
+    line-height: 1.6;
+    white-space: pre;
   }
 
-  pre code {
-    overflow-wrap: break-word;
+  .command-block code {
+    padding: 0;
+    background: none;
+    font-size: inherit;
+    overflow-wrap: normal;
   }
 
-  .command-block :global(.command-copy) {
-    position: absolute;
-    top: 8px;
-    right: 8px;
+  .command-copy {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    flex: none;
+    place-items: center;
+    margin: 0.55rem 0.55rem 0 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--rune-ink-soft);
+    cursor: pointer;
+  }
+
+  .command-copy:hover {
+    border-color: var(--rune-groove);
+    color: var(--rune-ink);
+  }
+
+  .command-copy :global(svg) {
+    width: 1rem;
+    height: 1rem;
   }
 </style>

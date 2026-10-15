@@ -13,6 +13,6 @@
 
 <ErrorState
   status="404"
-  title="That rune is not in the catalog."
-  description="The page may have moved as the preview documentation evolves."
+  title="No page at this address"
+  description="It may have moved while the preview documentation changes. Search for it, or start from the documentation home."
 />

@@ -68,9 +68,8 @@
   />
 </svelte:head>
 
-<div class="page-hero shell search-page">
-  <p class="eyebrow">Search</p>
-  <h1>Search the documentation.</h1>
+<div class="shell page-head search-page">
+  <h1>Search the documentation</h1>
   <form
     class="search-form large"
     role="search"
@@ -98,9 +97,7 @@
   <noscript>
     <p class="search-status">
       Search runs in your browser and needs JavaScript. Browse the
-      <a class="text-link" href={resolve('/guides/[...path]', { path: '' })}
-        >guide index</a
-      > instead.
+      <a href={resolve('/guides/[...path]', { path: '' })}>guide index</a> instead.
     </p>
   </noscript>
 
@@ -120,11 +117,9 @@
       {#each results as result (result.entry.u)}
         <li>
           <a href={result.entry.u}>
-            <strong
-              >{result.entry.t}{#if result.entry.s}<span
-                  >{` › ${result.entry.s}`}</span
-                >{/if}</strong
-            >
+            <strong>{result.entry.t}</strong>
+            {#if result.entry.s}<span class="section">{result.entry.s}</span
+              >{/if}
             <span class="excerpt"
               >{#each result.excerpt as part, partIndex (partIndex)}{#if part.match}<mark
                     >{part.text}</mark
@@ -136,3 +131,66 @@
     </ol>
   {/if}
 </div>
+
+<style>
+  .search-page :global(.search-form) {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .search-status {
+    color: var(--rune-ink-soft);
+    font-size: var(--text-ui);
+  }
+
+  .search-results {
+    width: 100%;
+    max-width: 48rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search-results li {
+    border-bottom: var(--rule);
+  }
+
+  .search-results li:first-child {
+    border-top: var(--rule);
+  }
+
+  .search-results a {
+    display: grid;
+    gap: 0.2rem;
+    padding-block: 1rem;
+    text-decoration: none;
+  }
+
+  .search-results strong {
+    font-size: 1.0625rem;
+    font-weight: 600;
+  }
+
+  .search-results a:hover strong {
+    text-decoration: underline;
+    text-decoration-color: var(--rune-paint);
+  }
+
+  .section {
+    color: var(--rune-ink);
+    font-size: var(--text-ui);
+  }
+
+  .excerpt {
+    color: var(--rune-ink-soft);
+    font-size: var(--text-ui);
+    line-height: 1.55;
+  }
+
+  mark {
+    padding: 0 0.1em;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--rune-paint) 18%, transparent);
+    color: var(--rune-ink);
+  }
+</style>

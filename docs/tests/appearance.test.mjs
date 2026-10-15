@@ -1,30 +1,21 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
-  appearanceKeys,
-  applyAppearance,
-  defaultAppearance,
+  appearanceKey,
+  applyThemeMode,
+  defaultThemeMode,
   isThemeMode,
-  isThemePalette,
-  readAppearance,
-  resolveDarkMode,
-  saveAppearance,
-  subscribeSystemAppearance,
+  readThemeMode,
+  resolveColorScheme,
+  saveThemeMode,
+  subscribeSystemScheme,
   themeModes,
-  themePalettes,
 } from '../src/lib/appearance.ts';
 
 const expectedThemeModes = ['system', 'light', 'dark'];
-const expectedThemePalettes = ['runic', 'moss', 'fjord', 'ember'];
-const expectedAppearanceKeys = {
-  mode: 'runic-docs.theme-mode',
-  palette: 'runic-docs.theme-palette',
-};
-const expectedEditorThemeMatrixSha256 =
-  '39409f85f4e943f00f6880c9b5c74d5a7cb7ffa20b9f1d2ed1943fbb8361d544';
+const expectedAppearanceKey = 'runic-docs.theme-mode';
 
 function createStorage() {
   const values = new Map();
@@ -80,107 +71,117 @@ function createMedia(matches = false) {
   };
 }
 
-test('uses typed dark Runic defaults and strict guards', () => {
+test('follows the system by default and guards stored modes', () => {
   assert.deepEqual(themeModes, expectedThemeModes);
-  assert.deepEqual(themePalettes, expectedThemePalettes);
-  assert.deepEqual(appearanceKeys, expectedAppearanceKeys);
-  assert.deepEqual(defaultAppearance, { mode: 'dark', palette: 'runic' });
-  assert.deepEqual(readAppearance(undefined), defaultAppearance);
+  assert.equal(appearanceKey, expectedAppearanceKey);
+  assert.equal(defaultThemeMode, 'system');
+  assert.equal(readThemeMode(undefined), 'system');
 
   for (const mode of themeModes) assert.equal(isThemeMode(mode), true);
-  for (const palette of themePalettes)
-    assert.equal(isThemePalette(palette), true);
-  for (const invalid of [null, undefined, '', 'sepia', 1, {}]) {
+  for (const invalid of [null, undefined, '', 'sepia', 'runic', 1, {}])
     assert.equal(isThemeMode(invalid), false);
-    assert.equal(isThemePalette(invalid), false);
-  }
 });
 
-test('persists and applies every mode and palette combination with docs-only keys', () => {
+test('persists and applies every mode with the docs-only key', () => {
   const storage = createStorage();
   const root = createRoot();
-  const media = createMedia(false);
 
-  for (const palette of themePalettes) {
+  for (const systemPrefersDark of [false, true]) {
+    const media = createMedia(systemPrefersDark);
     for (const mode of themeModes) {
-      saveAppearance(mode, palette, storage, root, media);
-      assert.deepEqual(readAppearance(storage), { mode, palette });
-      assert.equal(root.dataset.theme, palette);
-      assert.equal(root.style.colorScheme, mode === 'dark' ? 'dark' : 'light');
-      assert.equal(root.classes.has('dark'), mode === 'dark');
+      saveThemeMode(mode, storage, root, media);
+      const scheme =
+        mode === 'dark' || (mode === 'system' && systemPrefersDark)
+          ? 'dark'
+          : 'light';
+      assert.equal(readThemeMode(storage), mode);
+      assert.equal(root.dataset.scheme, scheme, `${mode} ${systemPrefersDark}`);
+      assert.equal(root.style.colorScheme, scheme);
+      assert.equal(root.classes.has('dark'), scheme === 'dark');
+      assert.equal(root.dataset.theme, undefined);
     }
   }
 
-  assert.equal(themeModes.length * themePalettes.length, 12);
-  assert.deepEqual(
-    new Set(storage.reads),
-    new Set([appearanceKeys.mode, appearanceKeys.palette]),
-  );
+  assert.deepEqual(new Set(storage.reads), new Set([appearanceKey]));
   assert.deepEqual(
     new Set(storage.writes.map(([key]) => key)),
-    new Set([appearanceKeys.mode, appearanceKeys.palette]),
+    new Set([appearanceKey]),
   );
   assert.equal(
     storage.writes.some(([key]) =>
-      /runic-translations|translations-editor/.test(key),
+      /palette|runic-translations|translations-editor/.test(key),
     ),
     false,
   );
 });
 
 test('resolves system mode and falls back safely for corrupt or blocked storage', () => {
-  assert.equal(resolveDarkMode('dark', false), true);
-  assert.equal(resolveDarkMode('light', true), false);
-  assert.equal(resolveDarkMode('system', false), false);
-  assert.equal(resolveDarkMode('system', true), true);
+  assert.equal(resolveColorScheme('dark', false), 'dark');
+  assert.equal(resolveColorScheme('light', true), 'light');
+  assert.equal(resolveColorScheme('system', false), 'light');
+  assert.equal(resolveColorScheme('system', true), 'dark');
 
   const storage = createStorage();
-  storage.values.set(appearanceKeys.mode, 'sepia');
-  storage.values.set(appearanceKeys.palette, 'unknown');
-  assert.deepEqual(readAppearance(storage), defaultAppearance);
-  assert.deepEqual(
-    readAppearance({
+  storage.values.set(appearanceKey, 'sepia');
+  assert.equal(readThemeMode(storage), 'system');
+  assert.equal(
+    readThemeMode({
       getItem() {
         throw new Error('blocked');
       },
       setItem() {},
     }),
-    defaultAppearance,
+    'system',
   );
 
   const root = createRoot();
-  const media = createMedia(true);
-  applyAppearance('system', 'fjord', root, media);
+  applyThemeMode('system', root, createMedia(true));
   assert.equal(root.classes.has('dark'), true);
-  assert.equal(root.dataset.theme, 'fjord');
+  assert.equal(root.dataset.scheme, 'dark');
   assert.equal(root.style.colorScheme, 'dark');
+
+  const blocked = createRoot();
+  saveThemeMode(
+    'dark',
+    {
+      getItem() {
+        return null;
+      },
+      setItem() {
+        throw new Error('blocked');
+      },
+    },
+    blocked,
+    createMedia(false),
+  );
+  assert.equal(blocked.dataset.scheme, 'dark');
 });
 
 test('subscribes to system changes only in system mode and cleans up exactly once', () => {
   const media = createMedia(false);
-  let appearance = { mode: 'system', palette: 'ember' };
+  let mode = 'system';
   const applied = [];
-  const cleanup = subscribeSystemAppearance(
-    () => appearance,
+  const cleanup = subscribeSystemScheme(
+    () => mode,
     media,
-    (mode, palette) => applied.push([mode, palette]),
+    (next) => applied.push(next),
   );
 
   assert.equal(media.listeners.size, 1);
   media.emit();
-  assert.deepEqual(applied, [['system', 'ember']]);
+  assert.deepEqual(applied, ['system']);
 
-  appearance = { mode: 'dark', palette: 'moss' };
+  mode = 'dark';
   media.emit();
-  assert.deepEqual(applied, [['system', 'ember']]);
+  assert.deepEqual(applied, ['system']);
 
   cleanup();
   assert.equal(media.listeners.size, 0);
   media.emit();
-  assert.deepEqual(applied, [['system', 'ember']]);
+  assert.deepEqual(applied, ['system']);
 });
 
-test('defines the complete semantic token contract for all eight theme selectors', async () => {
+test('maps the shadcn theme names onto the rune tokens in one place', async () => {
   const css = await readFile(
     new URL('../src/routes/layout.css', import.meta.url),
     'utf8',
@@ -189,72 +190,55 @@ test('defines the complete semantic token contract for all eight theme selectors
     new URL('../src/app.css', import.meta.url),
     'utf8',
   );
-  const requiredTokens = [
-    'background',
-    'foreground',
-    'card',
-    'card-foreground',
-    'popover',
-    'popover-foreground',
-    'primary',
-    'primary-foreground',
-    'secondary',
-    'secondary-foreground',
-    'muted',
-    'muted-foreground',
-    'accent',
-    'accent-foreground',
-    'border',
-    'input',
-    'ring',
-    'chart-1',
-    'chart-2',
-    'chart-3',
-    'chart-4',
-    'chart-5',
-    'sidebar',
-    'sidebar-foreground',
-    'sidebar-primary',
-    'sidebar-primary-foreground',
-    'sidebar-accent',
-    'sidebar-accent-foreground',
-    'sidebar-border',
-    'sidebar-ring',
-  ];
-  const selectors = [
-    ':root',
-    '.dark',
-    ...expectedThemePalettes
-      .filter((palette) => palette !== 'runic')
-      .flatMap((palette) => [
-        `:root:not(.dark)[data-theme='${palette}']`,
-        `.dark[data-theme='${palette}']`,
-      ]),
-  ];
-
-  assert.equal(selectors.length, 8);
-  for (const selector of selectors) {
-    const block = cssBlock(css, selector);
-    for (const token of requiredTokens) {
-      assert.match(
-        block,
-        new RegExp(`--${token}:`),
-        `${selector} does not define --${token}`,
-      );
-    }
-  }
-
-  assert.equal(
-    createHash('sha256').update(normalizedThemeMatrix(css)).digest('hex'),
-    expectedEditorThemeMatrixSha256,
-    'theme selector, variable, or value drifted from the pinned Editor matrix',
+  const tokens = await readFile(
+    new URL('../src/lib/brand/tokens.css', import.meta.url),
+    'utf8',
   );
+  const mapping = {
+    background: 'stone',
+    foreground: 'ink',
+    card: 'raised',
+    'card-foreground': 'ink',
+    popover: 'raised',
+    'popover-foreground': 'ink',
+    primary: 'ink',
+    'primary-foreground': 'stone',
+    secondary: 'sunk',
+    'secondary-foreground': 'ink',
+    muted: 'sunk',
+    'muted-foreground': 'ink-soft',
+    accent: 'sunk',
+    'accent-foreground': 'ink',
+    destructive: 'paint',
+    border: 'groove',
+    input: 'groove',
+    ring: 'paint',
+  };
 
-  assert.match(appCss, /--docs-accent:\s*var\(--primary\)/);
-  assert.match(appCss, /--docs-accent-soft:[\s\S]*?var\(--primary\)/);
-  assert.match(appCss, /--docs-ambient-secondary:[\s\S]*?var\(--chart-2\)/);
-  assert.doesNotMatch(appCss, /--runic-(?:gold|moss)/);
-  assert.doesNotMatch(appCss, /oklch\(\d/);
+  assert.match(css, /@import '\.\.\/lib\/brand\/tokens\.css';/);
+  const root = cssBlock(css, ':root');
+  for (const [name, token] of Object.entries(mapping))
+    assert.match(
+      root,
+      new RegExp(`--${name}: var\\(--rune-${token}\\);`),
+      `--${name} should use --rune-${token}`,
+    );
+  // Dark values come from tokens.css; the mapping has no second colour block.
+  assert.doesNotMatch(css, /^\.dark\s*\{/m);
+  for (const scheme of [
+    ":root[data-scheme='dark']",
+    ":root:not([data-scheme='light'])",
+  ])
+    assert.ok(tokens.includes(scheme), scheme);
+
+  for (const source of [css, appCss]) {
+    assert.doesNotMatch(
+      source,
+      /data-theme|--docs-accent|--runic-(?:gold|moss)/,
+    );
+    assert.doesNotMatch(source, /oklch\(\d/);
+    assert.doesNotMatch(source, /Newsreader|Geist|Inter Variable/);
+  }
 });
 
 function cssBlock(source, selector) {
@@ -264,41 +248,4 @@ function cssBlock(source, selector) {
   const end = source.indexOf('}', bodyStart);
   assert.notEqual(end, -1, `Unclosed theme selector ${selector}`);
   return source.slice(bodyStart, end);
-}
-
-function normalizedThemeMatrix(source) {
-  const normalizedSelectors = [
-    ':root',
-    '.dark',
-    ...expectedThemePalettes
-      .filter((palette) => palette !== 'runic')
-      .flatMap((palette) => [
-        `:root:not(.dark)[data-theme=${palette}]`,
-        `.dark[data-theme=${palette}]`,
-      ]),
-  ];
-  const themes = [];
-  const themeSource = source.slice(source.indexOf(':root {'));
-
-  for (const [, rawSelector, body] of themeSource.matchAll(
-    /([^{}]+)\{([^{}]*)\}/g,
-  )) {
-    const selector = rawSelector.trim().replaceAll(/["']/g, '');
-    if (!normalizedSelectors.includes(selector)) continue;
-
-    const variables = Object.fromEntries(
-      [...body.matchAll(/--([\w-]+):\s*([^;]+);/g)].map(([, name, value]) => [
-        name,
-        value.replace(/\s+/g, ' ').trim(),
-      ]),
-    );
-    themes.push([selector, variables]);
-  }
-
-  assert.deepEqual(
-    themes.map(([selector]) => selector),
-    normalizedSelectors,
-    'theme selector order must stay identical to the Editor matrix',
-  );
-  return JSON.stringify(themes);
 }
