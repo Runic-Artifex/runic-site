@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "db744896cc8dc02fabbdc9cb7389fb4eba8c2296",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/db744896cc8dc02fabbdc9cb7389fb4eba8c2296.tar.gz",
+  "revision": "b99f3c0760a3d621478d82ae1fe5a03234a6c8a9",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/b99f3c0760a3d621478d82ae1fe5a03234a6c8a9.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -46,6 +46,7 @@
     "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailView.xaml.cs",
     "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailViewModel.cs",
     "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NotesListViewModel.cs",
+    "nix/README.md",
     "packages/dotnet/Runic.Application.Views.ReactiveUI/README.md",
     "packages/dotnet/Runic.Application.Views.Wpf/README.md",
     "packages/dotnet/Runic.Application.Views/README.md",
@@ -77,6 +78,7 @@
     "tools/Runic.Application.Templates/content/runic-app/Views.cs",
     "tools/Runic.Application.Templates/content/runic-app/WorkspaceServices.cs",
     "tools/Runic.Application.Templates/content/runic-app/WorkspaceViewModel.cs",
+    "tools/Runic.Application.Templates/content/runic-app/flake.nix",
     "tools/Runic.Application.Templates/content/runic-app/frontends/angular/src/app/app.ts",
     "tools/Runic.Application.Templates/content/runic-app/frontends/angular/src/index.html",
     "tools/Runic.Application.Templates/content/runic-app/frontends/react/index.html",
@@ -89,5 +91,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:a61155c1a24bc0abb4898b0bdf0f0638d67b23f81964eb02d918bb7219bd7de0"
+  "contentDigest": "sha256:553ce1b8594e43fd1bc2a5e579ac4cf90c52b7abe1aca7034855af184009fd5f"
 }

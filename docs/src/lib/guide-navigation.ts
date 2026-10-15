@@ -68,6 +68,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'desktop/inhibition.md',
       'desktop/size-and-tuning.md',
       'desktop/shipping.md',
+      'desktop/nix-packaging.md',
       'desktop/migrations/webui-compat-to-desktop.md',
       'desktop/host-choice-and-footprint.md',
     ],

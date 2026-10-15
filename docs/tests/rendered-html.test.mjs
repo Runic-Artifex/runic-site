@@ -326,7 +326,7 @@ test('uses the canonical Runic Translations identifiers', async () => {
   assert.match(html, /runic-translations-sdk/);
   assert.match(stripMarkup(html), /released independently from the Runic SDK/);
   assert.ok(
-    html.includes('runic-translations-sdk/releases/tag/v0.6.0-preview.7'),
+    html.includes('runic-translations-sdk/releases/tag/v0.7.0-preview.1'),
   );
   assert.doesNotMatch(html, /independent preview is not yet published/);
 });
@@ -412,7 +412,7 @@ test('product documentation areas link to their owning guides', async () => {
     ],
     [
       'runic-command-line',
-      `${github}runic-cli-sdk/blob/v0.6.0-preview.5/README.md`,
+      `${github}runic-cli-sdk/blob/v0.7.0-preview.1/README.md`,
     ],
   ]) {
     const html = await render(`/products/${slug}`);
