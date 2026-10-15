@@ -2,8 +2,8 @@
 
 Since SDK `0.8.0-preview.1`, the Runic SDK's flake exports a builder for Runic
 applications, a development shell, and NixOS and Home Manager modules that
-install them. This guide follows `0.8.0-preview.1` and summarizes the SDK's
-[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/nix/README.md),
+install them. This guide follows `0.8.0-preview.2` and summarizes the SDK's
+[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/nix/README.md),
 which has every argument and option.
 
 `buildRunicApplication` wraps nixpkgs' `buildDotnetModule`. It restores NuGet
@@ -44,7 +44,7 @@ SDK input to the release your packages use:
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   runic-sdk = {
-    url = "github:Runic-Artifex/runic-sdk/v0.8.0-preview.1";
+    url = "github:Runic-Artifex/runic-sdk/v0.8.0-preview.2";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 };
@@ -105,7 +105,7 @@ the program behind it finds no WebKitGTK, and Runic Desktop then reports
 autostart entry.
 
 The policy of the application's
-[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 is installed in `$out/share/polkit-1/actions`. The build exports
 `RunicApplicationInstallPrefix` as `$out`, so an action can name the installed
 program, and fails when a policy names a program outside the package:

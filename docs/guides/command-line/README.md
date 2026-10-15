@@ -209,14 +209,15 @@ Help, parse errors and faults are English by default. The
 `Runic.Translations.CommandLine` adapter, which Runic Translations publishes,
 translates them with a [Translations](../translations/README.md) catalog. It
 ships English and German text for every framework key, and it looks up your
-own command descriptions in your catalog. Translations `0.7.0-preview.1` needs
-Command Line `0.6.0-preview.4` or later, so it works with `0.7.0-preview.1`.
+own command descriptions in your catalog, including the prompt text that
+Command Line `0.7.0-preview.1` added. Translations `0.7.0-preview.2` needs
+Command Line `0.7.0-preview.1` or later.
 Add the adapter and the build package to the project from
 [your first command](#your-first-command):
 
 ```sh docs-test=skip:translations-repository
-dotnet add package Runic.Translations.CommandLine --version 0.7.0-preview.1
-dotnet add package Runic.Translations.Build --version 0.7.0-preview.1
+dotnet add package Runic.Translations.CommandLine --version 0.7.0-preview.2
+dotnet add package Runic.Translations.Build --version 0.7.0-preview.2
 ```
 
 The build package compiles a `translations/` folder next to the project file.
@@ -264,9 +265,9 @@ using Runic.CommandLine.Generated;
 using Runic.Translations;
 using Runic.Translations.CommandLine;
 
-// The invariant culture, for example with LANG=C, has no name: use the base locale.
-string? locale = CultureInfo.CurrentUICulture.Name is { Length: > 0 } name ? name : null;
-ITranslationManager manager = HelloTextCatalog.CreateManager(initialLocale: locale);
+// Under LANG=C the invariant culture has no name; the catalog then uses its base locale.
+ITranslationManager manager = HelloTextCatalog.CreateManager(
+    initialLocale: CultureInfo.CurrentUICulture.Name);
 
 return await new CommandApp(GeneratedCommandCatalog.Create())
 {
@@ -315,7 +316,7 @@ command names, option spellings, codes and `messageKey` values never change.
   variable writes the exception of an `RCLI5000` host failure to stderr.
 
 The
-[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Translations.CommandLine/README.md)
+[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.2/packages/dotnet/Runic.Translations.CommandLine/README.md)
 describes the resolver in full.
 
 ## Next steps

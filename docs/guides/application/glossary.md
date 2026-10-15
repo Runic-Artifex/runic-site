@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
