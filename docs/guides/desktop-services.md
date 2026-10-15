@@ -49,7 +49,7 @@ as do requests through CS-WebUI's registration. Portal diagnostics of these
 notifications are logged as event 2003. To compose the service yourself, call
 `PlatformServices.CreateNotifications(applicationId)`. Notifications through
 `AddRunicPlatformServices()` are new in SDK `0.7.0-preview.8`; see the
-[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Application.Views.Desktop/README.md).
+[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views.Desktop/README.md).
 
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native
@@ -70,7 +70,7 @@ applications should use the GTK 4 portal adapter, for example
 and must not load GTK 3 just to open a file. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
@@ -93,7 +93,7 @@ selection unavailable. Treat an unavailable provider or browser-only owner as
 an application state, and retain an appropriate fallback.
 
 Use the provider matching the presentation backend; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform/README.md).
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform/README.md).
 
 ## Status icon, single instance and login startup
 
@@ -102,16 +102,24 @@ Use the provider matching the presentation backend; see the
 launch the primary instance. Since SDK `0.8.0-preview.1`, the status icon,
 login startup and `PlatformServices.PresentAsync` work on Linux, Windows and
 macOS. The
-[status icon example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/examples/status-icon/README.md)
+[status icon example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/examples/status-icon/README.md)
 starts without a window, shows the icon with a menu, and brings its Window
-forward when the application is launched again. The provider READMEs describe
+forward when the application is launched again. Since SDK `0.8.0-preview.2`, a
+termination signal (Ctrl+C, SIGTERM from `systemctl --user stop` or a logout,
+SIGHUP) ends a windowless application instead of leaving it running until
+SIGKILL. To shut down in order, as the example does, set
+`DesktopHostOptions.HandlesShutdownWithoutWindow = true` and end the
+application loop when `ShutdownRequested` is cancelled; without it, a signal
+that arrives while no window is open ends the process at once. See
+[Runic.Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Desktop/README.md).
+The provider READMEs describe
 each platform:
-[Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform.Windows/README.md#status-icon-and-window-presentation)
+[Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform.Windows/README.md#status-icon-and-window-presentation)
 and
-[macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform.MacOS/README.md#status-icon).
+[macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform.MacOS/README.md#status-icon).
 On macOS, Runic Desktop also adds the standard application, Edit, View and
 Window menus unless the application supplies its own; see
-[keyboard and zoom in embedded windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Desktop/README.md#keyboard-and-zoom-in-embedded-windows).
+[keyboard and zoom in embedded windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Desktop/README.md#keyboard-and-zoom-in-embedded-windows).
 
 ## Privileged actions
 
@@ -119,14 +127,14 @@ Window menus unless the application supplies its own; see
 time as a `RunicPrivilegedAction` item, a fixed program with bounded arguments,
 as the administrator after the platform's authorization prompt. It is new in
 SDK `0.8.0-preview.1`. Start with the
-[contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform/README.md#privileged-actions),
+[contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform/README.md#privileged-actions),
 then follow the provider for each platform:
-[Polkit on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[Polkit on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 (`Runic.Platform.Linux.Polkit`),
-[UAC on Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform.Windows.Elevation/README.md)
+[UAC on Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform.Windows.Elevation/README.md)
 (`Runic.Platform.Windows.Elevation`) and
-[a launch daemon on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Platform.MacOS/README.md#privileged-actions).
-The [design and security review](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/specs/platform/privileged-operations.md)
+[a launch daemon on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Platform.MacOS/README.md#privileged-actions).
+The [design and security review](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/specs/platform/privileged-operations.md)
 records the threat model. [Nix packaging](desktop/nix-packaging.md#run-time-and-privileged-actions)
 installs the Polkit policy with the application.
 
@@ -136,6 +144,6 @@ installs the Polkit policy with the application.
 directory entries and a Git checkout's `HEAD`, and calls back in a turn of the
 model context, so a ViewModel refreshes when they change. It is new in SDK
 `0.8.0-preview.1`; see
-[Watching files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Application.Views/README.md#watching-files)
+[Watching files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views/README.md#watching-files)
 and, for tests on a fake clock,
-[`RunicPathWatchTester`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Application.Testing/README.md#file-watchers).
+[`RunicPathWatchTester`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Testing/README.md#file-watchers).

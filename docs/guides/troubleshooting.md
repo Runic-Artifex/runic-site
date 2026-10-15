@@ -10,16 +10,16 @@ something fails without one.
 
 | Prefix                                     | Reported by                                                           | Reference                                                                                                                                         |
 | ------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RUNICBRIDGE`                              | The bridge code generator, during `dotnet build`                      | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/docs/diagnostics.md#bridge-code-generator)                     |
-| `RAPPCLI`, `RAPPDEV`, `RAPPSUP`, `RTKSIZE` | `dotnet runic` commands, such as `dev`, `doctor` and `size`           | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/docs/diagnostics.md#dotnet-runic)                              |
-| `RAS`                                      | The asset packer that the Runic.Assets build runs                     | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/docs/diagnostics.md#asset-packer)                              |
-| `RCREATE`                                  | `dnx Runic.Create`                                                    | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/docs/diagnostics.md#runiccreate)                               |
-| `RUNICWPF`                                 | The compiler, for an experimental API                                 | [Experimental APIs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/docs/experimental.md)                                        |
+| `RUNICBRIDGE`                              | The bridge code generator, during `dotnet build`                      | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/docs/diagnostics.md#bridge-code-generator)                     |
+| `RAPPCLI`, `RAPPDEV`, `RAPPSUP`, `RTKSIZE` | `dotnet runic` commands, such as `dev`, `doctor` and `size`           | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/docs/diagnostics.md#dotnet-runic)                              |
+| `RAS`                                      | The asset packer that the Runic.Assets build runs                     | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/docs/diagnostics.md#asset-packer)                              |
+| `RCREATE`                                  | `dnx Runic.Create`                                                    | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/docs/diagnostics.md#runiccreate)                               |
+| `RUNICWPF`                                 | The compiler, for an experimental API                                 | [Experimental APIs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/docs/experimental.md)                                        |
 | `RCLI`                                     | Runic Command Line and any tool built on it, including `dotnet runic` | [Command Line diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.7.0-preview.1/docs/guides/command-line/diagnostics.md)          |
-| `RTR`                                      | The Translations compiler, in the build, the tool and the editors     | [Translations diagnostics](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/diagnostics.md) |
+| `RTR`                                      | The Translations compiler, in the build, the tool and the editors     | [Translations diagnostics](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.2/docs/guides/translations/diagnostics.md) |
 
-The links above are for SDK `0.8.0-preview.1`, Command Line `0.7.0-preview.1`
-and Translations `0.7.0-preview.1`. For another release, change the tag in the
+The links above are for SDK `0.8.0-preview.2`, Command Line `0.7.0-preview.1`
+and Translations `0.7.0-preview.2`. For another release, change the tag in the
 address. `dotnet runic` reports a few `RCLI8xxx` codes of its own; the SDK
 diagnostics list them.
 
@@ -39,14 +39,16 @@ diagnostics list them.
   warning; see [translate a CLI](command-line/README.md#translate-a-cli).
 - **The bridge or the frontend build fails.** `RUNICBRIDGE016` reports a
   frontend install or build command that failed; its own output, printed
-  above the error, names the cause.
+  above the error, names the cause. `RUNICBRIDGE022` means that
+  `dotnet publish --no-build` found no Bridge code from an earlier build:
+  build first with the same configuration, target framework and `PublishAot`.
 
 ## More help
 
 - Guides with their own troubleshooting sections:
   [embed and serve assets](assets/README.md#troubleshooting) and the
-  [Translations .NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/quickstart-dotnet.md#troubleshooting).
-- [Release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/eng/release/notes/0.7.0-preview.7.md#upgrading)
+  [Translations .NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.2/docs/guides/translations/quickstart-dotnet.md#troubleshooting).
+- [Release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/eng/release/notes/0.7.0-preview.7.md#upgrading)
   list the steps for upgrading from an earlier preview.
 - [Support](https://docs.runic-artifex.eu/support/) explains how to report a
   problem.
