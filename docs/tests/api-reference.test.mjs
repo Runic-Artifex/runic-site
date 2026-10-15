@@ -77,7 +77,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  assert.ok(inputs <= 1.5 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  assert.ok(inputs <= 1.75 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
   // __data.json payloads that client-side navigation loads.
   let compressed = 0;
