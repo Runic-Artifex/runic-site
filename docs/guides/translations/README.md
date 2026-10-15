@@ -4,7 +4,7 @@ Runic Translations compiles your message files into typed C# and TypeScript
 APIs. This page explains the concepts and leads to the quick start for your
 platform.
 
-It covers release `0.6.0-preview.7`. The Translations repository owns the
+It covers release `0.7.0-preview.1`. The Translations repository owns the
 detailed guides; every link to it points at that release. Translations is
 versioned on its own, so its version does not need to match the Application
 SDK. Use one exact Translations version for every Translations package and tool
@@ -87,7 +87,7 @@ fewer of them or select on them differently, but it cannot add new ones.
 Messages may also contain markup for links, actions and icons, which the
 application binds to typed slots. Runic implements a bounded profile of
 MessageFormat 2, not every Unicode MF2 feature; the
-[RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/rmf2.md)
+[RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/rmf2.md)
 lists what is supported.
 
 ## What gets generated
@@ -174,7 +174,7 @@ committed output is current. Exit code `0` means success, `1` means catalog or
 verification errors, and `2` means an invalid invocation or an operational
 failure. Errors carry `RTR` IDs, which are the same in the build, the tool,
 the IDE extensions and the Editor; the
-[diagnostics reference](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/diagnostics.md)
+[diagnostics reference](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/diagnostics.md)
 explains each one.
 
 ## The Translations Editor
@@ -183,7 +183,7 @@ The Translations Editor is a desktop app for translators. It opens a
 `translations/` project, shows locale coverage, edits and previews messages
 with the same compiler, and exports and imports XLIFF. It is available from
 source only: this preview has no Editor download. See the
-[Editor README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/apps/translations-editor/README.md)
+[Editor README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/apps/translations-editor/README.md)
 to build and launch it.
 
 ## Choose your platform
@@ -191,25 +191,25 @@ to build and launch it.
 Each quick start starts from an empty folder and ends with a running app:
 
 - **.NET**: the
-  [.NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/quickstart-dotnet.md)
+  [.NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/quickstart-dotnet.md)
   creates a translations library with `dotnet new runic-translations-project`
   and prints the first message from a console app.
 - **WPF**: the
-  [WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
+  [WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
   binds messages in XAML with `{rt:Message}`, next to existing `.resx`
   resources.
 - **Vite and TypeScript**: the
-  [Vite quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/quickstart-vite.md)
+  [Vite quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/quickstart-vite.md)
   adds the Vite plugin, renders a message and builds on CI.
 - **SvelteKit**: the
-  [SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/quickstart-sveltekit.md)
+  [SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/quickstart-sveltekit.md)
   adds localized routes, a language switcher and server rendering per request.
 - **Command line**: [translate a CLI](../command-line/README.md#translate-a-cli)
   with the `Runic.Translations.CommandLine` adapter, which translates Runic
   Command Line help, errors and faults.
 - **Runic Desktop**: there is no separate adapter. Use the .NET runtime and the
   Vite plugin as above; the
-  [Runic Desktop note](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/runic-desktop.md)
+  [Runic Desktop note](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/runic-desktop.md)
   explains how locale files are delivered.
 
 ## Next steps
@@ -220,10 +220,10 @@ Each quick start starts from an empty folder and ends with a running app:
 - [Translations in ViewModels](../application/guides/model-context.md#translations-in-viewmodels)
   shows how a Runic ViewModel follows locale changes.
 - The
-  [RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/rmf2.md)
+  [RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/rmf2.md)
   covers the full message syntax, markup, documents and mounted source folders.
 - The
-  [ESM backend guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/docs/guides/translations/esm.md)
+  [ESM backend guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/docs/guides/translations/esm.md)
   describes the generated web modules in detail.
-- [Release notes for 0.6.0-preview.7](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.6.0-preview.7/eng/release/notes/0.6.0-preview.7.md)
+- [Release notes for 0.7.0-preview.1](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.1/eng/release/notes/0.7.0-preview.1.md)
   list what changed in this release.

@@ -24,6 +24,9 @@ For isolated KDE Plasma and GNOME portal acceptance, use the
 session and portal backend; the development shell intentionally does not start or
 reconfigure the host's desktop services.
 
+To build and install an application, rather than the SDK, with Nix, see
+[Package a Runic application with Nix](nix-packaging.md).
+
 ## September 7, 2026 crash investigation
 
 Two customer example dumps had SIGSEGV in `_webui_server_thread`, inside
@@ -42,8 +45,8 @@ server directly. Requesting application exit before disposal exited 0.
 in the same process. Stopping this host also closes any other WebUI windows in
 that process. The host is not a restartable, independently owned native server.
 
-The SDK's current Views examples use `CsWebUi.Native 2.5.0-beta.4.5`, which
-bundles WebUI revision `52f9e75b92faf9a23fd150b3c60051c4ec85fc69`. The
+The SDK's current Views examples use `CsWebUi.Native 2.5.0-beta.4.7`, which
+bundles WebUI revision `efac0e24dd4e6199dd7308c485906c90fb8816a2`. The
 Reactive Notes server sample also awaits WebUI exit before disposing its window.
 
 The separate SIGABRT report came from an unhandled exception in the new mailbox

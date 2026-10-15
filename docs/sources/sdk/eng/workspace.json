@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.7.0-preview.9",
+  "version": "0.8.0-preview.1",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "edd2d175794afc86e964a06cb55329f44793009f"
@@ -147,6 +147,14 @@
     {
       "name": "Runic.Platform.Linux.Gtk4",
       "project": "packages/dotnet/Runic.Platform.Linux.Gtk4/Runic.Platform.Linux.Gtk4.csproj"
+    },
+    {
+      "name": "Runic.Platform.Linux.Polkit",
+      "project": "packages/dotnet/Runic.Platform.Linux.Polkit/Runic.Platform.Linux.Polkit.csproj"
+    },
+    {
+      "name": "Runic.Platform.Windows.Elevation",
+      "project": "packages/dotnet/Runic.Platform.Windows.Elevation/Runic.Platform.Windows.Elevation.csproj"
     }
   ],
   "components": {
@@ -346,7 +354,14 @@
         "tests/native/Runic.Desktop.WebViewSmoke",
         "tests/native/Runic.Desktop.Gtk4.Smoke",
         "tests/native/Runic.StatusIcon.Smoke",
-        "tests/native/Runic.Lifetime.Smoke"
+        "tests/native/Runic.Lifetime.Smoke",
+        "packages/dotnet/Runic.Platform.Linux.Polkit",
+        "tests/dotnet/Runic.Platform.Linux.Polkit.Tests",
+        "tests/native/Runic.Privileged.Smoke",
+        "packages/dotnet/Runic.Platform.Windows.Elevation",
+        "tests/dotnet/Runic.Platform.Windows.Elevation.Tests",
+        "tests/native/Runic.Elevation.Smoke",
+        "specs/platform"
       ]
     }
   }

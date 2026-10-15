@@ -19,7 +19,7 @@ that a native WPF View can bind to, so the user can switch between the two
 without losing a draft.
 
 The
-[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.7.0-preview.9/examples/wpf-hybrid-editor)
+[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.1/examples/wpf-hybrid-editor)
 is the complete application this guide quotes. Its notes list and dialogs are
 WPF; its editor page can switch between WPF controls and a web View.
 
@@ -171,7 +171,7 @@ On `dotnet build`, the project that generates the client:
 application copies the model project's `dist` to its own `www/`.
 `RunicViewHost` opens `www/index.html` next to the application by default; its
 `ContentRoot` and `EntryPage` properties change that. The
-[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views/README.md)
+[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Application.Views/README.md)
 change the frontend folder, the package manager and the build command.
 
 ## Place a `RunicViewHost`
@@ -262,7 +262,7 @@ without asking; this is new in SDK `0.7.0-preview.8`, and before it a tab
 switch asked only the tab model. Closing the window clears every region a guarding
 host has loaded with, one after another, and stops at the first that a guard
 keeps. See the Runic.Navigation.Wpf README,
-["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
+["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
 
 ## Start windows in code, not with `StartupUri`
 
@@ -305,7 +305,7 @@ Translations `0.6.0-preview.7` and later have `CreateManager`.
 `ServiceProvider.Dispose()` in `OnExit` starts the navigator's shutdown but
 doesn't wait for it. When owned cleanup must finish, dispose the provider
 asynchronously after `app.Run()` returns in a custom `Main`, as the
-[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
+[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
 shows. Never block the dispatcher on `DisposeAsync` while it runs.
 
 ## Limits
@@ -327,5 +327,5 @@ shows. Never block the dispatcher on `DisposeAsync` while it runs.
 - [Pages and navigation](../guides/pages-and-navigation.md) explains regions,
   guards and dialog results.
 - The
-  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views.Wpf/README.md)
+  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Application.Views.Wpf/README.md)
   lists every `RunicViewHost` property and the lower-level API.

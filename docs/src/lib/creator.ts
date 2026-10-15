@@ -38,6 +38,7 @@ type TemplateSymbol = {
   readonly description?: string;
   readonly defaultValue?: string;
   readonly value?: string;
+  readonly replaces?: string;
   readonly choices?: readonly {
     readonly choice: string;
     readonly displayName?: string;
@@ -130,6 +131,19 @@ export function templateSymbols(
     else if (symbol.type === 'computed')
       result[name] = String(evaluate(symbol.value ?? '', result));
   return result;
+}
+
+/**
+ * The text that each parameter with `replaces`, such as `__RUNIC_HOST__`,
+ * stands for in the template files, mapped to its selected value.
+ */
+export function templateReplacements(
+  selection: CreatorSelection,
+): [string, string][] {
+  const values = templateSymbols(selection);
+  return Object.entries(symbols)
+    .filter(([name, symbol]) => symbol.replaces && name in values)
+    .map(([name, symbol]) => [symbol.replaces!, values[name]]);
 }
 
 export function choiceFor(

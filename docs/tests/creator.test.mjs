@@ -8,6 +8,7 @@ import {
   creatorToggles,
   defaultSelection,
   isValidProjectName,
+  templateReplacements,
   templateSymbols,
 } from '../src/lib/creator.ts';
 import { evaluate, renderTemplate } from '../src/lib/template-conditions.ts';
@@ -37,7 +38,10 @@ test('picker options are the template choice parameters in order', () => {
 test('picker toggles are the template Boolean parameters', () => {
   assert.deepEqual(
     creatorToggles.map((toggle) => [toggle.flag, toggle.defaultValue]),
-    [['--tests', false]],
+    [
+      ['--tests', false],
+      ['--nix', false],
+    ],
   );
   assert.equal(defaultSelection().tests, 'false');
 });
@@ -72,6 +76,32 @@ test('the tests toggle adds its flag and the test command', () => {
       templateSymbols({ ...defaultSelection(), tests: 'true' }),
     ),
     /^\s*(#|<!--#)(if|elif|else|endif)\b/m,
+  );
+});
+
+test('the nix toggle adds its flag and a flake for the chosen host', () => {
+  const selection = {
+    ...defaultSelection(),
+    packageManager: 'bun',
+    host: 'desktop-gtk4',
+    nix: 'true',
+  };
+  assert.match(creatorCommands('1.2.3', 'MyApp', selection).create, / --nix$/);
+  const flake = templateReplacements(selection).reduce(
+    (text, [token, value]) => text.replaceAll(token, value),
+    renderTemplate(read('flake.nix'), templateSymbols(selection)),
+  );
+  assert.match(flake, /packageManager = "bun";/);
+  assert.match(flake, /host = "desktop-gtk4";/);
+  assert.match(flake, /hash = lib\.fakeHash;/);
+  // The preview replaces __RUNIC_NUGET_VERSION__ with the selected release.
+  assert.doesNotMatch(
+    flake.replaceAll('__RUNIC_NUGET_VERSION__', '1.2.3'),
+    /__[A-Z_]+__|^\s*#(if|else|endif)\b/m,
+  );
+  assert.match(
+    renderTemplate(read('RunicWindowApp.csproj'), templateSymbols(selection)),
+    /<RestorePackagesWithLockFile>true</,
   );
 });
 

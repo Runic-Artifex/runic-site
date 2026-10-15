@@ -169,7 +169,7 @@ generated clients are used from components.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.7.0-preview.9/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.1/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
 in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the

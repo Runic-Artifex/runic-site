@@ -14,8 +14,10 @@ import project from '../../sources/sdk/tools/Runic.Application.Templates/content
 import views from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/Views.cs?raw';
 import services from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/WorkspaceServices.cs?raw';
 import viewModels from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/WorkspaceViewModel.cs?raw';
+import flake from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/flake.nix?raw';
 import windowTests from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/RunicWindowApp.Tests/WorkspaceWindowTests.cs?raw';
 import {
+  templateReplacements,
   templateSourceName,
   templateSymbols,
   type CreatorSelection,
@@ -56,10 +58,14 @@ export function previewFiles(
 ): PreviewFile[] {
   const frontend = frontends[selection.frontend] ?? frontends.react;
   const symbols = templateSymbols(selection);
+  const replacements = templateReplacements(selection);
   const render = (content: string) =>
-    renderTemplate(content, symbols)
-      .replaceAll(templateSourceName, name)
-      .replaceAll('__RUNIC_NUGET_VERSION__', version);
+    replacements.reduce(
+      (text, [token, value]) => text.replaceAll(token, value),
+      renderTemplate(content, symbols)
+        .replaceAll(templateSourceName, name)
+        .replaceAll('__RUNIC_NUGET_VERSION__', version),
+    );
   return [
     { path: 'Program.cs', language: 'csharp', content: render(program) },
     {
@@ -93,6 +99,10 @@ export function previewFiles(
             content: render(windowTests),
           },
         ]
+      : []),
+    // The optional Nix flake, added by --nix.
+    ...(symbols.nix === 'true'
+      ? [{ path: 'flake.nix', language: 'nix', content: render(flake) }]
       : []),
   ];
 }

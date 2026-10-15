@@ -1,6 +1,6 @@
 {
-  "version": "0.7.0-preview.9",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.7.0-preview.9",
+  "version": "0.8.0-preview.1",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.8.0-preview.1",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -160,6 +160,18 @@
     },
     {
       "identity": "Runic.Platform.Linux.Gtk4",
+      "ecosystem": "nuget",
+      "product": "platform",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Platform.Linux.Polkit",
+      "ecosystem": "nuget",
+      "product": "platform",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Platform.Windows.Elevation",
       "ecosystem": "nuget",
       "product": "platform",
       "installKind": "nuget-package"
