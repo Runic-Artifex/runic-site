@@ -3,29 +3,29 @@
 Each package ID is also its namespace and source folder name. Before
 0.7.0-preview.7 the Application packages had shorter IDs, such as
 `Runic.Application` and `Runic.Application.Desktop`; the
-[rename table](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views/README.md#moved-and-renamed-since-070-preview6)
+[rename table](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/README.md#moved-and-renamed-since-070-preview6)
 lists them. Independent navigation packages use `Runic.Navigation`.
 
 | Package                                                                                                                                                                                 | Source folder                                                 | Namespace                                     |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------- |
-| [`Runic.Application.Views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views/README.md)                                         | `packages/dotnet/Runic.Application.Views`                     | `Runic.Application.Views`                     |
-| [`Runic.Application.Views.CsWebUi`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views.CsWebUi/README.md)                         | `packages/dotnet/Runic.Application.Views.CsWebUi`             | `Runic.Application.Views.CsWebUi`             |
-| [`Runic.Application.Views.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views.Desktop/README.md)                         | `packages/dotnet/Runic.Application.Views.Desktop`             | `Runic.Application.Views.Desktop`             |
-| [`Runic.Application.Views.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md)                   | `packages/dotnet/Runic.Application.Views.ReactiveUI`          | `Runic.Application.Views.ReactiveUI`          |
-| [`Runic.Application.Views.ReactiveUI.Reactive`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views.ReactiveUI.Reactive/README.md) | `packages/dotnet/Runic.Application.Views.ReactiveUI.Reactive` | `Runic.Application.Views.ReactiveUI.Reactive` |
-| [`Runic.Application.Testing`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Testing/README.md)                                     | `packages/dotnet/Runic.Application.Testing`                   | `Runic.Application.Testing`                   |
-| [`Runic.Application.Views.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views.Wpf/README.md)                                 | `packages/dotnet/Runic.Application.Views.Wpf`                 | `Runic.Application.Views.Wpf`                 |
-| [`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Navigation/README.md)                                                       | `packages/dotnet/Runic.Navigation`                            | `Runic.Navigation`                            |
-| [`Runic.Navigation.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Navigation.Wpf/README.md)                                               | `packages/dotnet/Runic.Navigation.Wpf`                        | `Runic.Navigation.Wpf`                        |
-| [`Runic.Navigation.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Navigation.ReactiveUI/README.md)                                 | `packages/dotnet/Runic.Navigation.ReactiveUI`                 | `Runic.Navigation.ReactiveUI`                 |
-| [`Runic.Navigation.ReactiveUI.Reactive`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Navigation.ReactiveUI.Reactive/README.md)               | `packages/dotnet/Runic.Navigation.ReactiveUI.Reactive`        | `Runic.Navigation.ReactiveUI.Reactive`        |
+| [`Runic.Application.Views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/README.md)                                         | `packages/dotnet/Runic.Application.Views`                     | `Runic.Application.Views`                     |
+| [`Runic.Application.Views.CsWebUi`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views.CsWebUi/README.md)                         | `packages/dotnet/Runic.Application.Views.CsWebUi`             | `Runic.Application.Views.CsWebUi`             |
+| [`Runic.Application.Views.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views.Desktop/README.md)                         | `packages/dotnet/Runic.Application.Views.Desktop`             | `Runic.Application.Views.Desktop`             |
+| [`Runic.Application.Views.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md)                   | `packages/dotnet/Runic.Application.Views.ReactiveUI`          | `Runic.Application.Views.ReactiveUI`          |
+| [`Runic.Application.Views.ReactiveUI.Reactive`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views.ReactiveUI.Reactive/README.md) | `packages/dotnet/Runic.Application.Views.ReactiveUI.Reactive` | `Runic.Application.Views.ReactiveUI.Reactive` |
+| [`Runic.Application.Testing`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Testing/README.md)                                     | `packages/dotnet/Runic.Application.Testing`                   | `Runic.Application.Testing`                   |
+| [`Runic.Application.Views.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views.Wpf/README.md)                                 | `packages/dotnet/Runic.Application.Views.Wpf`                 | `Runic.Application.Views.Wpf`                 |
+| [`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation/README.md)                                                       | `packages/dotnet/Runic.Navigation`                            | `Runic.Navigation`                            |
+| [`Runic.Navigation.Wpf`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation.Wpf/README.md)                                               | `packages/dotnet/Runic.Navigation.Wpf`                        | `Runic.Navigation.Wpf`                        |
+| [`Runic.Navigation.ReactiveUI`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation.ReactiveUI/README.md)                                 | `packages/dotnet/Runic.Navigation.ReactiveUI`                 | `Runic.Navigation.ReactiveUI`                 |
+| [`Runic.Navigation.ReactiveUI.Reactive`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation.ReactiveUI.Reactive/README.md)               | `packages/dotnet/Runic.Navigation.ReactiveUI.Reactive`        | `Runic.Navigation.ReactiveUI.Reactive`        |
 
 - [Incremental WPF migration](../migrations/wpf-incremental.md)
 - [ReactiveUI 26 capabilities and Avalonia comparison](reactiveui.md)
-- [Views build targets](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views/build/Runic.Application.Views.targets), shipped in the `Runic.Application.Views` package
-- [`dotnet runic`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/tools/dotnet-runic/README.md) development and doctor commands
-- [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/web/views/README.md): the shared browser runtime and mock Bridge for generated clients
-- [React package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/web/react/README.md), [Vue package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/web/vue/README.md), [Svelte package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/web/svelte/README.md) and [Angular package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/web/angular/README.md)
+- [Views build targets](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/build/Runic.Application.Views.targets), shipped in the `Runic.Application.Views` package
+- [`dotnet runic`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/tools/dotnet-runic/README.md) development and doctor commands
+- [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/views/README.md): the shared browser runtime and mock Bridge for generated clients
+- [React package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/react/README.md), [Vue package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/vue/README.md), [Svelte package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/svelte/README.md) and [Angular package](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/angular/README.md)
 
 The examples show complete Window composition, generated client use, browser
 mount lifecycle, and frontend integration.
@@ -47,7 +47,7 @@ context's naming defaults. Treat each consumer's generated wire contract as
 explicit rather than assuming serializer configuration controls both.
 
 SDK `0.7.0-preview.6` adds the assembly-level
-[`RunicBridgeJsonIgnore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.2/packages/dotnet/Runic.Application.Views/RunicPresentation.cs)
+[`RunicBridgeJsonIgnore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/RunicPresentation.cs)
 opt-in for shared DTOs. Put it in the assembly declaring the ViewModel; that
 ViewModel's policy follows its DTO graph, including DTOs in another assembly.
 It recognizes unconditional `[JsonIgnore]` and
@@ -59,7 +59,7 @@ existing rules. Existing assemblies have no behavior change unless they opt in.
 
 Keep shared domain DTOs independent of the GUI and let both hosts call the same
 workflow. Runic Command Line has its own release train: use its published
-`0.7.0-preview.1` packages independently of Application `0.8.0-preview.2`.
+`0.7.0-preview.1` packages independently of Application `0.8.0-preview.3`.
 
 Since Command Line `0.6.0-preview.3`, generated result codecs preserve the
 source-generated JSON context's defaults. The bridge still uses its own
