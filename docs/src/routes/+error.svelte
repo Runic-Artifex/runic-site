@@ -12,9 +12,9 @@
 <ErrorState
   status={page.status}
   title={page.status === 404
-    ? 'That rune is not in the catalog.'
-    : 'The page could not be rendered.'}
+    ? 'No page at this address'
+    : 'This page could not be shown'}
   description={page.status === 404
-    ? 'The page may have moved as the preview documentation evolves.'
-    : 'Please return to the documentation home and try again.'}
+    ? 'It may have moved while the preview documentation changes. Search for it, or start from the documentation home.'
+    : 'Something went wrong while rendering it. Try again, or start from the documentation home.'}
 />

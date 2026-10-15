@@ -228,14 +228,16 @@ export function renderGuide(
   const body = tokens.filter((token) => token !== title);
   marked.use({
     renderer: {
+      // Each section heading links to itself, so readers can share the spot.
       heading(token) {
         const { anchor } = token as AnchoredHeading;
         const content = this.parser.parseInline(token.tokens);
-        return `<h${token.depth} id="${anchor}">${content}</h${token.depth}>\n`;
+        return `<h${token.depth} id="${anchor}">${content} <a class="heading-anchor" href="#${anchor}" aria-label="Link to this section">#</a></h${token.depth}>\n`;
       },
-      // Guides are Markdown only; show stray HTML as text.
+      // Guides are Markdown only; show stray HTML as text. Comments, such as
+      // formatter directives, are dropped rather than shown.
       html({ text }) {
-        return escapeHtml(text);
+        return escapeHtml(text.replace(/<!--[\s\S]*?-->\n?/g, ''));
       },
       // Code scrolls horizontally, so keyboard users must be able to focus it.
       code({ text, lang }) {

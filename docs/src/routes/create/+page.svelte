@@ -1,7 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import CommandBlock from '#lib/components/CommandBlock.svelte';
-  import * as Card from '#lib/components/ui/card/index.js';
   import {
     choiceFor,
     creatorCommands,
@@ -130,9 +129,8 @@
   />
 </svelte:head>
 
-<div>
-  <section class="page-hero shell">
-    <p class="eyebrow">Create</p>
+<div class="shell">
+  <div class="page-head">
     <h1>Put your app together.</h1>
     <p class="lede">
       Choose a frontend, package manager, Window host, and ViewModel library.
@@ -140,17 +138,15 @@
         >dnx Runic.Create</code
       > asks for in your terminal.
     </p>
-    <p class="lede">
+    <p class="create-intro">
       The defaults, Runic Desktop and ReactiveUI, suit most apps.
-      <a
-        class="text-link"
-        href={resolve('/guides/[...path]', { path: 'application/choosing' })}
+      <a href={resolve('/guides/[...path]', { path: 'application/choosing' })}
         >Choosing a host and MVVM library</a
       > explains when to pick another.
     </p>
-  </section>
+  </div>
 
-  <section class="creator shell" aria-label="Project creator">
+  <section class="creator" aria-label="Project creator">
     <form class="creator-options" onsubmit={(event) => event.preventDefault()}>
       <label class="creator-field">
         <span class="creator-legend">Project name</span>
@@ -187,7 +183,7 @@
                 />
                 <span class="choice-label"
                   >{choice.label}{#if choice.value === option.defaultValue}<small
-                      >default</small
+                      >Default</small
                     >{/if}</span
                 >
                 <span class="choice-description">{choice.description}</span>
@@ -201,7 +197,7 @@
         <fieldset class="creator-field">
           <legend class="creator-legend">{toggle.label}</legend>
           <div class="choice-grid">
-            <label class="choice-card">
+            <label class="choice-card choice-card--toggle">
               <input
                 type="checkbox"
                 checked={selection[toggle.symbol] === 'true'}
@@ -219,127 +215,133 @@
     </form>
 
     <div class="creator-output">
-      <Card.Root class="creator-card">
-        <Card.Header>
-          <p class="eyebrow">SDK {version}</p>
-          <Card.Title
-            ><h2 class="creator-card-title">Your command</h2></Card.Title
+      <section class="creator-pane" aria-labelledby="creator-command-title">
+        <div class="creator-pane__head">
+          <h2 id="creator-command-title">Your command</h2>
+          <p class="creator-help">For Runic SDK {version}.</p>
+        </div>
+        <div class="mode-tabs" role="radiogroup" aria-label="Command style">
+          <label
+            ><input
+              type="radio"
+              bind:group={mode}
+              value="creator"
+            />Runic.Create</label
           >
-        </Card.Header>
-        <Card.Content class="grid gap-4">
-          <div class="mode-tabs" role="radiogroup" aria-label="Command style">
-            <label
-              ><input
-                type="radio"
-                bind:group={mode}
-                value="creator"
-              />Runic.Create</label
-            >
-            <label
-              ><input type="radio" bind:group={mode} value="template" />dotnet
-              new</label
-            >
-          </div>
-          {#if mode === 'creator'}
-            <CommandBlock command={commands.creator} />
-            <p class="creator-help">
-              <code>dnx</code> runs the creator without installing it. It
-              installs
-              <code>Runic.Application.Templates</code> and runs
-              <code>dotnet new runic-app</code>, then prints these commands
-              again. Run <code>{commands.interactive}</code> to answer the questions
-              in your terminal instead.
-            </p>
-          {:else}
-            <CommandBlock command={`${commands.install}\n${commands.create}`} />
-            <p class="creator-help">
-              The template's own options. <code
-                >dotnet new runic-app --help</code
-              >
-              lists them.
-            </p>
-          {/if}
-          <div class="grid gap-2">
-            <span class="creator-legend">Then run it</span>
-            <CommandBlock
-              command={commands.nextSteps.join('\n')}
-              label="Copy next steps"
-            />
-          </div>
-          <div class="grid gap-2">
-            <span class="creator-legend">You need</span>
-            <ul class="creator-needs">
-              <li>
-                <a href="https://dotnet.microsoft.com/download/dotnet/10.0"
-                  >The .NET 10 SDK</a
-                >
-              </li>
-              {#each needs as need (need.text)}
-                <li><a href={need.href} rel="external">{need.text}</a></li>
-              {/each}
-            </ul>
-          </div>
-        </Card.Content>
-      </Card.Root>
-
-      <Card.Root class="creator-card">
-        <Card.Header>
-          <Card.Title><h2 class="creator-card-title">Preview</h2></Card.Title>
-          <Card.Description
-            >Selected files from the template, rendered for your choices.</Card.Description
+          <label
+            ><input type="radio" bind:group={mode} value="template" />dotnet new</label
           >
-        </Card.Header>
-        <Card.Content class="grid gap-3">
-          <div class="file-tabs" role="tablist" aria-label="Generated files">
-            {#each files as entry, index (entry.path)}
-              <button
-                id={`preview-tab-${index}`}
-                type="button"
-                role="tab"
-                aria-selected={index === activeFile}
-                aria-controls="preview-panel"
-                tabindex={index === activeFile ? 0 : -1}
-                onclick={() => (activeFile = index)}
-                onkeydown={selectFile}>{entry.path}</button
-              >
-            {/each}
-          </div>
-          <div
-            id="preview-panel"
-            class="file-preview"
-            role="tabpanel"
-            aria-labelledby={`preview-tab-${activeFile}`}
-          >
-            <pre data-language={file.language}><code>{file.content}</code></pre>
-          </div>
+        </div>
+        {#if mode === 'creator'}
+          <CommandBlock command={commands.creator} />
           <p class="creator-help">
-            New to the Window and View model? Read
-            <a href={resolve('/views')}>Window and View</a> or the
-            <a href={resolve('/getting-started')}>getting-started guide</a>.
+            <code>dnx</code> runs the creator without installing it. It installs
+            <code>Runic.Application.Templates</code> and runs
+            <code>dotnet new runic-app</code>, then prints these commands again.
+            Run <code>{commands.interactive}</code> to answer the questions in your
+            terminal instead.
           </p>
-        </Card.Content>
-      </Card.Root>
+        {:else}
+          <CommandBlock command={`${commands.install}\n${commands.create}`} />
+          <p class="creator-help">
+            The template's own options. <code>dotnet new runic-app --help</code>
+            lists them.
+          </p>
+        {/if}
+        <div class="creator-group">
+          <h3>Then run it</h3>
+          <CommandBlock
+            command={commands.nextSteps.join('\n')}
+            label="Copy next steps"
+          />
+        </div>
+        <div class="creator-group">
+          <h3>You need</h3>
+          <ul class="creator-needs">
+            <li>
+              <a href="https://dotnet.microsoft.com/download/dotnet/10.0"
+                >The .NET 10 SDK</a
+              >
+            </li>
+            {#each needs as need (need.text)}
+              <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- requirement links are external URLs or guide paths -->
+              <li><a href={need.href} rel="external">{need.text}</a></li>
+            {/each}
+          </ul>
+        </div>
+      </section>
+
+      <section class="creator-pane" aria-labelledby="creator-preview-title">
+        <div class="creator-pane__head">
+          <h2 id="creator-preview-title">Preview</h2>
+          <p class="creator-help">
+            Selected files from the template, rendered for your choices.
+          </p>
+        </div>
+        <div class="file-tabs" role="tablist" aria-label="Generated files">
+          {#each files as entry, index (entry.path)}
+            <button
+              id={`preview-tab-${index}`}
+              type="button"
+              role="tab"
+              aria-selected={index === activeFile}
+              aria-controls="preview-panel"
+              tabindex={index === activeFile ? 0 : -1}
+              onclick={() => (activeFile = index)}
+              onkeydown={selectFile}>{entry.path}</button
+            >
+          {/each}
+        </div>
+        <div
+          id="preview-panel"
+          class="file-preview"
+          role="tabpanel"
+          aria-labelledby={`preview-tab-${activeFile}`}
+        >
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <pre
+            class="code-block"
+            tabindex="0"
+            data-language={file.language}><code>{file.content}</code></pre>
+        </div>
+        <p class="creator-help">
+          New to the Window and View model? Read
+          <a href={resolve('/views')}>Window and View</a> or the
+          <a href={resolve('/getting-started')}>getting-started guide</a>.
+        </p>
+      </section>
     </div>
   </section>
 </div>
 
 <style>
+  .create-intro {
+    max-width: 44rem;
+    color: var(--rune-ink-soft);
+  }
+
+  .create-intro a {
+    color: var(--rune-ink);
+  }
+
   .creator {
     display: grid;
     grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-    gap: 28px;
+    gap: clamp(2rem, 4vw, 3.5rem);
     align-items: start;
-    padding-bottom: 90px;
+    padding-top: 2.25rem;
+    border-top: var(--rule);
   }
 
   .creator-options {
     display: grid;
-    gap: 26px;
+    gap: 2rem;
   }
 
   .creator-field {
     display: grid;
-    gap: 8px;
+    gap: 0.5rem;
+    min-width: 0;
     margin: 0;
     padding: 0;
     border: 0;
@@ -347,75 +349,95 @@
 
   .creator-legend {
     padding: 0;
-    color: var(--foreground);
-    font-size: 0.78rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: 1.0625rem;
+    font-weight: 600;
   }
 
   .creator-help {
-    color: var(--muted-foreground);
-    font-size: 0.92rem;
+    color: var(--rune-ink-soft);
+    font-size: var(--text-ui);
+  }
+
+  .creator-help code,
+  .creator-help a {
+    color: var(--rune-ink);
   }
 
   .creator-error {
-    color: var(--destructive);
+    color: var(--rune-paint);
   }
 
   .creator-input {
-    height: 42px;
-    padding-inline: 14px;
-    border: 1px solid var(--border);
-    border-radius: calc(var(--radius) * 1.4);
-    background: var(--card);
-    color: var(--foreground);
-    font:
-      500 1rem 'Geist Mono',
-      monospace;
+    height: 2.75rem;
+    padding-inline: 0.85rem;
+    border: var(--rule);
+    border-radius: var(--radius-control);
+    background: var(--rune-raised);
+    color: var(--rune-ink);
+    font: 500 1rem var(--rune-font-mono);
   }
 
-  .creator-input:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 2px;
+  .creator-input:hover {
+    border-color: var(--rune-ink-soft);
   }
 
   .creator-input[aria-invalid='true'] {
-    border-color: var(--destructive);
+    border-color: var(--rune-paint);
   }
 
+  /* Choices: a grid of groove-bordered options; the chosen one is inked. */
   .choice-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+    gap: 0.6rem;
+    margin-top: 0.25rem;
   }
 
   .choice-card {
     position: relative;
     display: grid;
-    gap: 4px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: calc(var(--radius) * 1.6);
-    background: var(--card);
+    align-content: start;
+    gap: 0.25rem;
+    padding: 0.85rem 2.5rem 0.9rem 1rem;
+    border: 1px solid var(--rune-groove);
+    border-radius: var(--radius-control);
     cursor: pointer;
-    transition:
-      border-color 120ms,
-      background-color 120ms;
   }
 
   .choice-card:hover {
-    border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+    border-color: var(--rune-ink-soft);
   }
 
   .choice-card:has(input:checked) {
-    border-color: var(--primary);
-    background: color-mix(in oklch, var(--primary) 12%, var(--card));
+    border-color: var(--rune-ink);
+    box-shadow: inset 0 0 0 0.5px var(--rune-ink);
   }
 
   .choice-card:has(input:focus-visible) {
-    outline: 2px solid var(--ring);
+    outline: 2px solid var(--rune-paint);
     outline-offset: 2px;
+  }
+
+  /* The indicator repeats the state in shape, not only in border weight. */
+  .choice-card::after {
+    position: absolute;
+    top: 1rem;
+    right: 0.9rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    border: 1px solid var(--rune-ink-soft);
+    border-radius: 50%;
+    content: '';
+  }
+
+  .choice-card--toggle::after {
+    border-radius: 2px;
+  }
+
+  .choice-card:has(input:checked)::after {
+    border-color: var(--rune-ink);
+    background: var(--rune-ink);
+    box-shadow: inset 0 0 0 2.5px var(--rune-stone);
   }
 
   .choice-card input {
@@ -426,68 +448,98 @@
 
   .choice-label {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
-    gap: 8px;
-    font-weight: 650;
+    gap: 0.5rem;
+    font-weight: 600;
   }
 
   .choice-label small {
-    color: var(--muted-foreground);
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    color: var(--rune-ink-soft);
+    font-size: var(--text-small);
+    font-weight: 400;
   }
 
   .choice-description {
-    color: var(--muted-foreground);
-    font-size: 0.86rem;
+    color: var(--rune-ink-soft);
+    font-size: var(--text-small);
     line-height: 1.45;
   }
 
+  /* Output */
   .creator-output {
     position: sticky;
-    top: 88px;
+    top: 1.5rem;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: 1.25rem;
   }
 
-  /* Long commands scroll inside their blocks instead of widening the column. */
-  .creator-output :global(.grid) {
+  .creator-pane {
+    --code-ground: var(--rune-stone);
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    padding: clamp(1rem, 2.5vw, 1.5rem);
+    border: var(--rule);
+    border-radius: var(--radius-pane);
+    background: var(--rune-raised);
   }
 
-  .creator-card-title {
-    font-size: 1.7rem;
+  .creator-pane__head {
+    display: grid;
+    gap: 0.25rem;
+  }
+
+  .creator-pane h2 {
+    font-size: 1.375rem;
+  }
+
+  .creator-group {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .creator-group h3 {
+    font-size: 1rem;
   }
 
   .mode-tabs {
     display: inline-flex;
     justify-self: start;
-    gap: 4px;
-    padding: 4px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
+    border: var(--rule);
+    border-radius: var(--radius-control);
   }
 
   .mode-tabs label {
-    padding: 4px 14px;
-    border-radius: 999px;
-    color: var(--muted-foreground);
-    font:
-      600 0.85rem 'Geist Mono',
-      monospace;
+    position: relative;
+    padding: 0.35rem 0.85rem;
+    color: var(--rune-ink-soft);
+    font: 500 var(--text-small) var(--rune-font-mono);
     cursor: pointer;
   }
 
+  .mode-tabs label + label {
+    border-left: var(--rule);
+  }
+
+  .mode-tabs label:first-child {
+    border-radius: 3px 0 0 3px;
+  }
+
+  .mode-tabs label:last-child {
+    border-radius: 0 3px 3px 0;
+  }
+
   .mode-tabs label:has(input:checked) {
-    background: var(--secondary);
-    color: var(--secondary-foreground);
+    background: var(--rune-ink);
+    color: var(--rune-stone);
   }
 
   .mode-tabs label:has(input:focus-visible) {
-    outline: 2px solid var(--ring);
+    z-index: 1;
+    outline: 2px solid var(--rune-paint);
+    outline-offset: 2px;
   }
 
   .mode-tabs input {
@@ -498,51 +550,62 @@
 
   .creator-needs {
     display: grid;
-    gap: 4px;
+    gap: 0.25rem;
     margin: 0;
     padding-left: 1.2rem;
-    color: var(--muted-foreground);
-    font-size: 0.92rem;
+    font-size: var(--text-ui);
+    list-style: disc;
+  }
+
+  .creator-needs li::marker {
+    color: var(--rune-ink-soft);
   }
 
   .file-tabs {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 0 1.1rem;
+    border-bottom: var(--rule);
   }
 
   .file-tabs button {
-    padding: 4px 10px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
+    position: relative;
+    padding: 0.4rem 0 0.55rem;
+    border: 0;
     background: transparent;
-    color: var(--muted-foreground);
-    font:
-      500 0.8rem 'Geist Mono',
-      monospace;
+    color: var(--rune-ink-soft);
+    font: 500 0.8125rem var(--rune-font-mono);
     cursor: pointer;
   }
 
+  .file-tabs button:hover {
+    color: var(--rune-ink);
+  }
+
   .file-tabs button[aria-selected='true'] {
-    border-color: var(--primary);
-    color: var(--foreground);
+    color: var(--rune-ink);
+  }
+
+  .file-tabs button[aria-selected='true']::after {
+    position: absolute;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    height: 2px;
+    background: var(--rune-paint);
+    content: '';
   }
 
   .file-preview pre {
-    max-height: 460px;
+    max-height: 30rem;
     margin: 0;
-    padding: 16px 18px;
     overflow: auto;
-    border: 1px solid var(--border);
-    border-radius: calc(var(--radius) * 1.4);
-    background: color-mix(in oklch, var(--muted) 65%, var(--background));
-    font-size: 0.8rem;
-    line-height: 1.6;
+    font-size: 0.8125rem;
   }
 
-  @media (max-width: 960px) {
+  @media (max-width: 60rem) {
     .creator {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
 
     .creator-output {

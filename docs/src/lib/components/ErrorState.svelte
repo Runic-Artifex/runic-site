@@ -1,8 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import ActionLink from '#lib/components/ActionLink.svelte';
-  import * as Empty from '#lib/components/ui/empty/index.js';
-  import FileQuestionIcon from '@lucide/svelte/icons/file-question';
+  import SearchForm from '#lib/components/SearchForm.svelte';
 
   let {
     status,
@@ -11,27 +9,37 @@
   }: { status: number | string; title: string; description: string } = $props();
 </script>
 
-<div>
-  <section class="page-hero shell">
-    <Empty.Root class="min-h-[28rem] border border-border bg-card/60">
-      <Empty.Media variant="icon" class="text-primary">
-        <FileQuestionIcon />
-      </Empty.Media>
-      <Empty.Header>
-        <p class="eyebrow">{status}</p>
-        <Empty.Title>
-          <h1 class="font-serif text-4xl sm:text-6xl">{title}</h1>
-        </Empty.Title>
-        <Empty.Description class="max-w-xl text-base">
-          {description}
-        </Empty.Description>
-      </Empty.Header>
-      <Empty.Content class="actions mt-2">
-        <ActionLink href={resolve('/')}>Return home</ActionLink>
-        <ActionLink href={resolve('/products')} variant="outline"
-          >Browse products</ActionLink
-        >
-      </Empty.Content>
-    </Empty.Root>
-  </section>
+<div class="shell page-head error-state">
+  <h1>{title}</h1>
+  <p class="lede">{description}</p>
+  <SearchForm id="error-search" large placeholder="Search the documentation" />
+  <p class="error-state__links">
+    <a href={resolve('/')}>Documentation home</a>
+    <a href={resolve('/guides/[...path]', { path: '' })}>All guides</a>
+    <a href={resolve('/products')}>Products</a>
+  </p>
+  <p class="error-state__status">Status {status}</p>
 </div>
+
+<style>
+  .error-state {
+    min-height: 50vh;
+  }
+
+  .error-state :global(.search-form) {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+
+  .error-state__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .error-state__status {
+    color: var(--rune-ink-soft);
+    font-family: var(--rune-font-mono);
+    font-size: var(--text-small);
+  }
+</style>

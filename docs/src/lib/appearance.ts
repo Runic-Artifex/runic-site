@@ -1,13 +1,9 @@
+// The documentation follows the system color scheme unless the reader picks
+// light or dark. src/app.html applies the same rules before the first paint.
 export const themeModes = ['system', 'light', 'dark'] as const;
-export const themePalettes = ['runic', 'moss', 'fjord', 'ember'] as const;
 
 export type ThemeMode = (typeof themeModes)[number];
-export type ThemePalette = (typeof themePalettes)[number];
-
-export type Appearance = {
-  mode: ThemeMode;
-  palette: ThemePalette;
-};
+export type ColorScheme = 'light' | 'dark';
 
 export type AppearanceStorage = {
   getItem(key: string): string | null;
@@ -30,15 +26,9 @@ export type AppearanceMediaQuery = {
   removeEventListener(type: 'change', listener: () => void): void;
 };
 
-export const appearanceKeys = {
-  mode: 'runic-docs.theme-mode',
-  palette: 'runic-docs.theme-palette',
-} as const;
+export const appearanceKey = 'runic-docs.theme-mode';
 
-export const defaultAppearance: Readonly<Appearance> = {
-  mode: 'dark',
-  palette: 'runic',
-};
+export const defaultThemeMode: ThemeMode = 'system';
 
 const colorSchemeQuery = '(prefers-color-scheme: dark)';
 
@@ -46,81 +36,70 @@ export function isThemeMode(value: unknown): value is ThemeMode {
   return themeModes.some((mode) => mode === value);
 }
 
-export function isThemePalette(value: unknown): value is ThemePalette {
-  return themePalettes.some((palette) => palette === value);
-}
-
-export function resolveDarkMode(
+export function resolveColorScheme(
   mode: ThemeMode,
   systemPrefersDark: boolean,
-): boolean {
-  return mode === 'dark' || (mode === 'system' && systemPrefersDark);
+): ColorScheme {
+  return mode === 'dark' || (mode === 'system' && systemPrefersDark)
+    ? 'dark'
+    : 'light';
 }
 
-export function readAppearance(
+export function readThemeMode(
   storage: AppearanceStorage | undefined = browserStorage(),
-): Appearance {
-  if (storage === undefined) return { ...defaultAppearance };
+): ThemeMode {
+  if (storage === undefined) return defaultThemeMode;
 
   try {
-    const storedMode = storage.getItem(appearanceKeys.mode);
-    const storedPalette = storage.getItem(appearanceKeys.palette);
-    return {
-      mode: isThemeMode(storedMode) ? storedMode : defaultAppearance.mode,
-      palette: isThemePalette(storedPalette)
-        ? storedPalette
-        : defaultAppearance.palette,
-    };
+    const stored = storage.getItem(appearanceKey);
+    return isThemeMode(stored) ? stored : defaultThemeMode;
   } catch {
-    return { ...defaultAppearance };
+    return defaultThemeMode;
   }
 }
 
-export function applyAppearance(
+/** Sets the Tailwind `dark` class and the resolved `data-scheme` on <html>. */
+export function applyThemeMode(
   mode: ThemeMode,
-  palette: ThemePalette,
   root: AppearanceRoot | undefined = documentRoot(),
   media: AppearanceMediaQuery | undefined = colorSchemeMedia(),
 ): void {
   if (root === undefined) return;
 
-  const dark = resolveDarkMode(mode, media?.matches ?? false);
-  root.classList.toggle('dark', dark);
-  root.dataset.theme = palette;
-  root.style.colorScheme = dark ? 'dark' : 'light';
+  const scheme = resolveColorScheme(mode, media?.matches ?? false);
+  root.classList.toggle('dark', scheme === 'dark');
+  root.dataset.scheme = scheme;
+  root.style.colorScheme = scheme;
 }
 
-export function saveAppearance(
+export function saveThemeMode(
   mode: ThemeMode,
-  palette: ThemePalette,
   storage: AppearanceStorage | undefined = browserStorage(),
   root: AppearanceRoot | undefined = documentRoot(),
   media: AppearanceMediaQuery | undefined = colorSchemeMedia(),
 ): void {
   if (storage !== undefined) {
     try {
-      storage.setItem(appearanceKeys.mode, mode);
-      storage.setItem(appearanceKeys.palette, palette);
+      storage.setItem(appearanceKey, mode);
     } catch {
       // Applying the in-memory preference remains useful when storage is blocked.
     }
   }
 
-  applyAppearance(mode, palette, root, media);
+  applyThemeMode(mode, root, media);
 }
 
-export function subscribeSystemAppearance(
-  getAppearance: () => Appearance,
+/** Follows system changes while the reader's mode is `system`. */
+export function subscribeSystemScheme(
+  getMode: () => ThemeMode,
   media: AppearanceMediaQuery | undefined = colorSchemeMedia(),
-  apply: (mode: ThemeMode, palette: ThemePalette) => void = applyAppearance,
+  apply: (mode: ThemeMode) => void = applyThemeMode,
 ): () => void {
   if (media === undefined) return () => {};
 
   const update = (): void => {
-    const appearance = getAppearance();
-    if (appearance.mode === 'system') {
-      apply(appearance.mode, appearance.palette);
-    }
+    const mode = getMode();
+    if (mode === 'system') apply(mode);
   };
 
   media.addEventListener('change', update);

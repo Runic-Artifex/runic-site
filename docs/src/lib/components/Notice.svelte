@@ -1,13 +1,20 @@
 <script lang="ts">
-  import * as Alert from '#lib/components/ui/alert/index.js';
-  import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
   import type { Snippet } from 'svelte';
 
-  let { title, children }: { title: string; children: Snippet } = $props();
+  // Notices carry a pigment bar; the title names the kind for readers who
+  // cannot tell the colours apart.
+  let {
+    title,
+    tone = 'note',
+    children,
+  }: {
+    title: string;
+    tone?: 'note' | 'tip' | 'warning' | 'caution';
+    children: Snippet;
+  } = $props();
 </script>
 
-<Alert.Root class="notice border-primary/30 bg-primary/5">
-  <CircleAlertIcon />
-  <Alert.Title class="text-primary">{title}</Alert.Title>
-  <Alert.Description>{@render children()}</Alert.Description>
-</Alert.Root>
+<div class="notice" data-tone={tone} role="note">
+  <p class="notice-title">{title}</p>
+  {@render children()}
+</div>

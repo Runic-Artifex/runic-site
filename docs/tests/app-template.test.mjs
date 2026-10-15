@@ -4,18 +4,10 @@ import { readFile } from 'node:fs/promises';
 import { readdir } from 'node:fs/promises';
 import test from 'node:test';
 
-import {
-  appearanceKeys,
-  themeModes,
-  themePalettes,
-} from '../src/lib/appearance.ts';
+import { appearanceKey, themeModes } from '../src/lib/appearance.ts';
 
 const expectedThemeModes = ['system', 'light', 'dark'];
-const expectedThemePalettes = ['runic', 'moss', 'fjord', 'ember'];
-const expectedAppearanceKeys = {
-  mode: 'runic-docs.theme-mode',
-  palette: 'runic-docs.theme-palette',
-};
+const expectedAppearanceKey = 'runic-docs.theme-mode';
 
 test('initializes validated docs appearance before SvelteKit head rendering', async () => {
   const html = await readFile(
@@ -25,40 +17,33 @@ test('initializes validated docs appearance before SvelteKit head rendering', as
   const initializer = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
 
   assert.ok(initializer, 'missing pre-hydration appearance initializer');
-  assert.match(html, /<html lang="en" class="dark" data-theme="runic">/);
-  assert.match(html, /<meta name="color-scheme" content="dark light" \/>/);
+  // No scheme is fixed in the markup: without JavaScript, tokens.css follows
+  // prefers-color-scheme.
+  assert.match(html, /<html lang="en">/);
+  assert.match(html, /<meta name="color-scheme" content="light dark" \/>/);
   assert.ok(
     html.indexOf('<script>') < html.indexOf('%sveltekit.head%'),
     'appearance initializer must precede %sveltekit.head%',
   );
   assert.deepEqual(themeModes, expectedThemeModes);
-  assert.deepEqual(themePalettes, expectedThemePalettes);
-  assert.deepEqual(appearanceKeys, expectedAppearanceKeys);
+  assert.equal(appearanceKey, expectedAppearanceKey);
 
   const initializerModes = parseInitializerArray(initializer, 'modes');
-  const initializerPalettes = parseInitializerArray(initializer, 'palettes');
   const initializerKeys = [
     ...initializer.matchAll(/localStorage\.getItem\(\s*'([^']+)'\s*,?\s*\)/g),
   ].map((match) => match[1]);
 
   assert.deepEqual(initializerModes, expectedThemeModes);
-  assert.deepEqual(initializerPalettes, expectedThemePalettes);
-  assert.deepEqual(initializerKeys, Object.values(expectedAppearanceKeys));
   assert.deepEqual(initializerModes, themeModes);
-  assert.deepEqual(initializerPalettes, themePalettes);
-  assert.deepEqual(initializerKeys, Object.values(appearanceKeys));
+  assert.deepEqual(initializerKeys, [appearanceKey]);
   assert.match(initializer, /modes\.includes\(storedMode\)/);
-  assert.match(initializer, /palettes\.includes\(storedPalette\)/);
-  assert.match(initializer, /\? storedMode : 'dark'/);
-  assert.match(initializer, /: 'runic'/);
-  assert.match(initializer, /runic-docs\.theme-mode/);
-  assert.match(initializer, /runic-docs\.theme-palette/);
+  assert.match(initializer, /\? storedMode : 'system'/);
   assert.match(initializer, /prefers-color-scheme: dark/);
+  assert.match(initializer, /classList\.toggle\('dark', dark\)/);
+  assert.match(initializer, /dataset\.scheme = dark \? 'dark' : 'light'/);
   assert.match(initializer, /style\.colorScheme = dark \? 'dark' : 'light'/);
-  assert.match(
-    initializer,
-    /document\.documentElement\.classList\.add\('js'\)/,
-  );
+  assert.match(initializer, /root\.classList\.add\('js'\)/);
+  assert.doesNotMatch(html, /palette|data-theme/);
   assert.doesNotMatch(html, /runic-translations\.theme-/);
   assert.doesNotMatch(html, /webui\.js|translations-editor/i);
 });
@@ -73,7 +58,7 @@ test('reveals the hydrated Sheet trigger only after JavaScript is detected', asy
     'utf8',
   );
 
-  assert.match(html, /document\.documentElement\.classList\.add\('js'\)/);
+  assert.match(html, /root\.classList\.add\('js'\)/);
   assert.match(css, /\.mobile-menu-button\s*\{[\s\S]*?display:\s*none/);
   assert.match(
     css,
@@ -103,34 +88,34 @@ test('owns shared root appearance state and both desktop and mobile controls', a
     'utf8',
   );
 
-  assert.match(layout, /let themeMode = \$state<ThemeMode>\('dark'\)/);
-  assert.match(layout, /let themePalette = \$state<ThemePalette>\('runic'\)/);
+  assert.match(layout, /let themeMode = \$state<ThemeMode>\('system'\)/);
+  assert.doesNotMatch(layout, /palette/i);
   assert.match(layout, /onMount\(\(\) => \{/);
-  assert.match(layout, /const appearance = readAppearance\(\)/);
-  assert.match(layout, /applyAppearance\(themeMode, themePalette\)/);
-  assert.match(layout, /return subscribeSystemAppearance/);
+  assert.match(layout, /themeMode = readThemeMode\(\)/);
+  assert.match(layout, /applyThemeMode\(themeMode\)/);
+  assert.match(layout, /return subscribeSystemScheme/);
   assert.equal(layout.match(/<AppearanceMenu/g)?.length, 2);
   assert.match(layout, /<AppearanceMenu[\s\S]*?compact/);
   assert.match(
     layout,
-    /<Sheet\.Content[\s\S]*?<AppearanceMenu[\s\S]*?onpalettechange=/,
+    /<Sheet\.Content[\s\S]*?<AppearanceMenu[\s\S]*?onmodechange=/,
   );
   assert.match(layout, /<noscript>[\s\S]*?noscript-nav[\s\S]*?<\/noscript>/);
 
-  assert.match(menu, /let accessibleLabel = \$derived/);
+  assert.match(menu, /let accessibleLabel = \$derived\(`Appearance, \$\{/);
   assert.match(menu, /aria-label=\{accessibleLabel\}/);
+  assert.match(menu, /data-appearance-trigger="compact"/);
+  assert.match(menu, /<DropdownMenu\.Label>Appearance<\/DropdownMenu\.Label>/);
+  // Both forms offer exactly the modes from appearance.ts.
   assert.match(
     menu,
-    /data-appearance-trigger=\{compact \? 'compact' : 'full'\}/,
+    /\{#each themeModes as value[\s\S]*?<DropdownMenu\.RadioItem \{value\}/,
   );
-  assert.match(menu, /<DropdownMenu\.Label>Appearance<\/DropdownMenu\.Label>/);
-  assert.match(menu, /<DropdownMenu\.Label>Color theme<\/DropdownMenu\.Label>/);
-  for (const value of ['system', 'light', 'dark']) {
-    assert.match(menu, new RegExp(`RadioItem value="${value}"`));
-  }
-  for (const value of ['runic', 'moss', 'fjord', 'ember']) {
-    assert.match(menu, new RegExp(`RadioItem value="${value}"`));
-  }
+  assert.match(
+    menu,
+    /\{#each themeModes as value[\s\S]*?<input\s+type="radio"\s+name="appearance-mode"/,
+  );
+  assert.doesNotMatch(menu, /palette|Color theme/i);
 });
 
 test('keeps the Editor dropdown wrapper snapshot byte-equivalent', async () => {

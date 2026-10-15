@@ -228,7 +228,10 @@ test('renders one title, escapes raw HTML and splits sections', () => {
   assert.equal(guide.title, 'Title code');
   assert.doesNotMatch(guide.html, /<h1|<script|<div>block/);
   assert.match(guide.html, /&lt;script&gt;/);
-  assert.match(guide.html, /<h2 id="first-part">First part<\/h2>/);
+  assert.match(
+    guide.html,
+    /<h2 id="first-part">First part <a class="heading-anchor" href="#first-part" aria-label="Link to this section">#<\/a><\/h2>/,
+  );
   assert.match(
     guide.html,
     /<pre tabindex="0" role="region" aria-label="sh code example"><code class="language-sh">echo hi/,

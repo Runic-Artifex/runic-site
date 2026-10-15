@@ -13,7 +13,7 @@ test('prerenders the homepage with canonical metadata and accessible entry', asy
   assert.equal(html.match(/<h1\b/g)?.length, 1);
   assert.match(html, /<main id="content" tabindex="-1">/);
   assert.match(html, /href="#content"/);
-  assert.match(html, /<nav aria-label="Primary navigation">/);
+  assert.match(html, /<nav aria-label="Primary navigation"[^>]*>/);
   for (const match of html.matchAll(/href="(?:\.\/)?#([^"]+)"/g)) {
     assert.ok(
       html.includes(`id="${match[1]}"`),
@@ -22,7 +22,7 @@ test('prerenders the homepage with canonical metadata and accessible entry', asy
   }
 });
 
-test('links each SDK capability to its guide, current source, and existing artwork', async () => {
+test('links each SDK capability to its guide, current source, and brand mark', async () => {
   const html = await readPage('index.html');
   assert.equal(products.length, 5);
   for (const product of products) {
@@ -39,8 +39,9 @@ test('links each SDK capability to its guide, current source, and existing artwo
         `https://github.com/Runic-Artifex/${sourceRepository}/tree/main/`,
       ),
     );
-    await access(
-      new URL(`../static/products/${product.slug}.png`, import.meta.url),
+    assert.ok(
+      html.includes(`data-mark="${product.mark}"`),
+      `missing mark ${product.mark}`,
     );
   }
   for (const match of html.matchAll(/src="(\/[^"?]+)"/g)) {

@@ -1,3 +1,4 @@
+import type { MarkName } from '#lib/brand/Mark.svelte';
 import { activeVersionForProduct } from '#lib/release-docs.js';
 
 type ReleaseProductId = string;
@@ -12,7 +13,9 @@ export type Product = {
   slug: string;
   name: string;
   shortName: string;
-  icon: string;
+  /** The product's glyph in the brand marks. */
+  mark: MarkName;
+  /** A short description of what the product is, shown under its name. */
   kicker: string;
   summary: string;
   description: string;
@@ -66,7 +69,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Flow',
     shortName: 'Flow',
-    icon: '/products/runic-flow.png',
+    mark: 'flow',
     kicker: 'Historical project',
     summary: 'Historical Runic Flow information and migration guidance.',
     description:
@@ -108,7 +111,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Application',
     shortName: 'Application',
-    icon: '/products/runic-application.png',
+    mark: 'application',
     kicker: 'Window and View model',
     summary:
       'Compose typed .NET Windows and Views with generated TypeScript clients for browser frontends.',
@@ -154,7 +157,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Desktop',
     shortName: 'Desktop',
-    icon: '/products/runic-desktop.png',
+    mark: 'desktop',
     kicker: 'Native presentation',
     summary:
       'Present web-powered Runic applications in native windows through explicit browser and embedded-WebView policies.',
@@ -184,7 +187,7 @@ export const products: Product[] = [
     ],
     name: 'CS-WebUI',
     shortName: 'CS-WebUI',
-    icon: '/products/cs-webui.png',
+    mark: 'webui',
     kicker: 'Independent WebUI binding',
     summary:
       'Use upstream WebUI from .NET through a complete C-ABI binding and an ownership-safe managed API.',
@@ -221,7 +224,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Assets',
     shortName: 'Assets',
-    icon: '/products/runic-assets.png',
+    mark: 'assets',
     kicker: 'Shared infrastructure',
     summary:
       'Package static assets once and serve the same validated manifest from embedded, development, browser, or server hosts.',
@@ -271,7 +274,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Translations',
     shortName: 'Translations',
-    icon: '/products/runic-translations.png',
+    mark: 'translations',
     kicker: 'Localization',
     summary:
       'Turn a conventional MessageFormat 2 project into typed C# and tree-shakable TypeScript APIs.',
@@ -312,7 +315,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Translations Editor',
     shortName: 'Translations Editor',
-    icon: '/products/runic-translations-editor.png',
+    mark: 'translations',
     kicker: 'Translation authoring',
     summary:
       'Create, translate, review, and validate Runic Translations workspaces in a focused desktop editor.',
@@ -359,7 +362,7 @@ export const products: Product[] = [
     ],
     name: 'Runic Command Line',
     shortName: 'Command Line',
-    icon: '/products/runic-command-line.png',
+    mark: 'command-line',
     kicker: 'Command applications',
     summary:
       'Build reflection-free NativeAOT command applications with parser-neutral contracts and predictable human and machine output.',

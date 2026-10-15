@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import ContentCard from '#lib/components/ContentCard.svelte';
+  import DocSection from '#lib/components/DocSection.svelte';
   import {
     hostName,
     operatingSystemNames,
@@ -29,9 +29,8 @@
   <meta name="twitter:title" content="Supported platforms · Runic Artifex" />
   <meta name="twitter:description" content={description} />
 </svelte:head>
-<div>
-  <section class="page-hero shell">
-    <p class="eyebrow">Support</p>
+<div class="shell">
+  <div class="page-head">
     <h1>Supported platforms</h1>
     <p class="lede">
       Support for each Window host and runtime identifier (RID). Runtime
@@ -39,9 +38,9 @@
       <code>dotnet runic doctor --rid &lt;rid&gt;</code> to check a project against
       the same data.
     </p>
-  </section>
-  <section class="content-grid shell">
-    <ContentCard eyebrow="Matrix" title="Hosts and runtime identifiers" full>
+  </div>
+  <div class="doc-sections doc-sections--wide">
+    <DocSection title="Hosts and runtime identifiers">
       <!-- The scrollable table region must be reachable by keyboard. -->
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
@@ -80,8 +79,8 @@
           <dd>{supportMatrix.statuses[status]}</dd>
         {/each}
       </dl>
-    </ContentCard>
-    <ContentCard eyebrow="Target machines" title="Platform requirements" full>
+    </DocSection>
+    <DocSection title="Platform requirements">
       <!-- The scrollable table region must be reachable by keyboard. -->
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
@@ -111,8 +110,8 @@
           </tbody>
         </table>
       </div>
-    </ContentCard>
-    <ContentCard eyebrow="Details" title="Targets that CI does not verify" full>
+    </DocSection>
+    <DocSection title="Targets that CI does not verify">
       <ul class="support-notes">
         {#each notes as note (`${note.host}-${note.rid}`)}
           <li>
@@ -124,38 +123,36 @@
       </ul>
       <p>
         Choose a host with the <a
-          class="text-link"
           href={resolve('/guides/[...path]', {
             path: 'desktop/host-selection',
           })}>host selection guide</a
         >. The matrix comes from
         <a
-          class="text-link"
           href="https://github.com/Runic-Artifex/runic-sdk/blob/main/eng/support.json"
           rel="external">eng/support.json</a
         >
         in the SDK, which also generates the SDK README table and the data that
         <code>dotnet runic doctor</code> reads.
       </p>
-    </ContentCard>
-  </section>
+    </DocSection>
+  </div>
 </div>
 
 <style>
   .support-matrix td[data-status='ci-verified'] {
-    color: var(--foreground);
     font-weight: 600;
   }
 
   .support-matrix td[data-status='unsupported'] {
-    color: var(--muted-foreground);
+    color: var(--rune-ink-soft);
   }
 
   .support-statuses {
     display: grid;
     grid-template-columns: max-content 1fr;
-    gap: 0.4rem 1rem;
-    margin: 0;
+    gap: 0.4rem 1.25rem;
+    margin: 1.5rem 0 0;
+    font-size: var(--text-ui);
   }
 
   .support-statuses dt {
@@ -164,13 +161,21 @@
 
   .support-statuses dd {
     margin: 0;
-    color: var(--muted-foreground);
+    color: var(--rune-ink-soft);
   }
 
-  .support-notes {
-    display: grid;
-    gap: 0.5rem;
-    margin: 0;
-    padding-left: 1.25rem;
+  @media (max-width: 40rem) {
+    .support-statuses {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.15rem;
+    }
+
+    .support-statuses dd + dt {
+      margin-top: 0.6rem;
+    }
+  }
+
+  .support-notes li + li {
+    margin-top: 0.6em;
   }
 </style>

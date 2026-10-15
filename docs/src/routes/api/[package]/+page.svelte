@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import Breadcrumbs from '#lib/components/Breadcrumbs.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -19,11 +20,9 @@
   <meta name="twitter:description" content={description} />
 </svelte:head>
 
-<div>
-  <section class="doc-hero guide-hero shell">
-    <nav class="api-breadcrumb" aria-label="Breadcrumb">
-      <a href={resolve('/api')}>API reference</a>
-    </nav>
+<div class="shell">
+  <div class="page-head api-head">
+    <Breadcrumbs items={[{ label: 'API reference', href: resolve('/api') }]} />
     <h1><code>{pkg.id}</code></h1>
     <p class="lede">
       Version {pkg.version}{pkg.framework
@@ -34,12 +33,14 @@
           .filter((framework) => framework !== pkg.framework)
           .join(', ')}.
       {/if}
-      Read from the <a class="text-link" href={pkg.url}>published package</a>.
+      Read from the <a href={pkg.url}>published package</a>.
     </p>
-  </section>
-  <div class="api-layout shell">
+  </div>
+  <div class="api-layout">
     <nav class="api-toc" aria-label="Namespaces">
-      <strong>{pkg.ecosystem === 'nuget' ? 'Namespaces' : 'Modules'}</strong>
+      <p class="guide-toc-title">
+        {pkg.ecosystem === 'nuget' ? 'Namespaces' : 'Modules'}
+      </p>
       <ul>
         {#each pkg.groups as group (group.id)}
           <li><a href={`#${group.id}`}>{group.title}</a></li>
@@ -54,6 +55,7 @@
             {#each group.types as type (type.anchor)}
               <dt id={type.anchor}>
                 {#if type.href}
+                  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- type paths come from the prerendered reference -->
                   <a href={type.href}><code>{type.name}</code></a>
                 {:else}
                   <code>{type.name}</code>

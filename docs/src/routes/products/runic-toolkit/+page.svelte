@@ -9,13 +9,12 @@
   <link rel="canonical" href="/products/runic-application/" />
 </svelte:head>
 
-<div class="page-hero shell">
-  <p class="eyebrow">Runic Application</p>
+<div class="shell page-head">
   <h1>Runic Application has moved.</h1>
   <p class="lede">The Runic Application product page has a new address.</p>
-  <a
-    class="text-link"
-    href={resolve('/products/[slug]', { slug: 'runic-application' })}
-    >Open Runic Application</a
-  >
+  <p>
+    <a href={resolve('/products/[slug]', { slug: 'runic-application' })}
+      >Open Runic Application</a
+    >
+  </p>
 </div>

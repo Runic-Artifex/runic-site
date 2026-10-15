@@ -67,14 +67,14 @@ function stripMarkup(value) {
 
 test('renders the documentation home with complete metadata and branding', async () => {
   const html = await render();
-  assert.match(
-    html,
-    /^<!doctype html>\s*<html lang="en" class="dark" data-theme="runic">/,
-  );
-  assert.match(html, /name="color-scheme" content="dark light"/);
+  assert.match(html, /^<!doctype html>\s*<html lang="en">/);
+  assert.match(html, /name="color-scheme" content="light dark"/);
   assert.match(html, /<h1>[^<]+<\/h1>/);
   assert.match(html, /<title>[^<]+Runic Artifex<\/title>/);
-  assert.match(html, /<small>Documentation<\/small>/);
+  assert.match(
+    html,
+    /<a class="brand" href="\.\/" aria-label="Runic Artifex documentation home">[\s\S]*?data-mark="wordmark"[\s\S]*?class="lockup__descriptor[^"]*">Documentation<\/span>/,
+  );
   assert.match(
     html,
     /property="og:image" content="https:\/\/docs\.runic-artifex\.eu\/og\.png"/,
@@ -87,9 +87,9 @@ test('renders the documentation home with complete metadata and branding', async
   assert.match(html, /name="twitter:card" content="summary_large_image"/);
   assert.match(html, /rel="icon" href="\/icon\.png"/);
   assert.match(html, /runic-docs\.theme-mode/);
-  assert.match(html, /runic-docs\.theme-palette/);
+  assert.doesNotMatch(html, /runic-docs\.theme-palette/);
   assert.doesNotMatch(html, /runic-translations\.theme-/);
-  assert.match(html, /aria-label="Appearance, Runic Gold · Dark"/);
+  assert.match(html, /aria-label="Appearance, System"/);
   assert.match(html, /data-appearance-trigger="compact"/);
   assert.match(
     html,
@@ -97,10 +97,8 @@ test('renders the documentation home with complete metadata and branding', async
   );
   assert.match(html, /<main id="content" tabindex="-1">/);
   assert.equal(html.match(/<main\b/g)?.length, 1);
-  assert.match(
-    html,
-    /background-image:\s*url\(\/products\/runic-application\.png\)/,
-  );
+  assert.match(html, /data-mark="application"/);
+  assert.doesNotMatch(html, /\/products\/[a-z-]+\.png/);
   assert.match(html, /Runic Application/);
   assert.match(html, /CS-WebUI/);
   assert.doesNotMatch(
@@ -250,21 +248,30 @@ test('redirects the legacy Runic Application product slug', async () => {
   assert.match(html, /href="[^"]*products\/runic-application\/?"/);
 });
 
-test('product pages use their own product icon', async () => {
-  const flow = await render('/products/runic-flow');
-  assert.match(flow, /background-image:\s*url\(\/products\/runic-flow\.png\)/);
-  assert.doesNotMatch(flow, /url\(\/products\/runic-application\.png\)/);
-
-  const application = await render('/products/runic-application');
-  assert.match(
-    application,
-    /background-image:\s*url\(\/products\/runic-application\.png\)/,
-  );
+test('product pages use their own product glyph', async () => {
+  for (const [slug, mark] of [
+    ['runic-flow', 'flow'],
+    ['runic-application', 'application'],
+    ['runic-desktop', 'desktop'],
+    ['cs-webui', 'webui'],
+    ['runic-assets', 'assets'],
+    ['runic-translations', 'translations'],
+    ['runic-translations-editor', 'translations'],
+    ['runic-command-line', 'command-line'],
+  ]) {
+    const html = await render(`/products/${slug}`);
+    const title = html.match(/<div class="product-title[\s\S]*?<\/h1>/)?.[0];
+    assert.ok(title, slug);
+    assert.match(title, new RegExp(`data-mark="${mark}"`), slug);
+    assert.doesNotMatch(html, /\/products\/[a-z-]+\.png/, slug);
+  }
 });
 
 test('builds an accessible branded page for nginx 404 responses', async () => {
   const html = await render('/404');
-  assert.match(html, /That rune is not in the catalog/);
+  assert.match(html, /<h1>No page at this address<\/h1>/);
+  assert.match(html, /<form[^>]*action="[^"]*search"[^>]*role="search"/);
+  assert.match(html, /href="[^"]*"[^>]*>Documentation home<\/a>/);
   assert.match(html, /<title>Page not found · Runic Artifex<\/title>/);
   assert.match(html, /Skip to content/);
 });
@@ -365,11 +372,11 @@ test('links SDK release notes and renders active SDK install commands', async ()
       );
     }
   }
-  assert.match(packageHtml, /Templates · NuGet/);
-  assert.match(packageHtml, /Effect bindings · npm/);
+  assert.match(packageHtml, /Templates on NuGet/);
+  assert.match(packageHtml, /Effect bindings on npm/);
   assert.doesNotMatch(
     packageHtml,
-    />(?:views-effect|administration-windows) · /,
+    />(?:views-effect|administration-windows) on /,
   );
   const applicationHtml = await render('/products/runic-application');
   for (const name of [

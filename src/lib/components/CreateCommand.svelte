@@ -15,68 +15,64 @@
   }
 </script>
 
-<div class="create-command">
-  <span class="create-command__prompt" aria-hidden="true">$</span>
-  <code>{command}</code>
-  <button type="button" onclick={copy} aria-label="Copy command"
-    >{copied ? 'Copied' : 'Copy'}</button
+<div class="command">
+  <code><span class="command__prompt" aria-hidden="true">$</span>{command}</code
   >
-  <span class="visually-hidden" role="status"
-    >{copied ? 'Copied to clipboard' : ''}</span
-  >
+  <button type="button" onclick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+  <span class="sr-only" role="status">{copied ? 'Command copied' : ''}</span>
 </div>
 
 <style>
-  .create-command {
+  .command {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
-    max-width: 36rem;
-    padding: 0.55rem 0.55rem 0.55rem 1.1rem;
-    border: 1px solid var(--line-strong);
-    background: rgb(7 16 11 / 72%);
-    box-shadow: var(--shadow);
-  }
-
-  .create-command__prompt {
-    color: var(--gold);
-    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+    gap: 1rem;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.4rem 0.4rem 0.4rem 1rem;
+    border-radius: var(--radius-control);
+    color: var(--rune-stone);
+    background: var(--rune-ink);
   }
 
   code {
-    flex: 1;
     min-width: 0;
-    overflow-wrap: break-word;
-    color: var(--parchment);
-    font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
-    font-size: 0.92rem;
+    overflow-x: auto;
+    font-size: 0.9375rem;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 26rem) {
+    code {
+      font-size: 0.8125rem;
+    }
+  }
+
+  .command__prompt {
+    margin-right: 1ch;
+    color: var(--rune-paint);
+    user-select: none;
   }
 
   button {
+    flex: none;
     min-height: 2.25rem;
-    padding: 0.4rem 0.85rem;
-    border: 1px solid var(--line-strong);
-    color: var(--parchment);
-    background: rgb(24 35 27 / 55%);
+    padding: 0.3rem 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--rune-stone) 28%, transparent);
+    border-radius: 3px;
+    color: inherit;
+    background: transparent;
     font: inherit;
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 0.875rem;
+    font-weight: 540;
     cursor: pointer;
   }
 
-  button:hover,
-  button:focus-visible {
-    border-color: var(--gold);
+  button:hover {
+    border-color: var(--rune-stone);
   }
 
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  button:focus-visible {
+    box-shadow: 0 0 0 2px var(--rune-paint);
   }
 </style>

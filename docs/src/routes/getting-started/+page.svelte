@@ -1,7 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import CommandBlock from '#lib/components/CommandBlock.svelte';
-  import ContentCard from '#lib/components/ContentCard.svelte';
+  import DocSection from '#lib/components/DocSection.svelte';
   import { creatorCommands, defaultSelection } from '#lib/creator.js';
   import { currentRelease } from '#lib/release-docs.js';
 
@@ -30,22 +30,17 @@
   />
 </svelte:head>
 
-<div>
-  <section class="page-hero shell">
-    <p class="eyebrow">Getting started</p>
+<div class="shell">
+  <div class="page-head">
     <h1>Build your first Runic app.</h1>
     <p class="lede">
       Use C# for application logic and React, Vue, Svelte or Angular for the
       frontend. One command creates a project that connects them and opens your
       app.
     </p>
-  </section>
-  <section class="content-grid shell">
-    <ContentCard
-      eyebrow="Before you start"
-      title="Install the prerequisites"
-      full
-    >
+  </div>
+  <div class="doc-sections">
+    <DocSection title="Install the prerequisites">
       <p>
         You need the <a href="https://dotnet.microsoft.com/download/dotnet/10.0"
           >.NET 10 SDK</a
@@ -61,12 +56,8 @@
         best-effort basis. Run
         <code>dotnet runic doctor</code> in the generated project to check your setup.
       </p>
-    </ContentCard>
-    <ContentCard
-      eyebrow={`SDK ${currentRelease.version}`}
-      title="Create and run"
-      full
-    >
+    </DocSection>
+    <DocSection title="Create and run">
       <CommandBlock command={commands.interactive} />
       <p>
         The creator asks for a project name, frontend, package manager, Window
@@ -86,16 +77,15 @@
         and builds the production frontend.
       </p>
       <p>
-        Prefer to choose in the browser? <a
-          class="text-link"
-          href={resolve('/create')}>Put your app together</a
+        Prefer to choose in the browser? <a href={resolve('/create')}
+          >Put your app together</a
         >
         and copy one command. The creator runs the
         <code>runic-app</code> template, which you can also use directly:
       </p>
       <CommandBlock command={`${commands.install}\n${commands.create}`} />
-    </ContentCard>
-    <ContentCard eyebrow="Make it yours" title="Change the counter" full>
+    </DocSection>
+    <DocSection title="Change the counter">
       <p>
         The generated app contains C# ViewModels, a Window and Views that select
         them, and a frontend in <code>Frontend</code>. The build generates a
@@ -106,34 +96,31 @@
       </p>
       <p>
         Follow <a
-          class="text-link"
           href={resolve('/guides/[...path]', { path: 'application/tutorial' })}
           >Windows and Views, step by step</a
         >
         through the generated project and its tests,
-        <a class="text-link" href={resolve('/views')}
-          >learn about Windows and Views</a
-        >, or explore the
+        <a href={resolve('/views')}>learn about Windows and Views</a>, or
+        explore the
         <a
-          class="text-link"
           href="https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-view-first"
           >CommunityToolkit Notes example</a
         > for nested content, editing, and navigation.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Share your app" title="Publish for your platform">
+    </DocSection>
+    <DocSection title="Publish for your platform">
       <pre><code>dotnet publish -c Release -r linux-x64</code></pre>
       <p>
         Use <code>win-x64</code>, <code>osx-arm64</code> or another runtime
         identifier for other platforms; the
-        <a class="text-link" href={resolve('/support')}>supported platforms</a>
+        <a href={resolve('/support')}>supported platforms</a>
         page lists them per host. The publish folder contains the executable and a
         <code>www</code> folder with the built frontend; distribute the whole folder.
         Users need no JavaScript runtime or package manager, only a browser or the
         platform WebView.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Your choices" title="Choose a host and MVVM library">
+    </DocSection>
+    <DocSection title="Choose a host and MVVM library">
       <p>
         The creator asks for the host and the ViewModel library. Runic Desktop
         is the default and first-class host: native windows, embedded WebViews,
@@ -144,39 +131,33 @@
         a best-effort basis. ReactiveUI is the default ViewModel library; CommunityToolkit.Mvvm
         is supported too.
         <a
-          class="text-link"
           href={resolve('/guides/[...path]', {
             path: 'application/choosing',
           })}>Choosing a host and MVVM library</a
         >
         compares them. To distribute a Desktop app, follow
         <a
-          class="text-link"
           href={resolve('/guides/[...path]', {
             path: 'desktop/shipping',
           })}>ship a Desktop application</a
         >.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Existing project" title="Add one capability">
+    </DocSection>
+    <DocSection title="Add one capability">
       <p>
         You can adopt Application Views, Desktop, or Assets separately. The <a
-          class="text-link"
           href={resolve('/packages')}>package catalog</a
         > lists the packages for each goal. Command Line and Translations have their
         own installation guidance.
       </p>
       <p>
         <a
-          class="text-link"
           href={resolve('/guides/[...path]', {
             path: 'application/existing-app',
           })}>Add Runic to an existing app</a
         >
         or
-        <a
-          class="text-link"
-          href={resolve('/guides/[...path]', { path: 'assets' })}
+        <a href={resolve('/guides/[...path]', { path: 'assets' })}
           >embed and serve a frontend with Runic Assets</a
         >.
       </p>
@@ -185,20 +166,17 @@
         emits the C# attachments and TypeScript client modules for those
         contracts.
       </p>
-    </ContentCard>
-    <ContentCard eyebrow="Next steps" title="Keep building">
+    </DocSection>
+    <DocSection title="Keep building">
       <p>
-        Read the <a class="text-link" href={currentRelease.url} rel="external"
-          >release notes</a
-        >
+        Read the <a href={currentRelease.url} rel="external">release notes</a>
         when upgrading preview versions. Keep Runic packages on the same version.
         For SDK contributions, use the
         <a
-          class="text-link"
           href="https://github.com/Runic-Artifex/runic-sdk/blob/main/CONTRIBUTING.md"
           >contributor guide</a
         >.
       </p>
-    </ContentCard>
-  </section>
+    </DocSection>
+  </div>
 </div>

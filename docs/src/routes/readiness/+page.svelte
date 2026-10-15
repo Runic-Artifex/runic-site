@@ -9,8 +9,7 @@
     content="Where to find SDK release notes and contributor release instructions."
   />
 </svelte:head>
-<div class="shell content-page">
-  <p class="eyebrow">Release process</p>
+<div class="shell page-head">
   <h1>Release information has moved.</h1>
   <p class="lede">
     For published versions and upgrade guidance, visit <a
