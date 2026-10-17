@@ -8,9 +8,10 @@ and notifications, follow each platform's own rules, which this guide lists
 with what the application can and cannot change.
 
 **Checked with**: Runic CI runs the GTK 4 smoke with an Arabic process locale
-(`--rtl`, Linux x64 and arm64): the page reads `ar-EG`, lays out right to
-left, and GTK's direction is right to left. The Windows and macOS rows below
-have not been run.
+(`--rtl`, Linux x64 and arm64): the page reads `ar-EG` and lays out right to
+left, GTK's direction matches its translation (left to right on Ubuntu 24.04),
+and the override below works. Run locally on NixOS, GTK's direction was right
+to left. The Windows and macOS rows have not been run.
 
 ## Set the page's language and direction
 
@@ -73,9 +74,20 @@ state, to `navigator.language`, which each WebView takes from somewhere else:
 
 On Linux, GTK reads its direction from its own translation for the process
 locale. A user whose session is Arabic gets a mirrored header bar; an
-application that only switches its page to Arabic does not. On an Ubuntu
-image without GTK's translations (the `language-pack-gnome-*` packages), GTK
-stays left to right.
+application that only switches its page to Arabic does not. The translation
+depends on the distribution: NixOS's GTK 4 mirrors for Arabic, but Ubuntu
+24.04's GTK 4 language packs do not translate the direction for Arabic, Hebrew
+or Persian (GTK 3's do), so GTK 4 windows there stay left to right. An
+application on the GTK 4 host can set the direction itself; GTK applies it on
+its own thread:
+
+```csharp docs-test=skip:illustrative-fragment
+GLib.Functions.IdleAdd(GLib.Constants.PRIORITY_DEFAULT, () =>
+{
+    Gtk.Widget.SetDefaultDirection(Gtk.TextDirection.Rtl);
+    return false;
+});
+```
 
 On macOS, AppKit mirrors an application only for a language the bundle
 declares: list it in `CFBundleLocalizations` in `Info.plist`, or ship an
