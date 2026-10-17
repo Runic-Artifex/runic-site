@@ -66,6 +66,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'desktop-services.md',
       'desktop/window-close-lifecycle.md',
       'desktop/inhibition.md',
+      'desktop/right-to-left.md',
       'desktop/size-and-tuning.md',
       'desktop/shipping.md',
       'desktop/crash-reporting.md',
