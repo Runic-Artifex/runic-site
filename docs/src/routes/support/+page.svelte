@@ -35,8 +35,9 @@
     <p class="lede">
       Support for each Window host and runtime identifier (RID). Runtime
       identifiers that are not listed are unsupported. Run
-      <code>dotnet runic doctor --rid &lt;rid&gt;</code> to check a project against
-      the same data.
+      <code>dotnet runic doctor --rid &lt;rid&gt;</code> to check a project
+      against the same data. What Runic promises from 1.0 is in the
+      <a href={resolve('/support/policy')}>versioning and support policy</a>.
     </p>
   </div>
   <div class="doc-sections doc-sections--wide">
