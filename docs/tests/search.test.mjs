@@ -132,8 +132,9 @@ const queries = {
   ],
 };
 
-// Each search loads the index, its terms' shards and the texts it shows.
-const budget = { raw: 400 * 1024, gzip: 104 * 1024 };
+// Each search loads the index, its terms' shards and the texts it shows. The gzip
+// budget grew from 104 KiB with the 1.0 Desktop guides (crash reporting, right-to-left).
+const budget = { raw: 400 * 1024, gzip: 112 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {

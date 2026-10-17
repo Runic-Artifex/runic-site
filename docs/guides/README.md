@@ -26,7 +26,7 @@ needs and leads on from there:
 - [Runic Application Views](application/README.md) and [application architecture](application/architecture/README.md).
 - [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/notes-reactive-views/README.md).
 - [Desktop native services](desktop-services.md), [host selection](desktop/host-selection.md), and [window close lifecycle](desktop/window-close-lifecycle.md).
-- [Ship a Desktop application](desktop/shipping.md) and [package it with Nix](desktop/nix-packaging.md).
+- [Ship a Desktop application](desktop/shipping.md), [package it with Nix](desktop/nix-packaging.md), and [report crashes](desktop/crash-reporting.md).
 - [Runic Command Line](command-line/README.md).
 - [Runic Translations](translations/README.md), the [Translations repository's guides](https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations) and [migrating Svelte translation imports](migrations/translations-svelte.md).
 - [Embed and serve assets](assets/README.md) with Runic Assets.
