@@ -188,6 +188,7 @@
       <a href={resolve('/products')}>Products</a>
       <a href={resolve('/packages')}>Package catalog</a>
       <a href={resolve('/support')}>Supported platforms</a>
+      <a href={resolve('/support/policy')}>Support policy</a>
       <a href={resolve('/architecture')}>Architecture</a>
     </nav>
     <nav class="footer-links" aria-labelledby="footer-project">

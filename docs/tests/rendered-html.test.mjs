@@ -23,6 +23,7 @@ const primaryRoutes = [
   '/packages',
   '/releases',
   '/support',
+  '/support/policy',
   '/readiness',
   '/products/runic-application',
   '/products/runic-desktop',
@@ -502,5 +503,37 @@ test('renders the support matrix from the synchronized SDK data', async () => {
   assert.match(
     home,
     /<footer[\s\S]*href="\.\/support">Supported platforms<\/a>/,
+  );
+});
+
+test('states the 1.0 support policy and links each SDK release guide at main', async () => {
+  const html = await render('/support/policy');
+  const text = stripMarkup(html);
+  assert.match(
+    text,
+    /This policy takes effect with 1\.0\.0\. Until then every release is a preview/,
+  );
+  assert.match(
+    text,
+    /Runic\.Application\.Views\.CsWebUi is the only preview package/,
+  );
+  assert.match(
+    text,
+    /Bug and security fixes ship in a patch of the latest minor only/,
+  );
+  for (const repository of [
+    'runic-sdk',
+    'runic-cli-sdk',
+    'runic-translations-sdk',
+  ])
+    assert.ok(
+      html.includes(
+        `href="https://github.com/Runic-Artifex/${repository}/blob/main/eng/release/README.md#versioning-and-support-from-10"`,
+      ),
+      `expected the ${repository} release guide`,
+    );
+  assert.match(
+    await render('/support'),
+    /href="\.\/policy"|href="[^"]*support\/policy\/?"/,
   );
 });
