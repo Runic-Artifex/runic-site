@@ -9,9 +9,8 @@ with what the application can and cannot change.
 
 **Checked with**: Runic CI runs the GTK 4 smoke with an Arabic process locale
 (`--rtl`, Linux x64 and arm64): the page reads `ar-EG` and lays out right to
-left, GTK's direction matches its translation (left to right on Ubuntu 24.04),
-and the override below works. Run locally on NixOS, GTK's direction was right
-to left. The Windows and macOS rows have not been run.
+left, GTK 4's direction is right to left, and the override below works. The
+Windows and macOS rows have not been run.
 
 ## Set the page's language and direction
 
@@ -64,22 +63,20 @@ state, to `navigator.language`, which each WebView takes from somewhere else:
 
 ## Native pieces
 
-| Piece                           | Linux                                                                      | Windows                                                                      | macOS                                                         |
-| ------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Window frame and GTK header bar | GTK's direction, from the process locale when GTK has a translation for it | Not mirrored ([#389](https://github.com/Runic-Artifex/runic-sdk/issues/389)) | AppKit's direction for the application                        |
-| Menu bar                        | None                                                                       | None                                                                         | AppKit's direction; Runic's default items have English titles |
-| Status icon menu                | Drawn by the panel, in the session's language                              | Not mirrored (#389)                                                          | AppKit's direction for the application                        |
-| File dialogs                    | Drawn by the desktop portal, in the session's language                     | Windows display language                                                     | AppKit's direction for the application                        |
-| Notifications                   | Drawn by the notification server                                           | Windows display language                                                     | Drawn by the system                                           |
+| Piece                           | Linux                                                  | Windows                                                                      | macOS                                                         |
+| ------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Window frame and GTK header bar | GTK's direction, from the process locale               | Not mirrored ([#389](https://github.com/Runic-Artifex/runic-sdk/issues/389)) | AppKit's direction for the application                        |
+| Menu bar                        | None                                                   | None                                                                         | AppKit's direction; Runic's default items have English titles |
+| Status icon menu                | Drawn by the panel, in the session's language          | Not mirrored (#389)                                                          | AppKit's direction for the application                        |
+| File dialogs                    | Drawn by the desktop portal, in the session's language | Windows display language                                                     | AppKit's direction for the application                        |
+| Notifications                   | Drawn by the notification server                       | Windows display language                                                     | Drawn by the system                                           |
 
-On Linux, GTK reads its direction from its own translation for the process
-locale. A user whose session is Arabic gets a mirrored header bar; an
-application that only switches its page to Arabic does not. The translation
-depends on the distribution: NixOS's GTK 4 mirrors for Arabic, but Ubuntu
-24.04's GTK 4 language packs do not translate the direction for Arabic, Hebrew
-or Persian (GTK 3's do), so GTK 4 windows there stay left to right. An
-application on the GTK 4 host can set the direction itself; GTK applies it on
-its own thread:
+On Linux, GTK 4 takes its direction from the script of the process locale's
+language, and GTK 3 from its own translation for the locale, which on Ubuntu
+comes with the `language-pack-gnome-*` packages. A user whose session is
+Arabic gets a mirrored header bar; an application that only switches its page
+to Arabic does not. An application whose language differs from the session's
+can set GTK 4's direction itself; GTK applies it on its own thread:
 
 ```csharp docs-test=skip:illustrative-fragment
 GLib.Functions.IdleAdd(GLib.Constants.PRIORITY_DEFAULT, () =>
