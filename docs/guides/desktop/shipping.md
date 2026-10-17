@@ -70,7 +70,8 @@ Ship the executable and `www` together, or embed the frontend in the
 executable with [Runic Assets](../assets/README.md) and serve it with
 `Runic.Assets.Desktop`, so the package holds a single file. NativeAOT also
 writes debug symbols (`.pdb` on Windows, `.dbg` on Linux, `.dSYM` on macOS).
-Leave them out of the package but keep them per release for crash analysis.
+Leave them out of the package but keep them per release for
+[crash analysis](crash-reporting.md).
 
 The window icon at run time comes from `DesktopWindowOptions.IconFile`, which
 an application sets through the `WindowOptions` of its `RunicDesktopHost`:
