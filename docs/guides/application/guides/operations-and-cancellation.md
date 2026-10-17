@@ -22,29 +22,59 @@ state. Operation observation, selection queues and recovery need their own polic
 
 A call resolves to the ViewModel's state after the command, `can{Command}(input)`
 to whether the command can run with that argument, and `start{Command}(input)`
-to a `BridgeOperation<TResult>` handle. Only a ReactiveUI
+to a `BridgeOperation<TResult>` handle. A ReactiveUI
 `ReactiveCommand<TInput, TResult>` has a typed result: its `outcome()` resolves
-to `{ ok: true, value }`. A CommunityToolkit command's operation is
-`BridgeOperation<void>`, and a `[RelayCommand]` method's `Task<T>` result is
-not delivered.
+to `{ ok: true, value }`. Since SDK `0.8.0-preview.4`, a CommunityToolkit
+`[RelayCommand]` method that returns `Task<T>` does too: its operation is a
+`BridgeOperation<T>`. Other commands have none (`BridgeOperation<void>`).
 
-Return a result through state instead. Publish it in a read-only property
-together with the input it answers, and a second property for the phase of
-the work. The page then shows a result only when it answers the current
-choice, and shows progress, cancellation and failure from the phase. A
-question that takes parameters works the same way: there is no query route
-that returns a computed value, so run a command with the parameters and read
-the answer from the state it publishes. Start each question with
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+[RelayCommand(IncludeCancelCommand = true)]
+private async Task<CleanupEstimate> MeasureAsync(CleanupChoice choice, CancellationToken token) =>
+    new(choice.Retention, await estimator.FreedBytesAsync(choice.Retention, token), DateTimeOffset.Now);
+```
+
+```ts docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+const outcome = await cleanup.startMeasure({ retention: 3 }).outcome();
+if (outcome.ok) render(outcome.value.bytes);
+```
+
+A result that other parts of the page show is better published as state.
+Publish it in a read-only property together with the input it answers, and a
+second property for the phase of the work. The page then shows a result only
+when it answers the current choice, and shows progress, cancellation and
+failure from the phase. A question that takes parameters works the same way:
+there is no query route that returns a computed value, so run a command with
+the parameters and read the answer from the state it publishes. Start each question with
 `createLatestOperationController` (see [below](#bind-operation-feedback)) so a
 newer choice cancels the one it supersedes.
 
 The Views README walks through a complete example, a cleanup
 estimate in C# and TypeScript, in
-[Operation results and parameterised queries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/README.md#operation-results-and-parameterised-queries).
+[Operation results and parameterised queries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/README.md#operation-results-and-parameterised-queries).
 Its
-[wire types](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/README.md#wire-types)
+[wire types](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/README.md#wire-types)
 explain why a result such as a byte count shown in the UI is better a `double`
 than a `long`, which becomes a `bigint`.
+
+Since SDK `0.8.0-preview.4`, a read-only `string` state property marked
+`[RunicAppendOnlyText]`, such as an operation's output, crosses as the text it
+appends:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+[ObservableProperty, RunicAppendOnlyText]
+public partial string Log { get; private set; } = "";
+
+private void OnOutput(string text)
+{
+    var log = Log + text;
+    // Keeps the last 128 KB; the page receives the dropped length and the new text.
+    Log = log.Length > LogCharacters ? log[^LogCharacters..] : log;
+}
+```
+
+The page still sees a `string`. See
+[live logs and other growing text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/README.md#live-logs-and-other-growing-text).
 
 ## Choose a policy for the action
 
@@ -88,9 +118,9 @@ and [published-package desktop onboarding](../package-consumer.md).
 
 The following helpers are new in SDK `0.7.0-preview.6`.
 
-[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/views/src/operation-controller.ts)
+[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/web/views/src/operation-controller.ts)
 and Svelte's
-[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/svelte/src/views/use-operation.svelte.ts)
+[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/web/svelte/src/views/use-operation.svelte.ts)
 bind Start handles to admission, pending state, status, outcome, declared failure,
 error and Cancel. Progress stays in the generated View snapshot.
 Disposal detaches observation; the application still owns cancellation and drain.
@@ -180,7 +210,7 @@ availability must finish after terminal invocation status. Call `dispose()`
 when the selection owner leaves; it drops feedback and queued intent without
 requesting cancellation of accepted work.
 
-[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
+[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
 reserves application-owned work before invoking
 its factory. `DrainAsync` stops new admission and waits for accepted tasks;
 cancelling the caller's drain wait does not cancel those tasks. Asynchronous
@@ -209,7 +239,7 @@ public async ValueTask DisposeAsync()
 
 The editor and workspace snippets illustrate application-specific contracts.
 The package onboarding snippets are checked against the pinned release template. The
-[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/tests/fixtures/application/operations-consumer/README.md)
+[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tests/fixtures/application/operations-consumer/README.md)
 builds from packed NuGet/npm archives and exercises operation feedback, latest
 selection, session replacement, DTO opt-in and accepted-work disposal through the
 real Desktop bridge.

@@ -16,7 +16,7 @@ script.
 
 ## Historical Linux footprint measurement
 
-The [September 3 Linux measurement](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/tests/fixtures/application/experiments/native-aot-size/results/linux-x64-2026-09-03.md)
+The [September 3 Linux measurement](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tests/fixtures/application/experiments/native-aot-size/results/linux-x64-2026-09-03.md)
 reported runtime payloads of **1.79 MiB for CS-WebUI** and **8.25 MiB for Desktop**,
 with the installed browser excluded from both. A separate slim ASP.NET Core
 Minimal API diagnostic was **7.46 MiB**. These are historical measurements for

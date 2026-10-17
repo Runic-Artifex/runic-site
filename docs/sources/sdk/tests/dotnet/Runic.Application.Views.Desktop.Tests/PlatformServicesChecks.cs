@@ -136,6 +136,119 @@ internal sealed class PlatformServicesChecks
             Require(await PlatformServices.PresentAsync(owner) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
                 "A closed window did not report the owner closed.");
         }
+
+        // A Runic Window is presented through its Desktop window's owner: the closed presentation reports it.
+        await using (var provider = CreateProvider())
+        await using (var host = await DesktopHost.StartAsync(new DesktopHostOptions { WindowHostFactory = new NativeDispatchFactory(), WaitForConnection = false }))
+        {
+            await using var window = await TestWindows.EmbeddedHtml(provider, host).OpenWindowAsync<FileWindow>();
+            await ((DesktopBridgeWindow<FileViewModel>)window.Host).Presentation.CloseAsync();
+            Require(await PlatformServices.PresentAsync(window) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+                "A Runic Window whose presentation closed did not report the owner closed.");
+        }
+    }
+
+    // #318: a Window announces through its embedded window, from the static facade and from the services a ViewModel
+    // holds; a window that cannot, or none, reports why.
+    [Test, NotInParallel(Order = 16)]
+    public async Task AnnouncementsReachTheEmbeddedWindowOrReportWhyNot()
+    {
+        await using (var provider = CreateProvider())
+        {
+            var factory = new NativeDispatchFactory { Announces = true };
+            await using var host = await DesktopHost.StartAsync(new DesktopHostOptions { WindowHostFactory = factory, WaitForConnection = false });
+            var window = await TestWindows.EmbeddedHtml(provider, host).OpenWindowAsync<FileWindow>();
+            var services = (DesktopWindowPlatformServices)window.ViewModel.Platform;
+            try
+            {
+                Require(await PlatformServices.AnnounceAsync(window, "Saved") is PlatformResult<PlatformUnit>.Success,
+                    "A Window did not announce through its embedded window.");
+                Require(await services.AnnounceAsync("The disk is full", DesktopAnnouncementPriority.Assertive) is PlatformResult<PlatformUnit>.Success,
+                    "The ViewModel's platform services did not announce.");
+                Require(factory.Hosts[0].Announcements.SequenceEqual(
+                    [("Saved", DesktopAnnouncementPriority.Polite), ("The disk is full", DesktopAnnouncementPriority.Assertive)]),
+                    "The embedded window did not receive the announcements with their priorities.");
+                await ((DesktopBridgeWindow<FileViewModel>)window.Host).Presentation.CloseAsync();
+                Require(await PlatformServices.AnnounceAsync(window, "Late") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+                    "A Window whose presentation closed did not report the owner closed.");
+            }
+            finally
+            {
+                await window.DisposeAsync();
+            }
+            Require(await services.AnnounceAsync("Late") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+                "The services of a closed window did not report the owner closed.");
+        }
+
+        await using (var provider = CreateProvider())
+        {
+            var factory = new NativeDispatchFactory();
+            await using var host = await DesktopHost.StartAsync(new DesktopHostOptions { WindowHostFactory = factory, WaitForConnection = false });
+            await using var window = await TestWindows.EmbeddedHtml(provider, host).OpenWindowAsync<FileWindow>();
+            Require(await PlatformServices.AnnounceAsync(window, "Saved") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.BackendUnavailable),
+                "A window host without announcements did not report the backend unavailable.");
+            Require(factory.Hosts[0].Announcements.IsEmpty, "A window host without announcements received one.");
+        }
+
+        var unbound = new DesktopWindowPlatformServices();
+        Require(await unbound.AnnounceAsync("Saved") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            "Services of a window that has not opened did not report the owner unavailable.");
+        var rejected = false;
+        try { _ = await unbound.AnnounceAsync(""); }
+        catch (ArgumentException) { rejected = true; }
+        Require(rejected, "An empty announcement was accepted.");
+    }
+
+    // #313: a Window opened for a forwarded launch is presented with the launch's activation context as soon as it is
+    // shown, so that the compositor gives it focus. Without a context, for a hidden window and for a window without
+    // native dispatch nothing is presented, and a presentation that fails does not fail the open.
+    [Test, NotInParallel(Order = 16)]
+    public async Task OpenWindowWithActivationPresentsTheNewWindow()
+    {
+        await using var provider = CreateProvider();
+        var activation = new DesktopActivationContext(activationToken: "launch-token");
+        List<(DesktopNativeOwner Owner, DesktopActivationContext? Context)> presented = [];
+        var fail = false;
+        ValueTask<PlatformResult<PlatformUnit>> Record(DesktopNativeOwner owner, DesktopActivationContext? context, CancellationToken _)
+        {
+            presented.Add((owner, context));
+            if (fail) throw new InvalidOperationException("The desktop refused.");
+            return ValueTask.FromResult<PlatformResult<PlatformUnit>>(new PlatformResult<PlatformUnit>.Success(new PlatformUnit()));
+        }
+        RunicDesktopHost Windows(DesktopHost desktop, bool hidden = false) => new(provider, desktop)
+        {
+            SurfaceOptions = new DesktopSurfaceOptions { Content = new DesktopContent.Html("<!doctype html>") },
+            WindowOptions = new DesktopWindowOptions { Browser = BrowserKind.Embedded, Hidden = hidden },
+            Present = Record,
+        };
+
+        await using (var host = await DesktopHost.StartAsync(new DesktopHostOptions { WindowHostFactory = new NativeDispatchFactory(), WaitForConnection = false }))
+        {
+            await using (var window = await Windows(host).OpenWindowAsync<FileWindow>(null, activation))
+            {
+                var owner = ((DesktopBridgeWindow<FileViewModel>)window.Host).NativeOwner;
+                Require(presented.Count == 1 && ReferenceEquals(presented[0].Owner, owner) && ReferenceEquals(presented[0].Context, activation),
+                    "The new window was not presented once with the launch's activation context.");
+            }
+            await using (await Windows(host).OpenWindowAsync<FileWindow>(options: null, activation: null)) { }
+            await using (await Windows(host, hidden: true).OpenWindowAsync<FileWindow>(null, activation)) { }
+            Require(presented.Count == 1, "A window without a context, or a hidden one, was presented.");
+
+            fail = true;
+            await using (var refused = await Windows(host).OpenWindowAsync<FileWindow>(null, activation))
+            {
+                Require(presented.Count == 2 && refused.Host is DesktopBridgeWindow<FileViewModel> { Presentation.IsOpen: true },
+                    "A refused presentation failed the open or closed the window.");
+            }
+        }
+
+        await using (var host = await DesktopHost.StartAsync(new DesktopHostOptions
+        {
+            WindowHostFactory = new NativeDispatchFactory { SupportsDispatch = false },
+            WaitForConnection = false,
+        }))
+        await using (await Windows(host).OpenWindowAsync<FileWindow>(null, activation)) { }
+        Require(presented.Count == 2, "A window without native dispatch was presented.");
     }
 
     [Test, NotInParallel(Order = 17)]

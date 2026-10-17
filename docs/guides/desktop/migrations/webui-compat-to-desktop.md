@@ -30,7 +30,7 @@ without a window: since SDK `0.7.0-preview.8`, the host honours
 `RUNIC_APPLICATION_SERVE_ONLY=1` as the CS-WebUI host does. It opens no window,
 writes `RUNIC_APPLICATION_URL=<url>` and serves until a line is read from
 standard input, as in the
-[First Window on Runic Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/examples/first-window-desktop/README.md)
+[First Window on Runic Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/first-window-desktop/README.md)
 browser test.
 
 `Content` takes one `DesktopContent` case: `Directory(root, entry?)` for local
@@ -38,7 +38,7 @@ files, `Html(document)`, `ExternalUrl(url)` or `Handler(contentHandler)`. Only
 directory content serves local files. This form is new in Runic SDK
 0.7.0-preview.1; 0.6.0-preview.1 sets `RootFolder` and a `Content`
 string, or `ContentHandler`. The
-[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/eng/release/notes/0.7.0-preview.1.md#upgrading)
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/eng/release/notes/0.7.0-preview.1.md#upgrading)
 map each 0.6 form to its case.
 
 Register capabilities on the surface, then open an optional window:

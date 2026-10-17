@@ -11,12 +11,12 @@ construction, typed commands, property writes, and operation lifetimes. A View
 mount is acknowledged by the browser, so a content session can create and release
 its logical View as frontend routes change. Generated clients are framework-neutral;
 React, Vue, Svelte, Angular, and plain TypeScript use the same contract. They
-share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/views/README.md),
+share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/web/views/README.md),
 which also provides a mock Bridge for development without .NET. The
-[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/react/README.md) and
-[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/vue/README.md) packages, `useView` in
-[`@runic-artifex/svelte/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/svelte/README.md) and
-`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/web/angular/README.md)
+[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/web/react/README.md) and
+[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/web/vue/README.md) packages, `useView` in
+[`@runic-artifex/svelte/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/web/svelte/README.md) and
+`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/web/angular/README.md)
 connect and dispose clients with component lifetimes.
 
 Start with [getting started](getting-started/README.md), follow
@@ -24,11 +24,11 @@ Start with [getting started](getting-started/README.md), follow
 [add Runic to an existing app](existing-app.md). Existing WPF applications can
 [adopt Runic incrementally](migrations/wpf-incremental.md), keeping their shell
 and models while adding native navigation and optional embedded web Views. The
-[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/examples/first-window/README.md) is the smallest example; then read the
-[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/examples/notes-view-first/README.md) and
-[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/examples/notes-reactive-views/README.md) examples. The
+[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/first-window/README.md) is the smallest example; then read the
+[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/notes-view-first/README.md) and
+[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/README.md).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/README.md).
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.
@@ -36,7 +36,7 @@ types are in the `Runic.Application.Views` namespace; the
 ## Navigation and model context packages
 
 Since 0.7.0-preview.4, navigation and model contexts live in
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation/README.md).
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Navigation/README.md).
 It can be used independently of Views; `Runic.Application.Views` references it
 transitively. Add `using Runic.Navigation;` for `RunicNavigator`, regions,
 `IRunicModelContext`, `RunicModelContext` and `RunicModelContextRegistry`, then
@@ -49,7 +49,7 @@ scheduling helpers, `AddRunicReactiveModelContext()` and
 `using Runic.Application.Views.ReactiveUI;` for them.
 [Pages and navigation](guides/pages-and-navigation.md) and
 [ViewModel state and threads](guides/model-context.md) show both in use. The
-[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/eng/release/notes/0.7.0-preview.4.md)
+[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/eng/release/notes/0.7.0-preview.4.md)
 list the moved types.
 
 ## Upgrading generated clients
