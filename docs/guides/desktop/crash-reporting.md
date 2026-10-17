@@ -25,6 +25,13 @@ Reporting, which records it in the Application event log. A Windows GUI
 application (`WinExe`) or one started from a launcher, Finder or Explorer has
 no visible standard error, so log it yourself.
 
+On Linux, WebKitGTK renders the page in a separate web process. When that
+process crashes, the window reloads its page and Runic reports
+`web-process-terminated` (event 3010); the application keeps running. See
+[Web process crashes on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Desktop/README.md#web-process-crashes-on-linux);
+the crash of `WebKitWebProcess` itself is in the system journal
+(`coredumpctl`).
+
 ## Log the exception that ends the process
 
 Register logging as the
