@@ -25,6 +25,7 @@ needs and leads on from there:
 - [Incremental WPF migration](application/migrations/wpf-incremental.md): independent Translations and Command Line, native navigation, then optional web Views [hosted in WPF](application/migrations/wpf-hybrid.md).
 - [Runic Application Views](application/README.md) and [application architecture](application/architecture/README.md).
 - [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/notes-reactive-views/README.md).
+- [Accessible Desktop views](desktop/accessibility.md): screen readers on each host, status messages, range controls, selection, focus and keyboard.
 - [Desktop native services](desktop-services.md), [host selection](desktop/host-selection.md), [window close lifecycle](desktop/window-close-lifecycle.md), and
   [right-to-left layouts](desktop/right-to-left.md).
 - [Ship a Desktop application](desktop/shipping.md), [package it with Nix](desktop/nix-packaging.md), and [report crashes](desktop/crash-reporting.md).
