@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "3c54f34f1013c9d7bb1e8aa4c9b1abc30fd8b30a",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/3c54f34f1013c9d7bb1e8aa4c9b1abc30fd8b30a.tar.gz",
+  "revision": "4ab90a5b5814218fe88caf83434ca396afa24903",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/4ab90a5b5814218fe88caf83434ca396afa24903.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -47,6 +47,7 @@
     "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NoteDetailViewModel.cs",
     "examples/wpf-navigation/NotesNavigation.ReactiveUI/Notes/NotesListViewModel.cs",
     "nix/README.md",
+    "packages/dotnet/Runic.Application.Views.Desktop/README.md",
     "packages/dotnet/Runic.Application.Views.ReactiveUI/README.md",
     "packages/dotnet/Runic.Application.Views.Wpf/README.md",
     "packages/dotnet/Runic.Application.Views/README.md",
@@ -56,6 +57,7 @@
     "packages/dotnet/Runic.Desktop/pack/README.md",
     "packages/dotnet/Runic.Navigation.ReactiveUI/README.md",
     "packages/dotnet/Runic.Navigation/README.md",
+    "packages/dotnet/Runic.Platform/README.md",
     "packages/web/views-effect/README.md",
     "packages/web/views/README.md",
     "tests/dotnet/Runic.Application.Testing.Tests/LeaveGuardRoutingTests.cs",
@@ -91,5 +93,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:ebbc1132d249047d723a0d293d590672a8782d5066a2e32353f719616020809f"
+  "contentDigest": "sha256:a65206c8c25d8409acad420005e2cf7cde81562091f8c3ed76c5ce78d20f33ec"
 }

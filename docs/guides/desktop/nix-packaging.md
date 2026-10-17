@@ -2,8 +2,8 @@
 
 Since SDK `0.8.0-preview.1`, the Runic SDK's flake exports a builder for Runic
 applications, a development shell, and NixOS and Home Manager modules that
-install them. This guide follows `0.8.0-preview.3` and summarizes the SDK's
-[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/nix/README.md),
+install them. This guide follows `0.8.0-preview.4` and summarizes the SDK's
+[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/nix/README.md),
 which has every argument and option.
 
 `buildRunicApplication` wraps nixpkgs' `buildDotnetModule`. It restores NuGet
@@ -24,10 +24,13 @@ build, because a flake sees only the files Git tracks:
 ```sh docs-test=readme:tools/Runic.Application.Templates/content/runic-app/README.md
 dotnet restore
 dotnet restore -p:PublishAot=true
+# ...
 git init && git add -A
 nix build                # or nix build .#native-aot
 result/bin/RunicWindowApp
 ```
+
+With `--tests`, also run `dotnet restore RunicWindowApp.Tests`.
 
 After changing a package reference, restore both again, or the build fails
 with `NU1004`. With pnpm or Bun, the frontend's packages are one fixed-output
@@ -40,11 +43,11 @@ the lock file changes.
 Every function of `runic-sdk.lib` takes the consumer's nixpkgs first. Pin the
 SDK input to the release your packages use:
 
-```nix docs-test=readme:nix/README.md
+```nix docs-test=skip:release-tag-pin
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   runic-sdk = {
-    url = "github:Runic-Artifex/runic-sdk/v0.8.0-preview.3";
+    url = "github:Runic-Artifex/runic-sdk/v0.8.0-preview.4";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 };
@@ -69,6 +72,24 @@ The SDK guide's full example also installs a desktop entry and an icon.
 ones choose the host's run-time libraries (`host`: `desktop`, `desktop-gtk4`
 or `cswebui`), NativeAOT, desktop items and icons.
 
+Tests that reject VSTest options, such as TUnit's, run with `testRunner`:
+
+```nix docs-test=readme:nix/README.md
+testProjectFile = "MyApp.Tests/MyApp.Tests.csproj";
+nugetLockFiles = [ ./MyApp/packages.lock.json ./MyApp.Tests/packages.lock.json ];
+doCheck = true;
+testRunner = "Microsoft.Testing.Platform";
+```
+
+`completions` installs the bash, zsh and fish scripts a command-line program
+prints:
+
+```nix docs-test=readme:nix/README.md
+meta.mainProgram = "my-app";
+completions = { };                                # my-app completion bash, zsh, fish
+completions.command = [ "--completions" ];        # my-app --completions bash, ...
+```
+
 ## NuGet and frontend packages
 
 `nugetLockFiles` reads the committed `packages.lock.json` files at evaluation
@@ -86,6 +107,16 @@ second lock file for it, as the template does:
 Packages from another feed, or a project without lock files, use nixpkgs'
 `deps.json` through `nugetDeps`.
 
+`dotnetTools` restores local .NET tools offline, each by the hash of its
+package, for build steps that run one:
+
+```nix docs-test=readme:nix/README.md
+dotnetTools = {
+  manifest = "MyApp/.config/dotnet-tools.json";
+  hashes.dotnet-runic-translations = "sha256-/sG0ngRIx6fh0LLQzBNvpCk6N1kYB1NYhhKpI6NjDPY=";
+};
+```
+
 The frontend's packages are installed in a separate derivation from its
 `package.json` and lock file only: npm through `importNpmLock` (no hash needed)
 or `fetchNpmDeps`, pnpm through `fetchPnpmDeps`, and Bun through
@@ -93,6 +124,20 @@ or `fetchNpmDeps`, pnpm through `fetchPnpmDeps`, and Bun through
 them to the Runic MSBuild targets with
 `RunicApplicationFrontendNodeModulesDirectory`, so the frontend builds without
 installing.
+
+A stale Bun hash fails with `frontend.hash is out of date`, and in
+`0.8.0-preview.4` every Bun hash changes once: set it to `lib.fakeHash` and
+copy the reported hash. `hash` can also take one per system:
+
+```nix docs-test=readme:nix/README.md
+frontend = {
+  packageManager = "bun";
+  hash = {
+    x86_64-linux = "sha256-...";
+    aarch64-linux = lib.fakeHash;
+  };
+};
+```
 
 ## Run time and privileged actions
 
@@ -104,8 +149,12 @@ the program behind it finds no WebKitGTK, and Runic Desktop then reports
 `RUNIC_APPLICATION_EXECUTABLE`, so login startup writes the wrapper into the
 autostart entry.
 
+`withSpeechSynthesis = false` loads a WebKitGTK without the Web Speech API's
+speech synthesis, 72.6 MiB smaller; screen readers still work, but it
+compiles from source for hours, so build it on your own cache.
+
 The policy of the application's
-[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 is installed in `$out/share/polkit-1/actions`. The build exports
 `RunicApplicationInstallPrefix` as `$out`, so an action can name the installed
 program, and fails when a policy names a program outside the package:

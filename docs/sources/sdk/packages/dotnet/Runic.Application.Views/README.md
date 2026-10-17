@@ -301,6 +301,31 @@ public sealed partial class ProjectViewModel(IRunicWindowService windows) : Obse
 - The interface has one method, so a test registers a fake that records the
   requested Window types after the application's services.
 
+#### Windows from another service provider
+
+A host and its window service open Windows from one service provider. A part of
+the application with services of its own, such as a dashboard that a setup
+assistant starts in the same process once it has created what the dashboard
+needs, builds its own provider and creates a host for it on the running
+Desktop host:
+
+```csharp
+await using var dashboardServices = new ServiceCollection()
+    .AddDashboard()            // its ViewModels, AddRunicViews() and AddRunicWindowService()
+    .BuildServiceProvider();
+var dashboard = new RunicDesktopHost(dashboardServices, setupHost.Desktop);
+await using var window = await dashboard.OpenWindowAsync<DashboardWindow>();
+await window.WaitForCloseAsync();
+```
+
+`setupHost` is the `RunicDesktopHost` the application runs on, and `Desktop`
+its event loop's `DesktopHost`; a `RunicDesktopHost` created in
+`DesktopEventLoop.Run(options, desktop => ...)` takes that `desktop`. On
+CS-WebUI, use `new RunicCsWebUiHost(dashboardServices)`. The
+`IRunicWindowService` of the second provider follows the second host once it
+has opened a Window, so the dashboard's ViewModels open further Windows from
+their own services. Both hosts share the event loop and its lifetime.
+
 ### A Window with its own page
 
 Every Window opens `index.html` unless `RunicWindowOptions.StartPage` names
@@ -765,13 +790,15 @@ so a malformed reply never reaches application state.
 | `TimeOnly` | `string` | `"08:15:00.0000000"`; `"08:15:00"` is accepted. |
 | `TimeSpan` | `string` | .NET's invariant `c` format, `[-][d.]hh:mm:ss[.fffffff]`, such as `"1.02:03:04"`. |
 | An enum | A union of its wire names, such as `"Editor" \| "Preview"` | The C# name, or its `[RunicAlias]`. A `[Flags]` enum needs a `[RunicBridgeCodec]`. |
-| `T?`, for a value or a reference type | `T \| null` | `null`. The member is always present: it is never optional and never `undefined`. |
+| `T?`, for a value or a reference type | `T \| null` | `null`. In a value that reaches the page the member is always present; see [Optional members](#optional-members) for values the page sends. |
 | `T` with nullable reference types enabled | `T` | Never `null`. Without annotations (`#nullable disable`), a reference type is `T` too. |
 | `T[]`, `List<T>`, `IReadOnlyList<T>`, `IReadOnlyCollection<T>`, `IList<T>`, `ICollection<T>`, `IEnumerable<T>`, `ImmutableArray<T>`, `ImmutableList<T>`, `ObservableCollection<T>`, `ReadOnlyObservableCollection<T>`, `ReadOnlyCollection<T>` | `readonly T[]` | An array. `string?[]` is `readonly (string \| null)[]`. Multi-dimensional arrays and other collections fail the build. |
 | `Dictionary<string, T>`, `IDictionary<string, T>`, `IReadOnlyDictionary<string, T>` | `Readonly<Record<string, T>>` | An object. Other key types fail the build. |
 | A record, class or struct (DTO) | An `interface` with `readonly` members | A member's name starts with a lower-case letter (`MeasuredAt` is `measuredAt`), unless `[RunicAlias]` or `[JsonPropertyName]` names it. |
 | A `[RunicUnion]` | A union discriminated by `$case` | |
 | A type with `[RunicBridgeCodec]` | The codec's TypeScript type | Whatever the codec writes. |
+| `JsonElement`, `JsonElement?`, `JsonNode?` | `unknown` | Any JSON value, as it is. A `JsonElement` holds JSON `null` as a value; a default `JsonElement`, which holds none, is written as `null`. `JsonNode?` and `JsonElement?` are C# `null` for JSON `null`. |
+| `JsonNode` | `NonNullable<unknown>` | Any JSON value except `null`, which a `JsonNode` cannot hold. `JsonObject`, `JsonArray`, `JsonValue` and `JsonDocument` fail the build: declare a `JsonNode`, or a DTO for a known shape. |
 
 Other framework types, such as `object`, `char`, `Uri` and tuples, fail the
 build with a `RUNICBRIDGE` diagnostic that names the member.
@@ -787,8 +814,53 @@ milliseconds, prefer `double` in C#: it is a `number` in TypeScript and exact
 for every whole number up to 2^53, which is 8 PiB as a byte count. Keep `long`
 for ids and counters that must stay exact. Use `int` for a small count.
 
+The client checks a JSON value in both directions: it must be `null`, a
+boolean, a finite number, a string, or an array or plain object of them, at
+most 64 levels deep. `undefined` (except as an object member, which
+`JSON.stringify` leaves out), `NaN`, a `bigint`, a `Date` or a `Map` is
+rejected before the call rather than changed by `JSON.stringify`. The value is
+not copied. Its numbers are JavaScript numbers in the page, exact only up to
+2^53, while .NET keeps the digits it reads, such as `2.50`.
+
 A frontend whose own types use optional members (`version?: string`) maps the
 `T | null` members at its edge, for example with `value ?? undefined`.
+
+### Optional members
+
+A DTO that only the page sends, as a command input or an interaction result,
+declares as optional (`label?: string | null`) the members .NET fills in when
+the page leaves them out:
+
+- a nullable member, which is `null` when it is missing;
+- a constructor parameter with a default, which takes that default;
+- a member with a setter or `init` that is nullable, which keeps the value a new
+  instance has, such as its initializer.
+
+```csharp
+public sealed record BuildRequest(string Action, string? Host = null, int Retention = 3);
+```
+
+```ts
+await builds.start({ action: "switch" }); // host null, retention 3
+```
+
+A non-nullable member without a constructor default stays required: .NET
+cannot tell whether it has an initializer. A type that also reaches the page,
+as state, a command result, a declared failure or an interaction input,
+declares every member as present, because .NET always writes it; .NET still
+fills in what a page leaves out.
+
+A `JsonElement` member tells an absent value from `null`. A default
+`JsonElement`, which holds no value, is left out of the object, and the member
+is optional (`previous?: unknown`) everywhere: `undefined` in the page is
+absent, `null` is JSON `null`. A missing member reads as a default
+`JsonElement`. Elsewhere, such as a state property or a command argument of
+its own, a default `JsonElement` is `null`.
+
+A DTO that only reaches the page needs no constructor for its members: a
+class with only read-only or computed properties is fine as state or a result. A DTO the
+page sends needs a public constructor whose parameters map to its properties,
+or a public parameterless constructor with public setters (`RUNICBRIDGE003`).
 
 ## Generator diagnostics
 
@@ -818,13 +890,14 @@ commands.
 | --- | --- | --- |
 | `RUNICBRIDGE001` | Invalid generator invocation or build configuration, such as a malformed `RunicApplicationFrontendCompositionType`; also an internal generator error. | Correct the build property. Report an internal error with the ViewModel that triggers it. |
 | `RUNICBRIDGE002` | A CommunityToolkit `ObservableValidator` ViewModel in a Native AOT publish. | Publish framework-dependent until its validation is verified under AOT. |
-| `RUNICBRIDGE003` | A state, command, or interaction value type is not a supported bridge value. The message names the member path, for example `EditorViewModel.Current.value`. | Use a supported scalar, collection, public DTO, `[RunicUnion]` or `[RunicBridgeCodec]` type. Exclude computed DTO properties with `[RunicIgnore]`, or opt into unconditional `[JsonIgnore]` as described under [Shared DTO exclusions](#shared-dto-exclusions). A `NavigationResult<T>` holds .NET content: return its `Outcome`, a `NavigationOutcome`, as `CreateBackCommand()` does. |
+| `RUNICBRIDGE003` | A state, command, or interaction value type is not a supported bridge value. The message names the member path, for example `EditorViewModel.Current.value`. | Use a supported scalar, collection, public DTO, `[RunicUnion]` or `[RunicBridgeCodec]` type. Exclude computed DTO properties with `[RunicIgnore]`, or opt into unconditional `[JsonIgnore]` and `[JsonExtensionData]` as described under [Shared DTO exclusions](#shared-dto-exclusions). A `NavigationResult<T>` holds .NET content: return its `Outcome`, a `NavigationOutcome`, as `CreateBackCommand()` does. |
 | `RUNICBRIDGE004` | Two generated names collide: ViewModel names, presentation kinds, state wire names, the reserved `revision` and `validation` fields, interactions, routes, client members, or generated files (including a hand-written `types.ts`), or a type named like a generated bridge (`CounterBridge` beside `CounterViewModel`). Also a command whose client member is reserved in a TypeScript object: `new` (a construct signature), `then` (a thenable client), `constructor`, `__proto__`, `toJSON`, `toString` or `valueOf`. | Rename one member, or set a state wire name with `[RunicAlias]`. Rename a reserved command; the message suggests a name, such as `CreateCommand` for `NewCommand`. |
 | `RUNICBRIDGE005` | The model assembly or one of its dependencies could not be loaded, a Runic View could not be loaded, or a member the Bridge exposes has a type from an assembly the generator cannot load, such as a WPF type. The message names the member path. | Mark a WPF-typed member `[RunicIgnore]`; otherwise check the bootstrap output and package versions. |
 | `RUNICBRIDGE006` | The assembly has no Window or View class (an error only when generation is required, see [Build properties](#build-properties)), one is not public, top-level, concrete and closed, or a View contract is invalid, duplicated or missing. | Make the class public and top-level; give each `[RunicViewContract]` a unique letters-and-digits name. |
 | `RUNICBRIDGE007` | A ViewModel does not implement `INotifyPropertyChanged`, is not a public top-level class, or has no state, command or interaction. | Change the ViewModel declaration. |
 | `RUNICBRIDGE008` | A state property has no public getter or an empty wire name, ViewModel content or a `NavigationRegion<TContent>` slot has a public setter, a ViewModel collection's item type has no registered View, or a region slot is a `NavigationRegion<object>` or has no ViewModel with a registered View that is a `TContent`. | Add a getter, make content read-only to the web view, register a View for the item or content type, or give the region a specific content interface or base class. |
 | `RUNICBRIDGE009` | A command's name does not end with `Command`, its shape is unsupported, or a non-ReactiveUI command has `[RunicCommandResult]`. | Rename the command or use a supported CommunityToolkit, ReactiveUI or `[RunicCommandInput]` command. |
+| `RUNICBRIDGE008`, append-only text | A `[RunicAppendOnlyText]` member is not a read-only `string` or `string?` state property. | Remove its public setter, or the attribute. |
 | `RUNICBRIDGE010` | A `[RunicCollection]` member is not a read-only, non-nullable collection of DTO rows, or its key is not a non-nullable `string`, `Guid` or `Int32` row property. | Change the collection or its key. |
 | `RUNICBRIDGE011` | A ReactiveUI interaction has no public getter or has a public setter. | Expose the interaction as a get-only property. |
 | `RUNICBRIDGE012` | A `[RunicFailure]` is on a member that is not a Bridge command or its `[RelayCommand]` method, is on both the property and the method, or names `object`, an exception or `Nullable<T>`. | Declare one failure type per command: any Bridge value type, typically a DTO, an enum or a `[RunicUnion]`. A failure type the Bridge cannot encode is `RUNICBRIDGE003` at `{Model}.{Command}.failure`. |
@@ -1091,6 +1164,10 @@ shared code or the Vite configuration reads as a
 - **Lists.** Tailwind removes list markers from every list, and Runic Desktop's
   WebKitGTK then no longer reports such a list as a list to a screen reader;
   see [Runic.Desktop accessibility](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Desktop#accessibility).
+- **Screen readers on Linux.** On Runic Desktop's WebKitGTK, live regions and
+  changed accessible names are silent under Orca, and a list item whose only
+  content is a button can crash the page; see the same section for what to use
+  instead.
 
 ## Typed commands and checked writes
 
@@ -1098,7 +1175,9 @@ CommunityToolkit `IRelayCommand<T>` and `IAsyncRelayCommand<T>` use the same
 supported input shapes and generated codecs as ReactiveUI commands: scalars,
 nullable values, DTOs, collections, unions, and explicit custom codecs. Generated
 `canX(input)` queries use the actual parameter. Async Toolkit commands expose
-`startX`, completion, recovery, and cancellation, with no invented result value.
+`startX`, completion, recovery, and cancellation. A `[RelayCommand]` method that
+returns `Task<T>` delivers its `T` as the operation's result; one that returns
+`Task` has none.
 Toolkit cancellation calls the command's `Cancel()` and therefore targets its
 current execution; it does not isolate concurrent invocations of the same
 command instance.
@@ -1112,6 +1191,15 @@ owns admission, completion, recovery, and View lifetime cancellation. Recognitio
 requires Toolkit's generator metadata, the paired async command, and its
 cancellation-token method with `IncludeCancelCommand = true`; other plain
 `ICommand` properties still require `[RunicCommandInput]`.
+
+A command without an argument publishes its availability as `canX` state. When
+`[RelayCommand(CanExecute = nameof(CanCreate))]` names a `bool` property whose
+wire name is that state, such as `CanCreate` for `CreateCommand`, the property
+is that availability and is written once, from the command's `CanExecute`.
+A `PropertyChanged` for the property publishes it, so it needs no
+`[RunicIgnore]`, and the page needs no `NotifyCanExecuteChangedFor`. A property with another name, or one for a
+command with an argument, whose availability is the `canX(input)` query, stays
+state of its own.
 
 Checked-write receipts decode their values just like state: for example, an
 `Int64` receipt's `snapshot.value` or conflict's `incoming.value` is a `bigint`.
@@ -1132,16 +1220,30 @@ What a call gives the page back depends on the command:
 | `canEstimate(choice)` | Whether the command can run with that argument (`Promise<boolean>`). Generated for a command with a parameter, instead of a `canEstimate` state property. |
 | `startEstimate(choice)` | A `BridgeOperation<TResult>` handle for status, Cancel and `outcome()`. |
 
-Only a ReactiveUI command has a typed result route. A public
+A command's result reaches the page through its operation. A public
 `ReactiveCommand<TInput, TResult>` generates `BridgeOperation<TResult>`, and
 `outcome()` resolves to `{ ok: true, value }`; see
 [Generated ReactiveUI contracts](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views.ReactiveUI#generated-reactiveui-contracts).
-A CommunityToolkit command has none. Its operation is a `BridgeOperation<void>`,
-and a `[RelayCommand]` method that returns `Task<T>` does not deliver its `T`.
-With CommunityToolkit.Mvvm, a command hands its result back through ViewModel
-state.
+A CommunityToolkit `[RelayCommand]` method that returns `Task<T>` generates
+`BridgeOperation<T>` the same way, with `T`'s nullability:
 
-Publish such a result in a read-only property, together with the input it
+```csharp
+[RelayCommand(IncludeCancelCommand = true)]
+private async Task<CleanupEstimate> MeasureAsync(CleanupChoice choice, CancellationToken token) =>
+    new(choice.Retention, await estimator.FreedBytesAsync(choice.Retention, token), DateTimeOffset.Now);
+```
+
+```ts
+const outcome = await cleanup.startMeasure({ retention: 3 }).outcome();
+if (outcome.ok) render(outcome.value.bytes);
+```
+
+A method that returns `Task`, a synchronous command and a plain `ICommand` have
+no result: their operation is a `BridgeOperation<void>`. The awaited `measure()`
+call resolves to the state after the command either way.
+
+A result that other parts of the page show, or that must survive a reload, is
+better published as state. Publish it in a read-only property, together with the input it
 answers. The page can then tell whether the result still matches its current
 choice. A second property tells where the work is, so the page can show
 progress, cancellation and failure. This is a simplified version of a cleanup
@@ -1259,6 +1361,42 @@ or own the model scheduler. Enter the model's execution context as usual and
 keep the batch around synchronous changes, after awaiting I/O. The translations
 editor uses this during bulk document reconciliation and command result updates.
 
+## Live logs and other growing text
+
+A read-only `string` that grows at its end, such as the output of a running
+build, would otherwise cross whole in every state, up to its full length per
+line of output. Mark it `[RunicAppendOnlyText]`, and a change of the property
+alone crosses as the text it appends:
+
+```csharp
+public sealed partial class OperationsViewModel : ObservableObject
+{
+    private const int LogCharacters = 128_000;
+
+    /// <summary>The end of the running operation's log.</summary>
+    [ObservableProperty, RunicAppendOnlyText]
+    public partial string Log { get; private set; } = "";
+
+    private void OnOutput(string text)
+    {
+        var log = Log + text;
+        // Keeps the last 128 KB; the page receives the dropped length and the new text.
+        Log = log.Length > LogCharacters ? log[^LogCharacters..] : log;
+    }
+}
+```
+
+The page sees an ordinary `log: string`. The Bridge compares the new value with
+the value the page has and publishes a frame with the number of UTF-16 code
+units dropped from its start and the text appended, keeping the longest text
+the two share. Appends in one `BridgeSnapshotBatch` are one change. A cleared
+or replaced log is a frame that drops everything. `null` (for `string?`), a
+change together with other state, a ViewModel with validation, and a page that
+missed a frame get full states, as with `[RunicCollection]`. The property must
+be a read-only `string` or `string?` state property (`RUNICBRIDGE008`). The
+frame format is in
+[collection delta frames](../../../specs/application/collection-deltas.md#text-changes).
+
 ## Structured validation
 
 Models and nested DTOs may implement `INotifyDataErrorInfo`. Generated snapshots
@@ -1282,8 +1420,9 @@ Use `[RunicIgnore]` on validation-only DTO properties such as a computed
 ## Shared DTO exclusions
 
 Public readable DTO properties are part of the Bridge contract, including
-computed properties. A DTO reader needs a public constructor matching its
-included properties, or public setters with a public parameterless constructor.
+computed properties. A DTO the page sends needs a public constructor matching its
+included properties, or public setters with a public parameterless constructor;
+one that only reaches the page needs neither ([Optional members](#optional-members)).
 Use `[RunicIgnore]` to leave a property on .NET without exposing it to the Bridge.
 By default, `[JsonIgnore]` affects System.Text.Json serialization only; it does
 not exclude a Bridge property.
@@ -1309,12 +1448,25 @@ public sealed record HistoryQuery(string Message, string Author)
 }
 ```
 
-The opt-in excludes `[JsonIgnore]` and `[JsonIgnore(Condition = JsonIgnoreCondition.Always)]`
-throughout that ViewModel's DTO graphs, including nested DTOs, collections,
+The opt-in excludes `[JsonIgnore]`, `[JsonIgnore(Condition = JsonIgnoreCondition.Always)]`
+and `[JsonExtensionData]` throughout that ViewModel's DTO graphs, including nested DTOs, collections,
 command values, interactions and declared failures. Generated codecs, TypeScript,
 validation traversal and the Hot Reload fingerprint use the same exclusions.
 The Core assembly and the assembly declaring only a Window need no marker.
 Each ViewModel uses its own declaring assembly's policy.
+
+An extension-data member keeps the JSON members a DTO's type does not declare,
+such as those a newer version of the application saved, for System.Text.Json to
+write back. They stay on .NET: a DTO that the Bridge reads from the browser has
+no extension data.
+
+```csharp
+public sealed record SavedRequest(string Kind)
+{
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Unknown { get; set; }
+}
+```
 
 `Never`, `WhenWritingNull` and `WhenWritingDefault` remain included; Bridge
 fields have a fixed contract and are emitted even when null or default.
@@ -1450,7 +1602,8 @@ output accordingly. The message properties are listed per event.
 | 1012 | `BridgeCollectionKeysRejected` | Error | A `[RunicCollection]` has a null row or a null, empty or duplicate key, so the route withholds its state. | `Model`, `Field`, `Key`, `Route` |
 | 1013 | `AcceptedWorkFailed` | Error | A task owned by an `AcceptedWorkScope` faults. | `ErrorType` |
 | 1014 | `AcceptedWorkDomainFailed` | Debug | A task owned by an `AcceptedWorkScope` throws a declared failure. | `FailureType` |
-| 1015 | `PathWatchProblem` | Warning | A `RunicPathWatcher` started without a `failed` callback meets a problem it works around: a missing directory, lost events or a watch that could not start. Always written to `Trace`. | `Problem` |
+| 1015 | `PathWatchProblem` | Warning | A `RunicPathWatcher` started without a `failed` callback meets a problem it works around: lost events, a watch limit or a watch that could not start. Always written to `Trace`. | `Problem` |
+| 1016 | `PathWatchPolling` | Debug | A `RunicPathWatcher` started without a `failed` callback polls for a directory that does not exist yet, such as a state directory created on the first start. Not written to `Trace`. | `Problem` |
 | 1020 | `ViewMountFailed` | Error | A .NET View fails to mount. | `Route`, `ErrorType` |
 | 1021 | `ViewRemountFailed` | Error | A View fails to mount again after a reconnect. | `Route`, `ErrorType` |
 | 1033 | `ModelContextReleaseFailed` | Error | A window session's own model context fails to shut down in the background. | `ErrorType` |
@@ -1486,6 +1639,7 @@ output accordingly. The message properties are listed per event.
 | 3007 | `DesktopShutdownFailed` | Error | Closing the Desktop windows for that shutdown throws. | `ErrorType` |
 | 3008 | `BrowserProfileNotDeleted` | Warning | A generated browser profile still cannot be deleted a minute after its browser closed; it stays in the temporary folder. | |
 | 3009 | `DesktopDiagnosticSinkFailed` | Warning | `DesktopHostOptions.DiagnosticSink` throws for a diagnostic. | `Code`, `ErrorType` |
+| 3010 | `EmbeddedWindowDiagnostic` | Warning or Error | An embedded window reports an event of its own: on Linux, `web-process-terminated` when the WebKitGTK web process crashed and the page was reloaded (Warning), or was not reloaded after three reloads within a minute (Error). | `Code`, `DiagnosticMessage`, `Remediation` |
 
 `Model` is the ViewModel type name, `Member` the command or property, and
 `Route` the Bridge route (a content presentation's route is per instance, such
@@ -1503,7 +1657,7 @@ Navigation (1060-1075) and the model context (1030-1033) log under
 `Runic.Navigation` and `Runic.Navigation.RunicModelContext`; see the
 [Runic.Navigation logging](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md#logging)
 section. Events 2000 and 2002 use `Runic.Application.Views.Desktop`, and event 2100
-uses `Runic.Application.Views.CsWebUi` and the factory of the Window's scope. Events 3000-3009
+uses `Runic.Application.Views.CsWebUi` and the factory of the Window's scope. Events 3000-3010
 use `Runic.Desktop` and `DesktopHostOptions.LoggerFactory`, which `RunicDesktopHost.Run`
 and `RunicViewHost` fill from the application's services.
 
@@ -1641,6 +1795,7 @@ public sealed partial class OverviewViewModel : ObservableObject, IDisposable
 | `File(path)` | The file is created, deleted, replaced, renamed or written. | A settings file, `flake.lock` |
 | `Link(path)` | The path a symbolic link leads to, through every link in its chain, differs: the link was created, removed or re-pointed. Changes inside the final file or directory are not reported. | `/run/current-system`, `~/.local/state/nix/profiles/home-manager` |
 | `Directory(path, pattern)` | The set of entry names matching the pattern differs: one is added, removed or renamed. Writes to entries, and a rename onto a name that already existed (the same set of names), are not reported. | `/nix/var/nix/profiles/system-*-link` |
+| `Files(path, pattern)` | An entry matching the pattern changes as for `File`: it is added, removed, renamed, written, or replaced by renaming another file over it, as atomic writers update a file. Where it polls, the watcher reads each matching entry's size and write time. | A directory of records that other processes rewrite, `*.json` |
 | `GitHead(repository)` | The commit `HEAD` resolves to, or the branch it names, differs: a commit, reset, switch, detach or pull. Works in linked worktrees, whose `.git` is a file, follows symbolic refs (five levels, as Git does) and supports the reftable format. `git pack-refs`, fetches and other branches are not reported with the files format. | A configuration checkout |
 
 After an event the watcher waits for `Debounce` (250 ms) without another
@@ -1649,7 +1804,7 @@ those whose state changed. A burst of writes, `ln -sfn`'s temporary link or
 Git's `.lock` files therefore produce one callback or none. For the same
 reason a target that changes and changes back within that window, such as a
 link re-pointed from A to B and back to A, is not reported, except a `File`
-target, for which an event alone counts. `GitHead` reads `HEAD`, the loose ref
+or `Files` target, for which an event that names a matching entry alone counts. `GitHead` reads `HEAD`, the loose ref
 and `packed-refs` itself; it starts no `git` process. With the reftable format
 any update of the ref stack counts, of the repository's and, in a linked
 worktree, of the worktree's own, so other branches and fetches are reported
@@ -1657,7 +1812,9 @@ too. To react to work-tree edits, add `Directory` or `File` targets for them.
 
 Problems never throw on a watcher thread. They reach the `failed` callback,
 in a model turn, or `System.Diagnostics.Trace` (event 1015) without one, and the watcher
-keeps working by polling every `PollingInterval` (2 s) where it needs to:
+keeps working by polling every `PollingInterval` (2 s) where it needs to. A
+missing directory is expected, as on an application's first start, so without
+a `failed` callback it is event 1016 at `Debug` level instead of a warning:
 
 | `RunicPathWatchErrorKind` | When | Then |
 | --- | --- | --- |

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.8.0-preview.3",
+  "version": "0.8.0-preview.4",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "edd2d175794afc86e964a06cb55329f44793009f"
@@ -301,6 +301,7 @@
       "paths": [
         "tools/Runic.Application.Templates",
         "tests/templates",
+        "tests/fixtures/nix",
         "tools/Runic.Create",
         "tests/dotnet/Runic.Create.Tests"
       ]

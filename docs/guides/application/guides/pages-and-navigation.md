@@ -59,14 +59,14 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
 `WhenNavigatedTo`, the result commands, `ReactiveLeaveConfirmation` and
-`GuardClose` are new in SDK `0.7.0-preview.7`. This guide follows `0.8.0-preview.3`.
+`GuardClose` are new in SDK `0.7.0-preview.7`. This guide follows `0.8.0-preview.4`.
 
 ### Coming from ReactiveUI navigation
 
@@ -106,7 +106,7 @@ dotnet add package Runic.Navigation.ReactiveUI --version <VERSION>
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.3/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.4/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -125,7 +125,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -502,7 +502,7 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   taking `IRunicWindowContext` in its constructor and calling its
   `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
   it is new in SDK `0.7.0-preview.8`; see
-  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -581,6 +581,6 @@ private async Task CloseEditorAsync()
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.3/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.

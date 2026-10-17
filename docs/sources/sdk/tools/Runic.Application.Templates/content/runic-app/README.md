@@ -137,6 +137,12 @@ The generated clients are not committed: `.gitignore` excludes
 `Frontend/src/generated`, and `dotnet build` or `dotnet runic dev` writes
 them again. Until the first build, your editor and
 `__PACKAGE_MANAGER_NAME__ run typecheck` report the missing modules.
+<!--#if (frontend != "angular") -->
+The frontend's `build` script runs `vite build` before the type check, so
+modules that a Vite plugin generates, such as the Runic Translations
+`virtual:runic-translations/...` declarations, exist when the check runs on a
+clean checkout.
+<!--#endif -->
 
 <!--#if (tests) -->
 ## Test it
@@ -249,11 +255,22 @@ build, because a flake sees only the files Git tracks:
 ```sh
 dotnet restore
 dotnet restore -p:PublishAot=true
+<!--#if (tests) -->
+dotnet restore RunicWindowApp.Tests
+<!--#endif -->
 git init && git add -A
 nix build                # or nix build .#native-aot
 result/bin/RunicWindowApp
 ```
 
+<!--#if (tests) -->
+The test project has its own lock file, `RunicWindowApp.Tests/packages.lock.json`.
+Both packages build and run the tests, under the JIT, so a failing test fails
+the build; `nix flake check` builds the default package. The build runs the
+test application itself (`testRunner = "Microsoft.Testing.Platform"`), since
+`dotnet test`'s VSTest options do not apply to TUnit.
+
+<!--#endif -->
 <!--#if (packageManager != "npm") -->
 The frontend's packages are one fixed-output download. Its hash in
 `flake.nix` is `lib.fakeHash` until the first `nix build`, which fails and
