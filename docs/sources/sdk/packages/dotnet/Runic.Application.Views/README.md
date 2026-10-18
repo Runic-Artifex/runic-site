@@ -389,7 +389,10 @@ ViewModels; only the guards and the commands below differ.
 The default `CanCloseAsync` clears each `NavigationRegion<T>` the Window's
 ViewModel exposes, in declaration order, so the departure guards of their
 entries decide, as WPF's `NavigationHost.GuardWindowClose` does (see
-[Navigation](#navigation)). Override it to add a check of your own,
+[Navigation](#navigation)). The clears pass
+`Admission = NavigationAdmission.Supersede`, so a region created with
+`RejectWhileBusy` is cleared during a request instead of refusing the close as
+`Busy`. Override it to add a check of your own,
 and call the base method to keep the navigation guards. It starts in a turn of
 the window's model context, one decision runs at a time, and it may wait as
 long as a prompt needs; the event loop is never blocked. An exception keeps the
@@ -515,6 +518,111 @@ public sealed partial class EditorViewModel(IRunicWindowContext window) : Observ
 - The interface has one method, so a test registers a fake that answers
   `true` or `false` after the application's services, or opens the Window and
   lets its guards decide.
+
+### Menu bar commands
+
+A Window's root ViewModel runs the menu bar's commands while its Window is the
+key window by implementing `IRunicMenuCommandSource`. The host's menu bar
+(Runic Desktop's `DesktopHostOptions.MenuBar`) names each command by id:
+
+```csharp
+public sealed partial class EditorViewModel : ObservableObject, IRunicMenuCommandSource
+{
+    public ICommand? GetMenuCommand(string commandId) => commandId switch
+    {
+        "file.save" => SaveCommand,
+        "edit.find" => Find.OpenCommand, // a child ViewModel's command
+        _ => null,
+    };
+}
+```
+
+The host asks once for each id when the Window opens, and again after
+`DesktopHost.SetMenuBar`, in the ViewModel's model turn. An item is enabled
+while its command's `CanExecute(null)` is `true`, following `CanExecuteChanged`,
+and runs `Execute(null)` in the model turn; a failure is logged as event 2004,
+`DesktopMenuCommandFailed`. An id the ViewModel returns `null` for goes to the
+application's commands, `RunicDesktopHost.MenuCommands`, such as New or
+Settings…, which also run while no Window is open. Runic Desktop shows the menu
+bar on macOS; elsewhere, and on CS-WebUI, render menus in the page, bound to the
+same commands.
+
+### Keyboard shortcuts in the page
+
+In-window shortcuts belong to the page: handle `keydown` and run the generated
+command, as a button would. `matchesShortcut` and `formatShortcut` from
+`@runic-artifex/views` read the same shortcut text as `DesktopShortcut`, so one
+`Primary+S` is ⌘S on macOS and Ctrl+S on Windows and Linux:
+
+```ts
+import { formatShortcut, matchesShortcut } from "@runic-artifex/views";
+
+addEventListener("keydown", (event) => {
+  if (matchesShortcut(event, "Primary+S") && editor.state.canSave) {
+    event.preventDefault();
+    void editor.save();
+  }
+});
+saveButton.title = `Save (${formatShortcut("Primary+S")})`;
+saveButton.setAttribute("aria-keyshortcuts", "Control+S Meta+S");
+```
+
+- **Primary, not Ctrl.** `Primary` is `metaKey` on Apple platforms and
+  `ctrlKey` elsewhere; matching requires exactly the shortcut's modifiers, and
+  keys an input method is composing never match.
+- **Text editing comes first.** Leave Undo, Cut, Copy, Paste, Select All and
+  arrow-key movement to text fields; check `event.target` before taking a key
+  that editing uses.
+- **Keys the window keeps.** The operating system and web view reserve some
+  keys: ⌘Q, ⌘W, ⌘H and ⌘M on macOS, Alt+F4 on Windows, F12 and the zoom keys in
+  embedded windows. A key the page handles with `preventDefault()` does not
+  reach a menu item with the same shortcut, so declare a command's shortcut on
+  the macOS menu item or in the page, not both.
+- **Make shortcuts discoverable.** Show them beside the control or in the
+  page's menus with `formatShortcut`, and set `aria-keyshortcuts` so screen
+  readers announce them. Global shortcuts, which work while the application is
+  in the background, are not supported yet.
+
+### Receiving dropped files
+
+A Window's root ViewModel receives the files the user drops onto its window,
+with their real paths, by implementing `IRunicFileDropTarget`:
+
+```csharp
+public sealed partial class EditorViewModel : ObservableObject, IRunicFileDropTarget
+{
+    public async ValueTask OnFilesDroppedAsync(RunicFileDrop drop, CancellationToken cancellationToken)
+    {
+        foreach (var file in drop.Files.Where(static file => !file.IsDirectory))
+            await OpenAsync(file.Path, cancellationToken);
+    }
+}
+```
+
+The host calls it in the ViewModel's model turn, as a command runs, once per
+drop and in drop order; the token is cancelled when the Window closes. A failure
+is logged as event 1054, `WindowFileDropFailed`, and the Window stays open.
+`RunicFileDrop.Files` lists each dropped file or directory as a
+`RunicDroppedFile` with its absolute `Path`, `Name` and `IsDirectory`.
+
+The paths come from the native window, never from the page. Runic Desktop's
+embedded window (WebView2, WKWebView, GTK 3 and GTK 4) and the WPF child web
+View deliver drops; CS-WebUI and an installed browser have no native window
+that could, so there the page only gets HTML5 `File` objects without paths. The
+page keeps its own `dragenter`, `dragover` and `drop` events, so it can
+highlight a drop target, and dropping a file never navigates the Window away.
+To tell drop areas apart, mark an element with `data-runic-drop-target`:
+
+```html
+<li data-runic-drop-target="folder:42">Invoices</li>
+```
+
+The nearest marked element under the drop becomes `RunicFileDrop.Target`. The
+page reports it, so treat it as an untrusted routing label: never as a path,
+and never for an access decision. In a Flatpak sandbox the paths are
+document-portal paths under `/run/user/<uid>/doc`, which the application can
+open; a macOS App Sandbox grants access to dropped files while the application
+runs.
 
 ### Moved and renamed since 0.7.0-preview.6
 
@@ -940,7 +1048,10 @@ the host adapters set) and the `RunicViews*` target names are not settings.
 | `RunicApplicationFrontendWindowProject` | `false` | `true` marks a Window project that `dotnet runic dev` and `doctor` run. |
 
 `dotnet build` and `dotnet publish` copy the built frontend as loose files to
-`www/` next to the executable; they do not embed it. `dotnet runic dev` sets
+`www/` next to the executable; they do not embed it. On macOS, an application
+in an `.app` bundle without `www/` next to its executable reads the frontend
+from the bundle's `Contents/Resources/www`, where Apple expects resources
+(`RunicWindowOptions.ContentRoot` overrides both). `dotnet runic dev` sets
 `RunicApplicationFrontendBuildEnabled=false` and
 `RunicApplicationFrontendCopyEnabled=false` while its development server serves
 the frontend. The
@@ -1561,6 +1672,30 @@ capture. Until then it may still hold the old reference. An invocation on that
 reference is rejected like any forgotten route, and the outlet may briefly
 show the old View or nothing. The next capture converges.
 
+### Navigation command results
+
+A command that navigates returns the request's `NavigationOutcome`, as
+`CreateBackCommand()` and the adapter's entry commands do, because the Bridge
+cannot encode a `NavigationResult<TContent>` (`RUNICBRIDGE003`). The generated
+client receives it as a typed result:
+
+```ts
+interface NavigationOutcome {
+  readonly kind: "Committed" | "Rejected" | "Superseded" | "Failed";
+  readonly rejection: NavigationRejection | null; // set for "Rejected"
+  readonly activation: "None" | "Completed" | "Failed" | "Cancelled"; // "None" unless "Committed"
+}
+```
+
+`activation` reports how the
+[activation hooks](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md#after-the-commit-activation)
+(`INavigationActivated`) of the entry the commit made current ended. A
+`"Failed"` hook leaves the commit standing, so a page that went back or
+navigated can show that the destination's data did not load. Like a `"Failed"`
+kind, it carries no exception message, which can contain application data:
+the hook's exception is logged as event 1076, and code that needs it awaits the
+region's request in its own command and reads `Committed.ActivationError`.
+
 ## Logging and telemetry
 
 Registering logging is all an application needs: with `services.AddLogging(...)`,
@@ -1585,6 +1720,12 @@ Every entry carries the exception, in every environment: logs belong to the
 operator, whereas `BridgeDiagnostics` governs only what a Bridge reply shows
 to web content. Exception messages can contain application data, so treat log
 output accordingly. The message properties are listed per event.
+
+Runic does not log an exception that ends the process, such as one thrown by
+the application body that `RunicDesktopHost.Run` rethrows. The
+[crash reporting guide](https://docs.runic-artifex.eu/guides/desktop/crash-reporting/)
+shows how to log it from `AppDomain.UnhandledException`, capture a dump, keep
+NativeAOT symbols and what to attach to a bug report.
 
 | Event ID | Name | Level | Logged when | Properties |
 | --- | --- | --- | --- | --- |
@@ -1615,6 +1756,7 @@ output accordingly. The message properties are listed per event.
 | 1051 | `WindowReleaseFailed` | Error | `IRunicWindowService` fails to release a Window it opened, after that Window closed. | `Window`, `ErrorType` |
 | 1052 | `WindowCloseGuardFailed` | Error | A guarded Window's `CanCloseAsync` throws; the window stays open. A departure guard that throws is logged by the navigator as 1060 instead. | `Window`, `ErrorType` |
 | 1053 | `WindowCloseGuardUnavailable` | Warning | A Window with `GuardClose` opens on a presentation that cannot keep its window open, such as CS-WebUI or a browser, so a user close does not ask `CanCloseAsync`. | `Window`, `Presentation` |
+| 1054 | `WindowFileDropFailed` | Error | `IRunicFileDropTarget.OnFilesDroppedAsync` of a Window's root ViewModel threw for a drop of files; later drops still arrive. | `ViewModel`, `FileCount`, `ErrorType` |
 | 1090 | `ReactiveSchedulerKept` | Information | A Runic Desktop, CS-WebUI or test-host window opens while ReactiveUI's main-thread scheduler is one set before `AddRunicReactiveModelContext()`, so Runic's was not installed. Once per scheduler type; a UI dispatcher's scheduler, such as WPF's, is not logged. | `Scheduler` |
 | 1091 | `ReactiveSchedulerReplaced` | Warning | Such a window opens after another scheduler replaced the installed one, for example a later `RxAppBuilder` `BuildApp()` with `WithPlatformServices()`. Call `WithRunicModelContext()` on that builder. Once per scheduler type; a UI dispatcher's scheduler is not logged. | `Scheduler` |
 | 1100 | `HotReloadRestartRequired` | Error | A Hot Reload edit changed a generated Bridge contract; restart the application. The `RUNIC_IDE_CONTRACT_RESTART_REQUIRED` line also goes to standard error. | `Mismatch` |
@@ -1627,7 +1769,8 @@ output accordingly. The message properties are listed per event.
 | 1114 | `ChildViewCleanupFailed` | Error | A `WpfBridgeView` fails to release after its presentation closed. | `ErrorType` |
 | 2000 | `DesktopSnapshotDeliveryFailed` | Error | Runic Desktop cannot run a state delivery script. | `Route`, `ErrorType` |
 | 2002 | `DesktopWindowCloseAfterOpen` | Warning | `RUNIC_APPLICATION_CLOSE_AFTER_OPEN=1` closed a Desktop window right after it opened. | `Variable` |
-| 2003 | `DesktopPortalDiagnostic` | Warning or Debug | On Linux, xdg-desktop-portal reports a diagnostic for the notifications `AddRunicPlatformServices()` registers: Warning for a rejected identity, an unavailable portal or a denied request, Debug for an accepted request or registration. | `Code`, `DiagnosticMessage`, `Remediation` |
+| 2003 | `DesktopPortalDiagnostic` | Warning or Debug | On Linux, xdg-desktop-portal reports a diagnostic for the portal services `AddRunicPlatformServices()` registers (notifications, status icon, login startup and inhibition): Warning for a rejected identity, an unavailable portal or a denied request, Debug for an accepted request or registration. | `Code`, `DiagnosticMessage`, `Remediation` |
+| 2004 | `DesktopMenuCommandFailed` | Error | A menu bar command of a Window's root ViewModel (`IRunicMenuCommandSource`) or of `RunicDesktopHost.MenuCommands` threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |
 | 2100 | `CsWebUiWindowShowFailed` | Error | CS-WebUI cannot show a window: it finds no browser, the selected browser does not exist or start, its page does not connect in time, or the WebView does not start. `OpenWindowAsync` fails with a `RunicWindowConfigurationException`. | `Window`, `Code`, `Browser`, `BrowserPath`, `DiagnosticMessage` |
 | 3000 | `WindowCloseCancellationCallbackFailed` | Error | A Runic Desktop close-cancellation callback throws. | `ErrorType` |
 | 3001 | `WindowCloseConfirmationFailed` | Error | A Runic Desktop close confirmation throws; the Window stays open. | `ErrorType` |
@@ -1640,6 +1783,8 @@ output accordingly. The message properties are listed per event.
 | 3008 | `BrowserProfileNotDeleted` | Warning | A generated browser profile still cannot be deleted a minute after its browser closed; it stays in the temporary folder. | |
 | 3009 | `DesktopDiagnosticSinkFailed` | Warning | `DesktopHostOptions.DiagnosticSink` throws for a diagnostic. | `Code`, `ErrorType` |
 | 3010 | `EmbeddedWindowDiagnostic` | Warning or Error | An embedded window reports an event of its own: on Linux, `web-process-terminated` when the WebKitGTK web process crashed and the page was reloaded (Warning), or was not reloaded after three reloads within a minute (Error). | `Code`, `DiagnosticMessage`, `Remediation` |
+| 3011 | `WindowStateHandlerFailed` | Error | A `DesktopWindow.StateChanged` handler threw; later handlers and events still run. | `ErrorType` |
+| 3012 | `FileDropHandlerFailed` | Error | A `DesktopWindow.FilesDropped` handler threw; later handlers and drops still run. | `ErrorType` |
 
 `Model` is the ViewModel type name, `Member` the command or property, and
 `Route` the Bridge route (a content presentation's route is per instance, such
@@ -1656,8 +1801,8 @@ or `Trace` without one.
 Navigation (1060-1075) and the model context (1030-1033) log under
 `Runic.Navigation` and `Runic.Navigation.RunicModelContext`; see the
 [Runic.Navigation logging](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md#logging)
-section. Events 2000 and 2002 use `Runic.Application.Views.Desktop`, and event 2100
-uses `Runic.Application.Views.CsWebUi` and the factory of the Window's scope. Events 3000-3010
+section. Events 2000, 2002 and 2004 use `Runic.Application.Views.Desktop`, and event 2100
+uses `Runic.Application.Views.CsWebUi` and the factory of the Window's scope. Events 3000-3012
 use `Runic.Desktop` and `DesktopHostOptions.LoggerFactory`, which `RunicDesktopHost.Run`
 and `RunicViewHost` fill from the application's services.
 

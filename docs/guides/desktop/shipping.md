@@ -9,7 +9,7 @@ signing credentials that CI does not have, and where the SDK does not help yet.
 
 Each platform section ends with a **Checked with** note. "Runic CI" means the
 `Native` jobs of the SDK's
-[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/.github/workflows/ci.yml)
+[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/.github/workflows/ci.yml)
 run that step for test applications that use Runic Desktop. They do not
 package the template application or produce signed installers. "Not executed"
 means the step uses the platform vendor's documented tools and has not been
@@ -38,7 +38,7 @@ a CI matrix with one runner per OS is the usual setup. Since SDK
 `dotnet publish --no-build -p:PublishAot=true` after a `dotnet build` with the
 same configuration, target framework and `PublishAot`: the publish reuses the
 Bridge code of that build and reports
-[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/docs/diagnostics.md#runicbridge022)
+[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/docs/diagnostics.md#runicbridge022)
 when it is missing. Before publishing, ask
 the CLI what the target needs on the machine that publishes:
 
@@ -48,7 +48,7 @@ dotnet runic doctor --rid win-x64 --aot --fail-on fail
 ```
 
 The `target-rid` check reads the
-[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/eng/support.json):
+[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/eng/support.json):
 `win-x64`, `osx-arm64` and `linux-x64` are CI-verified for Desktop, while
 `win-arm64`, `osx-x64`, `linux-arm64` and the musl RIDs ship native support
 without CI coverage. Test those on a real machine. `target-presentation`
@@ -97,7 +97,7 @@ them to a file if you need them.
 With NativeAOT on `win-x64` or `win-arm64`, Runic Desktop's build targets link
 the WebView2 loader statically into the executable, so the publish folder
 contains no `WebView2Loader.dll`
-([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
+([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
 A JIT build (self-contained or framework-dependent) copies
 `WebView2Loader.dll` next to the executable; ship it, or Desktop reports
 `webview2-loader-unavailable`. Set the Explorer icon of the executable with
@@ -205,7 +205,7 @@ var root = OperatingSystem.IsMacOS()
 ### Info.plist
 
 The SDK's CI fixture
-([`Info.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tests/native/platform-sandbox/Info.plist))
+([`Info.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/platform-sandbox/Info.plist))
 uses the bundle identifier, name, executable, package type, version and
 `NSHighResolutionCapable`. For a shipped application, also set the
 user-visible version, the minimum macOS version and the icon:
@@ -249,7 +249,7 @@ Microsoft's .NET guidance for the hardened runtime, which includes
 
 The entitlements file is optional outside the App Sandbox. For a sandboxed
 application (required for the Mac App Store), the CI fixture's
-[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tests/native/platform-sandbox/entitlements.plist)
+[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/platform-sandbox/entitlements.plist)
 is the tested starting point: `com.apple.security.app-sandbox`,
 `com.apple.security.network.server` and `com.apple.security.network.client`
 for the loopback listener and its WebSocket, and
@@ -280,7 +280,7 @@ ad hoc with the sandbox entitlements
 `codesign --verify --deep --strict` and retains it as the
 `platform-sandbox-osx-arm64-<run>` artifact. That bundle keeps the publish
 folder in `Contents/MacOS` and is only for
-[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tests/native/platform-sandbox/README.md).
+[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/platform-sandbox/README.md).
 The example Info.plist parses with Python's `plistlib`. Developer ID signing,
 the hardened runtime, `notarytool`, `stapler`, `lipo`
 and `osx-x64` were not executed: they need an Apple Developer account or an
@@ -334,12 +334,12 @@ Check the entry with `desktop-file-validate`.
 ### Flatpak
 
 Flatpak is the Linux path the SDK has tested. Its
-[sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md)
+[sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md)
 runs a NativeAOT GTK 4 application on the standard `org.gnome.Platform` 50
 runtime, which provides GTK 4 and WebKitGTK 6, with WebKit's own nested
 sandbox enabled. Use `--host desktop-gtk4` for Flatpak. The fixture is a test
 application, not a packaging recipe, but its
-[`install.sh`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/install.sh)
+[`install.sh`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/install.sh)
 shows the parts an application needs:
 
 - The executable and `www` under `/app` (the fixture uses `/app/lib/runic/`

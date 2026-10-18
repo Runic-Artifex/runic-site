@@ -58,6 +58,53 @@ if (await files.OpenFileAsync(new()) is PickerResult<IReadFileLease>.Selected(va
 }
 ```
 
+## File dialog options
+
+`OpenFileOptions` and `SaveFileOptions` take `Filters` and `InitialDirectory`,
+`OpenDirectoryOptions` takes `InitialDirectory`, and `SaveFileOptions` keeps its
+`SuggestedName`. `OpenFilesAsync` selects several files at once:
+
+```csharp
+var images = new FileDialogFilter("Images", ["png", "jpg"]);
+var options = new OpenFileOptions
+{
+    Filters = [images, new FileDialogFilter("All files", ["*"])],
+    InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+};
+if (await files.OpenFilesAsync(options) is PickerResult<IReadFileLeaseList>.Selected(var leases))
+{
+    await using (leases)
+        foreach (var lease in leases) { /* read each file */ }
+}
+```
+
+A `FileDialogFilter` names a file type and lists its extensions without the dot,
+such as `png` or `tar.gz`, or `*` for every file. The first filter is selected
+when the dialog opens; no filters offer every file. Extensions match without
+regard to case on every platform. Filters and the initial folder are hints to the
+dialog: a folder that does not exist is ignored, and the user can still choose or
+type a name that matches no filter on some platforms. Runic does not reject such
+a selection or add an extension to a saved name, so check the content you read.
+The options check their values when they are set and throw `ArgumentException`
+for an empty or wildcard extension, a relative folder or a `null` filter.
+
+`OpenFilesAsync` opens every selected file before it returns: if one cannot be
+opened, all are released and the result is `Failed`. Each lease holds its file
+open until it, the list or the presentation is disposed. A provider without
+multiple selection returns `Unavailable(BackendUnavailable)`, and the
+`platform.files.openMultiple` capability reports the same.
+
+| Option | Windows | macOS | Linux portal (GTK 3 and GTK 4) | Linux GTK 3 native chooser |
+| --- | --- | --- | --- | --- |
+| Filters | File type list (`SetFileTypes`) | The union of every filter restricts the panel (`allowedContentTypes`); no filter pop-up | FileChooser `filters` and `current_filter` | File type list |
+| Multiple selection | `FOS_ALLOWMULTISELECT` | `allowsMultipleSelection` | FileChooser `multiple` | `select-multiple` |
+| Initial folder | `SetFolder`, which overrides the folder Windows remembers | `directoryURL` | FileChooser `current_folder`; ignored when opening by portals before FileChooser version 4 | `current-folder` |
+| Suggested name | `SetFileName` | `nameFieldStringValue` | FileChooser `current_name` | `current-name` |
+
+On macOS a save panel with filters may add the first allowed extension to a
+name the user types without one. Applications that need the user to pick between
+filters on macOS can offer the choice in their own interface for now.
+
 ## Window services
 
 `IWindowPlatformServices` groups the file dialogs, text clipboard and file
@@ -77,6 +124,288 @@ registers `DesktopSettings.Unavailable(reason)`: reads return
 `IDesktopNotifications` is registered the same way; without a provider it is
 `DesktopNotifications.Unavailable(reason)`, whose requests return
 `Unavailable(reason)` and which never raises `Activated`.
+`IDesktopStatusIcon`, `IDesktopLoginStartup` and `IDesktopInhibition` are
+application singletons too; without a provider they are
+`DesktopStatusIcons.Unavailable(reason)`, `DesktopLoginStartup.Unavailable(reason)`
+and `DesktopInhibition.Unavailable(reason)`. Unavailable inhibition supports no
+effects, still validates the effects and reason as a provider does, and returns
+`Unavailable(reason)` from every acquisition.
+
+### Hosts without a native owner
+
+One `services.AddRunicPlatformServices()` call registers every service above on
+both hosts, so a ViewModel that takes any of them resolves on Runic Desktop and on
+CS-WebUI. Window services need the window's native owner; application services
+need none. A window has no native owner when it is shown in an installed browser
+after an embedded-window fallback, served under `RUNIC_APPLICATION_SERVE_ONLY=1`,
+or opened on CS-WebUI; a ViewModel resolved outside a window's scope has none
+either.
+
+| Service | Desktop window with a native owner | Desktop window without one, or outside a window scope | CS-WebUI |
+| --- | --- | --- | --- |
+| `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, `IDesktopFileLauncher` | Native provider; `OwnerClosed` after the window closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Announcements and `PlatformServices.PresentAsync` | Native window | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Window state, `PlatformServices.GetWindowState` | The window's bounds and state, also the last ones after it closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Dropped files, `IRunicFileDropTarget` | Native paths, once per drop | None | None |
+| Menu bar commands, `IRunicMenuCommandSource` | The macOS menu bar, while the window is key | None | None |
+| `IDesktopSettings`, `IDesktopNotifications`, `IDesktopStatusIcon`, `IDesktopLoginStartup`, `IDesktopInhibition`, `IDesktopSecretStore`, `IDesktopTrash`, `IDesktopFileTransfers` | Operating system provider | Operating system provider, the same instance | `Unavailable(ProviderNotConfigured)` |
+
+On Runic Desktop the application services behave the same with or without a
+native owner. The macOS settings, notifications and status icon need the AppKit
+event loop that the Desktop host runs, as their providers describe. Linux inhibition sends no parent window, so the desktop does not tie it to a
+window. CS-WebUI selects no native provider; register one before calling
+`AddRunicPlatformServices()` to use an application service there, for example
+`WindowsPlatformProvider.CreateInhibition()` or
+`new PortalApplication("org.example.Notes").CreateUnparentedInhibition()`.
+Existing registrations are kept on both hosts.
+
+The application composes `IDesktopPrivilegedActions` itself, because it needs
+declared actions and a provider package, and claims `ApplicationInstance` before
+it starts a host.
+
+## Opening files and URLs
+
+`IDesktopOpenRequests` raises `Opened` with the files and URLs the user opens
+with the application: its registered URL schemes, such as an OAuth callback, and
+its file types, at launch and while it runs. Linux and Windows start the
+application with them as arguments, which `ApplicationInstance` forwards to the
+running instance; macOS sends open events to the running application.
+`PlatformServices.CreateOpenRequests` in Runic.Application.Views.Desktop selects
+the provider:
+
+```csharp
+var launch = ApplicationLaunch.FromProcess(args);
+// After ApplicationInstance.ClaimAsync made this process the running instance; on macOS on the main thread,
+// before the first window.
+await using var opens = PlatformServices.CreateOpenRequests(new(["org.example.notes"]) { Files = true }, instance, launch);
+opens.Opened += (_, request) => { /* worker thread: validate each URI, then dispatch to a window */ };
+```
+
+`DesktopOpenRequests.FromLaunch` is the argument parser on its own. Treat every
+opened URL and file as untrusted input: any web page can open a URL with the
+application's scheme. The [opening files and URLs design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/open-activation.md) lists what
+each platform's package registers.
+
+## Secret storage
+
+`IDesktopSecretStore` keeps secrets, such as access tokens, in the user's
+credential store: the Secret Service on Linux (GNOME Keyring, KeePassXC,
+KWallet), Credential Manager on Windows and the login keychain on macOS.
+`AddRunicPlatformServices()` registers one for the application; it needs no
+window.
+
+```csharp
+await secrets.SetAsync("com.example.Mail", account, refreshToken);
+if (await secrets.GetAsync("com.example.Mail", account) is PlatformResult<string?>.Success(var token)) { /* null: none stored */ }
+await secrets.DeleteAsync("com.example.Mail", account); // Success(false): none stored
+```
+
+Services and accounts are 1 to 256 characters without NUL. Secrets are UTF-8
+text of at most 2560 bytes on every platform; a longer one is
+`Failed(TooLarge)`. No reachable store is `Unavailable(BackendUnavailable)`; a
+locked store that cannot ask the user to unlock it is `Failed(Locked)`; a
+dismissed unlock or access prompt is `Failed(UserDismissed)`. A request may wait
+while the store asks the user. Hosts without a provider register
+`DesktopSecretStore.Unavailable(reason)`. The
+[secret storage design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/secret-storage.md) has the
+per-platform behaviour and its verification.
+
+## Trash
+
+`IDesktopTrash` moves a file or directory the user deletes to the trash, from
+where the user can restore it: the freedesktop.org Trash on Linux, with the
+Trash portal inside Flatpak and Snap, the Recycle Bin on Windows and the Trash
+on macOS. .NET's `File.Delete` and `Directory.Delete` delete permanently.
+`AddRunicPlatformServices()` registers one for the application; it needs no
+window.
+
+```csharp
+switch (await trash.MoveToTrashAsync(document.Path))
+{
+    case PlatformResult<PlatformUnit>.Success: break;
+    case PlatformResult<PlatformUnit>.Failed { Code: PlatformFailureCode.NotFound }: break; // Already gone.
+    case PlatformResult<PlatformUnit>.Unavailable: /* No trash here: ask before deleting permanently. */ break;
+    case PlatformResult<PlatformUnit>.Failed failed: /* Report failed.Code. */ break;
+}
+```
+
+The path is a fully qualified local path to a file, a directory with its
+contents, or a symbolic link, which is trashed itself. A location without a
+usable trash, such as a network share, is `Unavailable(BackendUnavailable)`, and
+the item is never deleted permanently instead: it stays where it was unless the
+result is `Success`. A missing item is `Failed(NotFound)`, a refused move
+`Failed(PermissionDenied)`. Hosts without a provider register
+`DesktopTrash.Unavailable(reason)`. The
+[trash design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/trash.md)
+has the per-platform behaviour and its verification.
+
+## Copy and move
+
+`IDesktopFileTransfers` copies and moves files and directories as a file
+manager does: with progress, cancellation and a decision for each conflict.
+`AddRunicPlatformServices()` registers one for the application; every
+operating system uses the same managed engine
+(`Runic.Platform.Runtime.LocalFileTransfers.Create()`).
+
+```csharp
+var request = new FileTransferRequest([report, photos], destinationDirectory);
+if (await transfers.CopyAsync(request, cancellationToken) is PlatformResult<FileTransferSummary>.Success(var summary))
+    Console.WriteLine($"{summary.Transferred} copied, {summary.Skipped} skipped");
+```
+
+Each source goes into the destination directory under its own name. A file is
+written under a hidden temporary name and renamed into place once complete, so
+a directory listing, or a `RunicPathWatcher` watching it, never sees a partial
+file. A move renames a source that stays on its file system and copies one that
+does not, removing the source only after its whole item is complete.
+
+When the transfer stops, by an error, a conflict answered `Cancel` or
+cancellation, items completed before stay done, and what the item in progress
+did is put back: its copies are removed, renamed entries move back, and an entry
+it replaced returns. The first error is `Failed` with `NotFound`,
+`PermissionDenied`, `Conflict` (a conflict without a handler), `UserDismissed`
+(a conflict answered `Cancel`) or `IoError`, such as for a full disk. Caller
+cancellation throws `OperationCanceledException`.
+
+### What a transfer keeps
+
+| Kept | Not kept |
+| --- | --- |
+| File content | Owner and group |
+| Last write time of files and directories | Access control lists and extended attributes, including macOS quarantine and tags |
+| Permission bits on Linux and macOS (`UnixFileMode`) | Alternate data streams on Windows |
+| Read-only, hidden and archive attributes on Windows | macOS resource forks and Finder information |
+| Symbolic links, as links; they are never followed | Hard links: each becomes a separate file |
+| Directory structure, empty directories included | Sparse regions: holes are written out; creation and access times |
+
+Named pipes, sockets and devices are skipped and counted in `Skipped`. On
+Windows, copying a symbolic link needs Developer Mode or an elevated process;
+otherwise the transfer fails with `PermissionDenied`. Copying is block by
+block in .NET: reflinks, `CopyFileEx` and `clonefile` are not used.
+
+### Conflicts
+
+When an entry of the destination has a source's name, the transfer calls
+`ResolveConflict` with a `FileTransferConflict`, the source and the existing
+entry with their sizes and times, and waits for a `FileConflictResolution`:
+`Skip`, `Replace`, `KeepBoth` (`report (2).txt`), `Merge` (directories only:
+each conflict inside is decided in turn) or `Cancel`. `ApplyToAll` answers every
+later conflict of the same kind, between two directories or not. Without a
+handler the transfer stops at the first conflict with `Failed(Conflict)`.
+Copying an item into its own directory keeps both without asking; moving it
+there does nothing.
+
+The handler is called on the `SynchronizationContext` that was current when the
+transfer started. In a ViewModel command that is the model context, so the
+handler can ask the page through an interaction, and progress reported through
+a `Progress<T>` created in the command updates state in a later turn.
+
+### Show progress and ask the page
+
+This ReactiveUI ViewModel pastes files the user copied in its own listing. The
+command is a bridged operation, so the page can cancel it; its progress is
+state, and conflicts reach the page through an interaction. The paths stay in
+.NET; the page sees names and sizes.
+
+```csharp
+/// <summary>How far a paste is.</summary>
+public sealed record PasteProgress(int Items, int TotalItems, double Bytes, double TotalBytes);
+
+/// <summary>An entry of the folder that a pasted one would replace.</summary>
+public sealed record ConflictPrompt(string Name, bool IsDirectory, double Bytes, DateTimeOffset Modified, bool CanMerge);
+
+/// <summary>The user's decision.</summary>
+public sealed record ConflictAnswer(FileConflictAction Action, bool ApplyToAll);
+
+/// <summary>What a paste did.</summary>
+public sealed record PasteResult(int Transferred, int Skipped, bool Cancelled);
+
+public sealed partial class FolderViewModel : ReactiveObject
+{
+    private readonly IDesktopFileTransfers _transfers;
+    private ImmutableArray<string> _copied = [];  // Set by the folder's own Copy command.
+
+    public FolderViewModel(IDesktopFileTransfers transfers, string location)
+    {
+        _transfers = transfers;
+        Location = location;
+        PasteCommand = ReactiveCommand.CreateFromTask(PasteAsync);
+    }
+
+    public string Location { get; }
+
+    /// <summary>The paste in progress, or null.</summary>
+    [Reactive]
+    public partial PasteProgress? Pasting { get; private set; }
+
+    /// <summary>Asks which way to resolve a conflict.</summary>
+    public Interaction<ConflictPrompt, ConflictAnswer> ResolveConflict { get; } = new();
+
+    /// <summary>Copies the entries copied earlier into this folder.</summary>
+    public ReactiveCommand<RxVoid, PasteResult> PasteCommand { get; }
+
+    private async Task<PasteResult> PasteAsync(CancellationToken cancellationToken)
+    {
+        var request = new FileTransferRequest(_copied, Location)
+        {
+            // Created in the command's turn: each report sets state in a later turn of the model context.
+            Progress = new Progress<FileTransferProgress>(progress =>
+                Pasting = new(progress.CompletedItems, progress.TotalItems, progress.CompletedBytes, progress.TotalBytes)),
+            // Called in the model context; the page answers through the interaction.
+            ResolveConflict = async (conflict, token) =>
+            {
+                var prompt = new ConflictPrompt(Path.GetFileName(conflict.DestinationPath), conflict.Destination.IsDirectory,
+                    conflict.Destination.Length, conflict.Destination.LastWriteTime, conflict.CanMerge);
+                var answer = await ResolveConflict.Handle(prompt); // The command's cancellation cancels the question.
+                return new FileConflictResolution(answer.Action) { ApplyToAll = answer.ApplyToAll };
+            },
+        };
+        try
+        {
+            return await _transfers.CopyAsync(request, cancellationToken) switch
+            {
+                PlatformResult<FileTransferSummary>.Success(var done) => new(done.Transferred, done.Skipped, Cancelled: false),
+                PlatformResult<FileTransferSummary>.Failed { Code: PlatformFailureCode.UserDismissed } => new(0, 0, Cancelled: true),
+                var stopped => throw new IOException($"The paste stopped: {stopped}"),
+            };
+        }
+        finally { Pasting = null; }
+    }
+}
+```
+
+The page starts the operation, renders `pasting` from the snapshot, cancels
+through the operation controller and answers conflicts while it is mounted:
+
+```ts
+import { createOperationController } from "@runic-artifex/views";
+
+const paste = createOperationController(() => folder.startPaste());
+const unregister = folder.interactions.resolveConflict.handle(
+  async (prompt, { signal }) => askReplaceDialog(prompt, signal), // resolves to { action: "Replace", applyToAll: false }
+);
+folder.subscribe(state => renderProgress(state.pasting));
+pasteButton.onclick = () => void paste.run();
+cancelButton.onclick = () => void paste.cancel();
+```
+
+Cancel aborts the command's `CancellationToken`, which stops the transfer within
+a block and puts back the item in progress. The
+[operations guide](https://docs.runic-artifex.eu/guides/application/guides/operations-and-cancellation/)
+covers pending state and cancellation feedback. The
+[file transfer design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/file-transfers.md)
+has the full behaviour and its verification.
+
+### Watch a directory
+
+`RunicPathWatcher` in Runic.Application.Views watches the directory a file
+manager shows, also while a transfer writes into it:
+`RunicWatchTarget.Directory(location)` reports entries added, removed and
+renamed, through inotify on Linux, `ReadDirectoryChangesW` on Windows and
+FSEvents on macOS, and polls network file systems. Hidden temporary files that
+a transfer writes start with `.`, so a pattern such as `*.txt`, or skipping
+names that start with `.`, shows only complete entries. See
+[Watching files](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views#watching-files).
 
 ## Privileged actions
 
