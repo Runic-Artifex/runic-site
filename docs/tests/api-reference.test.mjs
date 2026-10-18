@@ -77,7 +77,9 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  assert.ok(inputs <= 1.75 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  // 1.875 MiB since 0.8.0-preview.5 added Runic.Platform.Linux.DBus (19 public
+  // types) and grew the Platform APIs; 0.8.0-preview.5 needs about 1.83 MiB.
+  assert.ok(inputs <= 1.875 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
   // __data.json payloads that client-side navigation loads.
   let compressed = 0;
@@ -88,8 +90,10 @@ test('API inputs and rendered pages stay within their size budgets', () => {
       assert.ok(bytes.length <= 160 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
+  // 4.5 MiB since the Runic.Platform.Linux.DBus pages of 0.8.0-preview.5,
+  // which needs about 4.4 MiB.
   assert.ok(
-    compressed <= 4 * 1024 * 1024,
+    compressed <= 4.5 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });

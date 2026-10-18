@@ -58,7 +58,7 @@ export function previewFiles(
 ): PreviewFile[] {
   const frontend = frontends[selection.frontend] ?? frontends.react;
   const symbols = templateSymbols(selection);
-  const replacements = templateReplacements(selection);
+  const replacements = templateReplacements(selection, name);
   const render = (content: string) =>
     replacements.reduce(
       (text, [token, value]) => text.replaceAll(token, value),

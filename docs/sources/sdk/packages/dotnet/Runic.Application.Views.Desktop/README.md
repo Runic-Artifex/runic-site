@@ -133,6 +133,47 @@ The same Window and `async host => ...` body run on CS-WebUI with
   host, or a ViewModel's window that has not opened yet), `OwnerClosed` once it
   closed, and `BackendUnavailable` for a window host without announcements,
   such as GTK 4 before 4.14.
+- `RunicDesktopHost.Placement` restores each Window's size, position and
+  maximized state from the last time it closed, and
+  `PlatformServices.GetWindowState(window)` reads them to save. The callback is
+  called with each Window as it opens, after its ViewModel is set, and returns
+  the saved `DesktopWindowPlacement` or `null`; it becomes
+  `DesktopWindowOptions.Placement`, which replaces the Window's size and keeps it
+  on a monitor that exists now (see
+  [Window state and restore](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md#window-state-and-restore)).
+  `GetWindowState` returns the embedded window's `DesktopWindowState`, also after
+  the window closed and until the Window is disposed, so save it after
+  `WaitForCloseAsync` returns:
+
+  ```csharp
+  var host = new RunicDesktopHost(provider, desktop)
+  {
+      Placement = window => window is MainWindow ? settings.MainWindowPlacement : null,
+  };
+  await using var window = await host.OpenWindowAsync<MainWindow>();
+  await window.WaitForCloseAsync();
+  if (PlatformServices.GetWindowState(window) is PlatformResult<DesktopWindowState>.Success { Value: var state })
+      settings.MainWindowPlacement = state.Placement;
+  ```
+
+  A Window without a native owner, one on CS-WebUI or another host, one served
+  under `RUNIC_APPLICATION_SERVE_ONLY` or an installed browser after a fallback,
+  reports `Unavailable` with `OwnerUnavailable`, as `PresentAsync` does; a custom
+  window host that reports no state reports `BackendUnavailable`. For each change
+  while the window is open, subscribe to `DesktopWindow.StateChanged` of the
+  Window's `Presentation`. A placement belongs to the machine and operating
+  system that saved it: its units are each platform's.
+- `RunicDesktopHost.MenuCommands` runs the application's menu bar commands by
+  id, and a Window's root ViewModel that implements `IRunicMenuCommandSource`
+  runs its own while the Window is key (see
+  [Menu bar commands](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#menu-bar-commands)).
+  Declare the menus in `DesktopHostOptions.MenuBar`; macOS shows them.
+- A Window's root ViewModel that implements `IRunicFileDropTarget` receives the
+  files the user drops onto the embedded window, with their native paths, in
+  its model turn (see
+  [Receiving dropped files](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#receiving-dropped-files)).
+  A window served under `RUNIC_APPLICATION_SERVE_ONLY` or shown in an installed
+  browser after a fallback receives none.
 - `services.AddRunicPlatformServices()` registers native file dialogs, the
   text clipboard, and the file launcher for each window scope:
   `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, and
@@ -173,7 +214,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
 
       public async Task OpenAsync()
       {
-          if (await files.OpenFileAsync(new()) is not PickerResult<IReadFileLease>.Selected(var lease)) return;
+          if (await files.OpenFileAsync(new() { Filters = [new("Notes", ["txt", "md"])] }) is not PickerResult<IReadFileLease>.Selected(var lease)) return;
           await using (lease)
           await using (var stream = await lease.OpenReadAsync())
           using (var reader = new StreamReader(stream))
@@ -183,7 +224,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
       // Replaces the file atomically, or leaves it unchanged.
       public async Task<bool> SaveAsync()
       {
-          if (await files.SaveFileAsync(new("notes.txt")) is not PickerResult<ISaveFileLease>.Selected(var lease)) return false;
+          if (await files.SaveFileAsync(new("notes.txt") { Filters = [new("Notes", ["txt"])] }) is not PickerResult<ISaveFileLease>.Selected(var lease)) return false;
           await using (lease)
           {
               if (await lease.BeginWriteAsync(FileWritePolicy.RequireAtomicReplace)
@@ -198,6 +239,11 @@ The same Window and `async host => ...` body run on CS-WebUI with
       }
   }
   ```
+
+  Filters, the initial folder and `OpenFilesAsync` for several files work with
+  every provider; the
+  [Runic.Platform guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#file-dialog-options)
+  lists what each platform does with them.
 
   On Windows, Linux and for unsandboxed macOS selections, the save writes a staged
   sibling file and replaces the selection in one step. On Linux this also works
@@ -251,7 +297,8 @@ The same Window and `async host => ...` body run on CS-WebUI with
   ```
 
   The application ID is the one string you pass: on Windows the
-  AppUserModelID your installer registers with the shell, on Linux the
+  AppUserModelID your installer registers with the shell (an MSIX package's
+  process uses the package's AppUserModelID instead), on Linux the
   reverse-DNS ID of the installed desktop entry (`org.example.Notes` for
   `org.example.Notes.desktop`); macOS uses the bundle identifier. Runic does
   not derive it from the assembly or the GTK application ID. The overload
@@ -266,6 +313,26 @@ The same Window and `async host => ...` body run on CS-WebUI with
   are logged as event 2003 through the provider's `ILoggerFactory`. Register
   your own `IDesktopNotifications` first to replace it, for example a fake in
   tests.
+- `AddRunicPlatformServices()` also registers `IDesktopStatusIcon`,
+  `IDesktopLoginStartup` and `IDesktopInhibition`, one singleton each for the
+  application, created by `PlatformServices.CreateStatusIcon(applicationId)`,
+  `CreateLoginStartup(applicationId)` and `CreateInhibition(applicationId)`.
+  Inhibition keeps the system or display awake while an operation holds a lease:
+
+  ```csharp
+  if (await inhibition.AcquireAsync(DesktopInhibitionEffects.SystemSleep, "Exporting documents")
+      is PlatformResult<IDesktopInhibitionLease>.Success(var lease))
+      await using (lease) await ExportAsync();
+  ```
+
+  Windows uses a power request and macOS an IOKit power assertion; Linux asks
+  the xdg-desktop-portal Inhibit interface without a parent window, so the
+  request belongs to the application, not to a window. The application services
+  need no native owner and work the same in an installed browser after a
+  fallback; the window services report `OwnerUnavailable` there. The
+  [Runic.Platform guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#hosts-without-a-native-owner)
+  lists every service's result without a native owner. Register
+  `IDesktopPrivilegedActions` yourself; it needs declared actions.
 - `DesktopBridgeWindow<TViewModel>.NativeOwner` (a `DesktopNativeOwner`) is the
   presentation's `INativePickerOwner`, which the services above bind to. The
   provider APIs that take it directly, such as
@@ -309,6 +376,11 @@ The [First Window on Runic Desktop](https://github.com/Runic-Artifex/runic-sdk/t
 example is a complete application. See the
 [host selection guide](https://docs.runic-artifex.eu/guides/desktop/host-selection/)
 to choose between this host and CS-WebUI.
+
+An exception from the application body passed to `Run` closes the windows,
+disposes the host and is rethrown by `Run`; Runic does not log it. The
+[crash reporting guide](https://docs.runic-artifex.eu/guides/desktop/crash-reporting/)
+shows how to log such crashes, capture a dump and keep NativeAOT symbols.
 
 ## From a command line
 

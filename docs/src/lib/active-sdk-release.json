@@ -1,6 +1,6 @@
 {
-  "version": "0.8.0-preview.4",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.8.0-preview.4",
+  "version": "0.8.0-preview.5",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.8.0-preview.5",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -166,6 +166,12 @@
     },
     {
       "identity": "Runic.Platform.Linux.Polkit",
+      "ecosystem": "nuget",
+      "product": "platform",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Platform.Linux.DBus",
       "ecosystem": "nuget",
       "product": "platform",
       "installKind": "nuget-package"

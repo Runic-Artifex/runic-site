@@ -143,9 +143,12 @@ See [Container-resolved targets](#container-resolved-targets).
 
 - Every operation returns a `NavigationResult<TContent>`. The outcomes are
   returned, never thrown:
-  - `Committed`, with the new current entry and the retired entries.
+  - `Committed`, with the new current entry and the retired entries, and,
+    when an entry it made current has an activation hook, how that ended
+    (`Activation`, `ActivationError`; see [After the commit](#after-the-commit-activation)).
   - `Rejected`, with a `Reason`: `Guard`, `Cancelled`, `Closed`, `Reentrant`,
-    `NoHistory`, `NotCurrent` or `EntryNotFound`.
+    `NoHistory`, `NotCurrent`, `EntryNotFound` or `Busy` (see
+    [Rejecting requests while busy](#rejecting-requests-while-busy)).
   - `Failed`, with the `Phase` (`Guarding`, `Preparing` or `Committing`) and
     the exception (`Error`).
   - `Superseded`.
@@ -154,21 +157,24 @@ See [Container-resolved targets](#container-resolved-targets).
 
   `IsCommitted` tells code after the request whether to continue, without a
   pattern match on the content type. `ThrowIfFailed()` rethrows a `Failed`
-  outcome's `Error` with its original stack trace and returns the result
-  otherwise, so a caller that treats failures as bugs can write
+  outcome's `Error`, or a `Committed` outcome's `ActivationError`, with its
+  original stack trace and returns the result otherwise, so a caller that
+  treats failures as bugs can write
   `if ((await main.PushAsync<EditorViewModel>()).ThrowIfFailed().IsCommitted) { ... }`.
 - `result.Outcome` is a `NavigationOutcome`: the `Kind` (`Committed`,
-  `Rejected`, `Superseded` or `Failed`) and, for a rejection, its `Rejection`
-  reason. It holds no .NET content or exception, so a ViewModel can return it to
-  a Runic View, which cannot receive a `NavigationResult<TContent>`.
+  `Rejected`, `Superseded` or `Failed`), for a rejection its `Rejection`
+  reason, and for a commit its `Activation` state (`None`, `Completed`,
+  `Failed` or `Cancelled`, as in `Committed.Activation`). It holds no .NET
+  content or exception, so a ViewModel can return it to a Runic View, which
+  cannot receive a `NavigationResult<TContent>`.
 - `NavigationRequestOptions.ExpectedCurrent` makes a request conditional. It
   is rejected as `NotCurrent` if that entry is not current at admission or at
   commit. Use it, or `NavigationEntryContext.BackAsync`, for work that
   completes late, such as a double click or a dialog that answers after the
   user moved on.
-- A region exposes `Current`, `CurrentEntry`, `History`, `CanGoBack` and
-  `IsTransitioning`. It raises `PropertyChanged` for them inside a model turn,
-  the commit turn for a navigation.
+- A region exposes `Current`, `CurrentEntry`, `History`, `CanGoBack`,
+  `IsTransitioning` and `IsBusy`. It raises `PropertyChanged` for them inside a
+  model turn, the commit turn for a navigation.
 
 ### Entry lifecycle
 
@@ -264,6 +270,62 @@ a pending entry whose transition didn't commit reports `Pending` to `Retired`.
   the transition. `OnNavigatedTo` runs after `ResumeAsync`, once the resume
   commits.
 
+### After the commit: activation
+
+`OnNavigatedTo` runs inside the commit turn and must not await. Work that
+needs the page presented first, such as loading its data while it shows a
+loading state, goes to `INavigationActivated`:
+
+```csharp
+public sealed partial class OrdersViewModel(IOrderStore store) : ObservableObject, INavigationActivated
+{
+    public async ValueTask OnActivatedAsync(NavigationEntryContext entry, NavigationResume arrival, CancellationToken token)
+    {
+        var orders = await store.LoadAsync(token);
+        await entry.ModelContext.InvokeAsync(() => Orders = orders, token); // presented state: commit in a turn
+    }
+}
+
+var result = await Main.PushAsync<OrdersViewModel>(); // returns once the orders are loaded
+```
+
+- The navigator calls it for each entry whose `OnNavigatedTo` the commit
+  called: the new entry of a Push, Replace or Reset, the entry a Back or BackTo
+  resumes, and a child region's root that a `ResetToRoot` policy makes current
+  again; one after another, in that order. ClearHistory and Clear activate
+  nothing. It runs again on every resume, so make it repeatable.
+- Order: the commit turn (with `OnNavigatedTo`), then the retirement of the
+  departed entries, then, with a model context that implements
+  `IRunicModelPresentationYield` (WPF's `DispatcherModelContext`), a wait
+  until the new view was laid out and rendered, then the hook. The request
+  returns `Committed` after it. `IsTransitioning` is already `false` while it
+  runs; `IsBusy` and `WhenIdleAsync()` include it.
+- A hook that throws is logged (event 1076) and gives
+  `Committed { Activation = Failed, ActivationError = ... }`; the entry stays
+  current. A hook cancelled through its token gives `Cancelled`. Without
+  hooks `Activation` is `None`.
+- Its token is cancelled when the entry stops being current (a later commit
+  retains or retires it), when it retires, and when the navigator closes; not
+  by the caller's token. A later request is admitted as usual and, if it moves
+  the entry, cancels the hook. Retirement doesn't wait for the hook: check the
+  token after each await. `RunicNavigator.HookCancellationToken` is this token
+  while the hook runs.
+- The hook may navigate. Its requests are admitted, also into its own region,
+  to redirect with `ReplaceAsync` or give up with `entry.BackAsync()`, and
+  into the regions its page owns; a region that rejects requests while busy
+  admits them too. It must not await `WhenIdleAsync()`, which waits for it.
+- `INavigationActivated<TInput>` receives the input of `Create<T, TInput>(input)`
+  and the region methods that wrap it, instead of `INavigationActivated`. The
+  input targets accept content that implements `INavigationInitialize<TInput>`,
+  `INavigationActivated<TInput>` or both; both receive the same input.
+- An initial target's hook starts after `CreateRegion` or `Start` returned. The
+  region is busy, and the navigator not idle, until it ends; a failure is
+  logged. `INavigationInitialize` stays forbidden on initial targets.
+- Without a hook scheduler (`RunicModelContext`), the content is already
+  presented, so change its state through `entry.ModelContext.InvokeAsync`.
+  With `DispatcherModelContext` the hook runs on the UI thread and may set
+  properties directly.
+
 Retirement runs once per entry, whichever path reaches it first: commit
 cleanup, a closing parent, a failed preparation or navigator disposal. It runs
 these steps in order, and each step runs even if an earlier one failed:
@@ -282,11 +344,11 @@ A failed step is logged as event 1064.
 
 | Phase | Where | What happens |
 | --- | --- | --- |
-| Admission | Synchronously, in the call | The request is rejected at once for these reasons: `Closed`; `Reentrant`, when the caller is inside a hook of a transition in this region, an ancestor or a descendant, for example a `CurrentPane` guard that calls `Main.BackAsync()`; `NotCurrent`; `NoHistory`; or `Cancelled`, for a token that is already cancelled. Otherwise the request supersedes every earlier request of the region that has not started committing, unless it is a Back that joins a pending Back (see below). It also supersedes those of the child regions its plan affects. |
-| Guarding | Outside model turns | The request first waits until earlier requests of the region, and those of the child regions in its plan, have ended. Then departure guards run one at a time, deepest first, also when a push only retains the current entry (`NavigationDepartureKind.Retain`). `false` rejects the request as `Guard`. A guard that throws fails it (event 1060). |
+| Admission | Synchronously, in the call | The request is rejected at once for these reasons: `Closed`; `Reentrant`, when the caller is inside a hook of a transition in this region, an ancestor or a descendant, for example a `CurrentPane` guard that calls `Main.BackAsync()`; `NotCurrent`; `NoHistory`; `Cancelled`, for a token that is already cancelled; or `Busy`, in a region that rejects requests while busy. Otherwise the request supersedes every earlier request of the region that has not started committing, unless it is a Back that joins a pending Back (see below). It also supersedes those of the child regions its plan affects. |
+| Guarding | Outside model turns | The request first waits until earlier requests of the region, and those of the child regions in its plan, have ended. Then departure guards run one at a time, deepest first, also when a push only retains the current entry (`NavigationDepartureKind.Retain`), followed by the region and navigator guards (see [Guards for a whole region](#guards-for-a-whole-region)). `false` rejects the request as `Guard`. A guard that throws fails it (event 1060). |
 | Preparing | Outside model turns | A new entry runs its factory, the ownership check, model-context binding and `InitializeAsync`, exactly once. A resumed entry runs `ResumeAsync`, which runs again on a retry. A step that throws fails the request (event 1061), and its pending entry retires. |
 | Committing | One model turn | The turn re-checks supersession, `ExpectedCurrent`, the target and the versions of the affected regions. Then it applies the new stacks and child policies, runs the departure's `OnCommitted` actions, raises the entries' `StateChanged` and `INavigationAware` notifications (event 1075 for a handler that throws), and raises `PropertyChanged`. A `PropertyChanged` handler that throws is logged (event 1063; its `Property` names the region property), and the commit stands. If the turn cannot run, for example because the model context throws, the request fails as `Failed(Committing)` (event 1062), nothing changes, and its pending entry retires. If the model context is already closed, the request is `Rejected(Closed)` instead, without event 1062, and the navigator starts closing. |
-| Committed | Outside model turns | Admission is released, and departing entries retire. The returned `ValueTask` completes after that cleanup. |
+| Committed | Outside model turns | Admission is released in the commit turn (`IsTransitioning` turns `false`), departing entries retire, and the activation hooks of the entries the commit made current run. The returned `ValueTask` completes after them; the region stays `IsBusy` until then. |
 
 - A `BackAsync()` that arrives while the region's
   latest request is another Back that hasn't committed, and neither the
@@ -335,6 +397,47 @@ A failed step is logged as event 1064.
   region, rather than a later request, superseded the transition, the yes
   ends, and the user may be asked twice.
 
+### Rejecting requests while busy
+
+By default a later request supersedes the earlier ones that haven't
+committed. A region whose page loads data after a click, and that must not
+start a second navigation meanwhile, can refuse requests instead:
+
+```csharp
+Main = navigator.CreateRegion<IPage>(this, initial,
+    new NavigationRegionOptions { Admission = NavigationAdmission.RejectWhileBusy });
+
+// Elsewhere, while a request of Main is still running:
+var result = await Main.PushAsync<DetailViewModel>(); // Rejected(Busy)
+```
+
+- A region is busy (`IsBusy`) from a request's admission until its task
+  completes: the guards, the preparation, the commit and the retirement of the
+  departed entries. `IsTransitioning` ends earlier, in the commit turn.
+- With `RejectWhileBusy`, a request to a busy region is `Rejected(Busy)` at
+  admission, after the other admission checks. A Back that can join the
+  pending Back still joins it, so a double click asks once and gets one
+  result. Returns from a result entry (`CompleteAsync`, `DismissAsync`, the
+  Back of a cancelled `PushForResult` caller) are refused like any other
+  request; repeat them once the region is idle.
+- The region's task is removed from the busy set before its result is set, so
+  a request made after `await region.PushAsync(...)` resumed is never `Busy`
+  because of that push.
+- `NavigationRequestOptions.Admission` overrides the region's policy for one
+  request. Pass `NavigationAdmission.Supersede` for a request that must win,
+  such as the clear of a window close: the WPF window close guard and dialog
+  host, and Runic.Application.Views' `CanCloseAsync`, do. Pass
+  `RejectWhileBusy` to refuse one request in a region that otherwise
+  supersedes.
+- The policy covers requests made to the region. A parent request whose plan
+  resets or closes a busy child region still supersedes the child's requests.
+- `IsBusy` is raised in a model turn, like `IsTransitioning`. The change to
+  `false` is posted, so the notification can trail the request's task; the
+  property itself is always current. Back-to-back requests can keep it `true`
+  without a `false` in between.
+- `region.WhenIdleAsync()` completes when the region is not busy. Unlike
+  `RunicNavigator.WhenIdleAsync()`, it doesn't wait for other regions.
+
 ### Ownership
 
 | Target | Who creates the content | On retirement |
@@ -343,6 +446,7 @@ A failed step is logged as event 1064.
 | `Own(content)` | The caller, with `new`, handing it over | Child regions close, presentations are forgotten, the content is disposed and its lease is released. |
 | `Create(factory)` / `Create(factory, input)` | The factory, with `new`, when the transition prepares; a `(services, entry)` factory also receives the entry's context | As `Own`, then the entry's scope is disposed. |
 | `Create<T>()` / `Create<T, TInput>(input)` | The navigator, with `ActivatorUtilities`, when the transition prepares | As `Own`, then the entry's scope is disposed. |
+| `Share(content)` | The caller (a new instance), or a live `Own`, `Create` or `Share` entry of this navigator | Nothing while another entry holds the content; the last holder releases it as `Own`, including the scope of created content. |
 
 - Content resolved from a container (a window scope, the root provider or
   Splat) belongs to that container, so `Borrow` it. Use `Own` and `Create` only
@@ -355,6 +459,27 @@ A failed step is logged as event 1064.
   A `Create` factory that returns one gives `Failed(Preparing)`.
 - Present owned content only through its region's slot. Retirement forgets
   every presentation of the instance.
+- `Share` lets several entries hold one instance, as when the next page takes
+  over the editor of the current one:
+  `ReplaceAsync(NavigationTarget.Share(current))` retires the current entry
+  and disposes nothing. A Push with `Share` keeps the content in both entries.
+  The content is forgotten and disposed when the last entry that holds it
+  retires; a pending `Share` push holds it from admission, so the entry that
+  handed it over can retire first. Each entry is its own entry: its
+  `INavigationInitialize` and `INavigationActivated` hooks run, and its
+  `NavigationEntryContext` is its own. Content that kept the context it was
+  constructed with still has its first entry's, so take the context in a hook
+  if the content moves between entries.
+- A departure that retires an entry whose content another entry keeps has
+  `NavigationDeparture.ContentContinues`; `LeaveConfirmation` treats it like a
+  `Retain` departure and doesn't ask. `OnNavigatedFrom` and `StateChanged`
+  still report the entry's retirement.
+- `Share` throws `InvalidOperationException` for an instance that was owned
+  and fully released, that another navigator holds, or that owns regions;
+  `Own` of shared content throws too. Shared content can't own regions
+  (`CreateRegion` with it as owner throws), and a shared target can't be an
+  initial target: start with `Own` or `Create`, then share. Don't also `Borrow`
+  shared content, since a borrowing entry can outlive its disposal.
 - Borrowed selection hosts use caller/container-owned models. Do not re-borrow
   content from a navigator-owned entry into another entry; retirement of its
   owning entry still disposes that content.
@@ -539,6 +664,60 @@ closes. The dialog region must not be the guarded region, one of its
 ancestors or one of its descendants: that push would be
 `Rejected(Reentrant)`.
 
+### Guards for a whole region
+
+An entry's guard answers for its own content. A guard that answers for a
+whole region, whatever its pages are, such as "discard the unsaved work of
+this window?", is an `INavigationRegionGuard` registered on the region, or on
+the navigator for every region:
+
+```csharp
+public sealed class UnsavedWorkGuard(Workspace workspace) : INavigationRegionGuard
+{
+    public async ValueTask<bool> CanLeaveAsync(NavigationRegionDeparture departure, CancellationToken token)
+    {
+        if (!await departure.ModelContext.InvokeAsync(() => workspace.HasUnsavedWork, token)) return true;
+        if (!await workspace.AskDiscardAsync(token)) return false;
+        departure.OnCommitted(workspace.Discard);
+        return true;
+    }
+}
+
+_registration = Main.AddDepartureGuard(new UnsavedWorkGuard(workspace));
+// or, for every region: navigator.AddDepartureGuard(guard)
+```
+
+- A region guard is asked once per transition that departs from an entry of
+  its region: a request to the region, a parent request that resets or closes
+  it, or the departure of borrowed content that leaves it, as a tab switch
+  does. A push into an empty region or a `BackTo` the current entry asks none.
+- Region guards run after the entries' guards, region by region, deepest
+  first, each region's guards in registration order, then the navigator's
+  guards once. `NavigationRegionDeparture` names the `Region`, the departing
+  `Entries` (current first), the `Operation`, and the `Kind`: `Retire` when one
+  of them retires, otherwise `Retain`. A navigator guard gets the region the
+  request was made to, and the entries and kind of the whole transition.
+- `NavigationRegionGuardOptions` decides when a guard is asked. By default it
+  is skipped when the transition only retains the region's entries
+  (`AskOnRetain`), and for `ClearHistory` (`AskOnClearHistory`), also for the
+  child regions a ClearHistory closes. The entries' own guards are asked
+  either way.
+- `false` gives `Rejected(Guard)` with `By` = `null`. A guard that throws fails
+  the request as `Failed(Guarding)` (event 1060, with the guard's type as
+  `EntryType`). `OnCommitted` actions run after those of the entries' guards,
+  in asking order.
+- They run like entry guards: outside turns, on the model's thread with a hook
+  scheduler, never two of one region at once, with the hook's token, and a
+  request from one into its region, an ancestor or a descendant is
+  `Rejected(Reentrant)`. A joined Back asks them once.
+- The guards are read when the request starts guarding. Disposing the
+  registration removes the guard; one removed before its turn is not asked.
+  Navigator disposal asks none.
+- A window close that clears its regions one after another, such as WPF's
+  `GuardWindowClose` or a Runic View's `CanCloseAsync`, asks a navigator guard
+  once per region with entries. Register an "unsaved anywhere" guard on the
+  window's main region instead, or let it remember its answer.
+
 `LeaveConfirmation` keeps the caller's context, so its confirm delegate stays
 on the UI thread. Without a hook scheduler the guard can run in the frame of
 the call that started the navigation. If that call blocks a UI thread on the
@@ -577,7 +756,8 @@ ReactiveUI apps can ask through an `Interaction` instead of a dialog region, wit
 Work that a hook starts on a presentation's side, such as a question shown in a
 browser, should end with the hook. `RunicNavigator.HookCancellationToken`
 returns the token of the hook whose code runs on the calling asynchronous flow
-(the guard's `token`), or `CancellationToken.None` outside hooks.
+(the guard's `token`, or an activation hook's), or `CancellationToken.None`
+outside hooks.
 `Runic.Application.Views` ends a browser interaction request with it, so a
 superseded guard aborts the browser handler's `signal`.
 
@@ -606,7 +786,8 @@ Runic Desktop's embedded window) or `GuardWindowClose` on a WPF
 `NavigationHost` (Runic.Navigation.Wpf). Either clears the window's regions
 before it closes, and a guard that rejects or fails keeps the window open.
 
-`WhenIdleAsync()` waits until no transition or retirement is running.
+`WhenIdleAsync()` waits until no transition or retirement is running;
+`NavigationRegion<T>.WhenIdleAsync()` waits only for the requests of one region.
 
 ### Threading
 
@@ -659,7 +840,8 @@ resumes on its own context as usual.
 - A hook that disposes its own navigator stalls disposal for `CloseTimeout`,
   because disposal waits for the transition that runs the hook.
 - A hook that awaits `WhenIdleAsync()` deadlocks: the navigator is not idle
-  while that hook runs.
+  while that hook runs. The same holds for the `WhenIdleAsync()` of the hook's
+  region.
 - A child guard that commits a change in its own region supersedes the
   parent's transition, because the parent's commit sees the child's version
   change.
@@ -780,6 +962,7 @@ public async Task ConfirmCompletesTheRequest()
 | 1073 | `NavigatorDisposeFailed` | Error | Disposing the navigator fails unexpectedly, for example started by `Dispose`, which does not wait; entries may not have retired. | `ErrorType` |
 | 1074 | `NavigationBackJoined` | Debug | A Back joins the pending Back of its region instead of superseding it. | `Region`, `RegionId` |
 | 1075 | `NavigationEntryNotificationFailed` | Error | A `NavigationEntryContext.StateChanged` handler or an `INavigationAware` method throws; the other handlers still run, and the change stands. `Notification` is `StateChanged`, `OnNavigatedTo` or `OnNavigatedFrom`. | `Region`, `RegionId`, `Operation`, `EntryType`, `Notification`, `ErrorType` |
+| 1076 | `NavigationActivationFailed` | Error | An `INavigationActivated` or `INavigationActivated<TInput>` hook throws; the commit stands and reports `Activation = Failed`. | `Region`, `RegionId`, `Operation`, `EntryType`, `ErrorType` |
 
 Errors and warnings carry the exception. Rejections, supersessions, joined Backs and
 dismissed results log at Debug. The properties are `Region` (the `TContent`
@@ -789,7 +972,7 @@ the same `TContent`), `Operation`, `EntryType`, `Step`, `Reason`, `Property`
 and `ErrorType`, never
 values.
 
-- Events 1060-1075 use the category `Runic.Navigation`
+- Events 1060-1076 use the category `Runic.Navigation`
   (`RunicNavigator.LogCategory`), from `RunicNavigatorOptions.LoggerFactory`
   or the scope's `ILoggerFactory` with `AddRunicNavigation()`.
 - Events 1030-1033 use the logger of the `RunicModelContext`:
@@ -802,6 +985,6 @@ values.
   its formatted message followed by the exception.
 
 Navigation reserves events 1060-1079: 1060-1069 for transitions and cleanup,
-and 1070-1079 for results and later navigation events, of which 1076-1079 are
+and 1070-1079 for results and later navigation events, of which 1077-1079 are
 not used yet. Events 1044-1049 are reserved for the ReactiveUI navigation
 adapter.

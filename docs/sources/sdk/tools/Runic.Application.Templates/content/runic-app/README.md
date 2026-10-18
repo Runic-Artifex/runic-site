@@ -115,6 +115,15 @@ clipboard on the default Runic Desktop host (create the project without
 | `Views.cs` | The `WorkspaceWindow` and the Views. The build generates a typed client for each. |
 | `WorkspaceServices.cs` | `AddWorkspace()` registers the ViewModels, the generated `AddRunicViews()` and the platform services. |
 | `Program.cs` | Opens the Window with the services from `AddWorkspace()`. |
+<!--#if (desktopHost) -->
+| `ApplicationIdentity.cs` | The application ID and name from the project file, and `DiagnosticsLog`, which keeps the Desktop diagnostics. |
+<!--#else -->
+| `ApplicationIdentity.cs` | The application ID and name from the project file. |
+<!--#endif -->
+| `icons/` | The application's placeholder icon: `icon.svg`, `icon.png` (512 px) and `icon.ico` (16 to 256 px). |
+<!--#if (packaging) -->
+| `packaging/` | `package.mjs` and the manifests it fills: MSIX on Windows, `.app` and disk image on macOS, Flatpak on Linux. See [Package it](#package-it). |
+<!--#endif -->
 <!--#if (frontend == "angular") -->
 | `Frontend/src/app` | Components connect generated clients with `injectView()` and render the page that `WorkspaceViewModel.Main` selects with `ViewOutlet`, both from `@runic-artifex/angular`. |
 <!--#elif (frontend == "svelte") -->
@@ -223,6 +232,42 @@ way. Give status such as `IsDirty`, `Error` or a collection a private setter
 form fields publicly settable.
 <!--#endif -->
 
+## Identity and icons
+
+The project file declares the application's identity once:
+
+| Property | Value | Used for |
+| --- | --- | --- |
+| `RunicApplicationId` | `__RUNIC_APPLICATION_ID__` | The desktop entry, icon and Flatpak ID on Linux, the bundle identifier on macOS, the package name and AppUserModelID on Windows. |
+| `RunicApplicationName` | `__RUNIC_APPLICATION_NAME__` | The name users see. |
+| `Version` | `1.0.0` | The application's version. |
+| `ApplicationIcon` | `icons/icon.ico` | The executable's icon in Explorer and the taskbar. |
+
+Choose the ID before you ship: a reverse-DNS name for a domain you control,
+such as `org.example.Notes` (`dotnet new runic-app --application-id org.example.Notes`
+sets it). Use ASCII letters, digits and dots, and start each part with a
+letter, so every platform accepts it; changing it later makes the platforms see
+a different application. `ApplicationIdentity.Id` reads it from the assembly.
+<!--#if (gtk4) -->
+Program.cs passes it to `WithGtk4`, so the desktop matches the windows to the
+desktop entry of that name.
+<!--#endif -->
+<!--#if (desktopHost) -->
+To show notifications, pass it to `AddRunicPlatformServices(ApplicationIdentity.Id)`
+once the application is installed: the platforms accept it only from an
+installed application (a desktop entry of that name, a registered
+AppUserModelID or an MSIX package, a macOS bundle).
+<!--#endif -->
+
+The icon in `icons/` is a neutral placeholder. Replace `icons/icon.svg` with
+your own square icon, then render `icon.png` (512 px) and `icon.ico` from it,
+for example with ImageMagick:
+
+```sh
+magick -background none -density 384 icons/icon.svg -resize 512x512 icons/icon.png
+magick icons/icon.png -define icon:auto-resize=256,128,64,48,32,24,16 icons/icon.ico
+```
+
 ## Publish
 
 ```sh
@@ -231,12 +276,85 @@ dotnet publish -c Release -r linux-x64
 
 Use `win-x64`, `osx-arm64`, or another runtime identifier for other
 platforms. Windows builds are GUI applications (`WinExe`), so no console window
-opens and diagnostics written to standard error are not visible there. The
+opens.
+<!--#if (desktopHost) -->
+Desktop diagnostics, such as a missing WebView runtime, still go to standard
+error, which a terminal or a redirect (`RunicWindowApp.exe 2> errors.txt`)
+shows, and to `diagnostics.log` in a folder named after the application ID
+under the user's local application data (`%LOCALAPPDATA%` on Windows,
+`~/.local/share` on Linux, `~/Library/Application Support` on macOS). The log
+starts empty at each start and keeps at most 256 KiB of diagnostics, without
+arguments or data.
+<!--#endif -->
+The
 publish folder holds the executable and a `www` folder with the built frontend;
 ship those two together, without debug symbols. Users need no Node.js or package
 manager, only the platform WebView or a browser described above. The
 [Ship a Desktop application](https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/desktop/shipping.md)
 guide covers publish modes, signing and packaging per platform.
+<!--#if (packaging) -->
+
+## Package it
+
+`packaging/package.mjs` packages the application on the platform it runs on.
+It reads `RunicApplicationId`, `RunicApplicationName`, `Version`,
+`Description`, `PackageProjectUrl`, `RunicApplicationPublisher` and
+`RunicApplicationUrlSchemes` from the project file, publishes with NativeAOT, fills the `{{...}}` fields of
+the manifests in `packaging/` and writes the package to `artifacts/package/`.
+Run it with Node 22 or later (or Bun) from the project directory:
+
+```sh
+node packaging/package.mjs windows   # MSIX, on Windows with the Windows SDK
+node packaging/package.mjs macos     # .app in a disk image, on macOS with Xcode's command line tools
+node packaging/package.mjs flatpak   # Flatpak, on Linux with flatpak and flatpak-builder
+```
+
+On Debian and Ubuntu, the Flatpak target needs `flatpak flatpak-builder
+appstream appstream-compose librsvg2-common desktop-file-utils` and the
+Flathub remote (`flatpak remote-add --user --if-not-exists flathub
+https://dl.flathub.org/repo/flathub.flatpakrepo`), from which flatpak-builder
+installs the GNOME runtime and SDK on the first build.
+
+| Platform | Package | Without credentials | To ship it |
+| --- | --- | --- | --- |
+| Windows | `<id>_<version>_x64.msix` from `packaging/windows/AppxManifest.xml` | Unsigned; Windows installs only signed packages. Sign it with a test certificate to try it. | A code-signing certificate whose subject is `RunicApplicationPublisher`: `--certificate app.pfx` (password in `RUNIC_SIGNING_PASSWORD`) or `--thumbprint <sha1>` from the certificate store, and `--timestamp-url` from your provider. A cloud signing service signs the unsigned package with its own `signtool` options. The Microsoft Store signs packages itself. |
+| macOS | `<name>.app` and `<name>-<version>.dmg` from `packaging/macos/Info.plist` and `entitlements.plist` | Ad-hoc signed with the hardened runtime: it runs on this Mac; Gatekeeper blocks it elsewhere. | An Apple Developer Program membership with a Developer ID Application certificate in the keychain (`--sign "Developer ID Application: Example Ltd (TEAMID)"`), and notarization credentials stored once with `xcrun notarytool store-credentials <profile>` (`--notary-profile <profile>`), which notarizes and staples the disk image. `--rid osx-arm64,osx-x64` builds a universal executable. |
+| Linux | `<id>.flatpak` and a repository in `artifacts/package/flatpak/repo`, from `packaging/linux/flatpak.yml`, `app.desktop` and `app.metainfo.xml` | Unsigned: install the bundle with `flatpak install --user <id>.flatpak`. | A GPG key for your own repository (`--gpg-sign <key id>`). Flathub reviews a submission from your account and builds from source in its own sandbox, which needs a manifest that builds the .NET project offline (the `org.freedesktop.Sdk.Extension.dotnet` SDK extension and generated NuGet sources) instead of installing this published folder. |
+
+The Flatpak runs on the GNOME runtime, which provides GTK 4 and WebKitGTK 6,
+so create the project with `--host desktop-gtk4` for it. Inside Flatpak the
+application ID is `FLATPAK_ID`, which `WithGtk4` accepts when it matches.
+
+### Identity on each platform
+
+- **Windows**: the package name is the application ID, and Windows registers
+  the AppUserModelID `<package family name>!App` that notifications use; Runic
+  uses it in the package. An unpackaged copy (a ZIP or another installer)
+  registers its AppUserModelID itself, with a Start menu shortcut whose
+  `System.AppUserModel.ID` is the ID. Login startup in a package needs a
+  `desktop:StartupTask` extension in the manifest; Runic's login startup
+  reports it unavailable there.
+- **macOS**: the bundle identifier is the application ID, and the frontend is
+  in `Contents/Resources/www`, where Runic finds it.
+- **Linux**: the desktop entry, the AppStream metadata and the icons are named
+  after the ID.
+
+Once installed, pass the ID to `AddRunicPlatformServices(ApplicationIdentity.Id)`
+for notifications.
+
+### Opened URLs and files
+
+`RunicApplicationUrlSchemes` (for example `org.example.notes` for an OAuth
+redirect to `org.example.notes:/callback`) adds the scheme to every package:
+a `windows.protocol` extension in the MSIX manifest, `CFBundleURLTypes` in
+`Info.plist` and `x-scheme-handler/<scheme>` in the desktop entry. Windows and
+Linux start the application with the URL as its argument; macOS sends it as
+an Apple event. File types are commented examples in the manifests: a
+`windows.fileTypeAssociation` extension, `CFBundleDocumentTypes` with a
+`UTExportedTypeDeclarations` entry, and a MIME type in the desktop entry with
+a shared-mime-info definition for a type of your own. Treat opened URLs and
+files as untrusted input.
+<!--#endif -->
 <!--#if (nix) -->
 
 ## Build it with Nix
@@ -278,8 +396,11 @@ reports the real hash: replace `lib.fakeHash` with it, and update it whenever
 the lock file changes.
 
 <!--#endif -->
-The package installs the program in `bin`, the desktop entry in
-`share/applications`, and GTK and WebKitGTK as run-time libraries. `nix develop`
+The package installs the program in `bin`, the desktop entry
+`share/applications/__RUNIC_APPLICATION_ID__.desktop` with the icons from
+`icons/` under the same name, and GTK and WebKitGTK as run-time libraries.
+`flake.nix` repeats the application ID; change it there too when you change
+`RunicApplicationId`. `nix develop`
 opens a shell with the .NET SDK, Node, the package manager and those libraries.
 The SDK's
 [Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v__RUNIC_NUGET_VERSION__/nix/README.md)

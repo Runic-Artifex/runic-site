@@ -11,7 +11,7 @@ executable and a folder, or when an ASP.NET Core application serves a single
 page application. Projects created with `dotnet new runic-app` do not need it:
 they copy the built frontend to a `www` folder next to the executable.
 
-> This guide follows Runic SDK 0.8.0-preview.4. The few differences in
+> This guide follows Runic SDK 0.8.0-preview.5. The few differences in
 > 0.6.0-preview.1 are marked where they occur.
 
 Replace `<VERSION>` below with the current release from the
@@ -147,7 +147,7 @@ dotnet "$packer" Client.Web/dist artifacts/app.runic-assets --trusted-generated-
 
 Embed the result with `RunicAssetsEmbeddedArchive`, or open the file at run time
 with `AssetArchive.Read`. The
-[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/tools/Runic.Assets.Packer/README.md)
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Assets.Packer/README.md)
 lists its options, JSON output and exit codes.
 
 ### Trusted generated output
@@ -181,11 +181,11 @@ directory.
 
 ## Reference
 
-- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Assets/README.md):
+- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Assets/README.md):
   explicit embedded resources, the Linux development directory source,
   validation and inspection.
-- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Assets.AspNetCore/README.md)
-  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Assets.Desktop/README.md):
+- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Assets.AspNetCore/README.md)
+  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Assets.Desktop/README.md):
   HTTP behavior and routing.
-- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/specs/assets/archive-v1.md)
+- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/specs/assets/archive-v1.md)
   and the [framework-neutral asset boundary](adr/0013-framework-neutral-asset-boundary.md).

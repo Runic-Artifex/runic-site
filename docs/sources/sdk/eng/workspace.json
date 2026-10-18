@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.8.0-preview.4",
+  "version": "0.8.0-preview.5",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "edd2d175794afc86e964a06cb55329f44793009f"
@@ -153,6 +153,10 @@
       "project": "packages/dotnet/Runic.Platform.Linux.Polkit/Runic.Platform.Linux.Polkit.csproj"
     },
     {
+      "name": "Runic.Platform.Linux.DBus",
+      "project": "packages/dotnet/Runic.Platform.Linux.DBus/Runic.Platform.Linux.DBus.csproj"
+    },
+    {
       "name": "Runic.Platform.Windows.Elevation",
       "project": "packages/dotnet/Runic.Platform.Windows.Elevation/Runic.Platform.Windows.Elevation.csproj"
     }
@@ -292,6 +296,18 @@
         "tests/web/svelte-package-consumers"
       ]
     },
+    "packaging": {
+      "dependsOn": [
+        "platform",
+        "application"
+      ],
+      "paths": [
+        "tools/Runic.Application.Templates/content/runic-app/packaging",
+        "tools/Runic.Application.Templates/content/runic-app/ApplicationIdentity.cs",
+        "tools/Runic.Application.Templates/content/runic-app/icons",
+        "tests/native/Runic.Packaging.Probe"
+      ]
+    },
     "templates": {
       "dependsOn": [
         "application",
@@ -353,10 +369,15 @@
         "tests/dotnet/Runic.Platform.Runtime.Tests",
         "tests/native/Runic.Desktop.WebViewSmoke",
         "tests/native/Runic.Desktop.Gtk4.Smoke",
+        "tests/native/Runic.Desktop.AccessibilityProbe",
         "tests/native/Runic.StatusIcon.Smoke",
         "tests/native/Runic.Lifetime.Smoke",
         "packages/dotnet/Runic.Platform.Linux.Polkit",
         "tests/dotnet/Runic.Platform.Linux.Polkit.Tests",
+        "packages/dotnet/Runic.Platform.Linux.DBus",
+        "packages/dotnet/Runic.Platform.Linux.DBus.Generator",
+        "tests/dotnet/Runic.Platform.Linux.DBus.Tests",
+        "tests/dotnet/Runic.Platform.Linux.DBus.Generator.Tests",
         "tests/native/Runic.Privileged.Smoke",
         "packages/dotnet/Runic.Platform.Windows.Elevation",
         "tests/dotnet/Runic.Platform.Windows.Elevation.Tests",

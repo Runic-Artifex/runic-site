@@ -41,6 +41,7 @@ test('picker toggles are the template Boolean parameters', () => {
     [
       ['--tests', false],
       ['--nix', false],
+      ['--packaging', false],
     ],
   );
   assert.equal(defaultSelection().tests, 'false');
@@ -225,7 +226,7 @@ test('every template file renders cleanly for every host and ViewModel choice', 
           !desktop,
         );
         assert.equal(
-          files['Program.cs'].includes('.WithGtk4()'),
+          files['Program.cs'].includes('.WithGtk4(ApplicationIdentity.Id)'),
           host === 'desktop-gtk4',
         );
         assert.equal(

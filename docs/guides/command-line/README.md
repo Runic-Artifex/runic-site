@@ -237,7 +237,7 @@ internal static class WindowCommands
 ```
 
 Capture values such as `settings`, not the command's scoped services.
-See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
+See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
 and
 [start a UI host on the main thread](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.7.0-preview.2/packages/dotnet/Runic.CommandLine/README.md#start-a-ui-host-on-the-main-thread).
 
@@ -248,14 +248,14 @@ Help, parse errors and faults are English by default. The
 translates them with a [Translations](../translations/README.md) catalog. It
 ships English and German text for every framework key, and it looks up your
 own command descriptions in your catalog, including the prompt text that
-Command Line `0.7.0-preview.1` added. Translations `0.7.0-preview.3` needs
+Command Line `0.7.0-preview.1` added. Translations `0.7.0-preview.4` needs
 Command Line `0.7.0-preview.1` or later.
 Add the adapter and the build package to the project from
 [your first command](#your-first-command):
 
 ```sh docs-test=skip:translations-repository
-dotnet add package Runic.Translations.CommandLine --version 0.7.0-preview.3
-dotnet add package Runic.Translations.Build --version 0.7.0-preview.3
+dotnet add package Runic.Translations.CommandLine --version 0.7.0-preview.4
+dotnet add package Runic.Translations.Build --version 0.7.0-preview.4
 ```
 
 The build package compiles a `translations/` folder next to the project file.
@@ -354,7 +354,7 @@ command names, option spellings, codes and `messageKey` values never change.
   variable writes the exception of an `RCLI5000` host failure to stderr.
 
 The
-[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.3/packages/dotnet/Runic.Translations.CommandLine/README.md)
+[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.4/packages/dotnet/Runic.Translations.CommandLine/README.md)
 describes the resolver in full.
 
 ## Next steps

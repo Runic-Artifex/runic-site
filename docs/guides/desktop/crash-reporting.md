@@ -13,7 +13,7 @@ and have not been run for Runic.
 
 | Where it is thrown                                                      | What happens                                                                                                                                                                                                                                                  |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A Bridge command, setter, checked write or operation                    | The page gets a bounded failure and the exception is logged ([events 1000 to 1008](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)). The application keeps running. |
+| A Bridge command, setter, checked write or operation                    | The page gets a bounded failure and the exception is logged ([events 1000 to 1008](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)). The application keeps running. |
 | A close guard, a `DesktopWindow.StateChanged` or `FilesDropped` handler | Logged (1052, 3011, 3012). The application keeps running.                                                                                                                                                                                                     |
 | A status icon's `Activated` handler                                     | Rethrown on the thread pool: the process ends as for any thread-pool exception.                                                                                                                                                                               |
 | The application body passed to `RunicDesktopHost.Run`                   | Runic closes the windows and disposes the host, then `Run` throws it. Returned from `Main`, it ends the process.                                                                                                                                              |
@@ -28,14 +28,14 @@ no visible standard error, so log it yourself.
 On Linux, WebKitGTK renders the page in a separate web process. When that
 process crashes, the window reloads its page and Runic reports
 `web-process-terminated` (event 3010); the application keeps running. See
-[Web process crashes on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Desktop/README.md#web-process-crashes-on-linux);
+[Web process crashes on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop/README.md#web-process-crashes-on-linux);
 the crash of `WebKitWebProcess` itself is in the system journal
 (`coredumpctl`).
 
 ## Log the exception that ends the process
 
 Register logging as the
-[Views guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.4/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
+[Views guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
 describes, then log from `AppDomain.UnhandledException`. It is raised for the
 application body and for every other thread, before the process ends:
 
@@ -57,8 +57,8 @@ return RunicDesktopHost.Run(provider, options, RunAsync);
 - `UnobservedTaskException` does not end the process. It is raised when a
   faulted task that nobody awaited is collected, so it reports late, if at all.
 - Write the log under the user's local application data, next to the
-  template's `diagnostics.log` (`DiagnosticsLog.Path`, in templates after
-  `0.8.0-preview.4`), in a file of its own: the template starts
+  template's `diagnostics.log` (`DiagnosticsLog.Path`, in templates since
+  `0.8.0-preview.5`), in a file of its own: the template starts
   `diagnostics.log` empty at each start, so a crash line written there is gone
   after the next start.
 - Exception messages can contain user data. Show the user what a report

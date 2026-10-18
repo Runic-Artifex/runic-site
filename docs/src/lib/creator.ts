@@ -39,6 +39,7 @@ type TemplateSymbol = {
   readonly defaultValue?: string;
   readonly value?: string;
   readonly replaces?: string;
+  readonly valueTransform?: string;
   readonly choices?: readonly {
     readonly choice: string;
     readonly displayName?: string;
@@ -139,11 +140,49 @@ export function templateSymbols(
  */
 export function templateReplacements(
   selection: CreatorSelection,
+  projectName: string = templateSourceName,
 ): [string, string][] {
-  const values = templateSymbols(selection);
+  const values = {
+    ...templateSymbols(selection),
+    ...applicationIdentity(projectName),
+  };
   return Object.entries(symbols)
     .filter(([name, symbol]) => symbol.replaces && name in values)
     .map(([name, symbol]) => [symbol.replaces!, values[name]]);
+}
+
+type TemplateForm = {
+  readonly identifier: string;
+  readonly pattern?: string;
+  readonly replacement?: string;
+  readonly steps?: readonly string[];
+};
+
+const forms = templateJson.forms as Readonly<Record<string, TemplateForm>>;
+
+function applyForm(form: string, value: string): string {
+  // `identity` is built in.
+  if (!(form in forms)) return value;
+  const { identifier, pattern, replacement, steps } = forms[form];
+  if (identifier === 'chain')
+    return steps!.reduce((text, step) => applyForm(step, text), value);
+  return value.replace(new RegExp(pattern!, 'g'), replacement!);
+}
+
+/**
+ * The template's name-derived symbols for the default application ID
+ * (`--application-id` left out): the display name, and `com.example.` with
+ * the project name's ASCII letters and digits, else `App`.
+ */
+function applicationIdentity(projectName: string): Record<string, string> {
+  const derived = applyForm(
+    symbols.derivedApplicationName.valueTransform!,
+    projectName,
+  );
+  return {
+    applicationDisplayName: projectName,
+    applicationIdValue: `com.example.${derived || 'App'}`,
+  };
 }
 
 export function choiceFor(
