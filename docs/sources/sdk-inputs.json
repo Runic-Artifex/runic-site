@@ -90,8 +90,12 @@
     "tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.svelte",
     "tools/Runic.Application.Templates/content/runic-app/frontends/vue/index.html",
     "tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.vue",
+    "tools/Runic.Application.Templates/content/runic-app/packaging/linux/app.desktop",
+    "tools/Runic.Application.Templates/content/runic-app/packaging/linux/flatpak.yml",
+    "tools/Runic.Application.Templates/content/runic-app/packaging/macos/Info.plist",
+    "tools/Runic.Application.Templates/content/runic-app/packaging/windows/AppxManifest.xml",
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:9cfbe027c22095e04743903fb1de0cab6e50b24111311a3d312d6f55831f0c89"
+  "contentDigest": "sha256:8ab4fb3c5881b59cf8b165377b382ffeed2397a6aec222e03bfca851ad96e3b9"
 }

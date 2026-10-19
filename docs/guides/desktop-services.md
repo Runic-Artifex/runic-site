@@ -42,7 +42,11 @@ application, so a ViewModel takes it in its constructor without an
 `services.AddRunicPlatformServices("org.example.Notes")`: on Windows the
 AppUserModelID your installer registers with the shell, on Linux the
 reverse-DNS ID of the installed desktop entry (`org.example.Notes` for
-`org.example.Notes.desktop`); macOS uses the bundle identifier. Without an ID,
+`org.example.Notes.desktop`); macOS uses the bundle identifier. Since
+`0.8.0-preview.5`, an application installed from an MSIX package uses its
+package's AppUserModelID and ignores the ID (see
+[identity in a package](desktop/shipping.md#identity-in-a-package-and-without-one)).
+Without an ID,
 the Linux portal infers the identity from the desktop session, which suits
 development, and Windows requests return `Unavailable(ProviderNotConfigured)`,
 as do requests through CS-WebUI's registration. Portal diagnostics of these
