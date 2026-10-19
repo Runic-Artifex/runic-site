@@ -17,7 +17,8 @@
 //   generated README. `<VERSION>` stands for the release version.
 // - `template:<path>`: an excerpt of a runic-app template file, rendered for
 //   the selection given as `symbol=value` (or `flag=value`) arguments over
-//   the template defaults, with the project named `MyApp`. The SDK's template
+//   the template defaults, with the project named `MyApp` and its derived
+//   values (application ID `com.example.MyApp`) filled in. The SDK's template
 //   acceptance suite builds and runs every variant, so this code is compiled.
 // - `source:<path>`: an excerpt of compiled SDK code in the snapshot, such as
 //   an example or its tests, which SDK CI builds and runs. READMEs are not
@@ -42,6 +43,7 @@ import {
   creatorOptions,
   creatorToggles,
   defaultSelection,
+  templateReplacements,
   templateSourceName,
   templateSymbols,
 } from '../src/lib/creator.ts';
@@ -143,10 +145,14 @@ function readSnapshot(path) {
 
 function renderTemplateFile(path, selection) {
   assert.ok(!path.split('/').includes('..'), path);
-  return renderTemplate(
+  let text = renderTemplate(
     readFileSync(new URL(path, templateRoot), 'utf8'),
     templateSymbols(selection),
-  )
+  );
+  // The values dotnet new fills in, such as the default application ID.
+  for (const [from, to] of templateReplacements(selection, projectName))
+    text = text.replaceAll(from, to);
+  return text
     .replaceAll(templateSourceName, projectName)
     .replaceAll('__RUNIC_NUGET_VERSION__', versionPlaceholder)
     .replaceAll('__RUNIC_NPM_VERSION__', versionPlaceholder);

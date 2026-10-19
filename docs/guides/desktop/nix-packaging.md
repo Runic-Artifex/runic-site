@@ -38,6 +38,11 @@ download whose hash in `flake.nix` starts as `lib.fakeHash`: the first
 `nix build` fails and reports the real hash. Replace it, and update it whenever
 the lock file changes.
 
+The package installs the desktop entry `share/applications/<ID>.desktop`, named
+after `RunicApplicationId` in the project file, with the icons from `icons/`
+under the same name. `flake.nix` repeats the ID; change it there too when you
+change `RunicApplicationId`.
+
 ## A flake for an existing application
 
 Every function of `runic-sdk.lib` takes the consumer's nixpkgs first. Pin the
