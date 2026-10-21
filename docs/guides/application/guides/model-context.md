@@ -222,7 +222,7 @@ service provider and register the instance.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands, progress and cancellation.
 - The
-  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
+  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
   and
-  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
+  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
   in the SDK guides cover the details, including WPF's dispatcher context.
