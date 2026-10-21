@@ -23,10 +23,10 @@
     ['linux-x64', 'Supported', 'Supported', 'n/a'],
     ['win-x64', 'Supported', 'Supported', 'Supported'],
     ['osx-arm64', 'Supported', 'Supported', 'n/a'],
-    ['linux-arm64', 'Supported (0.9)', 'Supported (0.9)', 'n/a'],
-    ['win-arm64', 'Supported (0.9)', 'Unsupported', 'Supported (0.9)'],
-    ['linux-musl-x64', 'Supported (0.9)', 'Unsupported', 'n/a'],
-    ['linux-musl-arm64', 'Supported (0.9)', 'Unsupported', 'n/a'],
+    ['linux-arm64', 'Supported', 'Supported', 'n/a'],
+    ['win-arm64', 'Supported', 'Unsupported', 'Supported'],
+    ['linux-musl-x64', 'Supported', 'Unsupported', 'n/a'],
+    ['linux-musl-arm64', 'Supported', 'Unsupported', 'n/a'],
     ['osx-x64', 'Best effort', 'Best effort', 'n/a'],
   ];
 </script>
@@ -57,8 +57,16 @@
     <Notice title="Applies from 1.0">
       <p>
         This policy takes effect with 1.0.0. Until then every release is a
-        preview: any release may change or remove an API, and only the latest
-        preview gets fixes.
+        preview with a plain <code>0.y.z</code> version: a new minor (<code
+          >0.9.0</code
+        >
+        to <code>0.10.0</code>) may change or remove APIs, a patch (<code
+          >0.9.1</code
+        >) only fixes or adds, and only the latest minor gets fixes. Releases
+        from 0.9.0 on carry no <code>-preview.N</code>
+        suffix; GitHub still marks them as prereleases.
+        <code>Runic.Application.Views.CsWebUi</code> keeps a prerelease version of
+        its own while the CS-WebUI release it depends on is a prerelease.
       </p>
     </Notice>
     <DocSection title="Version numbers" id="versions">
@@ -71,9 +79,11 @@
         </li>
         <li>All packages of one SDK share its version.</li>
         <li>
-          Previews of the next version (<code>x.y.0-preview.N</code>) go to the
-          npm <code>preview</code> dist-tag; <code>latest</code> moves only to stable
-          versions.
+          From 1.0, previews of the next version (<code>x.y.0-preview.N</code>
+          or
+          <code>x.y.0-rc.N</code>) remain possible. They go to the npm
+          <code>preview</code> dist-tag, and <code>latest</code> moves only to
+          stable versions; until 1.0 it moves to every <code>0.y.z</code> release.
         </li>
         <li>
           Experimental APIs and the preview package are outside these rules.
@@ -106,10 +116,10 @@
         </li>
         <li>
           Command-line commands, options, exit codes and versioned JSON
-          contracts such as <code>runic.create/1</code> or
-          <code>runic.commandline/1</code>. A changed contract gets a new
-          identifier and the old one stays until the next major. Human-readable
-          output is not a contract.
+          contracts such as <code>runic.create/2</code> or
+          <code>runic.application.tool.doctor/1</code>. A changed contract gets
+          a new identifier and the old one stays until the next major.
+          Human-readable output is not a contract.
         </li>
         <li>
           The Bridge protocol between .NET and npm packages of the same release,
@@ -148,9 +158,12 @@
       <p>
         A host and RID pair is supported only when Runic CI builds and runs that
         host's native layer on it. Packaged but unverified RIDs are best effort.
-        The <a href={resolve('/support')}>supported platforms</a> page shows the current
-        status and minimum operating systems. The planned 1.0 status, with the RIDs
-        that move into CI during 0.9:
+        The <a href={resolve('/support')}>supported platforms</a> page shows the
+        current status and minimum operating systems. CI covers
+        <code>linux-arm64</code>
+        and
+        <code>win-arm64</code> on hosted Arm runners and the musl RIDs in an Alpine
+        container. The 1.0 status:
       </p>
       <!-- The scrollable table region must be reachable by keyboard. -->
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -158,7 +171,7 @@
         class="table-scroll"
         tabindex="0"
         role="region"
-        aria-label="Planned 1.0 support by host and runtime identifier"
+        aria-label="1.0 support by host and runtime identifier"
       >
         <table>
           <thead>
@@ -214,9 +227,10 @@
         </li>
         <li>
           <strong>Preview:</strong>
-          <code>Runic.Application.Views.CsWebUi</code> is the only preview package.
-          It ships with each stable release on a prerelease version and may change
-          in any release.
+          <code>Runic.Application.Views.CsWebUi</code> is the only preview
+          package. It depends on the prerelease <code>CsWebUi</code>, so it
+          ships with each release on a prerelease version of its own and may
+          change in any release.
         </li>
       </ul>
     </DocSection>
@@ -229,7 +243,7 @@
         </li>
         <li>
           Bug and security fixes ship in a patch of the latest minor only. A
-          preview gets no fixes once the next release ships.
+          preview gets no fixes once the next preview or stable release ships.
         </li>
       </ul>
     </DocSection>

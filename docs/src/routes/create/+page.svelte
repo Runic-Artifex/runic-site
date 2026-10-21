@@ -8,12 +8,18 @@
     creatorToggles,
     defaultSelection,
     isValidProjectName,
+    optionApplies,
   } from '#lib/creator.js';
-  import { currentRelease } from '#lib/release-docs.js';
+  import { catalogRows, currentRelease } from '#lib/release-docs.js';
   import { previewFiles } from '#lib/template-preview.js';
   import { onMount } from 'svelte';
 
   const version = currentRelease.version;
+  // The preview Runic.Application.Views.CsWebUi ships on a prerelease version
+  // of its own.
+  const csWebUiVersion =
+    catalogRows.find((row) => row.name === 'Runic.Application.Views.CsWebUi')
+      ?.version.value ?? version;
 
   // Prerequisites that depend on a choice. Every project needs the .NET 10 SDK.
   const requirements: Readonly<Record<string, { text: string; href: string }>> =
@@ -35,6 +41,7 @@
         text: 'WebView2 on Windows, WKWebView on macOS, or GTK 3 with WebKitGTK 4.1 on Linux',
         href: 'https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md',
       },
+      // Runic Desktop with --linux-gtk 4.
       'desktop-gtk4': {
         text: 'WebView2 on Windows, WKWebView on macOS, or GTK 4.12 with WebKitGTK 6.0 on Linux',
         href: 'https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md',
@@ -50,11 +57,24 @@
   let validName = $derived(isValidProjectName(name));
   let projectName = $derived(validName ? name : 'MyApp');
   let commands = $derived(creatorCommands(version, projectName, selection));
-  let files = $derived(previewFiles(projectName, version, selection));
+  let files = $derived(
+    previewFiles(projectName, version, selection, csWebUiVersion),
+  );
+  let shownOptions = $derived(
+    creatorOptions.filter((option) => optionApplies(option, selection)),
+  );
   let file = $derived(files[Math.min(activeFile, files.length - 1)]);
   let needs = $derived(
-    creatorOptions
-      .map((option) => requirements[choiceFor(option, selection).value])
+    shownOptions
+      .map((option) => choiceFor(option, selection).value)
+      .map(
+        (value) =>
+          requirements[
+            value === 'desktop' && selection.linuxGtk === '4'
+              ? 'desktop-gtk4'
+              : value
+          ],
+      )
       .filter((entry) => entry !== undefined),
   );
 
@@ -81,7 +101,7 @@
     if (!ready) return;
     const query: [string, string][] = [];
     if (projectName !== 'MyApp') query.push(['name', projectName]);
-    for (const option of creatorOptions) {
+    for (const option of shownOptions) {
       const value = choiceFor(option, selection).value;
       if (value !== option.defaultValue)
         query.push([option.flag.slice(2), value]);
@@ -168,7 +188,7 @@
         </span>
       </label>
 
-      {#each creatorOptions as option (option.symbol)}
+      {#each shownOptions as option (option.symbol)}
         <fieldset class="creator-field">
           <legend class="creator-legend">{option.label}</legend>
           <p class="creator-help">{option.description}</p>

@@ -16,9 +16,12 @@ await using var window = await surface.OpenWindowAsync(new DesktopWindowOptions
     ConfirmCloseAsync = async cancellationToken =>
     {
         // An application-specific function owned by the presentation's state layer.
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(TimeSpan.FromMinutes(10));
+#pragma warning disable RUNICDESK101 // The low-level presentation transport is experimental.
         var answer = await surface.ExecuteJavaScriptAsync(
-            "return await window.confirmUnsavedChanges?.() === true;",
-            TimeSpan.FromMinutes(10), cancellationToken: cancellationToken);
+            "return await window.confirmUnsavedChanges?.() === true;", timeout.Token);
+#pragma warning restore RUNICDESK101
         return answer == "true";
     },
 });
@@ -75,8 +78,8 @@ Configured confirmation requires `BrowserKind.Embedded` without `EmbeddedThenBro
 Rejecting unsupported configuration avoids silently dropping a data-loss guard.
 `DesktopWindowCapabilities.CloseConfirmation` reflects the actual embedded host.
 
-Existing custom hosts remain source compatible: `IDesktopWindowHost.SupportsCloseConfirmation`
-defaults to false. To opt in, return true and honor `DesktopWindowHostOptions.CloseRequested`:
+Existing custom hosts (experimental, `RUNICDESK100`) remain source compatible:
+`IDesktopWindowHost.SupportsCloseConfirmation` defaults to false. To opt in, return true and honor `DesktopWindowHostOptions.CloseRequested`:
 when it is set, suppress the native user close event and invoke the callback instead.
 Keep `CloseAsync` unconditional and raise `Closed` after native destruction. An opted-out
 host is rejected before opening when the application supplies a confirmation policy.
@@ -98,25 +101,25 @@ thread. It checks bridge responsiveness during the pending decision, veto, retry
 approved destruction. Root CI runs this smoke on Linux x64, Windows x64 and macOS Apple Silicon. Local execution evidence is retained with the native smoke outputs;
 adding CI coverage is not evidence that a remote platform run has passed.
 
-The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop.Gtk4/README.md)
+The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
 also exercises close veto/retry on its own dispatcher. Select the native backend
 you ship when verifying your application's close and cleanup behavior.
 
 ## Presentation-owned native work
 
 `DesktopWindow.SupportsNativeDispatch`, `CheckNativeAccess()` and
-`DispatchNativeAsync(Action<nint>, CancellationToken)` expose the verified native
+`InvokeNativeAsync(Action<nint>, CancellationToken)` expose the verified native
 owner boundary. The callback receives an HWND on Windows, GtkWindow on Linux or
 NSWindow on macOS; these identities are not interchangeable. Queued cancellation
 prevents invocation. Once a callback starts, its completion is observed even if
 the caller cancels. Never retain the handle beyond the owning presentation or send
 it to JavaScript.
 
-`Runic.Platform` provider APIs take an explicit owner for native file dialogs,
-launchers, and clipboard access. For an embedded Desktop window pass
-`DesktopNativeOwner` (see [platform services](../desktop-services.md)); the
-application owns the service lifetime and disposes services while the native
-event loop remains active. On macOS use
+Runic's hosts create the native file dialogs, launchers and clipboard of each
+window. For an embedded Desktop window you open yourself, create them with
+`DesktopPlatformServices.ForWindow(new DesktopNativeOwner(window))` (see
+[platform services](../desktop-services.md)); the application owns the service
+lifetime and disposes services while the native event loop remains active. On macOS use
 `DesktopEventLoop.Run(Func<Task>)` when composing asynchronous cleanup around
 Desktop directly so AppKit stays on its main thread until disposal completes.
 Applications built on Views get the same from `RunicDesktopHost.Run`.

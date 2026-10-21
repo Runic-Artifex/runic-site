@@ -27,7 +27,7 @@ without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
 This store, from the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/multi-window),
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/multi-window),
 loads the settings on demand and saves them by writing a temporary file and
 moving it over the old one, so a crash never leaves a half-written file. It
 uses System.Text.Json's source generator, so it works with NativeAOT:
@@ -126,16 +126,17 @@ _services = new ServiceCollection()
 With SDK `0.7.0-preview.6`, or outside a Runic Views app, create it from the
 platform provider yourself; you own it and dispose it at shutdown:
 
-| Platform     | Factory                                                          |
-| ------------ | ---------------------------------------------------------------- |
-| Windows      | `WindowsPlatformProvider.CreateSettings()`                       |
-| macOS        | `MacOSPlatformProvider.CreateSettings()`, once AppKit is running |
-| Linux, GTK 3 | `LinuxPlatformProvider.CreateSettings()`                         |
-| Linux, GTK 4 | `PortalPlatformProvider.CreateSettings()`                        |
+| Platform | Factory                                                          |
+| -------- | ---------------------------------------------------------------- |
+| Windows  | `WindowsPlatformProvider.CreateSettings()`                       |
+| macOS    | `MacOSPlatformProvider.CreateSettings()`, once AppKit is running |
+| Linux    | `new PortalApplication(applicationId).CreateSettings()`          |
 
-On Linux both factories read the same xdg-desktop-portal settings; the portal
-one doesn't load a GTK toolkit. The Windows provider's interactive check reads
-the preferences like this:
+On Linux it reads the xdg-desktop-portal settings with either GTK version,
+without loading a GTK toolkit. Before SDK `0.9.0`, the Linux factories were
+`LinuxPlatformProvider.CreateSettings()` and
+`PortalPlatformProvider.CreateSettings()`. The Windows provider's interactive
+check reads the preferences like this:
 
 ```csharp docs-test=source:tests/dotnet/Runic.Platform.Windows.Tests/SettingsTests.cs
 await using var settings = WindowsPlatformProvider.CreateSettings();

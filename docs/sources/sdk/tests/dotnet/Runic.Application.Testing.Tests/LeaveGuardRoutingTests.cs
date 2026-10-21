@@ -6,6 +6,7 @@ using ReactiveUI.Primitives;
 using Runic.Application.Testing;
 using Runic.Application.Views;
 using Runic.Application.Views.ReactiveUI;
+using Runic.Application.Views.ReactiveUI.Generated;
 using Runic.Navigation;
 using TUnit.Core;
 
@@ -160,8 +161,8 @@ internal sealed class LeaveGuardRoutingTests
     [Test]
     public async Task InteractionsStayInTheirWindowAsync()
     {
-        using var transportA = new InMemoryViewTransport();
-        using var transportB = new InMemoryViewTransport();
+        using var transportA = new InMemoryBridgeTransport();
+        using var transportB = new InMemoryBridgeTransport();
         using var windowA = new WindowContentSession(transportA);
         using var windowB = new WindowContentSession(transportB);
         var model = new SharedPromptModel();
@@ -319,11 +320,11 @@ internal sealed class LeaveGuardRoutingTests
         public ReactiveNavShellWindow Window { get; }
         public TestWindow<ReactiveNavShellViewModel> Native { get; }
         public ReactiveNavShellViewModel ViewModel => Window.ViewModel;
-        private InMemoryViewTransport Transport => Native.Host.Transport;
+        private InMemoryBridgeTransport Transport => Native.Host.Transport;
 
         public static async Task<GuardedShell> OpenAsync()
         {
-            Require(RunicReactiveSchedulerProvider.InstallMainThreadScheduler(),
+            Require(ReactiveSchedulers.InstallMainThreadScheduler(),
                 "The model-context main-thread scheduler was not installed.");
             var services = new ServiceCollection();
             services.AddRunicNavigation();
@@ -390,7 +391,7 @@ internal sealed class LeaveGuardRoutingTests
     }
 
     // The browser side of one mounted editor View: it waits for the guard's question and answers it.
-    private sealed record EditorPresentation(InMemoryViewTransport Transport, ReactiveNavEditorViewModel ViewModel,
+    private sealed record EditorPresentation(InMemoryBridgeTransport Transport, ReactiveNavEditorViewModel ViewModel,
         RunicViewDriver<ReactiveNavEditorViewModel> View, string Mount, string Client, string Connection)
     {
         public EditorPresentation MountAgain(string client, string connection) =>
@@ -464,7 +465,7 @@ internal sealed class TestWindow<TViewModel>(AsyncServiceScope scope, RunicWindo
 {
     private readonly object _gate = new();
     private readonly TaskCompletionSource _closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private Task<BridgeWindowCloseResult>? _closing;
+    private Task<RunicWindowCloseResult>? _closing;
 
     public RunicWindowTestHost<TViewModel> Host { get; } = host;
     public bool IsOpen => !_closed.Task.IsCompleted;
@@ -477,7 +478,7 @@ internal sealed class TestWindow<TViewModel>(AsyncServiceScope scope, RunicWindo
         return true;
     }
 
-    public ValueTask<BridgeWindowCloseResult> CloseAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+    public ValueTask<RunicWindowCloseResult> CloseAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         lock (_gate) _closing ??= Task.Run(() => CloseCoreAsync(timeout));
         return new(_closing.WaitAsync(cancellationToken));
@@ -488,10 +489,10 @@ internal sealed class TestWindow<TViewModel>(AsyncServiceScope scope, RunicWindo
 
     public async ValueTask DisposeAsync() => await CloseAsync(TimeSpan.Zero);
 
-    private async Task<BridgeWindowCloseResult> CloseCoreAsync(TimeSpan timeout)
+    private async Task<RunicWindowCloseResult> CloseCoreAsync(TimeSpan timeout)
     {
         _closed.TrySetResult();
-        var result = await Host.BeginCloseAsync(timeout);
+        var result = await Host.DrainAsync(timeout);
         Host.Dispose();
         await scope.DisposeAsync();
         return result;

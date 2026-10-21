@@ -12,22 +12,23 @@ and Translations have independent versions on their product pages.
 For a Svelte/Bun/ReactiveUI application with GTK 4 on Linux:
 
 ```sh docs-test=commands
-dnx Runic.Create@<VERSION> -- MyApp --frontend svelte --package-manager bun --host desktop-gtk4 --view-models reactiveui
+dnx Runic.Create@<VERSION> -- MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 4 --view-models reactiveui
 cd MyApp
 dotnet tool restore
 dotnet runic dev
 ```
 
 Install .NET 10 and the frontend tools reported by `dotnet runic doctor`.
-The creator takes its destination with `--output` (`-o`), as `dotnet new` does;
-`--directory` is its former name. Its `--format json` option selects JSON output. Commit generated versions and lockfiles. The
+The creator takes its destination with `--output` (`-o`), as `dotnet new` does.
+Its `--format json` option selects JSON output. Commit generated versions and lockfiles. The
 [creator](https://docs.runic-artifex.eu/create/) previews other choices; see
 [existing-app setup](existing-app.md) to add Runic to an app.
 
-`desktop-gtk4` references `Runic.Application.Views.Desktop` and
+`--linux-gtk 4` references `Runic.Application.Views.Desktop` and
 `Runic.Desktop.Gtk4`, which brings the GTK 4 and portal platform providers.
-Linux needs GTK 4.12 or newer and WebKitGTK 6.0. `desktop` selects GTK
-3/WebKitGTK 4.1 on Linux. Both use WebView2 on Windows and WKWebView on macOS;
+Linux needs GTK 4.12 or newer and WebKitGTK 6.0. `--linux-gtk 3`, the
+default, selects GTK 3/WebKitGTK 4.1 on Linux. Both use WebView2 on Windows and
+WKWebView on macOS;
 see [choosing a host and MVVM library](choosing.md) and
 [host selection](../desktop/host-selection.md) for native prerequisites.
 
@@ -64,7 +65,7 @@ The generated `AddRunicViews()` registers Bridges and Views; the application
 registers its ViewModels and services. The Window's root ViewModel is scoped.
 For ReactiveUI, register its model context before constructing commands:
 
-```csharp docs-test=template:WorkspaceServices.cs host=desktop-gtk4 view-models=reactiveui
+```csharp docs-test=template:WorkspaceServices.cs host=desktop linuxGtk=4 view-models=reactiveui
 services.AddRunicReactiveModelContext();
 services.AddScoped<WorkspaceViewModel>();
 services.AddScoped<WelcomeViewModel>();
@@ -83,7 +84,7 @@ explains the model context.
 
 Use the template's entry point before any top-level `await`:
 
-```csharp docs-test=template:Program.cs host=desktop-gtk4
+```csharp docs-test=template:Program.cs host=desktop linuxGtk=4
 var options = new DesktopHostOptions { DiagnosticSink = ReportDiagnostic }.WithGtk4(ApplicationIdentity.Id);
 ...
 return RunicDesktopHost.Run(provider, options, RunAsync);
@@ -102,7 +103,7 @@ each Window. They bind to the Window's native owner when it opens, with the
 provider for the running backend, so a GTK 4 process uses the portal file
 dialogs and never the GTK 3 provider:
 
-```csharp docs-test=template:WorkspaceServices.cs host=desktop-gtk4
+```csharp docs-test=template:WorkspaceServices.cs host=desktop linuxGtk=4
 // Per-window file dialogs, clipboard and file launcher from the provider for the running backend. A
 // ViewModel can take IFileDialogs, ITextClipboard or IWindowPlatformServices in its constructor; they
 // bind to the native window when it opens and report OwnerUnavailable until then, as in tests.
@@ -125,7 +126,7 @@ and unavailable-provider handling.
 
 ## Own shutdown and verify the published output
 
-Use `Presentation.RequestCloseAsync` on the Window's `DesktopBridgeWindow`
+Use `Window.RequestCloseAsync` on the Window's `DesktopBridgeWindow`
 host for app close buttons when they should
 follow `ConfirmCloseAsync`. A close policy can refuse an active mutation or
 await saving a draft. It requires an embedded presentation with

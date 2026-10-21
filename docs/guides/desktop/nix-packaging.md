@@ -2,8 +2,8 @@
 
 Since SDK `0.8.0-preview.1`, the Runic SDK's flake exports a builder for Runic
 applications, a development shell, and NixOS and Home Manager modules that
-install them. This guide follows `0.8.0-preview.5` and summarizes the SDK's
-[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/nix/README.md),
+install them. This guide follows `0.9.0` and summarizes the SDK's
+[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/nix/README.md),
 which has every argument and option.
 
 `buildRunicApplication` wraps nixpkgs' `buildDotnetModule`. It restores NuGet
@@ -39,9 +39,9 @@ download whose hash in `flake.nix` starts as `lib.fakeHash`: the first
 the lock file changes.
 
 The package installs the desktop entry `share/applications/<ID>.desktop`, named
-after `RunicApplicationId` in the project file, with the icons from `icons/`
+after `ApplicationId` in the project file, with the icons from `icons/`
 under the same name. `flake.nix` repeats the ID; change it there too when you
-change `RunicApplicationId`.
+change `ApplicationId`.
 
 ## A flake for an existing application
 
@@ -52,7 +52,7 @@ SDK input to the release your packages use:
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   runic-sdk = {
-    url = "github:Runic-Artifex/runic-sdk/v0.8.0-preview.5";
+    url = "github:Runic-Artifex/runic-sdk/v0.9.0";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 };
@@ -159,7 +159,7 @@ speech synthesis, 72.6 MiB smaller; screen readers still work, but it
 compiles from source for hours, so build it on your own cache.
 
 The policy of the application's
-[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 is installed in `$out/share/polkit-1/actions`. The build exports
 `RunicApplicationInstallPrefix` as `$out`, so an action can name the installed
 program, and fails when a policy names a program outside the package:

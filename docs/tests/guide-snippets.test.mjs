@@ -403,12 +403,13 @@ test('tagged guide code blocks match the pinned SDK snapshot', () => {
 
 test('app-facing guides import only the root Views entry', () => {
   // Generated clients own the generated-code entry points; applications and
-  // their tests use the root entry and the mock Bridge.
+  // their tests use the root entry, the mock Bridge and, for APIs that may
+  // still change, the experimental entry.
   for (const guide of guideFiles()) {
     const markdown = readFileSync(new URL(guide, guidesRoot), 'utf8');
     assert.doesNotMatch(
       markdown,
-      /@runic-artifex\/views\/(?!mock\b)[\w/-]+/,
+      /@runic-artifex\/views\/(?!(?:mock|experimental)\b)[\w/-]+/,
       `${guide} imports a generated-only Views entry`,
     );
   }
@@ -458,12 +459,12 @@ test('the snippet checker rejects edited and reordered excerpts', () => {
   assert.ok(commands.has('dnx Runic.Create@<VERSION>'));
   assert.ok(
     commands.has(
-      'dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --view-models reactiveui',
+      'dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 3 --view-models reactiveui',
     ),
   );
   assert.ok(
     !commands.has(
-      'dotnet new runic-app --name MyApp --host desktop --frontend svelte --package-manager bun --view-models reactiveui',
+      'dotnet new runic-app --name MyApp --host desktop --linux-gtk 3 --frontend svelte --package-manager bun --view-models reactiveui',
     ),
   );
   assert.ok(

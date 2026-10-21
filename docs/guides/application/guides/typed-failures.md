@@ -8,7 +8,7 @@ still rejects with `BridgeError`.
 
 > Declared failures are new in Runic SDK 0.7.0-preview.1 and are not in
 > 0.6.0-preview.1. Every code block is an excerpt of the
-> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/notes-view-first),
+> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/notes-view-first),
 > which the SDK's CI builds and tests, or of a package README.
 
 ## Before you add a declaration
@@ -36,7 +36,7 @@ TypeScript does not flag the old code: an ignored
 `Promise<BridgeOutcome<...>>` compiles like an ignored `Promise<State>`.
 Callers that already read the result, or use a framework command helper, only
 need to show the new `failure`. The
-[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/eng/release/notes/0.7.0-preview.1.md#upgrading)
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/eng/release/notes/0.7.0-preview.1.md#upgrading)
 list this with the other breaking changes.
 
 ## Shape the failure
@@ -100,7 +100,7 @@ outcome `domain_failed`. A misplaced, repeated or unsupported declaration is
 the build error `RUNICBRIDGE012`. A synchronous plain `ICommand` reports only a
 failure thrown before `Execute` returns; use an asynchronous command for
 failures that happen after an `await`. The
-[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
 has the full rules.
 
 ## Handle the outcome in TypeScript
@@ -123,9 +123,8 @@ state or `{ ok: false, failure }`, and its operation carries the failure type:
 ```ts docs-test=source:examples/notes-view-first/Frontend/src/generated/editor.ts
   /** Saves the note. A missing title, or the title of another saved note, is a declared failure. */
   save(): Promise<BridgeOutcome<EditorState, SaveFailure>>;
-  startSave(): Promise<EditorSaveOperation>;
-  startSaveWithRequestId(requestId: string): Promise<EditorSaveOperation>;
-  recoverSaveWithRequestId(requestId: string): Promise<EditorSaveOperation>;
+  // ...
+  startSave(options?: BridgeOperationStartOptions): Promise<EditorSaveOperation>;
 ```
 
 For a `[RunicUnion]` failure, `matchCase` from `@runic-artifex/views` needs a
@@ -173,7 +172,7 @@ like `wait()` and resolves the same `BridgeOutcome` as the command; it rejects
 with `BridgeError` when the operation failed unexpectedly, was cancelled or
 timed out, and with `BridgeOperationUncertainError` when its outcome is
 unknown. A stream keeps the values it published before the failure. The
-[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/web/views/README.md#declared-failures)
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/web/views/README.md#declared-failures)
 maps every terminal status to `outcome()`.
 
 ## Framework command helpers
@@ -195,15 +194,15 @@ const issue = save.error ?? writeError;
 const alert = save.failure !== undefined ? describeSaveFailure(save.failure) : issue !== undefined ? String(issue) : undefined;
 ```
 
-A Vue reactive property:
+Vue shallow refs, read with `.value` in script:
 
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-view-first/Vue/src/editor.ts
 // A declared failure is save.failure; save.error holds unexpected ones.
 const save = useCommand(() => writes.run(() => props.editor.save()));
 // ...
-const issue = save.error ?? writeError.value;
-const alert = save.failure !== undefined ? describeSaveFailure(save.failure) : issue !== undefined ? String(issue) : undefined;
+const issue = save.error.value ?? writeError.value;
+const alert = save.failure.value !== undefined ? describeSaveFailure(save.failure.value) : issue !== undefined ? String(issue) : undefined;
 ```
 
 A Svelte rune. The command function returns the outcome, so the helper can
@@ -313,7 +312,7 @@ await Assert.That(reply.Failure?.GetRawText()).IsEqualTo("""{"$case":"titleTaken
 
 // The operation path reports the same failure.
 var status = await editor.Start(vm => vm.SaveCommand).WaitAsync();
-await Assert.That(status.Kind).IsEqualTo("domain-failed");
+await Assert.That(status.Kind).IsEqualTo(RunicOperationStatusKind.DomainFailed);
 await Assert.That(status.Failure?.GetProperty("$case").GetString()).IsEqualTo("titleTaken");
 ```
 

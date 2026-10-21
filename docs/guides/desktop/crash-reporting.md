@@ -11,12 +11,12 @@ and have not been run for Runic.
 
 ## What Runic does with an exception
 
-| Where it is thrown                                                      | What happens                                                                                                                                                                                                                                                  |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A Bridge command, setter, checked write or operation                    | The page gets a bounded failure and the exception is logged ([events 1000 to 1008](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)). The application keeps running. |
-| A close guard, a `DesktopWindow.StateChanged` or `FilesDropped` handler | Logged (1052, 3011, 3012). The application keeps running.                                                                                                                                                                                                     |
-| A status icon's `Activated` handler                                     | Rethrown on the thread pool: the process ends as for any thread-pool exception.                                                                                                                                                                               |
-| The application body passed to `RunicDesktopHost.Run`                   | Runic closes the windows and disposes the host, then `Run` throws it. Returned from `Main`, it ends the process.                                                                                                                                              |
+| Where it is thrown                                                      | What happens                                                                                                                                                                                                                                        |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A Bridge command, setter, checked write or operation                    | The page gets a bounded failure and the exception is logged ([events 1000 to 1008](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)). The application keeps running. |
+| A close guard, a `DesktopWindow.StateChanged` or `FilesDropped` handler | Logged (1052, 3011, 3012). The application keeps running.                                                                                                                                                                                           |
+| A status icon's `Activated` handler                                     | Rethrown on the thread pool: the process ends as for any thread-pool exception.                                                                                                                                                                     |
+| The application body passed to `RunicDesktopHost.Run`                   | Runic closes the windows and disposes the host, then `Run` throws it. Returned from `Main`, it ends the process.                                                                                                                                    |
 
 An exception that ends the process is not logged by Runic. The .NET runtime
 prints it with its stack to standard error and ends the process: on Linux
@@ -28,14 +28,14 @@ no visible standard error, so log it yourself.
 On Linux, WebKitGTK renders the page in a separate web process. When that
 process crashes, the window reloads its page and Runic reports
 `web-process-terminated` (event 3010); the application keeps running. See
-[Web process crashes on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop/README.md#web-process-crashes-on-linux);
+[Web process crashes on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Desktop/README.md#web-process-crashes-on-linux);
 the crash of `WebKitWebProcess` itself is in the system journal
 (`coredumpctl`).
 
 ## Log the exception that ends the process
 
 Register logging as the
-[Views guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
+[Views guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
 describes, then log from `AppDomain.UnhandledException`. It is raised for the
 application body and for every other thread, before the process ends:
 
@@ -138,7 +138,7 @@ For a report about Runic itself, run doctor in the application's project and
 attach its output:
 
 ```sh docs-test=skip:illustrative-command
-dotnet runic doctor --output json --fail-on never > doctor.json
+dotnet runic doctor --format json > doctor.json
 ```
 
 The envelope lists every check with its result, including the WebView runtimes and the Linux

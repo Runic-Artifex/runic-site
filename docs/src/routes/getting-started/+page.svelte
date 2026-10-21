@@ -124,9 +124,7 @@
       <p>
         The creator asks for the host and the ViewModel library. Runic Desktop
         is the default and first-class host: native windows, embedded WebViews,
-        file dialogs and other platform services (<code
-          >--host desktop-gtk4</code
-        >
+        file dialogs and other platform services (<code>--linux-gtk 4</code>
         uses GTK 4 on Linux). CS-WebUI opens a browser window and is supported on
         a best-effort basis. ReactiveUI is the default ViewModel library; CommunityToolkit.Mvvm
         is supported too.

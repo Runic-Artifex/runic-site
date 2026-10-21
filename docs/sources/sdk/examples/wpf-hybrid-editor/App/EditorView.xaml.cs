@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Data;
 using Runic.Application.Views.Wpf;
@@ -49,7 +50,9 @@ public partial class EditorView : UserControl
         // Both editors inherit this page's DataContext, the navigation entry's EditorViewModel. The native
         // editor is also the fallback when the embedded host can't open, with the same draft.
         var host = WebHost = new RunicViewHost { Services = _services, ModelContext = _context, Fallback = new NativeEditorView() };
-        host.SetBinding(RunicViewHost.ModelProperty, new Binding());
+        host.SetBinding(RunicViewHost.ViewModelProperty, new Binding());
+        // Narrator announces the web View's pane with this name when focus enters it.
+        AutomationProperties.SetName(host, "Web note editor");
         host.StateChanged += (_, _) => PresentationError.Text = host.State == RunicViewHostState.Failed
             ? $"Web editor unavailable: {host.Error?.Message} You can keep editing natively or reload the web editor."
             : "";

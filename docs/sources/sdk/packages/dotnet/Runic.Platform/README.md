@@ -11,12 +11,27 @@ without a value return `PlatformResult<PlatformUnit>`. The type names carry the
 `Platform` prefix so they do not collide with `System.Reactive.Unit` and similar
 names when both namespaces are imported.
 
-Branch on the failure code. When a provider observed a native error, `Failed.Diagnostic`
+Branch on the failure code. The set of codes is open: a minor release may add one, so
+give a `switch` a default arm. `Unknown` (0) is only the default value and is never
+reported; `Other` is a failure no other code describes, such as an unclassified native
+error. When a provider observed a native error, the `Diagnostic` of `PlatformResult<T>.Failed`,
+`PickerResult<T>.Failed`, `FileCommitResult.NotCommitted` and `FileCommitResult.CommitUnknown`
 carries a `PlatformDiagnostic` with its domain (`HRESULT`, `Win32`, `errno`, an
 `NSError`/`GError` domain or a D-Bus error name), numeric code and, where the operating system's error table describes the code, its
 message. It is for logs and support, not display. Free-form text from native services
 (GError and D-Bus messages, NSError descriptions) is left out, so a diagnostic contains
 no paths.
+
+These services report what happens on the desktop as results and throw only for a
+caller mistake (`ArgumentException`), caller cancellation (`OperationCanceledException`)
+and use after disposal. Runic's administration APIs and the Desktop window host do the
+opposite and throw exceptions that keep the native error: they are called for one
+operation at a time, where a failure ends the operation, while a host capability is
+asked for by an application that must carry on when the desktop cannot help.
+
+The result unions `PlatformResult<T>`, `PickerResult<T>` and `FileCommitResult` are
+closed: they keep their cases for the major version. Each enum says in its
+documentation whether it is open or closed.
 
 `IFileDialogs.OpenDirectoryAsync(new OpenDirectoryOptions())` returns a
 `PickerResult<IDirectoryLease>` for one existing local directory. Keep the selected
@@ -30,23 +45,21 @@ Presentation close releases every lease the presentation still owns; on macOS th
 ends security-scoped access, and `LocalPath` throws once closing starts. Native
 owner closure alone does not release leases. When application work that uses a
 lease can outlive the window, such as recovery owned by an `AcceptedWorkScope`,
-drain that work before stopping the `PresentationLifetime`, or dispose the lease
-at the end of the work itself:
+drain that work before the window closes, or dispose the lease at the end of the
+work itself:
 
 ```csharp
-await acceptedWork.DisposeAsync(); // Work using lease.LocalPath has finished.
-await presentationLifetime.DisposeAsync(); // Releases remaining leases.
+await acceptedWork.DisposeAsync(); // Work using lease.LocalPath has finished; closing the window releases the rest.
 ```
 
 User dismissal returns `Dismissed`, caller cancellation throws
 `OperationCanceledException`, and presentation shutdown returns
 `Unavailable(OwnerClosed)`. The `platform.directories.open` capability reports
-availability when using `PresentationFiles`. Existing file-only implementations
-remain compatible and report directory selection unavailable. A custom
-`IPickerBackend` that implements `OpenDirectoryAsync` must also return `true` from
-`SupportsDirectorySelection`; `PresentationFiles` always calls the backend's method
-and throws `InvalidOperationException` if an undeclared backend returns a result
-other than `Unavailable`.
+whether the window's dialogs can select a directory. A file-dialog provider
+(`IPickerBackend` in Runic.Platform.Runtime) that implements `OpenDirectoryAsync`
+must also return `true` from `SupportsDirectorySelection`; the host always calls the
+provider's method and throws `InvalidOperationException` if an undeclared provider
+returns a result other than `Unavailable`.
 
 `PickerResult<T>.Selected` and `PlatformResult<T>.Success` deconstruct, so a
 caller can match and take the value in one pattern:
@@ -117,6 +130,31 @@ them to the native window when it opens. A host without a native owner
 registers `WindowPlatformServices.Unavailable(reason)`, whose operations and
 capabilities all report that reason. Tests can use the same instance.
 
+### Opening links
+
+`IDesktopFileLauncher.LaunchUriAsync(uri)` opens a web or mail link in the
+user's default browser or mail client and reports the outcome as a
+`PlatformResult` (capability `platform.uris.launch`):
+
+```csharp
+var result = await launcher.LaunchUriAsync(new Uri("https://example.org/help"));
+```
+
+It accepts only absolute `http`, `https` and `mailto` URIs. A relative URI, a
+path (an absolute path parses as a `file:` URI, a UNC path too) and every other
+scheme throw `ArgumentException` before anything native runs, so a link never
+starts a program; open local files with `LaunchAsync`. The URI comes from
+trusted application code: validate links a web page supplies before passing them
+on.
+
+| Platform | Mechanism | Outcomes |
+| --- | --- | --- |
+| Linux (GTK 3 and GTK 4, also in Flatpak and Snap) | The OpenURI desktop portal | The portal may let the user choose an application; cancelling is `Failed(UserDismissed)` |
+| Windows | `ShellExecuteEx` with the URI and the shell's URL association (the user's default), with zone checks | Without a handler, for example no mail client, Windows 11 offers to find an application and reports success; older shells report `Unavailable(BackendUnavailable)` |
+| macOS | `NSWorkspace openURL:configuration:completionHandler:` | No application for the scheme: `Failed(Other)` with the `NSError` domain and code (macOS 26: `NSCocoaErrorDomain 256`) |
+
+Success means the desktop accepted the URI, not that an application showed it.
+
 `IDesktopSettings` is application-scoped, so `AddRunicPlatformServices()`
 registers one singleton for it. A host or platform without a provider
 registers `DesktopSettings.Unavailable(reason)`: reads return
@@ -126,7 +164,7 @@ registers `DesktopSettings.Unavailable(reason)`: reads return
 `Unavailable(reason)` and which never raises `Activated`.
 `IDesktopStatusIcon`, `IDesktopLoginStartup` and `IDesktopInhibition` are
 application singletons too; without a provider they are
-`DesktopStatusIcons.Unavailable(reason)`, `DesktopLoginStartup.Unavailable(reason)`
+`DesktopStatusIcon.Unavailable(reason)`, `DesktopLoginStartup.Unavailable(reason)`
 and `DesktopInhibition.Unavailable(reason)`. Unavailable inhibition supports no
 effects, still validates the effects and reason as a provider does, and returns
 `Unavailable(reason)` from every acquisition.
@@ -144,11 +182,11 @@ either.
 | Service | Desktop window with a native owner | Desktop window without one, or outside a window scope | CS-WebUI |
 | --- | --- | --- | --- |
 | `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, `IDesktopFileLauncher` | Native provider; `OwnerClosed` after the window closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
-| Announcements and `PlatformServices.PresentAsync` | Native window | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
-| Window state, `PlatformServices.GetWindowState` | The window's bounds and state, also the last ones after it closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Announcements and `DesktopPlatformServices.PresentAsync` | Native window | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Window state, `DesktopPlatformServices.GetWindowState` | The window's bounds and state, also the last ones after it closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
 | Dropped files, `IRunicFileDropTarget` | Native paths, once per drop | None | None |
 | Menu bar commands, `IRunicMenuCommandSource` | The macOS menu bar, while the window is key | None | None |
-| `IDesktopSettings`, `IDesktopNotifications`, `IDesktopStatusIcon`, `IDesktopLoginStartup`, `IDesktopInhibition`, `IDesktopSecretStore`, `IDesktopTrash`, `IDesktopFileTransfers` | Operating system provider | Operating system provider, the same instance | `Unavailable(ProviderNotConfigured)` |
+| `IDesktopSettings`, `IDesktopNotifications`, `IDesktopStatusIcon`, `IDesktopLoginStartup`, `IDesktopInhibition`, `IDesktopSecretStore`, `IDesktopTrash`, `IDesktopFileTransfers`, `IDesktopVolumes`, `IDesktopApplications`, `IDesktopThumbnails` | Operating system provider | Operating system provider, the same instance | `Unavailable(ProviderNotConfigured)` |
 
 On Runic Desktop the application services behave the same with or without a
 native owner. The macOS settings, notifications and status icon need the AppKit
@@ -156,7 +194,7 @@ event loop that the Desktop host runs, as their providers describe. Linux inhibi
 window. CS-WebUI selects no native provider; register one before calling
 `AddRunicPlatformServices()` to use an application service there, for example
 `WindowsPlatformProvider.CreateInhibition()` or
-`new PortalApplication("org.example.Notes").CreateUnparentedInhibition()`.
+`new PortalApplication("org.example.Notes").CreateInhibition()`.
 Existing registrations are kept on both hosts.
 
 The application composes `IDesktopPrivilegedActions` itself, because it needs
@@ -170,14 +208,14 @@ with the application: its registered URL schemes, such as an OAuth callback, and
 its file types, at launch and while it runs. Linux and Windows start the
 application with them as arguments, which `ApplicationInstance` forwards to the
 running instance; macOS sends open events to the running application.
-`PlatformServices.CreateOpenRequests` in Runic.Application.Views.Desktop selects
+`DesktopPlatformServices.CreateOpenRequests` in Runic.Application.Views.Desktop selects
 the provider:
 
 ```csharp
 var launch = ApplicationLaunch.FromProcess(args);
 // After ApplicationInstance.ClaimAsync made this process the running instance; on macOS on the main thread,
 // before the first window.
-await using var opens = PlatformServices.CreateOpenRequests(new(["org.example.notes"]) { Files = true }, instance, launch);
+await using var opens = DesktopPlatformServices.CreateOpenRequests(new(["org.example.notes"]) { IncludeFiles = true }, instance, launch);
 opens.Opened += (_, request) => { /* worker thread: validate each URI, then dispatch to a window */ };
 ```
 
@@ -239,6 +277,45 @@ result is `Success`. A missing item is `Failed(NotFound)`, a refused move
 [trash design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/trash.md)
 has the per-platform behaviour and its verification.
 
+## Desktop applications
+
+`IDesktopApplications` is the desktop's application database: what a file is,
+which installed applications open it, the user's default for it, and their
+icons. A file manager uses it for "Open With", and opens a file with the
+application the user picks. `AddRunicPlatformServices()` registers one for the
+application; it needs no window. Linux reads the freedesktop.org desktop
+entries, shared MIME-info database, `mimeapps.list` and icon themes directly;
+Windows uses the shell's file and protocol associations, and macOS Launch
+Services with uniform type identifiers.
+
+```csharp
+if (await applications.GetContentTypeAsync(path) is PlatformResult<DesktopContentType>.Success(var type)
+    && await applications.GetApplicationsForAsync(type.Id) is PlatformResult<ImmutableArray<DesktopApplicationInfo>>.Success(var handlers))
+{
+    // handlers[0] is the default; show each one's Name and GetIconAsync(DesktopIconRequest.ForApplication(app.Id, 32)).
+    await applications.LaunchAsync(handlers[0].Id, [path]);
+}
+```
+
+Identifiers are the platform's own: on Linux a desktop file ID such as
+`org.gnome.TextEditor.desktop` and a MIME type such as `text/plain`; on Windows
+an executable's path (an AppUserModelID for a packaged application) and a MIME
+type or an extension such as `.txt`; on macOS a bundle identifier such as
+`com.apple.TextEdit` and a uniform type identifier such as `public.plain-text`.
+`x-scheme-handler/<scheme>` names a URL scheme everywhere. `LaunchAsync` starts
+only an installed application the desktop knows, and passes each path or URI as
+one argument, never through a shell. `SetDefaultApplicationAsync` changes one
+key of the user's `mimeapps.list` on Linux, asks Launch Services on macOS, which
+may confirm with the user, and reports `PermissionDenied` on Windows, where only
+the user chooses defaults (in `ms-settings:defaultapps`). Icons are PNG or SVG
+bytes.
+Inside Flatpak and Snap the host's applications are out of reach and the
+application methods report `Unavailable(BackendUnavailable)`; use
+`IDesktopFileLauncher` there. Hosts without a provider register
+`DesktopApplications.Unavailable(reason)`. The
+[desktop applications design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/desktop-applications.md)
+has the per-platform behaviour, the algorithms and their verification.
+
 ## Copy and move
 
 `IDesktopFileTransfers` copies and moves files and directories as a file
@@ -264,7 +341,8 @@ cancellation, items completed before stay done, and what the item in progress
 did is put back: its copies are removed, renamed entries move back, and an entry
 it replaced returns. The first error is `Failed` with `NotFound`,
 `PermissionDenied`, `Conflict` (a conflict without a handler), `UserDismissed`
-(a conflict answered `Cancel`) or `IoError`, such as for a full disk. Caller
+(a conflict answered `Cancel`), `IOError`, such as for a full disk, or `Other`
+for a native error no other code describes. Caller
 cancellation throws `OperationCanceledException`.
 
 ### What a transfer keeps
@@ -407,6 +485,83 @@ a transfer writes start with `.`, so a pattern such as `*.txt`, or skipping
 names that start with `.`, shows only complete entries. See
 [Watching files](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Application.Views#watching-files).
 
+## Volumes
+
+`IDesktopVolumes` lists the desktop's storage volumes, such as USB sticks, SD
+cards and other disks, mounts, unmounts and ejects them, and reports them as
+they appear, change and disappear. `AddRunicPlatformServices()` registers one
+for the application; it needs no window and is disposed with the service
+provider.
+
+```csharp
+await foreach (var change in volumes.WatchAsync(cancellationToken))
+{
+    switch (change)
+    {
+        case PlatformResult<DesktopVolumeChange>.Success(DesktopVolumeChange.Snapshot(var all)): Show(all); break;
+        case PlatformResult<DesktopVolumeChange>.Success(DesktopVolumeChange.Added(var volume)): Add(volume); break;
+        case PlatformResult<DesktopVolumeChange>.Success(DesktopVolumeChange.Changed(var volume)): Update(volume); break;
+        case PlatformResult<DesktopVolumeChange>.Success(DesktopVolumeChange.Removed(var id)): Remove(id); break;
+        case PlatformResult<DesktopVolumeChange>.Unavailable: ShowNone(); break; // A Snapshot follows if the service returns.
+    }
+}
+
+if (await volumes.MountAsync(stick.Id) is PlatformResult<DesktopVolume>.Success(var mounted))
+    OpenFolder(mounted.MountPaths[0]);
+```
+
+The watch starts with a `Snapshot` of every volume. `DesktopVolume.Id` is
+opaque; `MountPaths` is empty while the volume is not mounted, and `CanMount`,
+`CanUnmount` and `CanEject` say what applies now. Mounting may show an
+authorization prompt: a refusal is `Failed(PermissionDenied)`, a dismissed
+prompt `Failed(UserDismissed)`, a volume in use `Failed(ResourceBusy)`, a
+locked encrypted volume `Failed(Locked)`, and a volume that is gone
+`Failed(NotFound)`. Unmounting a volume that is not mounted succeeds; ejecting
+unmounts every volume of the drive first. An operation the volume or platform
+does not offer is `Unavailable(BackendUnavailable)`.
+
+| Platform | Provider |
+| --- | --- |
+| Linux | UDisks2 on the system bus, which asks Polkit; inside Flatpak add `--system-talk-name=org.freedesktop.UDisks2` |
+| Windows | The volume management API: drive letters and mounted folders. Windows mounts volumes itself, so `MountAsync` and `UnmountAsync` only succeed for a volume already in that state and otherwise report `Unavailable(BackendUnavailable)`; `EjectAsync` is "Safely Remove Hardware" |
+| macOS | Disk Arbitration, as Finder does; an application with a file open on the volume makes an unmount or eject `Failed(ResourceBusy)`. The startup disk's volumes are never unmounted or ejected |
+
+Hosts without a provider register `DesktopVolumes.Unavailable(reason)`. The
+[volumes design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/volumes.md)
+has the per-platform behaviour and its verification.
+
+## Thumbnails
+
+`IDesktopThumbnails` returns the thumbnail the desktop's file manager shows for
+a file, as a PNG image, so a file browser can show pictures, videos and
+documents without decoding them itself. `AddRunicPlatformServices()` registers
+one for the application; it needs no window.
+
+```csharp
+if (await thumbnails.GetThumbnailAsync(path, 128) is PlatformResult<DesktopThumbnail?>.Success({ } thumbnail))
+    ShowImage("data:image/png;base64," + Convert.ToBase64String(thumbnail.Png.AsSpan()), thumbnail.Width, thumbnail.Height);
+else
+    ShowIcon(path); // No thumbnail: show the type's icon, from IDesktopApplications.GetIconAsync.
+```
+
+`size` is the largest edge to display, up to 1024 pixels. The image keeps the
+file's aspect ratio and can differ in size from the request, so scale it to
+display: Linux returns the cached size at least as large (128, 256, 512 or 1024
+pixels), Windows and macOS at most `size`. A file without a thumbnail, such as
+a type no thumbnailer handles or one whose thumbnailing failed, is
+`Success(null)`; an icon is never returned instead. A missing file is
+`Failed(NotFound)`.
+
+| Platform | Provider |
+| --- | --- |
+| Linux | The freedesktop.org thumbnail cache (`~/.cache/thumbnails`) that file managers fill; on a miss the session's `org.freedesktop.thumbnails.Thumbnailer1` service, such as Tumbler on Xfce. GNOME and KDE run no such service, so there only thumbnails their file managers already made are returned. Inside Flatpak add `--filesystem=xdg-cache/thumbnails:ro` and `--talk-name=org.freedesktop.thumbnails.Thumbnailer1`. |
+| Windows | The shell's thumbnail providers and cache, as Explorer shows them |
+| macOS | Quick Look, as Finder shows them |
+
+Hosts without a provider register `DesktopThumbnails.Unavailable(reason)`. The
+[thumbnails design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/thumbnails.md)
+has the per-platform behaviour and its verification.
+
 ## Privileged actions
 
 `IDesktopPrivilegedActions` runs a step the application declared at build time,
@@ -468,7 +623,7 @@ argument must match the pattern at its position:
                          Verb="system"
                          Description="Change the system"
                          Message="Authentication is required to change the system."
-                         AllowActive="auth_admin_keep" />
+                         PolkitAllowActive="auth_admin_keep" />
   <RunicPrivilegedCommand Include="activate" Action="org.example.app.system"
                           Arguments="switch|boot;/nix/store/[a-z0-9]{32}-nixos-system-[A-Za-z0-9._+-]+" />
   <RunicPrivilegedCommand Include="rollback" Action="org.example.app.system" />
@@ -494,8 +649,9 @@ macOS daemon) check the same positions; the program then switches on the
 command name. Invalid commands are build error `RUNICPA015`, and invalid
 command patterns `RUNICPA008`.
 
-Platform packages read further metadata of their own, such as Polkit's
-`IconName` and `AllowActive`; see their guides. Metadata no package reads is
+Platform packages read further metadata of their own, named after their
+platform, such as Polkit's `PolkitIconName` and `PolkitAllowActive`; see their
+guides. Metadata no package reads is
 ignored.
 
 Each build validates the items and writes `PrivilegedActions.g.cs` under
@@ -515,9 +671,16 @@ The class name and namespace defaults are set when the package's targets are
 evaluated, after the project file, so a project's own `RootNamespace` applies
 and platform targets can read the final values.
 
+Two targets are supported hooks: `RunicValidatePrivilegedActions`, which
+validates the items, and `RunicGeneratePrivilegedActions`, which writes the
+class. A project can run its own targets before or after them with
+`BeforeTargets` and `AfterTargets`. The names of the other privileged-action
+targets, in this package and in the platform packages, may change.
+
 A platform package extends the generation with a target that depends on
 `RunicValidatePrivilegedActions`, which validates the items once, and appends
 that target to `RunicPrivilegedActionsDependsOn`; `RunicGeneratePrivilegedActions`
 writes the class only after those targets succeeded. A platform package that
 generates its own part of the class uses a reserved property name, and adds any
-new one to `RunicPrivilegedActionsReservedNames`.
+new one to `RunicPrivilegedActionsReservedNames`. These two properties are the
+protocol between Runic.Platform and the platform packages.

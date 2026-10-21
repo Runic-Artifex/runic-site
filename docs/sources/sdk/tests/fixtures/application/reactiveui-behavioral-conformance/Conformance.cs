@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 using Runic.Application.Testing;
 using Runic.Application.Views;
+using Runic.Application.Views.Generated;
 using Runic.Navigation;
 using TUnit.Core;
 
@@ -13,10 +14,11 @@ using System.Reactive.Linq;
 using Runic.Platform;
 using ReactiveUI.Binding.Reactive;
 using Runic.Application.Views.ReactiveUI.Reactive;
+using Runic.Application.Views.ReactiveUI.Reactive.Generated;
 using Runic.Navigation.ReactiveUI.Reactive;
 using FlavorUnit = System.Reactive.Unit;
 using FlavorScheduler = System.Reactive.Concurrency.IScheduler;
-using FlavorSchedulerProvider = Runic.Application.Views.ReactiveUI.Reactive.IRunicReactiveSchedulerProvider;
+using FlavorSchedulerProvider = Runic.Application.Views.ReactiveUI.Reactive.IReactiveSchedulerProvider;
 using DispatcherSchedulerProbe = ConformanceProbes.DispatcherScheduler;
 #elif DEFAULT_FLAVOR
 using ReactiveUI;
@@ -25,10 +27,11 @@ using ReactiveUI.Binding;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Concurrency;
 using Runic.Application.Views.ReactiveUI;
+using Runic.Application.Views.ReactiveUI.Generated;
 using Runic.Navigation.ReactiveUI;
 using FlavorUnit = ReactiveUI.Primitives.RxVoid;
 using FlavorScheduler = ReactiveUI.Primitives.Concurrency.ISequencer;
-using FlavorSchedulerProvider = Runic.Application.Views.ReactiveUI.IRunicReactiveSchedulerProvider;
+using FlavorSchedulerProvider = Runic.Application.Views.ReactiveUI.IReactiveSchedulerProvider;
 using DispatcherSchedulerProbe = ConformanceProbes.DispatcherSequencer;
 #else
 #error A ReactiveUI flavor must be selected.
@@ -40,7 +43,7 @@ internal sealed class ConformanceTests
     public async Task CommandSemanticsAsync()
     {
         await using var context = new RunicModelContext();
-        var scheduler = new RunicReactiveSchedulerProvider().For(context);
+        var scheduler = ReactiveSchedulers.For(context);
 
         var exact = ReactiveCommand.Create(() => 7, scheduler);
         Require(await ReactiveCommandExecution.Execute(exact, UnitValue(), CancellationToken.None) == 7,
@@ -90,7 +93,7 @@ internal sealed class ConformanceTests
     [Test, NotInParallel(Order = 2)]
     public async Task InteractionSemanticsAsync()
     {
-        using var transport = new InMemoryViewTransport();
+        using var transport = new InMemoryBridgeTransport();
         using var session = new WindowContentSession(transport);
         var model = new ConformanceInteractionModel();
         const string route = "conformance";
@@ -141,7 +144,7 @@ internal sealed class ConformanceTests
     [Test, NotInParallel(Order = 3)]
     public async Task NavigationInteractionSemanticsAsync()
     {
-        using var transport = new InMemoryViewTransport();
+        using var transport = new InMemoryBridgeTransport();
         using var session = new WindowContentSession(transport);
         await using var context = new RunicModelContext();
         await using var navigator = new RunicNavigator(new RunicNavigatorOptions { ModelContext = context });
@@ -223,9 +226,9 @@ internal sealed class ConformanceTests
     public async Task SchedulerFailureAndShutdownSemanticsAsync()
     {
         var context = new RunicModelContext();
-        var scheduler = new RunicReactiveSchedulerProvider().For(context);
+        var scheduler = ReactiveSchedulers.For(context);
         var reported = new List<Exception>();
-        context.UnhandledTurnException += error => { lock (reported) reported.Add(error); };
+        context.UnhandledTurnException += (_, args) => { lock (reported) reported.Add(args.Exception); };
         _ = Schedule(scheduler, 0, _ => throw new InvalidOperationException("scheduled failure"));
         var delivered = 0;
         _ = Schedule(scheduler, 0, _ => Interlocked.Increment(ref delivered));
@@ -249,7 +252,7 @@ internal sealed class ConformanceTests
     public async Task StreamOverflowStopsExecutionAsync()
     {
         await using var context = new RunicModelContext();
-        var scheduler = new RunicReactiveSchedulerProvider().For(context);
+        var scheduler = ReactiveSchedulers.For(context);
         var producer = new OpenSequenceObservable<int>(1, 2, 3);
         var command = ReactiveCommand.CreateFromObservable<FlavorUnit, int>(_ => producer, scheduler);
         var stream = new BridgeOperationStream(maximumItems: 2);
@@ -293,7 +296,7 @@ internal sealed class ConformanceTests
     public async Task BridgeExceptionSemanticsAsync()
     {
         await using var context = new RunicModelContext();
-        var scheduler = new RunicReactiveSchedulerProvider().For(context);
+        var scheduler = ReactiveSchedulers.For(context);
         var handled = new System.Collections.Concurrent.ConcurrentQueue<Exception>();
         // ReactiveUIBuilder.WithExceptionHandler installs RxState's default handler
         // for the process, so this runs last. (The test reset helpers are internal.)
@@ -373,9 +376,9 @@ internal sealed class ConformanceTests
     public async Task AmbientMainThreadSchedulerSemanticsAsync()
     {
         var logs = new RecordingLoggerFactory();
-        Require(RunicReactiveSchedulerProvider.InstallMainThreadScheduler(logs),
+        Require(ReactiveSchedulers.InstallMainThreadScheduler(logs),
             "The model-context main-thread scheduler was not installed over ReactiveUI's default.");
-        Require(RunicReactiveSchedulerProvider.InstallMainThreadScheduler(),
+        Require(ReactiveSchedulers.InstallMainThreadScheduler(),
             "A second install did not report the installed scheduler.");
 
         await using var first = new RunicModelContext();
@@ -453,7 +456,7 @@ internal sealed class ConformanceTests
     public async Task SchedulerSemanticsAsync()
     {
         await using var context = new RunicModelContext();
-        var scheduler = new RunicReactiveSchedulerProvider().For(context);
+        var scheduler = ReactiveSchedulers.For(context);
         var fifo = new List<int>();
         for (var value = 0; value != 16; value++)
             _ = Schedule(scheduler, value, current => fifo.Add(current));
@@ -518,18 +521,42 @@ internal sealed class ConformanceTests
         Require(customProvider.Calls == 1, "AddRunicReactiveModelContext replaced an application scheduler provider registration.");
     }
 
+    // W319-003 B4: one Reactive* prefix and ...Extensions holders (D27 row g), ReactiveSchedulers as the static entry
+    // point with the provider only as the registered service (vrx-05), and no RoutingState adapter (D35 row r).
+    [Test]
+    public async Task AdapterNamingAndSchedulerEntryPointAsync()
+    {
+        var assembly = typeof(ReactiveSchedulers).Assembly;
+        var names = assembly.GetExportedTypes().Select(type => type.Name).ToHashSet();
+        foreach (var removed in new[] { "RunicReactiveExceptions", "RunicReactiveSchedulerProvider", "IRunicReactiveSchedulerProvider",
+                     "RunicReactiveUIBuilderExtensions", "ReactiveRoutedRegion`1" })
+            Require(!names.Contains(removed), $"{removed} is still public.");
+        Require(names.IsSupersetOf(["ReactiveBridgeExceptionExtensions", "ReactiveUIBuilderExtensions", "ReactiveSchedulers",
+                "IReactiveSchedulerProvider", "ReactiveSchedulerProvider"]), "A renamed adapter type is missing.");
+        Require(typeof(ReactiveSchedulers).IsAbstract && typeof(ReactiveSchedulers).IsSealed, "ReactiveSchedulers is not a static class.");
+        Require(typeof(ReactiveSchedulerProvider).GetConstructors().Length == 0, "ReactiveSchedulerProvider has a public constructor.");
+
+        await using var context = new RunicModelContext();
+        var services = new ServiceCollection();
+        services.AddSingleton<IRunicModelContext>(context);
+        services.AddRunicReactiveModelContext();
+        await using var container = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        var provider = container.GetRequiredService<FlavorSchedulerProvider>();
+        Require(provider is ReactiveSchedulerProvider && ReferenceEquals(provider.For(context), ReactiveSchedulers.For(context)),
+            "The registered provider does not return the context's scheduler.");
+    }
+
     // The provider keeps one scheduler per context, so every resolution for a context shares its
     // ordering state (W240-001 section 9, M7).
     [Test, NotInParallel(Order = 9)]
     public async Task SchedulerLifetimeSemanticsAsync()
     {
         await using var context = new RunicModelContext();
-        var provider = new RunicReactiveSchedulerProvider();
-        Require(ReferenceEquals(provider.For(context), provider.For(context)),
-            "The provider returned distinct schedulers for one context.");
+        Require(ReferenceEquals(ReactiveSchedulers.For(context), ReactiveSchedulers.For(context)),
+            "ReactiveSchedulers returned distinct schedulers for one context.");
         await using var other = new RunicModelContext();
-        Require(!ReferenceEquals(provider.For(context), provider.For(other)),
-            "The provider shared a scheduler between contexts.");
+        Require(!ReferenceEquals(ReactiveSchedulers.For(context), ReactiveSchedulers.For(other)),
+            "ReactiveSchedulers shared a scheduler between contexts.");
 
         // A transient registration returns the cached scheduler, also for a singleton context.
         var services = new ServiceCollection();
@@ -615,13 +642,66 @@ internal sealed class ConformanceTests
             $"Work outside a model turn was not logged once per ViewModel type: {string.Join(", ", outside)}");
     }
 
+    // D42 (vrx-04): ReactiveRunicView<T> activates and deactivates its ViewModel in explicit framework callbacks, so an
+    // override of a protected hook that does not call base cannot keep a ViewModel activated.
+    [Test, NotInParallel(Order = 14)]
+    public void ViewHooksCannotSkipDeactivation()
+    {
+        var viewModel = new LifetimeProbeViewModel();
+        var view = new LifetimeProbeView { DataContext = viewModel };
+        ((IRunicViewLifetime)view).OnAttached();
+        ((IRunicWebMountLifetime)view).OnWebMounted();
+        Require(viewModel.Active == 1, "Mounting did not activate the ViewModel.");
+        ((IRunicWebMountLifetime)view).OnWebUnmounted();
+        ((IRunicWebMountLifetime)view).OnWebMounted();
+        Require(viewModel.Active == 1, "Remounting did not reactivate the ViewModel once.");
+        ((IRunicViewLifetime)view).OnDetached();
+        Require(viewModel.Active == 0, "An override that did not call base kept the ViewModel activated.");
+        Require(view.Calls.SequenceEqual(["attached", "mounted", "unmounted", "mounted", "detached"]),
+            $"The hooks ran as {string.Join(", ", view.Calls)}.");
+        foreach (var name in new[] { "OnAttached", "OnDetached", "OnWebMounted", "OnWebUnmounted" })
+        {
+            var method = typeof(ReactiveRunicView<LifetimeProbeViewModel>).GetMethod(name,
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic,
+                Type.EmptyTypes)!;
+            Require(method.IsFamily && method.IsVirtual, $"ReactiveRunicView<T>.{name} must be a protected virtual hook.");
+        }
+    }
+
+    private sealed class LifetimeProbeViewModel : ReactiveObject, IActivatableViewModel
+    {
+        public LifetimeProbeViewModel() =>
+            this.WhenActivated((Action<Action<IDisposable>>)(register =>
+            {
+                Active++;
+                register(new Deactivation(this));
+            }));
+
+        public int Active { get; private set; }
+        public ViewModelActivator Activator { get; } = new();
+
+        private sealed class Deactivation(LifetimeProbeViewModel owner) : IDisposable
+        {
+            public void Dispose() => owner.Active--;
+        }
+    }
+
+    private sealed class LifetimeProbeView : ReactiveRunicView<LifetimeProbeViewModel>
+    {
+        public List<string> Calls { get; } = [];
+        protected override void OnAttached() => Calls.Add("attached");
+        protected override void OnDetached() => Calls.Add("detached");
+        protected override void OnWebMounted() => Calls.Add("mounted");
+        protected override void OnWebUnmounted() => Calls.Add("unmounted");
+    }
+
     // W260-015: ReactiveUI's builder after the install. Core services keep the model-context scheduler; platform
     // services replace it with ReactiveUI's default outside a test runner, which a window reports as event 1091 once;
     // WithRunicModelContext() keeps it. Runs after BridgeExceptionSemanticsAsync, which builds ReactiveUI first.
     [Test, NotInParallel(Order = 13)]
     public async Task BuilderAfterInstallSemanticsAsync()
     {
-        Require(RunicReactiveSchedulerProvider.InstallMainThreadScheduler(), "The model-context scheduler is not installed.");
+        Require(ReactiveSchedulers.InstallMainThreadScheduler(), "The model-context scheduler is not installed.");
         var installed = RxSchedulers.MainThreadScheduler;
         var logs = new RecordingLoggerFactory();
         await using var provider = WindowServices(logs);
@@ -843,13 +923,12 @@ sealed class SingletonViewModel(FlavorScheduler scheduler)
 
 sealed class RecordingProvider : FlavorSchedulerProvider
 {
-    private readonly RunicReactiveSchedulerProvider _inner = new();
     public int Calls { get; private set; }
 
     public FlavorScheduler For(IRunicModelContext context)
     {
         Calls++;
-        return _inner.For(context);
+        return ReactiveSchedulers.For(context);
     }
 }
 

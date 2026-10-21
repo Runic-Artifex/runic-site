@@ -10,7 +10,7 @@ switching later changes a few lines.
 | Choice                   | Template option            | Choose it when                                                             |
 | ------------------------ | -------------------------- | -------------------------------------------------------------------------- |
 | Runic Desktop (default)  | `--host desktop`           | You are building a desktop app. It is the first-class host.                |
-| Runic Desktop with GTK 4 | `--host desktop-gtk4`      | Your Linux users run GTK 4 and WebKitGTK 6.                                |
+| Runic Desktop with GTK 4 | `--linux-gtk 4`            | Your Linux users run GTK 4 and WebKitGTK 6.                                |
 | CS-WebUI                 | `--host cswebui`           | A browser window is enough and you want the smallest runtime.              |
 | ReactiveUI (default)     | `--view-models reactiveui` | You are starting fresh, or already use ReactiveUI. It is the primary path. |
 | CommunityToolkit.Mvvm    | `--view-models toolkit`    | Your team or existing ViewModels use CommunityToolkit.Mvvm.                |
@@ -40,10 +40,10 @@ backend that is running, so a GTK 4 process never loads the GTK 3 provider:
 When the WebView runtime is missing, the template's Window falls back to an
 installed browser and writes the reason to standard error; `dotnet runic doctor`
 lists what a machine needs. `--host desktop` uses GTK 3 with WebKitGTK 4.1 on
-Linux. `--host desktop-gtk4` uses GTK 4.12 or newer with WebKitGTK 6.0 and
-xdg-desktop-portal file dialogs, and behaves like `desktop` on Windows and
-macOS. [Ship a Desktop application](../desktop/shipping.md) covers publishing,
-signing and packaging for each platform.
+Linux. Adding `--linux-gtk 4` selects GTK 4.12 or newer with WebKitGTK 6.0 and
+xdg-desktop-portal file dialogs, and changes nothing on Windows and macOS.
+[Ship a Desktop application](../desktop/shipping.md) covers publishing, signing
+and packaging for each platform.
 
 ### CS-WebUI (best effort)
 
@@ -189,7 +189,7 @@ The template references what each choice needs. For the defaults:
 <PackageReference Include="Runic.Application.Views.Desktop" Version="<VERSION>" />
 ```
 
-`--host desktop-gtk4` adds `Runic.Desktop.Gtk4`, `--host cswebui` references
+`--linux-gtk 4` adds `Runic.Desktop.Gtk4`, `--host cswebui` references
 `Runic.Application.Views.CsWebUi` instead, and `--view-models toolkit`
 references `CommunityToolkit.Mvvm` instead of the ReactiveUI adapter. Each host
 package brings `Runic.Application.Views` and its build targets. The frontend

@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
@@ -46,14 +46,14 @@ clients and these guides. The first seven follow the glossary of the
   [opening a Window from a ViewModel](samples/cross-window.md#open-a-window-from-a-viewmodel).
 - **Presentation**: what shows a Window's or View's web content on screen: an
   embedded WebView or an installed browser window, such as
-  `DesktopBridgeWindow.Presentation` (a `DesktopWindow`). A presentation closes
+  `DesktopBridgeWindow.Window` (a `DesktopWindow`). A presentation closes
   and reopens without changing the ViewModel.
 - **Surface**: Runic Desktop's `DesktopSurface`, which serves a Window's web
   content, capabilities and browser sessions, and opens presentations of it.
   `DesktopBridgeWindow.Surface` is the Window's surface.
 - **Owner**: the native window that platform services, such as file dialogs,
   the clipboard and file launchers, attach to: `DesktopNativeOwner` for a Runic
-  Desktop window, or an `INativePickerOwner` for another host. With
+  Desktop window, or an `INativeWindowOwner` for another host. With
   `AddRunicPlatformServices()`, the services a ViewModel takes in its
   constructor bind to the Window's owner when it opens.
 

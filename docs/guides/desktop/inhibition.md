@@ -17,8 +17,10 @@ if (result is PlatformResult<IDesktopInhibitionLease>.Success acquired)
 ```
 
 Create the service with `WindowsPlatformProvider.CreateInhibition()`,
-`MacOSPlatformProvider.CreateInhibition()`, or `PortalApplication.CreateInhibition(owner)`.
-The Linux owner is the same verified GTK3/GTK4 portal owner used by file dialogs.
+`MacOSPlatformProvider.CreateInhibition()`, or `PortalApplication.CreateInhibition()`;
+a Views application gets it from `AddRunicPlatformServices()` or
+`DesktopPlatformServices.CreateInhibition(applicationId)`. On Linux, as on Windows
+and macOS, the request is application-scoped and not tied to a window.
 Cancellation applies to acquisition; the operation must observe its own token
 and leave its `await using` scope to release the lease.
 
@@ -38,11 +40,8 @@ consumer and separate per-platform semantics.
 
 The Linux implementation uses generated wire proxies from the pinned portal XML.
 It subscribes before calling Inhibit, waits for the backend response and retains
-the request connection until disposal. The exported parent window identifier is
-needed only while the portal handles the request, so it is released as soon as
-the request is accepted. GTK3 allows one Wayland export per window at a time;
-holding it for the lease would block later portal requests, such as file
-dialogs, on that window. X11 parents hold no native export. A cancelled or failed
+the request connection until disposal. The request carries the empty parent
+window identifier, so it needs no window and holds no window export. A cancelled or failed
 acquisition disconnects its dedicated bus connection, including a late handle
 reply; it cannot leave an owned request behind. A portal replacement does not
 replay inhibition into the new service.

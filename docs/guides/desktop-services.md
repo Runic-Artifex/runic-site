@@ -1,26 +1,29 @@
 # Desktop preferences, notifications, file handoff, and clipboard
 
 `Runic.Platform` defines typed, host-independent contracts. Select an OS provider
-explicitly from `Runic.Platform.Windows`, `Runic.Platform.Linux`, or
-`Runic.Platform.MacOS`. These provider packages do not discover the operating
-system provider or add a generic application-host registration layer.
+explicitly: `WindowsPlatformProvider` from `Runic.Platform.Windows`,
+`MacOSPlatformProvider` from `Runic.Platform.MacOS`, or, on Linux,
+`PortalApplication` from `Runic.Platform.Linux.Portal`. These provider packages
+do not discover the operating system provider or add a generic
+application-host registration layer.
 
 Factories such as `WindowsPlatformProvider.CreateNotifications(...)` and
-`LinuxPlatformProvider.CreateSettings()` return services that the caller owns and
-disposes. Native file dialogs, file launchers, and clipboard providers also need
-a verified presentation owner. For an embedded Runic Desktop window, use the
-shipped owner in `Runic.Application.Views.Desktop`: each opened Window's `Host`
+`new PortalApplication(applicationId).CreateSettings()` return
+application-scoped services that the caller owns and disposes. Native file
+dialogs, file launchers, and the clipboard belong to a window, and Runic's hosts
+create them. For an embedded Runic Desktop window, each opened Window's `Host`
 is a `DesktopBridgeWindow<TViewModel>` that exposes `NativeOwner`, and
 `new DesktopNativeOwner(desktopWindow)` creates one for a `DesktopWindow` opened
-without Views. Pass it to the provider, for example
-`LinuxPlatformProvider.CreateFileDialogs(workspace.NativeOwner)`, where
-`workspace` is the opened bridge window. The owner runs provider callbacks on
+without Views. Pass it to `DesktopPlatformServices.ForWindow(owner)` in
+`Runic.Application.Views.Desktop`, for example
+`DesktopPlatformServices.ForWindow(workspace.NativeOwner)`, where `workspace` is
+the opened bridge window, to get that window's services. The owner runs provider callbacks on
 the window's native thread and becomes unavailable when that window closes or is
 replaced. `DesktopNativeOwner.IsAvailable` is false for any window without native
 dispatch, such as an installed browser after fallback or a custom host without a
 native handle. Do not retain native handles beyond the callback or send native
-handles and leases to the browser. Non-Desktop hosts, such as CS-WebUI and custom window
-hosts, still implement `INativePickerOwner` over their own dispatcher.
+handles and leases to the browser. Before SDK `0.9.0`, the providers had
+owner-scoped factories such as `LinuxPlatformProvider.CreateFileDialogs(owner)`.
 
 In a Runic Application Views app, `services.AddRunicPlatformServices()` does
 this for you, as the template does. It registers `IFileDialogs`,
@@ -51,9 +54,9 @@ the Linux portal infers the identity from the desktop session, which suits
 development, and Windows requests return `Unavailable(ProviderNotConfigured)`,
 as do requests through CS-WebUI's registration. Portal diagnostics of these
 notifications are logged as event 2003. To compose the service yourself, call
-`PlatformServices.CreateNotifications(applicationId)`. Notifications through
+`DesktopPlatformServices.CreateNotifications(applicationId)`. Notifications through
 `AddRunicPlatformServices()` are new in SDK `0.7.0-preview.8`; see the
-[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views.Desktop/README.md).
+[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views.Desktop/README.md).
 
 Create and dispose owner-bound services while the native event loop is running.
 Provider shutdown drains native callbacks and resource releases; close the native
@@ -62,19 +65,18 @@ window only after that cleanup has completed.
 The APIs separate picker dismissal (`PickerResult<T>`) from operation success,
 unavailability, and failure (`PlatformResult<T>`). File selection returns C#
 leases; saves use a staged transaction and report known or uncertain commit
-outcomes. `PresentationLifetime` tracks admitted work, and the shared runtime
-releases leases and provider resources during disposal.
+outcomes. The shared runtime tracks admitted work and releases leases and
+provider resources during disposal.
 
-Linux file dialogs use XDG portals by default with GTK 3 parenting.
-`LinuxPlatformProvider.CreateFileDialogs(owner)` is for Linux with GTK 3
-only: it parents through GTK 3 and must not be used with a GTK 4 window. GTK-native
-choosers are a separate explicit compatibility choice for unsandboxed apps. GTK 4
-applications should use the GTK 4 portal adapter, for example
-`PortalPlatformProvider.CreateFileDialogs(Gtk4PlatformProvider.CreatePortalWindowOwner(owner))`,
-and must not load GTK 3 just to open a file. Windows notifications require shell registration for the chosen
+Linux file dialogs use XDG portals, parented to the window by the host with the
+window's GTK version: `Runic.Platform.Linux` serves GTK 3 windows and
+`Runic.Platform.Linux.Gtk4` GTK 4 windows, and a GTK 4 process never loads
+GTK 3. GTK-native choosers are a separate explicit compatibility choice for
+unsandboxed apps; inside Flatpak or Snap they report
+`Unavailable(BackendUnavailable)`. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
@@ -96,17 +98,17 @@ Existing file-only implementations remain compatible and return directory
 selection unavailable. Treat an unavailable provider or browser-only owner as
 an application state, and retain an appropriate fallback.
 
-Use the provider matching the presentation backend; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform/README.md).
+Runic's hosts use the provider matching the presentation backend; see the
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform/README.md).
 
 ## Status icon, single instance and login startup
 
 `AddRunicPlatformServices(id)` also registers `IDesktopStatusIcon` and
 `IDesktopLoginStartup`, and `ApplicationInstance.ClaimAsync` makes the first
 launch the primary instance. Since SDK `0.8.0-preview.1`, the status icon,
-login startup and `PlatformServices.PresentAsync` work on Linux, Windows and
+login startup and `DesktopPlatformServices.PresentAsync` work on Linux, Windows and
 macOS. The
-[status icon example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/examples/status-icon/README.md)
+[status icon example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/examples/status-icon/README.md)
 starts without a window, shows the icon with a menu, and brings its Window
 forward when the application is launched again. Since SDK `0.8.0-preview.2`, a
 termination signal (Ctrl+C, SIGTERM from `systemctl --user stop` or a logout,
@@ -115,15 +117,15 @@ SIGKILL. To shut down in order, as the example does, set
 `DesktopHostOptions.HandlesShutdownWithoutWindow = true` and end the
 application loop when `ShutdownRequested` is cancelled; without it, a signal
 that arrives while no window is open ends the process at once. See
-[Runic.Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop/README.md).
+[Runic.Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Desktop/README.md).
 The provider READMEs describe
 each platform:
-[Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.Windows/README.md#status-icon-and-window-presentation)
+[Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.Windows/README.md#status-icon-and-window-presentation)
 and
-[macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.MacOS/README.md#status-icon).
+[macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.MacOS/README.md#status-icon).
 On macOS, Runic Desktop also adds the standard application, Edit, View and
 Window menus unless the application supplies its own; see
-[keyboard and zoom in embedded windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop/README.md#keyboard-and-zoom-in-embedded-windows).
+[keyboard and zoom in embedded windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Desktop/README.md#keyboard-and-zoom-in-embedded-windows).
 
 Since SDK `0.8.0-preview.3`, a command line can hand its work to the running
 instance, such as a windowless application behind the status icon, and print
@@ -134,7 +136,7 @@ the messages and exit status from `ApplicationInstanceClaim.Forwarded.Reply`
 `ApplicationLaunch.Reply` (`IApplicationLaunchReply`). An instance claimed
 without the option, or by an earlier SDK, refuses such a launch, and the claim
 fails with `ResourceBusy`. See
-[single instance and replies to later launches](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.Runtime/README.md#single-instance-and-replies-to-later-launches).
+[single instance and replies to later launches](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.Runtime/README.md#single-instance-and-replies-to-later-launches).
 
 Since SDK `0.8.0-preview.4`, with `ApplicationInstanceOptions.ForwardOnly` a
 command line never becomes the instance; without one, the claim is
@@ -147,13 +149,13 @@ but outlives a lost SSH session, which cancels `Disconnected` instead.
 time as a `RunicPrivilegedAction` item, a fixed program with bounded arguments,
 as the administrator after the platform's authorization prompt. It is new in
 SDK `0.8.0-preview.1`. Start with the
-[contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform/README.md#privileged-actions),
+[contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform/README.md#privileged-actions),
 then follow the provider for each platform:
-[Polkit on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[Polkit on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 (`Runic.Platform.Linux.Polkit`),
-[UAC on Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.Windows.Elevation/README.md)
+[UAC on Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.Windows.Elevation/README.md)
 (`Runic.Platform.Windows.Elevation`) and
-[a launch daemon on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.MacOS/README.md#privileged-actions).
+[a launch daemon on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.MacOS/README.md#privileged-actions).
 Since SDK `0.8.0-preview.4`, `RunicPrivilegedCommand` items declare commands of
 one action, which share its authorization, with an argument pattern per
 position:
@@ -167,9 +169,9 @@ position:
 ```
 
 The request and the privileged program check each position; see
-[commands under one action](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform/README.md#commands-under-one-action).
+[commands under one action](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform/README.md#commands-under-one-action).
 
-The [design and security review](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/specs/platform/privileged-operations.md)
+The [design and security review](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/specs/platform/privileged-operations.md)
 records the threat model. [Nix packaging](desktop/nix-packaging.md#run-time-and-privileged-actions)
 installs the Polkit policy with the application.
 
@@ -179,9 +181,9 @@ installs the Polkit policy with the application.
 directory entries and a Git checkout's `HEAD`, and calls back in a turn of the
 model context, so a ViewModel refreshes when they change. It is new in SDK
 `0.8.0-preview.1`; see
-[Watching files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#watching-files)
+[Watching files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md#watching-files)
 and, for tests on a fake clock,
-[`RunicPathWatchTester`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Testing/README.md#file-watchers).
+[`RunicPathWatchTester`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Testing/README.md#file-watchers).
 
 Since SDK `0.8.0-preview.4`, `RunicWatchTarget.Files(path, pattern)` also
 reports writes to and replacement of each matching entry, which `Directory`
@@ -194,4 +196,4 @@ and calls `AnnounceAsync(message, priority)` to have the screen reader speak a
 status, such as "Saved", without moving focus; Orca hears no live regions in
 WebKitGTK. A browser or serve-only mode reports `OwnerUnavailable`, and WebView2
 and WKWebView also speak live regions, so send each message one way. See
-[Accessibility](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop/README.md#accessibility).
+[Accessibility](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Desktop/README.md#accessibility).

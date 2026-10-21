@@ -2,7 +2,7 @@
 
 Runic Translations now owns its Svelte integrations independently of the SDK.
 Use the published Translations `0.7.0-preview.4` package family; its version does
-not need to match Application SDK `0.8.0-preview.5`. Existing applications can
+not need to match Application SDK `0.9.0`. Existing applications can
 keep their current SDK release while migrating localization. See the
 [Translations SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.4/docs/guides/translations/quickstart-sveltekit.md).
 
@@ -15,8 +15,8 @@ keep their current SDK release while migrating localization. See the
 | `@runic-artifex/sveltekit/translations`            | `@runic-artifex/translations-sveltekit/translations`            |
 | `@runic-artifex/sveltekit/translations/navigation` | `@runic-artifex/translations-sveltekit/translations/navigation` |
 
-`@runic-artifex/svelte/views` remains an SDK import. The root
-`@runic-artifex/svelte` import becomes Views-only. The root
+The root `@runic-artifex/svelte` import becomes Views-only; since SDK `0.9.0`
+it also replaces the removed `@runic-artifex/svelte/views` entry. The root
 `@runic-artifex/sveltekit` import and its `/page-options` subpath also remain
 SDK-owned. Do not mix the independent preview packages with an older SDK
 Translations integration; upgrade the translation packages as one product

@@ -47,6 +47,40 @@ internal sealed class CloseGuardTests
         Require(!fixture.Native.IsOpen, "The native window stayed open after the guard allowed the close.");
     }
 
+    // A navigator guard asked before the entries (#412), such as "no navigation while an operation runs", vetoes a user close
+    // before the page asks its question: the window stays open with its entry. Once it allows, the page is asked after it.
+    [Test, NotInParallel(Order = 36)]
+    public async Task ABeforeEntriesNavigatorGuardVetoesTheCloseBeforeThePageIsAsked()
+    {
+        await using var fixture = await GuardFixture.OpenAsync<GuardedWindow>();
+        var asked = new ConcurrentQueue<string>();
+        var operation = new OperationGuard(asked);
+        fixture.Script.Decide = _ =>
+        {
+            asked.Enqueue("page");
+            return ValueTask.FromResult(true);
+        };
+        using var registration = fixture.ViewModel.Main.Navigator.AddDepartureGuard(operation,
+            new NavigationRegionGuardOptions { Order = NavigationRegionGuardOrder.BeforeEntries, AskOnRetain = true });
+
+        fixture.Native.UserClose();
+        await operation.Asked.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Require(!await fixture.Presentation.RequestCloseAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5)),
+            "A close request completed as allowed although the operation guard vetoed it.");
+        Require(fixture.Presentation.IsOpen && fixture.Native.IsOpen && fixture.ViewModel.Main.Current is GuardedPage,
+            "A vetoing operation guard did not keep the window open with its entry.");
+        // The request joins the user close's decision, or asks again when that decision has already ended.
+        Require(fixture.Script.AskCount == 0 && !asked.IsEmpty && asked.All(static name => name == "operation"),
+            $"The page was asked although the operation guard vetoed first: {string.Join(",", asked)}.");
+
+        operation.Running = false;
+        asked.Clear();
+        var closed = fixture.Window.WaitForCloseAsync().AsTask();
+        fixture.Native.UserClose();
+        await closed.WaitAsync(TimeSpan.FromSeconds(5));
+        Require(string.Join(",", asked) == "operation,page", $"The close asked {string.Join(",", asked)}.");
+    }
+
     // A failing guard is logged and keeps the window open; so does an overriding CanCloseAsync that throws.
     [Test, NotInParallel(Order = 21)]
     public async Task AFailingGuardIsLoggedAndKeepsTheWindowOpen()
@@ -369,7 +403,7 @@ sealed class GuardFixture : IAsyncDisposable
     public IBridgeWindow Window { get; }
     // The Window itself, as application code holds it.
     public IRunicWindow Opened => _window;
-    public DesktopWindow Presentation => ((DesktopBridgeWindow<GuardedShellModel>)Window).Presentation;
+    public DesktopWindow Presentation => ((DesktopBridgeWindow<GuardedShellModel>)Window).Window;
     public DesktopSurface Surface => ((DesktopBridgeWindow<GuardedShellModel>)Window).Surface;
     // What the host reported to its DiagnosticSink.
     public ConcurrentQueue<DesktopDiagnostic> Diagnostics { get; }
@@ -402,11 +436,11 @@ sealed class GuardFixture : IAsyncDisposable
         });
         try
         {
-            var windows = new RunicDesktopHost(provider, host)
+            var windows = new RunicDesktopHost(provider, host, new RunicDesktopHostOptions
             {
                 SurfaceOptions = new DesktopSurfaceOptions { Content = new DesktopContent.Html("<!doctype html>") },
                 WindowOptions = new DesktopWindowOptions { Browser = BrowserKind.Embedded, ConfirmCloseAsync = confirmClose },
-            };
+            });
             var window = await windows.OpenWindowAsync<TWindow>();
             return new GuardFixture(provider, host, window, window.Host, window.ViewModel, script, logs, factory.Hosts.Single(), diagnostics);
         }
@@ -441,6 +475,21 @@ sealed class ThrowingGuardWindow : RunicWindow<GuardedShellModel>
     {
         await Task.Yield();
         throw new TimeoutException("The autosave check timed out.");
+    }
+}
+
+// A navigator guard that vetoes every departure while an operation runs.
+sealed class OperationGuard(ConcurrentQueue<string> asked) : INavigationRegionGuard
+{
+    private volatile bool _running = true;
+    public bool Running { get => _running; set => _running = value; }
+    public TaskCompletionSource Asked { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public ValueTask<bool> CanDepartAsync(NavigationRegionDeparture departure, CancellationToken cancellationToken)
+    {
+        asked.Enqueue("operation");
+        Asked.TrySetResult();
+        return ValueTask.FromResult(!Running);
     }
 }
 
@@ -494,8 +543,8 @@ sealed class GuardedShellModel : INotifyPropertyChanged
 // current page as content and names its reference, so the page is served by routes of its own.
 sealed class GuardedShellBridge(IBridgeTransport transport, GuardedShellModel vm, WindowContentSession content)
     : ViewModelBridge<GuardedShellModel>(transport, vm, "guardedShell",
-        (writer, model, revision) => Write(content, writer, model, revision),
-        [new PropertyDescriptor<GuardedShellModel>("Main", static vm => vm.Main.Current, null, static vm => vm.Main)],
+        (writer, model, revision, _) => Write(content, writer, model, revision),
+        [new PropertyDescriptor<GuardedShellModel>("Main", static vm => vm.Main.Current, null, static vm => vm.Main)], [],
         [], content: content)
 {
     private static void Write(WindowContentSession content, Utf8JsonWriter writer, GuardedShellModel vm, long revision)
@@ -581,7 +630,7 @@ sealed class ConfirmingWindowHost : IDesktopWindowHost
     public ValueTask FocusAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
     public ValueTask MinimizeAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
     public ValueTask ToggleMaximizedAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
-    public ValueTask ResizeAsync(uint width, uint height, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+    public ValueTask ResizeAsync(int width, int height, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
     public ValueTask MoveAsync(int x, int y, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
     public ValueTask SetVisibleAsync(bool visible, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
     public ValueTask BeginMoveAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
