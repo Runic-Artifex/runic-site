@@ -10,14 +10,14 @@ Primitives 9.0.0; the fork also tests Primitives 8.4.0 used by ReactiveUI 25.
 
 DynamicData's cache, filtering, grouping, transforms and disposal stay in .NET.
 Runic exports the resulting collection through a generated, reflection-free
-bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/examples/dynamicdata/README.md)
+bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/examples/dynamicdata/README.md)
 has a 100,000-row source cache, keyed browser rendering and an independent
 viewport for each presentation.
 
 ## Bind on the model context
 
 Inject `IRunicModelContext` and obtain its sequencer from
-`RunicReactiveSchedulerProvider`. Bind the model with
+`ReactiveSchedulers.For(context)`. Bind the model with
 `RunicModelContextRegistry.Shared.Bind(context, model)` and retain the lease
 until disposal. Each window owns its model context; native UI dispatch remains
 the host's responsibility.
@@ -37,8 +37,8 @@ binding = changes
 `ObserveOn` and before `Bind` or `SortAndBind`; an outer batch around
 `SourceCache.Edit` ends before deferred notifications reach the collection.
 Dispose the binding, viewport signal, commands and model-context lease with
-the presentation. The same extension is available from the Reactive flavor's
-adapter namespace.
+the presentation. The extension is in the `Runic.Application.Views` namespace
+and works with either flavor.
 
 ## Opt into collection updates
 
@@ -69,9 +69,11 @@ delta; duplicates never apply twice.
 
 Keep the large source cache shared and the viewport request and bound
 collection per presentation. `SortAndVirtualize` suppresses updates outside
-that viewport. The browser helper computes a fixed-height range:
+that viewport. The experimental browser helper computes a fixed-height range:
 
 ```ts docs-test=skip:illustrative-fragment
+import { collectionViewport } from '@runic-artifex/views/experimental';
+
 const range = collectionViewport({
   totalCount,
   scrollTop,

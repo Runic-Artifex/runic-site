@@ -44,8 +44,16 @@ test('API inputs cover exactly the library packages of the active release', asyn
     manifest.packages.map((pin) => pin.package).sort(),
     expected,
   );
+  // A package that ships on a version of its own records it in the catalog.
+  const versions = new Map(
+    activeSdkRelease.packages.map((entry) => [entry.identity, entry.version]),
+  );
   for (const pin of manifest.packages) {
-    assert.equal(pin.version, activeSdkRelease.version, pin.package);
+    assert.equal(
+      pin.version,
+      versions.get(pin.package) ?? activeSdkRelease.version,
+      pin.package,
+    );
     if (pin.ecosystem === 'nuget') {
       assert.match(pin.sha512, /^[A-Za-z0-9+/]{86}==$/, pin.package);
       assert.match(pin.framework, /^net\d+\.\d+/, pin.package);
@@ -81,13 +89,14 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // types) and grew the Platform APIs; 0.8.0-preview.5 needs about 1.83 MiB.
   assert.ok(inputs <= 1.875 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads.
+  // __data.json payloads that client-side navigation loads. 176 KiB per page
+  // since 0.9.0, whose @runic-artifex/views page needs about 166 KiB.
   let compressed = 0;
   for (const file of files(buildApi)) {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 160 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 176 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
   // 4.5 MiB since the Runic.Platform.Linux.DBus pages of 0.8.0-preview.5,
@@ -346,17 +355,19 @@ test('signatures reference only public types of the reference packages', () => {
 
 test('signatures carry nullable reference annotations', () => {
   const descriptor = models['dotnet/Runic.Application.Views.json'].types.find(
-    (type) => type.id === 'T:Runic.Application.Views.CommandDescriptor`1',
+    (type) =>
+      type.id === 'T:Runic.Application.Views.Generated.CommandDescriptor`1',
   );
   const text = (parts) =>
     parts.map((part) => (typeof part === 'string' ? part : part[0])).join('');
-  const constructor = descriptor.members.find((m) => m.kind === 'constructor');
-  assert.match(
-    text(constructor.signature),
-    /Func<T, CancellationToken, object\?, Task>\? ExecuteAsync = null/,
+  const execute = descriptor.members.find((m) => m.name === 'ExecuteAsync');
+  assert.equal(
+    text(execute.signature),
+    'public Func<T, CancellationToken, object?, Task>? ExecuteAsync { get; init; }',
   );
   const bridge = models['dotnet/Runic.Application.Views.json'].types.find(
-    (type) => type.id === 'T:Runic.Application.Views.ViewModelBridge`1',
+    (type) =>
+      type.id === 'T:Runic.Application.Views.Generated.ViewModelBridge`1',
   );
   assert.equal(
     text(bridge.signature),

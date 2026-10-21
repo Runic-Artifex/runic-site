@@ -1,7 +1,7 @@
 # Ship a Desktop application
 
-This guide takes a Runic Desktop application (`--host desktop` or
-`--host desktop-gtk4`) from `dotnet publish` to something you can hand to
+This guide takes a Runic Desktop application (`--host desktop`, with
+`--linux-gtk 3` or `4`) from `dotnet publish` to something you can hand to
 users on Windows, macOS and Linux. Since SDK `0.8.0-preview.5`,
 `dotnet new runic-app --packaging` (or `--packaging` with `dnx Runic.Create`)
 adds packaging recipes to the project: `packaging/package.mjs` publishes the
@@ -13,15 +13,15 @@ does not have, and where the SDK does not help yet.
 
 Each platform section ends with a **Checked with** note. "Runic CI" means the
 SDK's
-[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/.github/workflows/ci.yml):
+[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/.github/workflows/ci.yml):
 its `Native` jobs run test applications that use Runic Desktop, and its
 `Packaging` jobs package the
-[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/tests/native/Runic.Packaging.Probe),
+[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/tests/native/Runic.Packaging.Probe),
 a test application with the template's identity, with the template's
 `package.mjs` on each platform, install the package without the maintainers'
 signing credentials and open it through its URL scheme. The probe opens no
 window: it records what the installed package gives it, and
-[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/eng/ci/packaging-probe-check.mjs)
+[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/eng/ci/packaging-probe-check.mjs)
 checks that record. CI does not package the template application itself or
 retain the packages. "Not executed" means the step uses the platform vendor's
 documented tools and has not been run for Runic.
@@ -35,8 +35,8 @@ The template's project file declares the application's identity once, and
 in code. `--packaging` adds the properties that only the packages read:
 
 ```xml docs-test=template:RunicWindowApp.csproj packaging=true
-<RunicApplicationId>com.example.MyApp</RunicApplicationId>
-<RunicApplicationName>MyApp</RunicApplicationName>
+<ApplicationId>com.example.MyApp</ApplicationId>
+<ApplicationTitle>MyApp</ApplicationTitle>
 <Version>1.0.0</Version>
 <!-- packaging/package.mjs reads these too. The summary software centers and the Start menu show. -->
 <Description>A Runic desktop application</Description>
@@ -50,7 +50,7 @@ in code. `--packaging` adds the properties that only the packages read:
 <ApplicationIcon>icons/icon.ico</ApplicationIcon>
 ```
 
-`RunicApplicationId` is the desktop entry, icon and Flatpak ID on Linux, the
+`ApplicationId` is the desktop entry, icon and Flatpak ID on Linux, the
 bundle identifier on macOS, and the package name and AppUserModelID on Windows.
 It defaults to `com.example.` and the project name's ASCII letters and digits;
 choose it before you ship, because changing it later makes the platforms see a
@@ -63,7 +63,7 @@ numeric part (`1.2.3-preview.4` becomes `1.2.3.0` and `1.2.3`).
 
 `icons/` holds a neutral placeholder icon as `icon.svg`, `icon.png` (512 px)
 and `icon.ico`. Replace it as the generated README's
-[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
+[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
 section describes; the packages take their icons from these files.
 
 ### Choose the publish mode
@@ -88,17 +88,17 @@ first can publish NativeAOT with
 `dotnet publish --no-build -p:PublishAot=true` after a `dotnet build` with the
 same configuration, target framework and `PublishAot`: the publish reuses the
 Bridge code of that build and reports
-[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/docs/diagnostics.md#runicbridge022)
+[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/docs/diagnostics.md#runicbridge022)
 when it is missing. Before publishing, ask
 the CLI what the target needs on the machine that publishes:
 
 ```bash docs-test=readme:tools/dotnet-runic/README.md
-dotnet runic doctor --rid linux-x64 --fail-on fail
-dotnet runic doctor --rid win-x64 --aot --fail-on fail
+dotnet runic doctor --runtime linux-x64 --fail-on fail
+dotnet runic doctor --runtime win-x64 --aot --fail-on fail
 ```
 
 The `target-rid` check reads the
-[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/eng/support.json):
+[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/eng/support.json):
 for Runic Desktop every supported RID (`win-x64`, `win-arm64`, `osx-arm64`,
 `linux-x64`, `linux-arm64` and the musl RIDs) is CI-verified except
 `osx-x64`, which ships native support without CI coverage. Test it on a real
@@ -125,7 +125,8 @@ writes debug symbols (`.pdb` on Windows, `.dbg` on Linux, `.dSYM` on macOS).
 [crash analysis](crash-reporting.md).
 
 The window icon at run time comes from `DesktopWindowOptions.IconFile`, which
-an application sets through the `WindowOptions` of its `RunicDesktopHost`:
+an application sets through the `WindowOptions` of its
+`RunicDesktopHostOptions`:
 WebView2 loads an `.ico` file, and the GTK 3 host and macOS load the image
 file you pass. GTK 4 windows reject `IconFile`; their icon comes from the
 installed desktop entry (see [Linux](#linux)). The icon that a file manager,
@@ -133,7 +134,7 @@ Dock or launcher shows comes from the package metadata described below.
 
 ### Run the packaging recipes
 
-`package.mjs` reads `RunicApplicationId`, `RunicApplicationName`, `Version`,
+`package.mjs` reads `ApplicationId`, `ApplicationTitle`, `Version`,
 `Description`, `PackageProjectUrl`, `RunicApplicationPublisher` and
 `RunicApplicationUrlSchemes` from the project file, publishes with NativeAOT,
 fills the `{{...}}` fields of the manifests in `packaging/` and writes the
@@ -174,7 +175,7 @@ without arguments or data.
 With NativeAOT on `win-x64` or `win-arm64`, Runic Desktop's build targets link
 the WebView2 loader statically into the executable, so the publish folder
 contains no `WebView2Loader.dll`
-([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
+([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
 A JIT build (self-contained or framework-dependent) copies
 `WebView2Loader.dll` next to the executable; ship it, or Desktop reports
 `webview2-loader-unavailable`. The template sets the Explorer icon of the
@@ -392,7 +393,7 @@ guidance for the hardened runtime, which includes
 
 The entitlements file needs entries only for the App Sandbox (required for
 the Mac App Store). The CI fixture's
-[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/platform-sandbox/entitlements.plist)
+[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tests/native/platform-sandbox/entitlements.plist)
 is the tested starting point: `com.apple.security.app-sandbox`,
 `com.apple.security.network.server` and `com.apple.security.network.client`
 for the loopback listener and its WebSocket, and
@@ -412,7 +413,7 @@ also publishes `Runic.Platform.Runtime.Tests` (a NativeAOT application whose
 native window is a Runic Desktop WKWebView), signs it ad hoc with the sandbox
 entitlements and retains it as the `platform-sandbox-osx-arm64-<run>` artifact
 for
-[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/platform-sandbox/README.md).
+[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tests/native/platform-sandbox/README.md).
 Developer ID signing, notarization, stapling, universal binaries and `osx-x64`
 were not executed: they need an Apple Developer account or an Intel Mac.
 
@@ -429,10 +430,10 @@ the oldest distribution you support. Runic Desktop does not link GTK or
 WebKitGTK at build time: it loads them by library name when the first window
 opens. Target machines need, from their distribution or a Flatpak runtime:
 
-| Template host  | Libraries loaded                                     | Debian and Ubuntu packages          |
-| -------------- | ---------------------------------------------------- | ----------------------------------- |
-| `desktop`      | `libgtk-3.so.0`, `libwebkit2gtk-4.1.so.0`            | `libgtk-3-0`, `libwebkit2gtk-4.1-0` |
-| `desktop-gtk4` | `libgtk-4.so.1` (GTK 4.12+), `libwebkitgtk-6.0.so.4` | `libgtk-4-1`, `libwebkitgtk-6.0-4`  |
+| Template option | Libraries loaded                                     | Debian and Ubuntu packages          |
+| --------------- | ---------------------------------------------------- | ----------------------------------- |
+| `--linux-gtk 3` | `libgtk-3.so.0`, `libwebkit2gtk-4.1.so.0`            | `libgtk-3-0`, `libwebkit2gtk-4.1-0` |
+| `--linux-gtk 4` | `libgtk-4.so.1` (GTK 4.12+), `libwebkitgtk-6.0.so.4` | `libgtk-4-1`, `libwebkitgtk-6.0-4`  |
 
 When they are missing, Desktop reports `webkitgtk-runtime-missing` or
 `gtk4-runtime-missing` and `webkitgtk6-runtime-missing`, and the template
@@ -463,7 +464,7 @@ Install it as `share/applications/<application ID>.desktop`, and the icons as
 `scalable/apps/<application ID>.svg`. GTK 4 matches windows to the entry
 through its application ID, which the template passes from the project file:
 
-```csharp docs-test=template:Program.cs host=desktop-gtk4
+```csharp docs-test=template:Program.cs host=desktop linux-gtk=4
 var options = new DesktopHostOptions { DiagnosticSink = ReportDiagnostic }.WithGtk4(ApplicationIdentity.Id);
 ```
 
@@ -473,7 +474,7 @@ Check the entry with `desktop-file-validate`.
 
 Flatpak is the Linux package the template's recipes build. It runs on the
 standard `org.gnome.Platform` 50 runtime, which provides GTK 4 and WebKitGTK 6,
-so create the project with `--host desktop-gtk4` for it; the GTK 3 `desktop`
+so create the project with `--host desktop --linux-gtk 4` for it; the GTK 3
 host has not been tested in Flatpak. On Debian and Ubuntu,
 `node packaging/package.mjs flatpak` needs these packages and the Flathub
 remote, from which `flatpak-builder` installs the GNOME runtime and SDK on the
@@ -516,7 +517,7 @@ homepage is `PackageProjectUrl`.
 
 Inside Flatpak the GTK 4 runner takes the application ID from `FLATPAK_ID`;
 an explicit `WithGtk4(...)` ID must match it, or Desktop throws. The template
-passes `RunicApplicationId`, which is the Flatpak's `app-id`. File dialogs
+passes `ApplicationId`, which is the Flatpak's `app-id`. File dialogs
 must go through the XDG portal: the GTK 4 template already references
 `Runic.Platform.Linux.Portal` (see [desktop services](../desktop-services.md)).
 
@@ -555,7 +556,7 @@ exported SVG icon and runs the application with its URL; the probe's record
 shows `FLATPAK_ID` and the content root `/app/lib/<executable>/www`. The probe
 opens no window. A Runic Desktop GTK 4 window with WebKit's nested sandbox in
 the same runtime is covered by the
-[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
+[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
 which is run by hand in the SDK's [container runner](container-automation.md),
 not in CI; its README records the verified runtime commit. Repository signing,
 Flathub submission, AppImage and distribution packages were not executed.
@@ -569,14 +570,14 @@ package: a `windows.protocol` extension in the MSIX manifest,
 desktop entry. Windows and Linux start the application with the URL as its
 argument; macOS sends it as an Apple event. `IDesktopOpenRequests` in
 Runic.Platform delivers them to the running instance; see the SDK's
-[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/specs/platform/open-activation.md).
+[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/specs/platform/open-activation.md).
 
 File types are commented examples in each manifest, not filled in by
 `package.mjs`: a `windows.fileTypeAssociation` extension,
 `CFBundleDocumentTypes` with a `UTExportedTypeDeclarations` entry, and a MIME
 type in the desktop entry with a shared-mime-info definition for a type of
 your own. The generated README's
-[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
+[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
 section describes them. Runic CI opens each package through a URL scheme; it
 does not check file types in packages. Treat opened URLs and files as untrusted
 input.

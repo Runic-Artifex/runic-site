@@ -14,7 +14,7 @@ test('published catalog has unique installable packages and matching registry li
   assert.equal(new Set(rows.map((row) => row.name)).size, rows.length);
   for (const row of rows) {
     assert.ok(packageInstallCommand(row), row.name);
-    assert.ok(row.registryUrl.endsWith(`/${activeSdkRelease.version}`));
+    assert.ok(row.registryUrl.endsWith(`/${row.version.value}`));
   }
   assert.ok(rows.some((row) => row.name === 'Runic.Application.Templates'));
   assert.ok(rows.some((row) => row.name === 'Runic.Application.Views'));
@@ -48,15 +48,20 @@ test('the unified 0.6 catalog remains immutable release history', () => {
 const unpublishedInventory = [];
 
 // The versions a pinned snapshot may carry: the active release, or the
-// immediate next development version (the next preview of the same
-// major.minor, or the first preview of the next minor).
+// immediate next version (the next patch, the next minor or its first
+// preview, or the next preview of the same major.minor). From 0.9.0 releases
+// carry no -preview.N suffix.
 const acceptedSnapshotVersions = (version) => {
   const match = /^(\d+)\.(\d+)\.(\d+)(?:-preview\.(\d+))?$/.exec(version);
   assert.ok(match, `unexpected version ${version}`);
   const [major, minor, patch, preview] = match.slice(1).map(Number);
-  const accepted = [version, `${major}.${minor + 1}.0-preview.1`];
-  if (!Number.isNaN(preview))
-    accepted.push(`${major}.${minor}.${patch}-preview.${preview + 1}`);
+  const accepted = [
+    version,
+    `${major}.${minor + 1}.0`,
+    `${major}.${minor + 1}.0-preview.1`,
+  ];
+  if (Number.isNaN(preview)) accepted.push(`${major}.${minor}.${patch + 1}`);
+  else accepted.push(`${major}.${minor}.${patch}-preview.${preview + 1}`);
   return accepted;
 };
 
@@ -150,11 +155,20 @@ test('catalog uses its published snapshot even when development packages change'
 test('a snapshot may be the active release or its immediate next version', () => {
   assert.deepEqual(acceptedSnapshotVersions('0.7.0-preview.1'), [
     '0.7.0-preview.1',
+    '0.8.0',
     '0.8.0-preview.1',
     '0.7.0-preview.2',
   ]);
+  assert.deepEqual(acceptedSnapshotVersions('0.9.0'), [
+    '0.9.0',
+    '0.10.0',
+    '0.10.0-preview.1',
+    '0.9.1',
+  ]);
   assert.deepEqual(acceptedSnapshotVersions('1.0.0'), [
     '1.0.0',
+    '1.1.0',
     '1.1.0-preview.1',
+    '1.0.1',
   ]);
 });

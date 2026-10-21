@@ -14,7 +14,7 @@ the template or of an SDK example that the SDK's CI builds and runs.
 
 ```sh docs-test=commands
 dotnet new install Runic.Application.Templates@<VERSION>
-dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --view-models reactiveui
+dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui
 cd MyApp
 dotnet tool restore
 dotnet runic dev
@@ -168,7 +168,7 @@ export function CounterPage({ page }: { page: CounterPageReference }) {
 
 The other frameworks follow their own idioms. Vue's `useView` from
 `@runic-artifex/vue` accepts a ref or getter (`MaybeRefOrGetter`). Svelte
-imports from `@runic-artifex/svelte/views` and passes a getter, so the
+imports from `@runic-artifex/svelte` and passes a getter, so the
 connection follows reactive state:
 
 <!-- prettier-ignore -->
@@ -197,13 +197,13 @@ const error = increment.error ?? setStep.error ?? connection;
 
 A rejected write or command rejects with the `BridgeError` from
 `@runic-artifex/views`, which `useCommand` keeps as its `error`. The
-[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/first-window)
+[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/first-window)
 uses the same client without a framework.
 
 ## 7. Test the Window and the frontend
 
 Both halves can be tested without a browser or a native window. The
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/notes-view-first)
+[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/notes-view-first)
 nests a sidebar, a document and an editor, and tests each side. Its .NET tests
 drive the real ViewModels and generated Bridges through `RunicWindowTestHost`
 from `Runic.Application.Testing`, with a fake clock:
@@ -220,11 +220,11 @@ A test then reads and changes typed state the way the browser would:
 
 ```csharp docs-test=source:examples/notes-view-first/Tests/NotesWindowTests.cs
 var editor = await OpenEditorAsync();
-editor.Set(vm => vm.Title, "Groceries").EnsureOk();
-editor.Set(vm => vm.Body, "Milk, eggs").EnsureOk();
+editor.Set(vm => vm.Title, "Groceries").ThrowIfFailed();
+editor.Set(vm => vm.Body, "Milk, eggs").ThrowIfFailed();
 
 var save = editor.Start(vm => vm.SaveCommand);
-await Assert.That(save.Admission).IsEqualTo("accepted");
+await Assert.That(save.Admission).IsEqualTo(RunicOperationAdmissionKind.Accepted);
 ```
 
 The frontend tests run the generated clients against generated typed mocks and
@@ -244,11 +244,11 @@ test("a rejected field write stops the save that follows it", async () => {
   const client = await connectEditor();
 ```
 
-The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Testing/README.md)
-and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/packages/web/views#testing)
+The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Testing/README.md)
+and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/packages/web/views#testing)
 cover the test host and the generated mocks. To test the real page against the
 real ViewModels in a browser, its
-[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
+[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
 starts the built application in serve-only mode for any browser driver.
 
 ## Where next
@@ -257,11 +257,11 @@ starts the built application in serve-only mode for any browser driver.
   pages with Back history and guards.
 - [ViewModel state and threads](../guides/model-context.md) explains why
   commands can set state after `await`.
-- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/notes-reactive-views)
+- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/notes-reactive-views)
   uses ReactiveUI routing and several Views over one model.
-- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/dynamicdata)
+- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/dynamicdata)
   presents a large keyed collection through viewports.
-- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md)
+- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md)
   lists the build properties, generator diagnostics, checked writes and
   operations.
 - [Typed domain failures](../guides/typed-failures.md) returns expected

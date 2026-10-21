@@ -8,15 +8,16 @@ CommunityToolkit dependency. It provides:
   created without a scheduler deliver on the Window's model context (see
   [Model-context scheduling](#model-context-scheduling));
 - `ReactiveRunicView<T>`, which implements `IViewFor<T>` over a typed Runic
-  `DataContext`. Windows derive from `RunicWindow<T>` in
+  `DataContext` and activates an `IActivatableViewModel` while its web component
+  is mounted. Override the `protected virtual` hooks `OnAttached`, `OnDetached`,
+  `OnWebMounted` and `OnWebUnmounted` to add work; the activation runs either way,
+  so an override does not call `base` (see
+  [View lifetime hooks](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#view-lifetime-hooks)). Windows derive from `RunicWindow<T>` in
   `Runic.Application.Views` with ReactiveUI ViewModels too: the
   `ReactiveRunicWindow<T>` base was removed in 0.7.0-preview.7, so the same Window
   class opens on every host with either MVVM library;
 - `ReactiveRunicViewLocator`, adapting explicit ReactiveUI view mappings and
   contracts;
-- `ReactiveRoutedRegion<T>`, projecting `RoutingState.CurrentViewModel` into
-  a generated content property, logging an incompatible route or failed
-  router through an optional `ILoggerFactory` (Views events 1040-1041);
 - mount-owned `IActivatableViewModel` leases; and
 - typed command and interaction adapters used by
   the compiled-model generator.
@@ -226,14 +227,14 @@ Otherwise its notifications run on the fallback scheduler. The
 has the details.
 
 For an explicit scheduler, for example an `ObserveOn` in a DynamicData
-pipeline, inject `ISequencer` or call `RunicReactiveSchedulerProvider.For(context)`.
+pipeline, inject `ISequencer` or call `ReactiveSchedulers.For(context)`.
 Both return the context's own sequencer, one per context, which the main-thread
 scheduler also uses. The injected sequencer is resolved from the window's scope
 before the ViewModel is constructed, so a source that replays when the
 constructor subscribes is already observed on the right context; a scheduler
 that looked up the ViewModel's context could not, because the host binds the
 ViewModel only after constructing it. The extension registers, with `TryAdd`, the scoped
-`IRunicModelContext`, the singleton `IRunicReactiveSchedulerProvider` and a
+`IRunicModelContext`, the singleton `IReactiveSchedulerProvider` and a
 transient `ISequencer` for the resolved context, preserving custom application
 registrations. Dispose a scope asynchronously to drain its default owned
 context. Each queued item captures its own `ExecutionContext`, so a trusted
@@ -251,10 +252,10 @@ context the ViewModels run on as its `ModelContext`; otherwise the window
 creates a context of its own and commands and replies are not ordered with each
 other.
 
-`AddRunicReactiveModelContext()` moved from `Runic.Navigation.ReactiveUI` to this
-package in W250, with `IRunicReactiveSchedulerProvider` and
-`RunicReactiveSchedulerProvider`. Replace `using Runic.Navigation.ReactiveUI;`
-with `using Runic.Application.Views.ReactiveUI;`.
+`ReactiveSchedulers` is the static entry point: `For(context)` and
+`InstallMainThreadScheduler()`. `IReactiveSchedulerProvider` is the same lookup
+as a service, for code that takes it by injection; the extension registers
+`ReactiveSchedulerProvider`, which has no public constructor.
 
 The [ReactiveUI reference guide](https://docs.runic-artifex.eu/guides/application/reference/reactiveui/)
 defines the supported data shapes, operation semantics, interaction targeting,
@@ -330,16 +331,17 @@ pages, a leave guard, results and a guarded window close, with code from the
 example. This section covers what is specific to Runic Views.
 
 The observables and back command for `RunicNavigator` regions
-(`WhenCurrentChanged`, `WhenEntryChanged` and `CreateBackCommand`) are in the
+(`WhenCurrentChanged`, `WhenCurrentEntryChanged` and `CreateBackCommand`) are in the
 `Runic.Navigation.ReactiveUI` namespace of the
 [Runic.Navigation.ReactiveUI](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation.ReactiveUI/README.md)
 package. It depends on `Runic.Navigation` and `ReactiveUI` only. This package
 no longer references it, so an app without navigation does not carry it; add a
 `PackageReference` to `Runic.Navigation.ReactiveUI` to navigate.
-Use a `NavigationRegion<TContent>` for new navigation, and keep
-`ReactiveRoutedRegion<T>` for existing `RoutingState` code. Expose the region as
-a get-only property and the generator presents its `Current` like any content
-slot.
+Use a `NavigationRegion<TContent>` for navigation. Expose the region as a
+get-only property and the generator presents its `Current` like any content
+slot. This package has no `RoutingState` adapter: code that projects a
+ReactiveUI router exposes its own content property and raises
+`PropertyChanged` when `CurrentViewModel` emits.
 
 `CreateBackCommand()` needs no scheduler: with `AddRunicReactiveModelContext()`
 its notifications arrive on the Window's model context. Its output is a
@@ -440,7 +442,8 @@ The browser is asked when the page's own window starts the departure:
 
 ## System.Reactive flavor
 
-For DynamicData changesets, place `BatchBridgeSnapshots(model)` after
+For DynamicData changesets, place `BatchBridgeSnapshots(model)` (namespace
+`Runic.Application.Views`, for any `IObservable<T>`) after
 `ObserveOn(modelSequencer)` and before `Bind` or `SortAndBind`. The downstream
 delivery owns the batch even when scheduling is deferred. Annotate a read-only
 DTO collection with `[RunicCollection(nameof(Row.Id))]` to publish indexed

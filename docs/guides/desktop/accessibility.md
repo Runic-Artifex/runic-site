@@ -40,7 +40,7 @@ await platform.AnnounceAsync("Disk full", DesktopAnnouncementPriority.Assertive)
 ```
 
 `platform` is the ViewModel's `DesktopWindowPlatformServices`; a Runic Window
-can also call `PlatformServices.AnnounceAsync(window, message)`. Send each
+can also call `DesktopPlatformServices.AnnounceAsync(window, message)`. Send each
 message one way: on WebView2 and WKWebView a live region is also spoken, so a
 message sent both ways is heard twice. An installed browser, used as a
 fallback, cannot announce (`window-capability-unavailable`); keep a live

@@ -26,6 +26,7 @@ test('picker options are the template choice parameters in order', () => {
       ['--frontend', 'react'],
       ['--package-manager', 'npm'],
       ['--host', 'desktop'],
+      ['--linux-gtk', '3'],
       ['--view-models', 'reactiveui'],
     ],
   );
@@ -54,11 +55,11 @@ test('the tests toggle adds its flag and the test command', () => {
   });
   assert.equal(
     commands.creator,
-    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --view-models reactiveui --tests',
+    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui --tests',
   );
   assert.equal(
     commands.create,
-    'dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --view-models reactiveui --tests',
+    'dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui --tests',
   );
   assert.deepEqual(commands.nextSteps, [
     'cd MyApp',
@@ -84,10 +85,14 @@ test('the nix toggle adds its flag and a flake for the chosen host', () => {
   const selection = {
     ...defaultSelection(),
     packageManager: 'bun',
-    host: 'desktop-gtk4',
+    host: 'desktop',
+    linuxGtk: '4',
     nix: 'true',
   };
-  assert.match(creatorCommands('1.2.3', 'MyApp', selection).create, / --nix$/);
+  assert.match(
+    creatorCommands('1.2.3', 'MyApp', selection).create,
+    / --host desktop --linux-gtk 4 .* --nix$/,
+  );
   const flake = templateReplacements(selection).reduce(
     (text, [token, value]) => text.replaceAll(token, value),
     renderTemplate(read('flake.nix'), templateSymbols(selection)),
@@ -107,10 +112,12 @@ test('the nix toggle adds its flag and a flake for the chosen host', () => {
 });
 
 test('commands match the creator and the template', () => {
+  // Like Runic.Create, a CS-WebUI project leaves out --linux-gtk.
   const commands = creatorCommands('1.2.3', 'MyApp', {
     ...defaultSelection(),
     frontend: 'svelte',
     host: 'cswebui',
+    linuxGtk: '4',
   });
   assert.equal(commands.interactive, 'dnx Runic.Create@1.2.3');
   assert.equal(
@@ -175,16 +182,18 @@ test('conditions support the template engine operators', () => {
 });
 
 test('computed template symbols follow the host choice', () => {
-  const computed = (host) => {
-    const { desktopHost, gtk4 } = templateSymbols({
+  const computed = (host, linuxGtk = '3') => {
+    const { desktopHost, gtk4, nixHost } = templateSymbols({
       ...defaultSelection(),
       host,
+      linuxGtk,
     });
-    return [desktopHost, gtk4];
+    return [desktopHost, gtk4, nixHost];
   };
-  assert.deepEqual(computed('cswebui'), ['false', 'false']);
-  assert.deepEqual(computed('desktop'), ['true', 'false']);
-  assert.deepEqual(computed('desktop-gtk4'), ['true', 'true']);
+  assert.deepEqual(computed('cswebui'), ['false', 'false', 'cswebui']);
+  assert.deepEqual(computed('cswebui', '4'), ['false', 'false', 'cswebui']);
+  assert.deepEqual(computed('desktop'), ['true', 'false', 'desktop']);
+  assert.deepEqual(computed('desktop', '4'), ['true', 'true', 'desktop-gtk4']);
 });
 
 test('every template file renders cleanly for every host and ViewModel choice', () => {
@@ -199,15 +208,21 @@ test('every template file renders cleanly for every host and ViewModel choice', 
     'frontends/angular/src/index.html',
   ];
   for (const frontend of ['react', 'vue', 'svelte', 'angular'])
-    for (const host of ['cswebui', 'desktop', 'desktop-gtk4'])
+    for (const [host, linuxGtk] of [
+      ['cswebui', '3'],
+      ['desktop', '3'],
+      ['desktop', '4'],
+    ])
       for (const viewModels of ['toolkit', 'reactiveui']) {
         const symbols = templateSymbols({
           frontend,
           packageManager: 'npm',
           host,
+          linuxGtk,
           viewModels,
         });
         const desktop = host !== 'cswebui';
+        const gtk4 = desktop && linuxGtk === '4';
         const files = Object.fromEntries(
           sources.map((path) => [path, renderTemplate(read(path), symbols)]),
         );
@@ -215,7 +230,7 @@ test('every template file renders cleanly for every host and ViewModel choice', 
           assert.doesNotMatch(
             content,
             /^\s*(#|<!--#)(if|elif|else|endif)\b/m,
-            `${path} ${host} ${viewModels}`,
+            `${path} ${host} ${linuxGtk} ${viewModels}`,
           );
         assert.equal(
           files['Program.cs'].includes('return RunicDesktopHost.Run('),
@@ -227,11 +242,11 @@ test('every template file renders cleanly for every host and ViewModel choice', 
         );
         assert.equal(
           files['Program.cs'].includes('.WithGtk4(ApplicationIdentity.Id)'),
-          host === 'desktop-gtk4',
+          gtk4,
         );
         assert.equal(
           files['RunicWindowApp.csproj'].includes('Runic.Desktop.Gtk4'),
-          host === 'desktop-gtk4',
+          gtk4,
         );
         // Every host loads the host-neutral Views client.
         for (const index of [

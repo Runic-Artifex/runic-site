@@ -16,6 +16,9 @@ export type PublishedRelease = {
     readonly ecosystem: string;
     readonly product: string;
     readonly installKind: string;
+    /** A package's own version when it differs from the release, such as
+     * the prerelease `Runic.Application.Views.CsWebUi`. */
+    readonly version?: string;
   }[];
 };
 // Display names of the component ids that eng/workspace.json assigns to packages.
@@ -70,18 +73,24 @@ export function createReleaseDocs(release: PublishedRelease) {
     state: 'published',
     value: release.version,
   };
-  const catalogRows = release.packages.map((entry) => ({
-    name: entry.identity,
-    registry: entry.ecosystem === 'nuget' ? 'NuGet' : 'npm',
-    registryUrl:
-      entry.ecosystem === 'nuget'
-        ? `https://www.nuget.org/packages/${entry.identity}/${release.version}`
-        : `https://www.npmjs.com/package/${entry.identity}/v/${release.version}`,
-    productId: entry.product,
-    product: productLabel(entry.product),
-    installKind: entry.installKind,
-    version,
-  }));
+  const catalogRows = release.packages.map((entry) => {
+    const value = entry.version ?? release.version;
+    return {
+      name: entry.identity,
+      registry: entry.ecosystem === 'nuget' ? 'NuGet' : 'npm',
+      registryUrl:
+        entry.ecosystem === 'nuget'
+          ? `https://www.nuget.org/packages/${entry.identity}/${value}`
+          : `https://www.npmjs.com/package/${entry.identity}/v/${value}`,
+      productId: entry.product,
+      product: productLabel(entry.product),
+      installKind: entry.installKind,
+      version:
+        value === release.version
+          ? version
+          : ({ state: 'published', value } satisfies ReleaseVersion),
+    };
+  });
   return {
     catalogRows,
     activeVersionForProduct: (product: string) =>

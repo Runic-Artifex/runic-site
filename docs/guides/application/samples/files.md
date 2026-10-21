@@ -29,7 +29,7 @@ It registers these services:
 | ------------------------- | --------------------------------------------------- |
 | `IFileDialogs`            | Open a file or folder, choose where to save a file. |
 | `ITextClipboard`          | Read and write text on the clipboard.               |
-| `IDesktopFileLauncher`    | Open a file in its app, or show it in its folder.   |
+| `IDesktopFileLauncher`    | Open a file or a web link, or show a file's folder. |
 | `IWindowPlatformServices` | All of the above, plus `GetSnapshot()`.             |
 
 It also registers `IDesktopSettings`, the desktop's appearance preferences.
@@ -125,9 +125,9 @@ the temporary file.
 `CommitAsync` returns one of three results:
 
 - `Committed`: the file now holds the new content.
-- `NotCommitted(code)`: the file was not changed. You can tell the user why
-  and let them try again.
-- `CommitUnknown(code)`: the replacement may or may not have happened. Don't
+- `NotCommitted(code, diagnostic)`: the file was not changed. You can tell the
+  user why and let them try again.
+- `CommitUnknown(code, diagnostic)`: the replacement may or may not have happened. Don't
   retry automatically; tell the user to check the file.
 
 `SaveAsync` above returns `false` for everything except `Committed`. A real
@@ -153,10 +153,10 @@ Portal saves are new in SDK `0.7.0-preview.7`; in `0.7.0-preview.6` a Linux
 portal selection was always unavailable for saving. With the preview.6
 packages, a Linux application can open files through the dialog but can't save
 through it, and an unsandboxed application on GTK 3 can choose GTK's own file chooser with
-`LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That is a
-lower-level provider API that you compose yourself, with no automatic fallback.
+`LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That was a
+lower-level provider API that you composed yourself, with no automatic fallback.
 The
-[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
+[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
 describes both mechanisms.
 
 When the save is unavailable, `BeginWriteAsync` returns
@@ -176,5 +176,5 @@ report success. This SDK has no other write policy: `FileWritePolicy` has only
 - [Desktop preferences, notifications, file handoff, and clipboard](../../desktop-services.md)
   covers the providers behind these services.
 - The
-  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
   lists every per-Window service and owner.

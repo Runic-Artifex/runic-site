@@ -40,6 +40,13 @@ type TemplateSymbol = {
   readonly value?: string;
   readonly replaces?: string;
   readonly valueTransform?: string;
+  readonly generator?: string;
+  readonly parameters?: {
+    readonly cases?: readonly {
+      readonly condition?: string;
+      readonly value: string;
+    }[];
+  };
   readonly choices?: readonly {
     readonly choice: string;
     readonly displayName?: string;
@@ -113,10 +120,23 @@ export function isEnabled(
 }
 
 /**
+ * Whether an option applies to the selection. Like Runic.Create, the creator
+ * neither shows nor passes `--linux-gtk` unless the host is Runic Desktop.
+ */
+export function optionApplies(
+  option: CreatorOption,
+  selection: CreatorSelection,
+): boolean {
+  return (
+    option.symbol !== 'linuxGtk' || (selection.host ?? 'desktop') === 'desktop'
+  );
+}
+
+/**
  * Adds the template's Boolean parameters that the selection leaves out, such
- * as `tests`, at their defaults, and its computed symbols, such as
- * `desktopHost`, as `true` or `false`, in declaration order like the template
- * engine.
+ * as `tests`, at their defaults, its computed symbols, such as `desktopHost`,
+ * as `true` or `false`, and its `switch` generated symbols, such as
+ * `nixHost`, in declaration order like the template engine.
  */
 export function templateSymbols(
   selection: CreatorSelection,
@@ -131,6 +151,12 @@ export function templateSymbols(
       result[name] = symbol.defaultValue ?? 'false';
     else if (symbol.type === 'computed')
       result[name] = String(evaluate(symbol.value ?? '', result));
+    else if (symbol.type === 'generated' && symbol.generator === 'switch') {
+      const match = symbol.parameters?.cases?.find(
+        (entry) => !entry.condition || evaluate(entry.condition, result),
+      );
+      if (match) result[name] = match.value;
+    }
   return result;
 }
 
@@ -214,10 +240,9 @@ function format(argumentsList: readonly string[]): string {
 
 function optionArguments(selection: CreatorSelection): string[] {
   return [
-    ...creatorOptions.flatMap((option) => [
-      option.flag,
-      choiceFor(option, selection).value,
-    ]),
+    ...creatorOptions
+      .filter((option) => optionApplies(option, selection))
+      .flatMap((option) => [option.flag, choiceFor(option, selection).value]),
     ...creatorToggles
       .filter((toggle) => isEnabled(toggle, selection))
       .map((toggle) => toggle.flag),

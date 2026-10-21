@@ -11,7 +11,7 @@ executable and a folder, or when an ASP.NET Core application serves a single
 page application. Projects created with `dotnet new runic-app` do not need it:
 they copy the built frontend to a `www` folder next to the executable.
 
-> This guide follows Runic SDK 0.8.0-preview.5. The few differences in
+> This guide follows Runic SDK 0.9.0. The few differences in
 > 0.6.0-preview.1 are marked where they occur.
 
 Replace `<VERSION>` below with the current release from the
@@ -129,8 +129,9 @@ the rules.
 
 In 0.6.0-preview.1 set `ContentHandler = assets.ToDesktopContentHandler()`
 instead of `Content`. There, `ToDesktopContentHandler` extends `IAssetSource`
-and takes `DesktopAssetOptions? options`; in 0.7 it extends
-`IAssetSnapshotSource` and takes `AssetRoutingOptions? routing`.
+and takes `DesktopAssetOptions? options`; in 0.7 and 0.8 it extends
+`IAssetSnapshotSource`, and since 0.9.0 the single source interface
+`IAssetSource`, with `AssetRoutingOptions? routing`.
 
 ## 5. Pack in a separate step
 
@@ -147,7 +148,7 @@ dotnet "$packer" Client.Web/dist artifacts/app.runic-assets --trusted-generated-
 
 Embed the result with `RunicAssetsEmbeddedArchive`, or open the file at run time
 with `AssetArchive.Read`. The
-[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Assets.Packer/README.md)
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tools/Runic.Assets.Packer/README.md)
 lists its options, JSON output and exit codes.
 
 ### Trusted generated output
@@ -166,26 +167,26 @@ directory.
 
 ## Troubleshooting
 
-- **`The RunicAssetsDist directory '...' does not exist.`** The frontend was not
+- **`RAS2002`: `The RunicAssetsDist directory '...' does not exist.`** The frontend was not
   built before `dotnet build`. Build it first, or make the build depend on it.
-- **`Set either RunicAssetsDist or RunicAssetsEmbeddedArchive, not both.`**
+- **`RAS2001`: `Set either RunicAssetsDist or RunicAssetsEmbeddedArchive, not both.`**
   Choose one source for the embedded archive.
-- **`Entry point '...' does not exist below '...' or was excluded.`** (packer
-  exit code `4`) Set `RunicAssetsEntryPoint` or `--entry-point` to a file in the
+- **`Entry point '...' does not exist below '...' or was excluded.`** (`RAS1002`,
+  packer exit code `1`) Set `RunicAssetsEntryPoint` or `--entry-point` to a file in the
   folder that is not excluded.
 - **`Directory archive compilation requires Linux handle-pinned traversal.`**
-  (packer exit code `5`) Without `--trusted-generated-output` the packer runs
+  (`RAS1004`, packer exit code `1`) Without `--trusted-generated-output` the packer runs
   only on Linux. Pass the option for your own build output on Windows and macOS.
 - **A request for `/` or a client route returns `404` on 0.6.0-preview.1.**
   0.6 serves exact paths only; request `/index.html` or upgrade.
 
 ## Reference
 
-- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Assets/README.md):
+- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Assets/README.md):
   explicit embedded resources, the Linux development directory source,
   validation and inspection.
-- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Assets.AspNetCore/README.md)
-  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Assets.Desktop/README.md):
+- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Assets.AspNetCore/README.md)
+  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Assets.Desktop/README.md):
   HTTP behavior and routing.
-- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/specs/assets/archive-v1.md)
+- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/specs/assets/archive-v1.md)
   and the [framework-neutral asset boundary](adr/0013-framework-neutral-asset-boundary.md).

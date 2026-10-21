@@ -81,7 +81,7 @@ bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
 The script checks the checkout revision and source bytes before replacing the
 snapshot. Guides link SDK sources (`examples/`, `packages/`, `tools/`, `tests/`,
 `specs/`) and the current release notes at the active release tag, such as
-`blob/v0.8.0-preview.5/`, so the links match the quoted snapshot; move them to
+`blob/v0.9.0/`, so the links match the quoted snapshot; move them to
 the new tag with the catalog. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
 
@@ -120,7 +120,9 @@ bun run docs:release <published-version>
 ```
 
 This reads the published tagged SDK package inventory using `gh` and updates
-`src/lib/active-sdk-release.json`. Review that snapshot and any affected guides
+`src/lib/active-sdk-release.json`. A package with a version of its own, such as
+the prerelease `Runic.Application.Views.CsWebUi`, keeps it in that snapshot, and
+its install command and registry link use it. Review that snapshot and any affected guides
 before deployment. Refresh the pinned SDK input inventory for its matching
 release revision as needed. Development version bumps never publish package
 availability. `published-release.json` preserves the immutable unified

@@ -49,6 +49,11 @@ const packages = ['nuget', 'npm'].flatMap((ecosystem) =>
       )?.[0] ?? 'application';
     return {
       identity: entry.name,
+      // A package with a version of its own, such as the prerelease
+      // Runic.Application.Views.CsWebUi.
+      ...(entry.version && entry.version !== version
+        ? { version: entry.version }
+        : {}),
       ecosystem,
       product,
       installKind:

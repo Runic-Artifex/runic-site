@@ -21,7 +21,7 @@ services.AddSingleton<RowStore>();
 services.AddScoped<RowsViewModel>();
 ```
 
-The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/multi-window)
+The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/multi-window)
 opens its first Window from the host callback. The application ends when that
 Window closes:
 
@@ -41,7 +41,7 @@ The host is passed only to that callback; it isn't registered in the
 container. To open Windows from a command or a service, register
 `IRunicWindowService` with `AddRunicWindowService()`. It is new in SDK
 `0.7.0-preview.7`, as is the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.8.0-preview.5/examples/multi-window).
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.0/examples/multi-window).
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
 // IRunicWindowService, which ProjectViewModel uses to open more Windows.
@@ -178,7 +178,7 @@ example's test renames in one Window and reads the title in the other after a
 turn of its context:
 
 ```csharp docs-test=source:examples/multi-window/Tests/ProjectWindowTests.cs
-(await _first.Root.ExecuteAsync(vm => vm.RenameCommand, "\"Atlas\"")).EnsureOk();
+(await _first.Root.ExecuteAsync(vm => vm.RenameCommand, "\"Atlas\"")).ThrowIfFailed();
 
 // The rename posted a turn to the second Window's model context; a turn after it sees the new title.
 await _secondScope.ServiceProvider.GetRequiredService<IRunicModelContext>().InvokeAsync(static () => { });
@@ -196,12 +196,12 @@ describes.
 
 When the shared service exposes an observable, as a DynamicData `SourceCache`
 does, move the stream onto the model context with `ObserveOn` instead of
-posting. `RunicReactiveSchedulerProvider` turns the Window's context into a
+posting. `ReactiveSchedulers.For` turns the Window's context into a
 sequencer:
 
 ```csharp docs-test=source:examples/dynamicdata/RowsViewModel.cs
 public RowsViewModel(RowStore store, IRunicModelContext context)
-    : this(store, new RunicReactiveSchedulerProvider().For(context), 30)
+    : this(store, ReactiveSchedulers.For(context), 30)
 {
 }
 ```

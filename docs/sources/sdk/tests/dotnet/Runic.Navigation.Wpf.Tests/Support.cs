@@ -223,7 +223,7 @@ internal sealed class SignallingContext(DispatcherModelContext inner) : IRunicMo
 
     public bool IsExecuting => inner.IsExecuting;
 
-    public event Action<Exception>? UnhandledTurnException
+    public event EventHandler<RunicModelTurnExceptionEventArgs>? UnhandledTurnException
     {
         add => inner.UnhandledTurnException += value;
         remove => inner.UnhandledTurnException -= value;
@@ -247,7 +247,7 @@ internal sealed class SignallingContext(DispatcherModelContext inner) : IRunicMo
         return result;
     }
 
-    public Task<T> RunHookAsync<T>(Func<Task<T>> hook, CancellationToken cancellationToken) => inner.RunHookAsync(hook, cancellationToken);
+    public Task<T> RunHookAsync<T>(Func<Task<T>> hook, CancellationToken cancellationToken) => ((IRunicModelHookScheduler)inner).RunHookAsync(hook, cancellationToken);
 
     public ValueTask DisposeAsync() => inner.DisposeAsync();
 

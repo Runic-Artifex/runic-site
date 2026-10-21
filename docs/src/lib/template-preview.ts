@@ -55,6 +55,7 @@ export function previewFiles(
   name: string,
   version: string,
   selection: CreatorSelection,
+  csWebUiVersion: string = version,
 ): PreviewFile[] {
   const frontend = frontends[selection.frontend] ?? frontends.react;
   const symbols = templateSymbols(selection);
@@ -64,7 +65,8 @@ export function previewFiles(
       (text, [token, value]) => text.replaceAll(token, value),
       renderTemplate(content, symbols)
         .replaceAll(templateSourceName, name)
-        .replaceAll('__RUNIC_NUGET_VERSION__', version),
+        .replaceAll('__RUNIC_NUGET_VERSION__', version)
+        .replaceAll('__RUNIC_CSWEBUI_NUGET_VERSION__', csWebUiVersion),
     );
   return [
     { path: 'Program.cs', language: 'csharp', content: render(program) },

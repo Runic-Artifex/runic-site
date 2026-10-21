@@ -17,14 +17,15 @@ project without questions:
 
 ```sh docs-test=commands
 dotnet new install Runic.Application.Templates@<VERSION>
-dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --view-models reactiveui
+dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 3 --view-models reactiveui
 ```
 
 | Option              | Choices                                         | Default      |
 | ------------------- | ----------------------------------------------- | ------------ |
 | `--frontend`        | `react`, `vue`, `svelte`, `angular`             | `react`      |
 | `--package-manager` | `npm`, `pnpm`, `bun`                            | `npm`        |
-| `--host`            | `desktop`, `desktop-gtk4`, `cswebui`            | `desktop`    |
+| `--host`            | `desktop`, `cswebui`                            | `desktop`    |
+| `--linux-gtk`       | `3`, `4` (Linux GTK version for `desktop`)      | `3`          |
 | `--view-models`     | `reactiveui`, `toolkit` (CommunityToolkit.Mvvm) | `reactiveui` |
 
 Runic Desktop, the default host, opens a native window with the embedded
@@ -77,7 +78,7 @@ operation lifetime.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see
-  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/examples/first-window/README.md).
+  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/examples/first-window/README.md).
 
 The code blocks in these guides are checked against a pinned copy of the SDK
 template and examples by

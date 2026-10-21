@@ -16,7 +16,7 @@ compare them by measuring each project configuration into its own report.
 The command uses Release, self-contained NativeAOT and size optimization by
 default. Use `--no-aot` for a managed comparison. It preserves your project's
 culture and diagnostic settings. Each report needs a new path so previous
-evidence is retained. `--output json` selects the command's JSON envelope;
+evidence is retained. `--format json` selects the command's JSON envelope;
 `--report` selects the measurement file. Progress streams to stderr in JSON mode.
 
 A successful publish alone has verification status `not-run`. Supply a checker

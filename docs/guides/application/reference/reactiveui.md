@@ -6,7 +6,7 @@ and SourceGenerators **4.2.0**. The default integration uses
 `Runic.Application.Views.ReactiveUI.Reactive`. Select one flavor for an application,
 then rebuild the application and its generated clients together when moving
 between ReactiveUI majors. ReactiveUI 26 keeps the ReactiveUI 25 public API; the
-[adapter migration notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#reactiveui-26)
+[adapter migration notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#reactiveui-26)
 cover the Primitives 9 `SubscribeSafe` change and the namespace changes from
 ReactiveUI 24. If an interface-typed generic command leaves the
 flavor ambiguous, set `RunicApplicationFrontendReactiveUiFlavor=reactive` in the generating
@@ -28,7 +28,7 @@ into browser APIs.
 | `CanExecute` and `IsExecuting`                                   | No-input commands publish `canX`; typed ReactiveUI commands also publish `isXExecuting`. Parameterized availability is checked from the decoded input at admission and execution time.                                                                                                                                                                                                                                                                |
 | `Interaction<TInput, TOutput>` / `IInteraction<TInput, TOutput>` | A getter-only interaction property becomes a typed browser handler surface. Requests use a selected mounted endpoint and preserve normal ReactiveUI .NET-handler/unhandled fallback when no browser handler is eligible.                                                                                                                                                                                                                              |
 | `IViewFor<T>`, locating views                                    | `ReactiveRunicView<T>` implements `IViewFor<T>`; Windows are `RunicWindow<T>` with every MVVM library. `ReactiveRunicViewLocator` adapts explicit ReactiveUI mappings and contracts.                                                                                                                                                                                                                                                                  |
-| `RoutingState`                                                   | Navigate with `RunicNavigator` regions and the `Runic.Navigation.ReactiveUI` adapter instead: Back commands, leave guards asked through an `Interaction`, results and owned pages ([Pages and navigation](../guides/pages-and-navigation.md#with-reactiveui)). `ReactiveRoutedRegion<T>` still projects an existing router's `CurrentViewModel` to generated content, without guards. Runic does not generate URL history or an Avalonia routed host. |
+| `RoutingState`                                                   | Navigate with `RunicNavigator` regions and the `Runic.Navigation.ReactiveUI` adapter instead: Back commands, leave guards asked through an `Interaction`, results and owned pages ([Pages and navigation](../guides/pages-and-navigation.md#with-reactiveui)). An existing router can project its `RoutingState.CurrentViewModel` through a property of your own, without any guards. Runic does not generate URL history or an Avalonia routed host. |
 | `WhenActivated`                                                  | Every mounted Runic presentation holds an activation lease. A shared ViewModel remains active until its final presentation unmounts. Activation follows the View, not a navigation entry; per-visit work goes in the adapter's `entry.WhenNavigatedTo`.                                                                                                                                                                                               |
 | `Bind`, `BindTo`, `BindCommand`, converters                      | These are still useful for .NET views. They do not bind DOM elements or frontend components; use the generated TypeScript client for that.                                                                                                                                                                                                                                                                                                            |
 | Schedulers                                                       | `IRunicModelContext` owns short serialized model turns. `AddRunicReactiveModelContext()` installs a model-context main-thread scheduler, so commands need no scheduler argument, and supplies a context-backed `ISequencer` (an `IScheduler` in the System.Reactive flavor).                                                                                                                                                                          |
@@ -60,7 +60,7 @@ The wire format is intentionally exact:
 | `TimeSpan`                       | invariant `c` duration string                                                                                          |
 | observable collection            | snapshot array; collection changes and supported nested DTO/item notifications publish a new snapshot                  |
 
-The [wire types table](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/README.md#wire-types)
+The [wire types table](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/README.md#wire-types)
 in the Views README lists every supported C# type with its generated
 TypeScript type and wire form, with examples.
 
@@ -80,8 +80,8 @@ polymorphism, non-string dictionary keys, and arbitrary `object` graphs are
 rejected with a member path rather than falling back to reflection JSON.
 
 For a type outside the built-in graph, implement static
-`IRunicBridgeCodec<T>.Read` and `.Write`, then pair
-`[RunicBridgeCodec(typeof(MyCodec))]` with a `[RunicCodecShape]` on the codec.
+`IRunicCodec<T>.Read` and `.Write`, then pair
+`[RunicCodec(typeof(MyCodec))]` with a `[RunicCodecShape]` on the codec.
 The shape gives the generated TypeScript type, validating decoder expression,
 and optional encoder expression (identity is the default); a .NET-only JSON
 converter cannot describe a safe frontend contract.
@@ -107,16 +107,15 @@ exactly-one result. Mark a property when its observable intentionally has a
 different cardinality:
 
 ```csharp docs-test=skip:illustrative-fragment
-[RunicCommandResult(BridgeCommandResultCardinality.Last)]
+[RunicCommandResult(RunicCommandResultCardinality.Last)]
 public IReactiveCommand<SaveRequest, SaveResult> SaveCommand { get; }
 
-[RunicCommandResult(BridgeCommandResultCardinality.Stream)]
+[RunicCommandResult(RunicCommandResultCardinality.Stream)]
 public IReactiveCommand<Query, Row> SearchCommand { get; }
 ```
 
-The generated client exposes `startSave(input)`,
-`startSaveWithRequestId(requestId, input)`, and
-`recoverSaveWithRequestId(requestId)`. Each returns an operation with
+The generated client exposes `startSave(input, { requestId? })` and
+`recoverSave(requestId)`. Each returns an operation with
 `status()`, `completion`, `wait()`, and `cancel()`. A stream operation also
 has `stream(cursor?)`, returning ordered `{ sequence, value }` items and the
 next cursor. `completion` starts its terminal wait only when it is read, and
@@ -174,8 +173,7 @@ from cancellation or handler failure.
 The adapter registers one handler for each Interaction object even if several
 views or windows show the same model. It selects the browser only inside the
 trusted bridge command/operation scope. Background .NET work has no implicit
-"last mounted window" target: use a normal .NET handler or explicitly enter a
-`RunicInteractionInvocation` scope with the intended session and route.
+"last mounted window" target: use a normal .NET handler.
 
 If a browser mounts multiple presentations of the same route, designate one
 presentation to register each interaction handler. Multiple eligible handlers
@@ -198,9 +196,9 @@ The navigation helpers are in `Runic.Navigation.ReactiveUI`, or
 be installed independently for native MVVM, and a Runic Views app references
 them next to `Runic.Application.Views.ReactiveUI`, which doesn't bring them.
 The scheduler helpers, `AddRunicReactiveModelContext()` and
-`RunicReactiveSchedulerProvider`, are in `Runic.Application.Views.ReactiveUI`
+`ReactiveSchedulers`, are in `Runic.Application.Views.ReactiveUI`
 (same namespace) since W250. See the
-[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/eng/release/notes/0.7.0-preview.4.md).
+[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/eng/release/notes/0.7.0-preview.4.md).
 
 `RunicModelContext` queues short synchronous reads and mutations. Await I/O or
 an interaction outside a turn, then use a later turn to commit state:
@@ -267,7 +265,7 @@ scheduler type. A UI dispatcher's scheduler, such as WPF's, is not logged.
 
 For an explicit scheduler, for example an `ObserveOn` in a DynamicData
 pipeline, inject `ISequencer` (an `IScheduler` in the System.Reactive flavor)
-or call `RunicReactiveSchedulerProvider.For(context)`. Both return the
+or call `ReactiveSchedulers.For(context)`. Both return the
 context's own sequencer, which the main-thread scheduler also uses. They are
 delivery tools, not a replacement for the async command body, host UI
 dispatcher or browser event loop.
@@ -320,11 +318,11 @@ explicit content maps, generated frontend contracts, and a host-neutral model
 context. It intentionally does not add Avalonia as a dependency or copy its
 control/template/converter APIs.
 
-The implementation boundaries are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Application.Views.Codegen/OperationTypeScriptEmitter.cs),
-[interaction emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Application.Views.Codegen/InteractionCodeEmitter.cs),
-[bridge runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/BridgeRuntime.cs),
-and [ReactiveUI adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactivePresentation.cs).
+The implementation boundaries are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tools/Runic.Application.Views.Codegen/OperationTypeScriptEmitter.cs),
+[interaction emitter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tools/Runic.Application.Views.Codegen/InteractionCodeEmitter.cs),
+[bridge runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/Generated/BridgeRuntime.cs),
+and [ReactiveUI adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactivePresentation.cs).
 
 The ReactiveUI-specific Native AOT fixture exercises the direct generated
 codecs and command bridge without warnings. It is focused contract coverage;

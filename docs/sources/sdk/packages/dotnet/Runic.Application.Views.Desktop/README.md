@@ -60,11 +60,16 @@ The same Window and `async host => ...` body run on CS-WebUI with
   ViewModel, opens a `DesktopSurface` and its presentation, and attaches the
   generated Bridge. The surface serves `RunicWindowOptions.ContentRoot` (`www`
   by default) and opens `StartPage`; `Width` and `Height` replace the window
-  size. For other surface or window options, create
-  `new RunicDesktopHost(provider, desktop) { SurfaceOptions = ..., WindowOptions = ... }`
-  inside `DesktopEventLoop.Run`. `RunicDesktopHost.DefaultWindowOptions` opens
-  the embedded WebView and falls back to an installed browser.
-- `RunicDesktopHost.Resources` serves application files that are not part of
+  size. For other surface or window options, pass a `RunicDesktopHostOptions`
+  to `RunicDesktopHost.Run(provider, desktopOptions, hostOptions, async host => ...)`,
+  or to `new RunicDesktopHost(provider, desktop, hostOptions)` for a host on a
+  `DesktopHost` you started yourself. `RunicDesktopHost.DefaultWindowOptions` opens
+  the embedded WebView and falls back to an installed browser. To serve a
+  frontend embedded with `Runic.Assets` instead of `www/`, set `SurfaceOptions`
+  to `new DesktopSurfaceOptions { Content = new DesktopContent.Handler(assets.ToDesktopContentHandler()) }`
+  from `Runic.Assets.Desktop`; see
+  [Runic.Assets or the Views `www/` folder](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Assets/README.md#runicassets-or-the-views-www-folder).
+- `RunicDesktopHostOptions.Resources` serves application files that are not part of
   the frontend build, such as icons from a cache, from each Window's own
   address. It is called with each Window as it opens, after its ViewModel is
   set, and returns that Window's `ContentHandler` or `null`. The surface asks
@@ -75,7 +80,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   rather than to the file system.
 
   ```csharp
-  var host = new RunicDesktopHost(provider, desktop)
+  var hostOptions = new RunicDesktopHostOptions
   {
       Resources = window => window is DashboardWindow ? icons.ServeAsync : null,
   };
@@ -86,7 +91,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   such as `ApplicationLaunch.PlatformContext` of a launch the running instance
   received. Wayland compositors such as KWin give a new window focus only with
   that token. A Window that is already open is brought forward with
-  `PlatformServices.PresentAsync(window, context)` instead.
+  `DesktopPlatformServices.PresentAsync(window, context)` instead.
 - `host.ValidateWindow<TWindow>(options)` checks, before any window opens, that
   the generated Bridge for the ViewModel is registered and that
   `DesktopHost.Validate` accepts the window options. It returns every problem
@@ -103,12 +108,12 @@ The same Window and `async host => ...` body run on CS-WebUI with
   `InnerException`. A missing Bridge is logged as event 1050 through the
   provider's `ILoggerFactory`.
 - `DesktopBridgeWindow<TViewModel>`, the Window's `Host`, owns the Window's scope, surface, and attachment.
-  It exposes `ViewModel`, `Surface`, `Presentation`, `WaitForCloseAsync`, and `CloseAsync`, which
+  It exposes `ViewModel`, `Surface`, `Window`, `WaitForCloseAsync`, and `CloseAsync`, which
   stops new operations and waits for accepted ones before releasing the scope.
   `RunicDesktopHost.GetSurface(window)` returns the `Surface` of any Window of
   this host without naming its ViewModel type, and `null` for another host's.
   It implements `IBridgeWindow`, the lifetime contract shared with the CS-WebUI
-  host, and returns the same `BridgeWindowCloseResult`.
+  host, and returns the same `RunicWindowCloseResult`.
 - A Window with `GuardClose` (see
   [Guarding a user close](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#guarding-a-user-close))
   passes its `CanCloseAsync` to the embedded window as
@@ -121,7 +126,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   the `CloseConfirmation` capability opens the Window unguarded for the user's
   close and logs event 1053 `WindowCloseGuardUnavailable`; `RequestCloseAsync`
   still asks `CanCloseAsync` there.
-- `PlatformServices.AnnounceAsync(window, message, priority)` asks the screen
+- `DesktopPlatformServices.AnnounceAsync(window, message, priority)` asks the screen
   reader to speak a status message for a Window, such as "Saved", through its
   embedded window (`DesktopWindow.AnnounceAsync`; see
   [Accessibility](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md#accessibility)).
@@ -135,7 +140,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   such as GTK 4 before 4.14.
 - `RunicDesktopHost.Placement` restores each Window's size, position and
   maximized state from the last time it closed, and
-  `PlatformServices.GetWindowState(window)` reads them to save. The callback is
+  `DesktopPlatformServices.GetWindowState(window)` reads them to save. The callback is
   called with each Window as it opens, after its ViewModel is set, and returns
   the saved `DesktopWindowPlacement` or `null`; it becomes
   `DesktopWindowOptions.Placement`, which replaces the Window's size and keeps it
@@ -146,14 +151,17 @@ The same Window and `async host => ...` body run on CS-WebUI with
   `WaitForCloseAsync` returns:
 
   ```csharp
-  var host = new RunicDesktopHost(provider, desktop)
+  return RunicDesktopHost.Run(provider, new DesktopHostOptions(), new RunicDesktopHostOptions
   {
       Placement = window => window is MainWindow ? settings.MainWindowPlacement : null,
-  };
-  await using var window = await host.OpenWindowAsync<MainWindow>();
-  await window.WaitForCloseAsync();
-  if (PlatformServices.GetWindowState(window) is PlatformResult<DesktopWindowState>.Success { Value: var state })
-      settings.MainWindowPlacement = state.Placement;
+  }, async host =>
+  {
+      await using var window = await host.OpenWindowAsync<MainWindow>();
+      await window.WaitForCloseAsync();
+      if (DesktopPlatformServices.GetWindowState(window) is PlatformResult<DesktopWindowState>.Success { Value: var state })
+          settings.MainWindowPlacement = state.Placement;
+      return 0;
+  });
   ```
 
   A Window without a native owner, one on CS-WebUI or another host, one served
@@ -161,10 +169,13 @@ The same Window and `async host => ...` body run on CS-WebUI with
   reports `Unavailable` with `OwnerUnavailable`, as `PresentAsync` does; a custom
   window host that reports no state reports `BackendUnavailable`. For each change
   while the window is open, subscribe to `DesktopWindow.StateChanged` of the
-  Window's `Presentation`. A placement belongs to the machine and operating
+  host's `DesktopBridgeWindow<TViewModel>.Window`. A placement belongs to the machine and operating
   system that saved it: its units are each platform's.
-- `RunicDesktopHost.MenuCommands` runs the application's menu bar commands by
-  id, and a Window's root ViewModel that implements `IRunicMenuCommandSource`
+- `host.UseApplicationMenu(commands)` runs the application's menu bar commands
+  by id until the returned object is disposed. They are application-wide, the
+  `DesktopHost.MenuCommands` of every host on that Desktop host, so a second
+  call before the first is disposed throws. A Window's root ViewModel that
+  implements `IRunicMenuCommandSource`
   runs its own while the Window is key (see
   [Menu bar commands](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#menu-bar-commands)).
   Declare the menus in `DesktopHostOptions.MenuBar`; macOS shows them.
@@ -200,7 +211,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   references only `Runic.Platform.Windows`, so it does not ship the Linux and
   macOS providers. `dotnet runic doctor` names the
   provider and, on Linux, checks for the session bus and xdg-desktop-portal.
-  `PlatformServices.ForWindow(owner)` creates the same services for a
+  `DesktopPlatformServices.ForWindow(owner)` creates the same services for a
   `DesktopWindow` that the application opened itself.
 
   ```csharp
@@ -263,7 +274,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
 - `AddRunicPlatformServices()` also registers `IDesktopSettings`, the
   desktop's appearance preferences (color scheme, accent color, high contrast,
   reduced motion). They belong to the application, not to a window, so there
-  is one singleton, which `PlatformServices.CreateSettings()` creates when it
+  is one singleton, which `DesktopPlatformServices.CreateSettings()` creates when it
   is first resolved and the service provider disposes. Windows reads its
   settings, macOS reads AppKit, and Linux reads xdg-desktop-portal with either
   GTK version, without loading GTK. On other systems every read returns
@@ -282,7 +293,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   when the theme is "system". Register your own `IDesktopSettings` before
   calling `AddRunicPlatformServices()`, for example in tests, to replace it.
 - `AddRunicPlatformServices()` also registers `IDesktopNotifications`, one
-  singleton for the application, which `PlatformServices.CreateNotifications(applicationId)`
+  singleton for the application, which `DesktopPlatformServices.CreateNotifications(applicationId)`
   creates when it is first resolved and the service provider disposes. A
   ViewModel takes it in its constructor, with no `OperatingSystem` branch:
 
@@ -315,7 +326,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   tests.
 - `AddRunicPlatformServices()` also registers `IDesktopStatusIcon`,
   `IDesktopLoginStartup` and `IDesktopInhibition`, one singleton each for the
-  application, created by `PlatformServices.CreateStatusIcon(applicationId)`,
+  application, created by `DesktopPlatformServices.CreateStatusIcon(applicationId)`,
   `CreateLoginStartup(applicationId)` and `CreateInhibition(applicationId)`.
   Inhibition keeps the system or display awake while an operation holds a lease:
 
@@ -333,14 +344,18 @@ The same Window and `async host => ...` body run on CS-WebUI with
   [Runic.Platform guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#hosts-without-a-native-owner)
   lists every service's result without a native owner. Register
   `IDesktopPrivilegedActions` yourself; it needs declared actions.
+- `AddRunicPlatformServices()` also registers `IDesktopVolumes`, one singleton
+  created by `DesktopPlatformServices.CreateVolumes()`, which lists, mounts, unmounts
+  and ejects storage volumes and watches them. Linux uses UDisks2 on the system
+  bus with either toolkit; Windows uses the volume management API and ejects as
+  "Safely Remove Hardware" does; macOS uses Disk Arbitration. See
+  [Volumes](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#volumes).
 - `DesktopBridgeWindow<TViewModel>.NativeOwner` (a `DesktopNativeOwner`) is the
-  presentation's `INativePickerOwner`, which the services above bind to. The
-  provider APIs that take it directly, such as
-  `WindowsPlatformProvider.CreateFileDialogs(owner)` or
-  `PortalPlatformProvider.CreateFileDialogs(Gtk4PlatformProvider.CreatePortalWindowOwner(owner))`,
-  keep working for applications that compose providers themselves.
-  `LinuxPlatformProvider` parents dialogs through GTK 3, so do not use it
-  with a GTK 4 window.
+  presentation's `INativeWindowOwner`, which the services above bind to. The
+  window services (file dialogs, the clipboard and file handoff) are created only
+  here, through `DesktopPlatformServices.ForWindow`; the providers keep them internal.
+  Pass the owner where an API asks for a window, such as
+  `WindowsElevationOptions.Owner` for the UAC prompt.
 
   The owner runs provider callbacks on the window's native thread and becomes
   unavailable when the window closes or the surface replaces it. A presentation
@@ -370,7 +385,7 @@ Pages that load `runic-desktop-views.js` keep working. `runic({ desktop: true })
 is not needed for a Views page. The adapter uses the same host-neutral client
 contract as the CS-WebUI adapter, and its build defaults match
 `Runic.Application.Views.CsWebUi`, so `AddRunicViews()` is generated in
-`<ProjectName>.RunicBridgeComposition`.
+`<RootNamespace>.RunicViewsComposition`.
 
 The [First Window on Runic Desktop](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/first-window-desktop)
 example is a complete application. See the
@@ -486,21 +501,27 @@ the surface's capability URL, and the surface admits one browser. It takes
 precedence over `RUNIC_APPLICATION_CLOSE_AFTER_OPEN`. As on CS-WebUI there is
 no native owner: platform services report `OwnerUnavailable`, and a Window
 with `GuardClose` opens unguarded (event 1053). `NativeOwner` throws, so bring
-a Window forward with `PlatformServices.PresentAsync(window, context)`, which
+a Window forward with `DesktopPlatformServices.PresentAsync(window, context)`, which
 takes the `IRunicWindow` and reports `OwnerUnavailable` in this mode and for a
 Window on another host. `ValidateWindow` makes the same
 decision: in serve-only mode it skips the presentation checks, such as
 `webkitgtk-runtime-missing`, `graphical-session-missing` and
 `presentation-unavailable`, which describe what this machine lacks to present a
-window, so an application that validates at startup also starts headless. It
-still reports configuration errors, such as `window-option-invalid`,
+window, so an application that validates at startup also starts headless. With
+a browser fallback, as in the default `EmbeddedThenBrowser` options, a missing
+browser stands in for an installed one, so the embedded WebView's findings,
+such as `linux-embedded-backend-not-selected`, are skipped too and no browser
+is needed. It still reports configuration errors, such as `window-option-invalid`,
 `browser-unsupported` or `gtk4-provider-missing`, which fail every launch that
 presents a window.
 
 A served Window can end with its last browser tab, as a `--browser` command
 that opens the URL in the default browser would. The Window's surface counts
 its connected pages in `ConnectionCount`, and a connection event's handler
-already sees the count with that event. A reload disconnects before or after
+already sees the count with that event. Both belong to the experimental
+presentation transport of Runic.Desktop (`RUNICDESK101`, see
+[Experimental APIs](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/experimental.md)):
+suppress the ID where you use them. A reload disconnects before or after
 the page connects again, so wait a moment before closing:
 
 ```csharp
@@ -546,10 +567,14 @@ dialog's button:
 ```csharp
 await using var window = await host.OpenWindowAsync<MainWindow>();
 var surface = ((DesktopBridgeWindow<MainViewModel>)window.Host).Surface;
+using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 var title = await surface.ExecuteJavaScriptAsync(
-    "return document.querySelector('h1')?.textContent ?? ''", TimeSpan.FromSeconds(10));
+    "return document.querySelector('h1')?.textContent ?? ''", timeout.Token);
 ```
 
-`ExecuteJavaScriptAsync` needs a connected page; with
-`DesktopHostOptions.WaitForConnection` the window has connected when
-`OpenWindowAsync` returns.
+`ExecuteJavaScriptAsync` is part of the experimental presentation transport
+(`RUNICDESK101`); suppress the ID in the test project. It needs a connected
+page; with `DesktopHostOptions.WaitForConnection` the window has connected when
+`OpenWindowAsync` returns. The token bounds the wait. A result larger than
+16 MiB of UTF-8 throws a `DesktopException` with the category `LimitExceeded`
+and the code `script-result-too-large`; it is never cut.

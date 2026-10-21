@@ -43,9 +43,10 @@ const fetchBytes = async (url) =>
 async function syncNuGet(packages) {
   const pins = [];
   const ids = [];
-  for (const { identity } of packages) {
+  // A package that ships on a version of its own records it in the catalog.
+  for (const { identity, version: own } of packages) {
     const lower = identity.toLowerCase();
-    const version = release.version.toLowerCase();
+    const version = (own ?? release.version).toLowerCase();
     const registration = await fetchJson(
       `https://api.nuget.org/v3/registration5-gz-semver2/${lower}/${version}.json`,
     );
@@ -150,9 +151,9 @@ function typeEntries(manifest) {
 
 async function syncNpm(packages) {
   const tarballs = [];
-  for (const { identity } of packages) {
+  for (const { identity, version = release.version } of packages) {
     const metadata = await fetchJson(
-      `https://registry.npmjs.org/${identity.replace('/', '%2f')}/${release.version}`,
+      `https://registry.npmjs.org/${identity.replace('/', '%2f')}/${version}`,
     );
     const bytes = await fetchBytes(metadata.dist.tarball);
     const [algorithm, expected] = metadata.dist.integrity.split('-');

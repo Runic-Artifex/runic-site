@@ -50,7 +50,7 @@ The former keeps the existing fire-and-snapshot behavior. The latter is the
 generated recovery API for ReactiveUI commands and has a request ID:
 
 ```ts docs-test=skip:illustrative-fragment
-const operation = await editor.startSaveWithRequestId(id, request);
+const operation = await editor.startSave(request, { requestId: id });
 const outcome = await operation.completion;
 if (outcome.kind === 'succeeded') use(outcome.result);
 ```
@@ -184,9 +184,8 @@ an `AbortSignal` for the same lifecycle. A boolean rejection is ordinary
 application output, while cancellation and browser-handler failure remain
 distinct outcomes. Browser prompts are never published in a state broadcast.
 
-Background code does not acquire a browser target by accident. It either uses
-a .NET handler or deliberately supplies a `RunicInteractionInvocation` with a
-chosen `WindowContentSession` and route. ReactiveUI's `Handle(input)` itself
+Background code does not acquire a browser target by accident: it uses a .NET
+handler. ReactiveUI's `Handle(input)` itself
 does not take a cancellation token; bridge-scoped calls receive the operation
 or command token through the invocation scope.
 
@@ -199,8 +198,8 @@ interaction attachment, view location, activation, and scheduler adaptation.
 
 Each mounted `ReactiveRunicView<T>`, and each open `RunicWindow<T>`, gets a
 separate activation lease. The ViewModel's `IActivatableViewModel.Activator` remains
-active until the final lease releases it. `ReactiveRoutedRegion<T>` maps
-`RoutingState.CurrentViewModel` into generated content. This gives Runic the
+active until the final lease releases it. A get-only `NavigationRegion<TContent>`
+property presents its `Current` as generated content. This gives Runic the
 same useful activation and routing boundary as a native integration while the
 frontend retains responsibility for visual layout and DOM binding.
 
@@ -214,8 +213,8 @@ The exact generated codec/command path is covered by a ReactiveUI Native AOT
 fixture with no warnings. That verifies the bridge contract under AOT; it does
 not represent every native host or frontend combination.
 
-The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
-[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
-[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
-and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.8.0-preview.5/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
+The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
+[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
+[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
+and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
