@@ -57,8 +57,8 @@ list the moved types.
 Rebuild after upgrading so the C# bridges and TypeScript clients regenerate
 together, and add `@runic-artifex/views` to the frontend's dependencies.
 
-- Connected client types are named `<Name>Client`. The former `<Name>View`
-  name remains as a deprecated alias.
+- Connected client types are named `<Name>Client`; the former `<Name>View`
+  name is no longer generated.
 - Import `BridgeError`, `BridgeOperation*` and `FieldBaseline*` from
   `@runic-artifex/views`. Generated modules no longer export them, so
   `instanceof BridgeError` holds across modules.

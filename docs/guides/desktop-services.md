@@ -71,9 +71,7 @@ provider resources during disposal.
 Linux file dialogs use XDG portals, parented to the window by the host with the
 window's GTK version: `Runic.Platform.Linux` serves GTK 3 windows and
 `Runic.Platform.Linux.Gtk4` GTK 4 windows, and a GTK 4 process never loads
-GTK 3. GTK-native choosers are a separate explicit compatibility choice for
-unsandboxed apps; inside Flatpak or Snap they report
-`Unavailable(BackendUnavailable)`. Windows notifications require shell registration for the chosen
+GTK 3. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
 The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.0/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
