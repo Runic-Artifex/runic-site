@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "8345f188a2b6d2736a069b5bbc4737ebfe32072d",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/8345f188a2b6d2736a069b5bbc4737ebfe32072d.tar.gz",
+  "revision": "6793f99c726af8b1d05067108761905aa5e8d0d6",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/6793f99c726af8b1d05067108761905aa5e8d0d6.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
