@@ -130,22 +130,40 @@ them to the native window when it opens. A host without a native owner
 registers `WindowPlatformServices.Unavailable(reason)`, whose operations and
 capabilities all report that reason. Tests can use the same instance.
 
+The capability identifiers are constants of `PlatformCapabilityIds`, so a typo
+does not compile:
+
+```csharp
+var snapshot = services.GetSnapshot();
+bool canSave = snapshot.Statuses[PlatformCapabilityIds.FilesSave] is CapabilityStatus.Available;
+```
+
 ### Opening links
 
 `IDesktopFileLauncher.LaunchUriAsync(uri)` opens a web or mail link in the
-user's default browser or mail client and reports the outcome as a
-`PlatformResult` (capability `platform.uris.launch`):
+user's default browser or mail client, or a Windows Settings page, and reports
+the outcome as a `PlatformResult` (capability
+`PlatformCapabilityIds.UrisLaunch`):
 
 ```csharp
 var result = await launcher.LaunchUriAsync(new Uri("https://example.org/help"));
 ```
 
-It accepts only absolute `http`, `https` and `mailto` URIs. A relative URI, a
+It accepts only absolute `http`, `https`, `mailto` and `ms-settings` URIs. A relative URI, a
 path (an absolute path parses as a `file:` URI, a UNC path too) and every other
 scheme throw `ArgumentException` before anything native runs, so a link never
-starts a program; open local files with `LaunchAsync`. The URI comes from
-trusted application code: validate links a web page supplies before passing them
-on.
+starts a program; open local files with `LaunchAsync`. A `mailto` URI that names
+an attachment (a header field `attach`, `attachment` or another name beginning
+with `attach`, in any case or escaping) throws too: some mail clients attach that
+file without the user choosing it. The URI comes from trusted application code:
+validate links a web page supplies before passing them on.
+
+`LaunchAsync(path)` opens a local file in its default application. On Windows and
+macOS, `DesktopFileOperation.Open` returns `Failed(PermissionDenied)` instead of
+running programs, scripts, installers, shortcuts and disk images; Linux applies
+the desktop portal's policy. The block lists are best effort, so do not `Open`
+files from untrusted sources, such as downloads or names a page supplies: use
+`DesktopFileOperation.Reveal` or `DesktopFileOperation.ChooseApplication` instead.
 
 | Platform | Mechanism | Outcomes |
 | --- | --- | --- |
@@ -154,6 +172,23 @@ on.
 | macOS | `NSWorkspace openURL:configuration:completionHandler:` | No application for the scheme: `Failed(Other)` with the `NSError` domain and code (macOS 26: `NSCocoaErrorDomain 256`) |
 
 Success means the desktop accepted the URI, not that an application showed it.
+
+`ms-settings:` URIs, such as `ms-settings:display` or `ms-settings:defaultapps`,
+open the Windows Settings app through the same shell call. The URI must be
+exactly `ms-settings:<page>`, where the page is 1 to 64 letters, digits or
+hyphens (compared lower-case), with no path, query, fragment or percent-escapes.
+Pages ending in `-action`, such as `windowsupdate-action`, start an action
+instead of showing a page and are refused. Other values throw
+`ArgumentException` on every platform. Linux and macOS accept a valid page and
+return `Unavailable(BackendUnavailable)` without a native call, so
+cross-platform code can offer a Settings link on Windows and handle the result
+elsewhere:
+
+```csharp
+var result = await launcher.LaunchUriAsync(new Uri("ms-settings:defaultapps"));
+if (result is PlatformResult<PlatformUnit>.Unavailable)
+    ShowManualInstructions();
+```
 
 `IDesktopSettings` is application-scoped, so `AddRunicPlatformServices()`
 registers one singleton for it. A host or platform without a provider
@@ -200,6 +235,46 @@ Existing registrations are kept on both hosts.
 The application composes `IDesktopPrivilegedActions` itself, because it needs
 declared actions and a provider package, and claims `ApplicationInstance` before
 it starts a host.
+
+## Menus
+
+Status icon menus (`DesktopStatusIconState.Menu`) and the Runic Desktop menu bar
+(`DesktopHostOptions.MenuBar`) share one model:
+
+| Type | Is |
+| --- | --- |
+| `DesktopMenuEntry` | The base of every entry. The set is open: a minor release may add entry kinds, so give a `switch` over entries a default arm. Code that walks a menu skips entries it does not know. |
+| `DesktopMenuItem(Title, CommandId)` | An item that runs a command, with `IsEnabled`, `IsChecked` (`null` for a plain item) and `Shortcut` |
+| `DesktopMenuSeparator` | A line between groups of entries |
+| `DesktopMenu(Title, Items)` | A submenu, or a menu of the menu bar, with `IsEnabled` and the menu bar's `Role` |
+| `DesktopShortcut`, `DesktopShortcutModifiers` | A key and its modifiers, written as `Primary+Shift+S` |
+
+```csharp
+ImmutableArray<DesktopMenuEntry> menu =
+[
+    new DesktopMenuItem(Title: "Open window", CommandId: "open"),
+    new DesktopMenuItem(Title: "Start at login", CommandId: "login") { IsChecked = startsAtLogin },
+    new DesktopMenuSeparator(),
+    new DesktopMenu("More", [new DesktopMenuItem(Title: "About", CommandId: "about")]),
+    new DesktopMenuItem(Title: "Quit", CommandId: "quit"),
+];
+```
+
+The title comes first. A title is literal user-visible text: not blank, at most
+128 characters and without NUL. It has no mnemonic markers: providers show `&`
+and `_` as written. A command id is an application-owned routing key, never a
+command line: 1 to 64 ASCII letters, digits, dots, underscores or hyphens. Ids
+starting with `runic.`, in any letter case, are reserved for Runic's standard
+commands. Each surface checks these rules when it receives a menu and throws an
+`ArgumentException` that names the id or title and the rule.
+
+| | Status icon menu | Menu bar (Runic Desktop) |
+| --- | --- | --- |
+| Command ids | Unique in the menu | May repeat |
+| Limits | Four nested submenus, 256 entries | None beyond the rules above |
+| `IsEnabled`, `IsChecked` | Shown as declared | Shown as declared; an item is also disabled while no command target can run it |
+| `Shortcut`, `Role` | Ignored | The macOS key equivalent and where the menu goes |
+| Choosing an item | `IDesktopStatusIcon.Activated` with `Kind` `MenuItem` and the item's `CommandId` | The command target's `Execute(DesktopMenuItem)` |
 
 ## Opening files and URLs
 

@@ -11,9 +11,12 @@ dotnet runic dev
 
 `dnx` ships with the .NET 10 SDK and runs the creator without installing it.
 The creator asks for the project name, frontend, package manager, Window host,
-and ViewModel library. It installs `Runic.Application.Templates`, runs
-`dotnet new runic-app`, and prints both commands so you can recreate the
-project without questions:
+and ViewModel library. Since SDK `0.10.0` it asks on standard error, so
+redirecting standard output does not turn the questions off. Pass `--yes`, set
+`RUNIC_COMMANDLINE_NO_INPUT=1` or redirect standard input to use the defaults;
+Escape or Ctrl+C at a question cancels with exit code 130. It installs
+`Runic.Application.Templates`, runs `dotnet new runic-app`, and prints both
+commands so you can recreate the project without questions:
 
 ```sh docs-test=commands
 dotnet new install Runic.Application.Templates@<VERSION>
@@ -78,7 +81,7 @@ operation lifetime.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see
-  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/examples/first-window/README.md).
+  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/examples/first-window/README.md).
 
 The code blocks in these guides are checked against a pinned copy of the SDK
 template and examples by

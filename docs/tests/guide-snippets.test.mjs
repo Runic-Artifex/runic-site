@@ -403,13 +403,13 @@ test('tagged guide code blocks match the pinned SDK snapshot', () => {
 
 test('app-facing guides import only the root Views entry', () => {
   // Generated clients own the generated-code entry points; applications and
-  // their tests use the root entry, the mock Bridge and, for APIs that may
-  // still change, the experimental entry.
+  // their tests use the root entry and the mock Bridge. The experimental entry
+  // is removed since SDK 0.10.0.
   for (const guide of guideFiles()) {
     const markdown = readFileSync(new URL(guide, guidesRoot), 'utf8');
     assert.doesNotMatch(
       markdown,
-      /@runic-artifex\/views\/(?!(?:mock|experimental)\b)[\w/-]+/,
+      /@runic-artifex\/views\/(?!mock\b)[\w/-]+/,
       `${guide} imports a generated-only Views entry`,
     );
   }

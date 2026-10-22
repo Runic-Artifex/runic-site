@@ -5,9 +5,10 @@ Targets .NET 10 and Windows. The containing WPF application owns its dispatcher,
 shell, navigation engine, ViewModels and services. Toolkit, ReactiveUI, or plain
 observable models can use the same presentation adapter. The API is stable since
 0.9.0; its former experimental ID `RUNICWPF001` is retired, so remove
-its suppressions. Only `RunicWebView.CreateWindowHostFactory()`, for the
-lower-level API, belongs to Runic Desktop's experimental custom window-host family
-[`RUNICDESK100`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/experimental.md#RUNICDESK100).
+its suppressions. `RunicWebView.CreateWindowHostFactory()`, for the lower-level
+API, is a Runic Desktop
+[custom window host](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts),
+stable since 0.10.0; remove suppressions of its former ID `RUNICDESK100`.
 The XAML namespace is `https://runic-artifex.eu/xaml/views`, with the prefix `rv`.
 
 ## Host a web View in XAML
@@ -76,8 +77,6 @@ never creates or disposes a ViewModel, a scope or a navigation entry.
 
 `RunicViewHost` composes `RunicWebView`, `DesktopHost` and
 `CreateWpfViewAsync`. Use them directly only when you need another lifecycle.
-`CreateWindowHostFactory()` and `DesktopHostOptions.WindowHostFactory` are
-experimental (`RUNICDESK100`): suppress that ID where you compose them.
 The view and host live as long as the presentation, so keep them in fields and
 dispose them in this order when the control unloads, rather than with
 `await using` in the method that opens them:
@@ -138,8 +137,14 @@ diagnostics.
 The adapter uses DesktopHost's existing asset server, authenticated surface,
 WebSocket transport and Views session. Its `HwndHost` reuses Runic Desktop's
 native WebView2 controller and native loader, including origin-bound document
-start credentials and permission policy. Install Microsoft Edge WebView2 Runtime
-on the Windows machine. It creates no separate WPF window or UI thread.
+start credentials, permission policy and the web content policy: external links
+open in the default browser, downloads are refused and developer tools are
+available only in Development (see [Links, new windows, downloads and developer tools](../Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools)).
+`WpfBridgeView` and `RunicViewHost` open with the defaults; a surface you open
+yourself through `RunicWebView.CreateWindowHostFactory()` takes
+`DesktopWindowOptions.WebContent`.
+Install Microsoft Edge WebView2 Runtime on the Windows machine. It creates no
+separate WPF window or UI thread.
 
 `CreateWpfViewAsync` borrows the exact supplied model and service provider. It
 does not create or dispose a DI scope, ViewModel, navigator, or application-owned

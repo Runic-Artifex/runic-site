@@ -419,10 +419,7 @@ test('product documentation areas link to their owning guides', async () => {
       'runic-translations',
       `${github}runic-translations-sdk/blob/main/docs/guides/translations/quickstart-dotnet.md`,
     ],
-    [
-      'runic-command-line',
-      `${github}runic-cli-sdk/blob/v0.7.0-preview.2/README.md`,
-    ],
+    ['runic-command-line', `${github}runic-cli-sdk/blob/v0.8.0/README.md`],
   ]) {
     const html = await render(`/products/${slug}`);
     assert.match(html, /id="guides"/);

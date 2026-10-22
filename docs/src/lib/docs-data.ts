@@ -352,11 +352,11 @@ export const products: Product[] = [
         label: 'Get started with Command Line',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.7.0-preview.2/README.md',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.8.0/README.md',
         label: 'Command Line repository README',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.7.0-preview.2/specs/command-line',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.8.0/specs/command-line',
         label: 'Command Line specifications',
       },
     ],
@@ -369,11 +369,11 @@ export const products: Product[] = [
     description:
       'Runic Command Line generates NativeAOT-ready commands from ordinary typed C# methods. Help, validation, completion, environment fallbacks and shared options work in standalone tools and hosted Runic applications. Add Runic.CommandLine.Spectre for styled help, progress and prompts; machine output remains structured and predictable.',
     releaseProduct: null,
-    version: '0.7.0-preview.2',
+    version: '0.8.0',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-cli-sdk/releases/tag/v0.7.0-preview.2',
+      'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.8.0/eng/release/notes/0.8.0.md',
     source: 'https://github.com/Runic-Artifex/runic-cli-sdk',
     bestFor: [
       'NativeAOT command applications',

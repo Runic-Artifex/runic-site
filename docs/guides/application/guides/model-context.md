@@ -135,8 +135,7 @@ one of their own when none is registered:
 
 `AddRunicReactiveModelContext()` and `AddRunicNavigation()` use `TryAdd`, so
 together they register one context per Window scope, and they keep one you
-registered before them. Neither the model context types nor the navigation
-types are experimental.
+registered before them.
 
 ## Coming from Avalonia or MAUI
 
@@ -222,7 +221,7 @@ service provider and register the instance.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands, progress and cancellation.
 - The
-  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
+  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
   and
-  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
+  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
   in the SDK guides cover the details, including WPF's dispatcher context.

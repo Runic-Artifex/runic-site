@@ -20,7 +20,7 @@ that a native WPF View can bind to, so the user can switch between the two
 without losing a draft.
 
 The
-[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.1/examples/wpf-hybrid-editor)
+[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/wpf-hybrid-editor)
 is the complete application this guide quotes. Its notes list and dialogs are
 WPF; its editor page can switch between WPF controls and a web View.
 
@@ -169,7 +169,7 @@ On `dotnet build`, the project that generates the client:
 application copies the model project's `dist` to its own `www/`.
 `RunicViewHost` opens `www/index.html` next to the application by default; its
 `ContentRoot` and `StartPage` properties change that. The
-[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/README.md)
+[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md)
 change the frontend folder, the package manager and the build command.
 
 ## Place a `RunicViewHost`
@@ -261,7 +261,7 @@ without asking; this is new in SDK `0.7.0-preview.8`, and before it a tab
 switch asked only the tab model. Closing the window clears every region a guarding
 host has loaded with, one after another, and stops at the first that a guard
 keeps. See the Runic.Navigation.Wpf README,
-["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
+["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
 
 ## Start windows in code, not with `StartupUri`
 
@@ -272,18 +272,20 @@ a navigation scope or a translation manager at load time can see none of
 them.
 
 The hybrid example therefore has no `StartupUri`. `OnStartup` builds the
-services, creates the window's scope, shows the window with its regions and
-only then navigates:
+services, creates the window's scope, starts the first page with
+`Main.Start(...)` and then shows the window with its regions. `Start` runs
+synchronously, so a page that can't be constructed throws at startup instead of
+being lost in an `async void OnStartup`:
 
 ```csharp docs-test=source:examples/wpf-hybrid-editor/App/App.xaml.cs
-protected override async void OnStartup(StartupEventArgs e)
+protected override void OnStartup(StartupEventArgs e)
 {
     base.OnStartup(e);
     _services = AddServices(new ServiceCollection()).BuildServiceProvider();
     _windowScope = _services.CreateScope();
     var regions = _windowScope.ServiceProvider.GetRequiredService<AppRegions>();
+    regions.Main.Start(NavigationTarget.Create<NotesListViewModel>()); // throws if the list can't be created
     new MainWindow { DataContext = regions }.Show();
-    await regions.Main.ResetAsync<NotesListViewModel>();
 }
 
 protected override void OnExit(ExitEventArgs e)
@@ -304,7 +306,7 @@ Translations `0.6.0-preview.7` and later have `CreateManager`.
 `ServiceProvider.Dispose()` in `OnExit` starts the navigator's shutdown but
 doesn't wait for it. When owned cleanup must finish, dispose the provider
 asynchronously after `app.Run()` returns in a custom `Main`, as the
-[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
+[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
 shows. Never block the dispatcher on `DisposeAsync` while it runs.
 
 ## Limits
@@ -326,5 +328,5 @@ shows. Never block the dispatcher on `DisposeAsync` while it runs.
 - [Pages and navigation](../guides/pages-and-navigation.md) explains regions,
   guards and dialog results.
 - The
-  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views.Wpf/README.md)
+  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views.Wpf/README.md)
   lists every `RunicViewHost` property and the lower-level API.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.9.1",
+  "version": "0.10.0",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "373946771c763bdbedb84a089723abcdd0e4c046"
@@ -94,7 +94,7 @@
     },
     {
       "name": "Runic.Application.Views.CsWebUi",
-      "version": "0.9.1-preview.1",
+      "version": "0.10.0-preview.1",
       "project": "packages/dotnet/Runic.Application.Views.CsWebUi/Runic.Application.Views.CsWebUi.csproj"
     },
     {
@@ -172,8 +172,16 @@
         "tools/Runic.Administration.Verify"
       ]
     },
-    "desktop": {
+    "platform-contracts": {
       "dependsOn": [],
+      "paths": [
+        "packages/dotnet/Runic.Platform"
+      ]
+    },
+    "desktop": {
+      "dependsOn": [
+        "platform-contracts"
+      ],
       "paths": [
         "packages/dotnet/Runic.Desktop",
         "tests/native/Runic.Desktop.ComparativeStressAdapter",
@@ -223,7 +231,8 @@
       "dependsOn": [
         "desktop",
         "platform",
-        "navigation"
+        "navigation",
+        "assets"
       ],
       "paths": [
         "packages/dotnet/Runic.Application.Views",
@@ -346,15 +355,16 @@
         "examples/Directory.Build.targets",
         "examples/Directory.Packages.props",
         "examples/NuGet.config",
-        "tests/fixtures/application/dynamicdata"
+        "tests/fixtures/application/dynamicdata",
+        "tests/fixtures/application/dev-live-assets"
       ]
     },
     "platform": {
       "dependsOn": [
+        "platform-contracts",
         "desktop"
       ],
       "paths": [
-        "packages/dotnet/Runic.Platform",
         "packages/dotnet/Runic.Platform.Runtime",
         "packages/dotnet/Runic.Platform.Windows",
         "packages/dotnet/Runic.Platform.Linux",

@@ -101,7 +101,7 @@ export const packageGoals: readonly PackageGoal[] = [
     packages: [
       {
         name: 'Runic.Application.Views.Wpf',
-        note: 'Experimental child WebView2 host; includes the Desktop bridge.',
+        note: 'Child WebView2 host; includes the Desktop bridge.',
       },
       {
         name: '@runic-artifex/views',
