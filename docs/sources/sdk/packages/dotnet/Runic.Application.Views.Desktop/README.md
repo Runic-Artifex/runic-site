@@ -490,6 +490,19 @@ renders, instead of assuming that a call lands; `@runic-artifex/vite-plugin-runi
 pre-bundles its development client, so a cold Vite dependency cache no longer
 reloads the first page.
 
+Without a Vite or Angular development server, `dotnet runic dev` sets
+`RUNIC_APPLICATION_DEVELOPMENT_ASSETS` to the frontend output directory, such
+as `Frontend/dist`, which the frontend watcher rewrites. In a `Development`
+environment, and when `RunicDesktopHostOptions.SurfaceOptions` is not set,
+each window then serves that directory before its `www/` folder (which still
+supplies `runic-views.js`) and reloads when the directory changes: it navigates
+to the last HTML page it loaded, or to its start page, without the page's
+query, hash or `history.pushState` route, and its Bridge reconnects as after
+any reload. Outside `Development` the host ignores the variable. Events 2005 to
+2007 report it. The
+[dotnet-runic README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/dotnet-runic/README.md)
+describes the frontend modes.
+
 Set `RUNIC_APPLICATION_SERVE_ONLY=1` to drive the unchanged application from a
 browser test, with the same contract as on
 [CS-WebUI](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.CsWebUi/README.md).
@@ -518,17 +531,14 @@ presents a window.
 A served Window can end with its last browser tab, as a `--browser` command
 that opens the URL in the default browser would. The Window's surface counts
 its connected pages in `ConnectionCount`, and a connection event's handler
-already sees the count with that event. Both belong to the experimental
-presentation transport of Runic.Desktop (`RUNICDESK101`, see
-[Experimental APIs](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/experimental.md)):
-suppress the ID where you use them. A reload disconnects before or after
+already sees the count with that event. A reload disconnects before or after
 the page connects again, so wait a moment before closing:
 
 ```csharp
 var surface = RunicDesktopHost.GetSurface(window)!;
-using var connections = surface.SubscribeConnectionEvents(invocation =>
+using var connections = surface.SubscribeConnectionEvents(connection =>
 {
-    if (invocation is not { Kind: PresentationEventKind.Disconnected, Surface.ConnectionCount: 0 }) return;
+    if (connection is not { Kind: DesktopConnectionEventKind.Disconnected, Surface.ConnectionCount: 0 }) return;
     _ = Task.Run(async () =>
     {
         await Task.Delay(TimeSpan.FromSeconds(1));
@@ -572,8 +582,7 @@ var title = await surface.ExecuteJavaScriptAsync(
     "return document.querySelector('h1')?.textContent ?? ''", timeout.Token);
 ```
 
-`ExecuteJavaScriptAsync` is part of the experimental presentation transport
-(`RUNICDESK101`); suppress the ID in the test project. It needs a connected
+`ExecuteJavaScriptAsync` needs a connected
 page; with `DesktopHostOptions.WaitForConnection` the window has connected when
 `OpenWindowAsync` returns. The token bounds the wait. A result larger than
 16 MiB of UTF-8 throws a `DesktopException` with the category `LimitExceeded`

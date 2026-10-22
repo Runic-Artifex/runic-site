@@ -28,6 +28,7 @@ const productLabels: Readonly<Record<string, string>> = {
   assets: 'Assets',
   desktop: 'Desktop',
   platform: 'Platform',
+  'platform-contracts': 'Platform contracts',
   svelte: 'Svelte',
   templates: 'Templates',
   'views-effect': 'Effect bindings',

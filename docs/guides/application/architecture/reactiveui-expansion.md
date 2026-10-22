@@ -204,17 +204,19 @@ same useful activation and routing boundary as a native integration while the
 frontend retains responsibility for visual layout and DOM binding.
 
 The two ReactiveUI flavors expose different namespaces and unit/scheduler
-types. An application selects exactly one adapter. The generated model tool
-uses the property contract to choose an adapter; when an interface-typed
-contract is ambiguous, set `RunicApplicationFrontendReactiveUiFlavor=reactive` for the
-System.Reactive flavor.
+types. An application selects exactly one adapter. Since SDK `0.10.0` the
+generated bridge calls the command helpers of the adapter the project
+references, so there is no flavor property to set; setting the removed
+`RunicApplicationFrontendReactiveUiFlavor` fails with `RUNICBRIDGE017`, and
+adapters of both flavors, directly or through another package or project, fail
+with `RUNICBRIDGE023`.
 
 The exact generated codec/command path is covered by a ReactiveUI Native AOT
 fixture with no warnings. That verifies the bridge contract under AOT; it does
 not represent every native host or frontend combination.
 
-The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
-[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
-[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
-and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
+The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
+[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
+[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
+and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).

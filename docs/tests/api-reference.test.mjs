@@ -316,7 +316,11 @@ test('the checked-in reference resolves most inheritdoc and cross references', (
     for (const type of model.types)
       for (const entry of [type, ...(type.members ?? [])]) {
         if (entry.inherited) inherited++;
-        if (entry.docs?.inheritdoc) unresolved++;
+        // Documentation inherited from .NET itself keeps its cref and links to
+        // Microsoft Learn; only other unresolved entries count.
+        const cref = entry.docs?.inheritdoc?.cref ?? '';
+        if (entry.docs?.inheritdoc && !/^[A-Z]:(System|Microsoft)\./.test(cref))
+          unresolved++;
       }
   assert.ok(inherited > 50, `${inherited} inherited`);
   assert.ok(unresolved < inherited / 2, `${unresolved} unresolved`);

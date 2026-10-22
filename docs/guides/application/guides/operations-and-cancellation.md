@@ -51,9 +51,9 @@ newer choice cancels the one it supersedes.
 
 The Views README walks through a complete example, a cleanup
 estimate in C# and TypeScript, in
-[Operation results and parameterised queries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/README.md#operation-results-and-parameterised-queries).
+[Operation results and parameterised queries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#operation-results-and-parameterised-queries).
 Its
-[wire types](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/README.md#wire-types)
+[wire types](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#wire-types)
 explain why a result such as a byte count shown in the UI is better a `double`
 than a `long`, which becomes a `bigint`.
 
@@ -74,7 +74,7 @@ private void OnOutput(string text)
 ```
 
 The page still sees a `string`. See
-[live logs and other growing text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/README.md#live-logs-and-other-growing-text).
+[live logs and other growing text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#live-logs-and-other-growing-text).
 
 ## Choose a policy for the action
 
@@ -118,9 +118,9 @@ and [published-package desktop onboarding](../package-consumer.md).
 
 The following helpers are new in SDK `0.7.0-preview.6`.
 
-[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/web/views/src/operation-controller.ts)
+[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/web/views/src/operation-controller.ts)
 and Svelte's
-[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/web/svelte/src/views/use-operation.svelte.ts)
+[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/web/svelte/src/views/use-operation.svelte.ts)
 bind Start handles to admission, pending state, status, outcome, declared failure,
 error and Cancel. Progress stays in the generated View snapshot.
 Disposal detaches observation; the application still owns cancellation and drain.
@@ -165,16 +165,20 @@ before Save; see [typed domain failures](typed-failures.md#framework-command-hel
 For mutations, keep the model's `canSave` false through accepted work and recovery;
 the binding's `pending` flag tracks the invocation, not domain-task completion.
 
-`createLatestOperationController`, from `@runic-artifex/views/experimental`
-since SDK `0.9.0`, coalesces selections and waits for terminal
-status before another admission in the same session. Intents can add a real-work
-barrier and session-validity check.
+`createLatestOperationController`, exported from the `@runic-artifex/views`
+root since SDK `0.10.0` (the `./experimental` entry is removed), coalesces
+selections and waits for terminal status before another admission in the same
+session. Intents can add a real-work barrier and session-validity check. In a
+component, `useLatestOperation()` (React, Vue, Svelte) and
+`injectLatestOperation()` (Angular) wrap one controller for the owner's lifetime
+and expose every `LatestOperationState` field; disposing the owner settles
+observation and never cancels accepted work.
 
 For a workspace contract exposing `startSelectCommit` and a short `cancelRead`
 control command, pass the session that rendered the selected item:
 
 ```ts docs-test=skip:illustrative-fragment
-import { createLatestOperationController } from '@runic-artifex/views/experimental';
+import { createLatestOperationController } from '@runic-artifex/views';
 import type {
   CommitSelection,
   WorkspaceClient,
@@ -211,7 +215,7 @@ availability must finish after terminal invocation status. Call `dispose()`
 when the selection owner leaves; it drops feedback and queued intent without
 requesting cancellation of accepted work.
 
-[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
+[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
 reserves application-owned work before invoking
 its factory. `DrainAsync` stops new admission and waits for accepted tasks;
 cancelling the caller's drain wait does not cancel those tasks. Asynchronous
@@ -240,7 +244,7 @@ public async ValueTask DisposeAsync()
 
 The editor and workspace snippets illustrate application-specific contracts.
 The package onboarding snippets are checked against the pinned release template. The
-[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/tests/fixtures/application/operations-consumer/README.md)
+[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tests/fixtures/application/operations-consumer/README.md)
 builds from packed NuGet/npm archives and exercises operation feedback, latest
 selection, session replacement, shared-DTO exclusions and accepted-work disposal through the
 real Desktop bridge.

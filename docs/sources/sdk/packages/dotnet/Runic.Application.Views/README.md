@@ -588,8 +588,9 @@ public sealed partial class EditorViewModel : ObservableObject, IRunicMenuComman
 
 The host asks once for each id when the Window opens, and again after
 `DesktopHost.SetMenuBar`, in the ViewModel's model turn. An item is enabled
-while its command's `CanExecute(null)` is `true`, following `CanExecuteChanged`,
-and runs `Execute(null)` in the model turn; a failure is logged as event 2004,
+while its declared `IsEnabled` and its command's `CanExecute(null)` are `true`,
+following `CanExecuteChanged`, and runs `Execute(null)` in the model turn; a
+failure is logged as event 2004,
 `DesktopMenuCommandFailed`. An id the ViewModel returns `null` for goes to the
 application's commands, `RunicDesktopHost.UseApplicationMenu`, such as New or
 Settings…, which also run while no Window is open. Runic Desktop shows the menu
@@ -719,7 +720,7 @@ in `PackageReference` and `Directory.Packages.props`; namespaces are unchanged.
 | `RunicBridgeBuildEnabled` | `RunicApplicationFrontendGenerationEnabled` |
 | `RunicBridgeCompositionType` | `RunicApplicationFrontendCompositionType` |
 | `RunicBridgeModelAssembly` | `RunicApplicationFrontendModelAssembly` |
-| `RunicBridgeReactiveUiFlavor` | `RunicApplicationFrontendReactiveUiFlavor` |
+| `RunicBridgeReactiveUiFlavor` | removed; the ReactiveUI flavor is inferred (see `RunicApplicationFrontendReactiveUiFlavor` below) |
 | `RunicBridgeDocumentation` | `RunicApplicationFrontendDocumentationEnabled` |
 | `RunicBridgeBootstrap` (set in the bootstrap pass) | `RunicApplicationFrontendBootstrap`; the bootstrap pass no longer sets the old name |
 | `RunicViewsWindowProject` | `RunicApplicationFrontendWindowProject` |
@@ -770,6 +771,13 @@ private async Task SaveAsync(CancellationToken token)
   Don't use `ConfigureAwait(false)` in ViewModel code that writes state after
   it. Code you start outside a turn, such as a test that calls
   `ExecuteAsync` directly, also commits with `InvokeAsync`.
+- With the ReactiveUI adapters' main-thread scheduler, ReactiveUI work that such
+  background code schedules, such as a command's result and `IsExecuting`, an
+  `ObserveOn(RxSchedulers.MainThreadScheduler)` or a `ToProperty`, still runs on
+  the context of the turn whose async flow started it (since 0.10). A plain
+  `command.Execute()` that hand-written code starts in a turn therefore delivers
+  its notifications on that context, as a bridged execution does. The scheduler
+  does not move a plain property write; commit those with `InvokeAsync`.
 - Don't block a turn on asynchronous work (`.Result`, `.Wait()`,
   `GetAwaiter().GetResult()`): its continuation needs the same context, so it
   deadlocks, as it would on a UI thread.
@@ -937,6 +945,14 @@ hand-written code. Generated files name them with `global::`, so regenerating
 is the only migration; hand-written code that names them, such as a test Bridge,
 adds `using Runic.Application.Views.Generated;`.
 
+Each ViewModel's generated bridge is an internal class `<Name>Bridge`, such as
+`CounterBridge` for `CounterViewModel`, in the `Runic.Application.Views.Generated.Bridges`
+namespace of the application's assembly, not beside the ViewModel, so no
+application type collides with it. Code in that assembly, or in a test project it
+grants `InternalsVisibleTo`, that constructs a bridge adds
+`using Runic.Application.Views.Generated.Bridges;` (see
+[Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Testing/README.md)).
+
 ### Wire types
 
 State, DTO members, command arguments and results use these TypeScript types in
@@ -1054,8 +1070,8 @@ When `svelte-check` fails, its errors and warnings are logged at their file, lin
 column too, without a code, from its default output or `--output machine`; warnings
 of a check that passes stay in the command output. A
 failed command that reports no such error gets one summary error instead:
-`RUNICBRIDGE001` for the generator, `RUNICBRIDGE016` for the frontend
-commands.
+`RUNICBRIDGE024` (an internal generator error) for the generator,
+`RUNICBRIDGE016` for the frontend commands.
 
 ## Build properties
 
@@ -1084,6 +1100,7 @@ an extension point.
 | `RunicApplicationFrontendPackageManager` | `packageManager` in `package.json`, then `pnpm-lock.yaml`, `bun.lock`, else `npm` | Selects the default build and install commands. |
 | `RunicApplicationFrontendBuildCommand` | `npm run build`, `pnpm run build`, or `bun run --bun build` | Production frontend build. |
 | `RunicApplicationFrontendInstallCommand` | `npm ci`, `pnpm install --frozen-lockfile`, or `bun install --frozen-lockfile`, each with `--ignore-scripts` | Runs before the frontend build when `package.json` or a lock file changed since the last install (stamp: `obj/runic-bridge-frontend-install.stamp`), or when declared dependencies have no `node_modules`. A `package.json` without dependencies needs no `node_modules`. |
+| `RunicApplicationFrontendAllowUnlockedInstall` | `false` | The default install is locked: when `package.json` declares dependencies and the package manager's lock file (`package-lock.json` or `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `bun.lock` or `bun.lockb`) is missing, the build fails with [`RUNICBRIDGE026`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge026) before installing. Set `true` to run `npm install`, `pnpm install` or `bun install` (with `--ignore-scripts`) without one instead. |
 | `RunicApplicationFrontendInstallEnabled` | `true` | Set `false` when a workspace install owns the frontend packages. |
 | `RunicApplicationFrontendNodeModulesDirectory` | none | A `node_modules` installed by something else, such as the [Nix builder](https://github.com/Runic-Artifex/runic-sdk/blob/main/nix/README.md) from the lock file. The install does not run, and the frontend's `node_modules` becomes a symbolic link (a junction on Windows) to it; an existing `node_modules` that is not a link is `RUNICBRIDGE021`. |
 | `RunicApplicationFrontendBuildEnabled` | `true` | Set `false` when another tool owns the frontend build. TypeScript is still generated. |
@@ -1093,11 +1110,19 @@ an extension point.
 | `RunicApplicationHost` | the only host adapter referenced | `desktop` or `cswebui`: whose Views client the build copies to `runic-views.js` in the web root. Set it when a project references both hosts. The frontend build receives it as `RUNIC_APPLICATION_HOST`. |
 | `RunicApplicationFrontendCompositionType` | `<RootNamespace>.RunicViewsComposition` (host adapters), with the namespace made a valid C# name | Generated composition class. |
 | `RunicApplicationFrontendModelAssembly` | the project itself | Inspect a separately built ViewModel assembly instead of a bootstrap build. |
-| `RunicApplicationFrontendReactiveUiFlavor` | `reactive` with `Runic.Application.Views.ReactiveUI.Reactive`, otherwise inferred | `primitives` or `reactive`: which ReactiveUI flavor's command helpers the generated code calls. `Runic.Application.Views.ReactiveUI.Reactive` sets it; set it yourself only for a model assembly that references ReactiveUI but neither adapter package (see the [ReactiveUI adapter](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md)). |
 | `RunicApplicationFrontendGenerationEnabled` | see below | `true` requires Bridge generation, `false` turns it off. |
 | `RunicApplicationFrontendDocumentationEnabled` | `true` | `false` skips the XML documentation file that the bootstrap pass writes for comments in the generated TypeScript. |
 | `RunicApplicationFrontendWindowProject` | `false` | `true` marks a Window project that `dotnet runic dev` and `doctor` run. |
 | `RunicApplicationFrontendBootstrap` | set by the targets (read-only) | `true` only in the bootstrap pass (see below). A project reads it, for example to leave a reference out of that pass; it does not set it. |
+
+The ReactiveUI flavor of the generated code is not a setting. The build infers it
+from the Runic ReactiveUI adapter the project compiles against, by package or
+project reference, directly or transitively: System.Reactive with
+`Runic.Application.Views.ReactiveUI.Reactive`, otherwise ReactiveUI.Primitives. A
+project that still sets `RunicApplicationFrontendReactiveUiFlavor`, removed in
+0.10, fails with `RUNICBRIDGE017`. A ReactiveUI command or interaction without either adapter
+is `RUNICBRIDGE025`, and adapters of both flavors, including
+`Runic.Navigation.ReactiveUI*`, are `RUNICBRIDGE023`.
 
 These are not settings and not part of the compatibility promise: the generator's
 command line (`--generate`, `--composition-stub`, `--reactiveui-flavor`,
@@ -1501,6 +1526,10 @@ cleanup.subscribe(state => {
 });
 ```
 
+In a component, the adapter's `useLatestOperation()` (React, Vue, Svelte) or
+`injectLatestOperation()` (Angular) wraps the same controller and disposes it with
+the component.
+
 A question that takes parameters works the same way. There is no query route
 that returns a computed value: run a command with the parameters, and read the
 answer from the state it publishes. `await cleanup.estimate({ retention: 5 })`
@@ -1819,8 +1848,8 @@ NativeAOT symbols and what to attach to a bug report.
 | 1021 | `ViewRemountFailed` | Error | A View fails to mount again after a reconnect. | `Route`, `ErrorType` |
 | 1033 | `ModelContextReleaseFailed` | Error | A window session's own model context fails to shut down in the background. | `ErrorType` |
 | 1040, 1041 | Retired | | Reported by `ReactiveRoutedRegion<T>`, removed in 0.9; not reused. | |
-| 1042 | `ReactiveCommandFailed` | Error | A bridged ReactiveUI command reports on `ThrownExceptions` an exception that no Bridge call received, while a generated Bridge presents it, or a command or object observed with `ObserveBridgeExceptions(logger)` reports one; declared `RunicFailureException`s and cancellations are not logged. | `Source` (`Model.Command` for the Bridge; the command expression or `sourceName` for `ObserveBridgeExceptions`), `ErrorType` |
-| 1043 | `ReactiveSchedulerOutsideModelTurn` | Warning | Work is scheduled on the model-context main-thread scheduler that `AddRunicReactiveModelContext()` installs, outside a model turn, so it runs on the scheduler it replaced. Logged once per ViewModel type found on the call stack, and once for work with no ViewModel there, such as a timer. Runic Desktop, CS-WebUI and `RunicWindowTestHost.Create` pass the application's logger factory when a window opens; before that, or without one, it goes to `Trace`. | `Source`, `Fallback` |
+| 1042 | `ReactiveCommandFailed` | Error | A bridged ReactiveUI command reports on `ThrownExceptions` an exception that no Bridge call received, while a generated Bridge presents it, or a command or object observed with `ObserveBridgeExceptions(logger)` reports one; declared `RunicFailureException`s and cancellations are not logged. An exception raised in a Bridge call's flow, such as by a plain `Execute` in a wrapper command, is held until the outermost Bridge call in that flow ends, and not logged if a call received it or an exception wrapping it. Still logged when hand-written code receives and handles it itself; a streamed operation holds nothing. | `Source` (`Model.Command` for the Bridge; the command expression or `sourceName` for `ObserveBridgeExceptions`), `ErrorType` |
+| 1043 | `ReactiveSchedulerOutsideModelTurn` | Warning | Work is scheduled on the model-context main-thread scheduler that `AddRunicReactiveModelContext()` installs, outside a model turn and outside any async flow that a still-open model context's turn started, so it runs on the scheduler it replaced. Logged once per ViewModel type found on the call stack, and once for work with no ViewModel there, such as a timer. Runic Desktop, CS-WebUI and `RunicWindowTestHost.Create` pass the application's logger factory when a window opens; before that, or without one, it goes to `Trace`. | `Source`, `Fallback` |
 | 1050 | `WindowRegistrationMissing` | Error | `ValidateWindow` or `OpenWindowAsync` finds a Window's generated Bridge unregistered, on any host. | `Code`, `DiagnosticMessage`, `Remediation` |
 | 1051 | `WindowReleaseFailed` | Error | `IRunicWindowService` fails to release a Window it opened, after that Window closed. | `Window`, `ErrorType` |
 | 1052 | `WindowCloseGuardFailed` | Error | A guarded Window's `CanCloseAsync` throws; the window stays open. A departure guard that throws is logged by the navigator as 1060 instead. | `Window`, `ErrorType` |
@@ -1840,6 +1869,9 @@ NativeAOT symbols and what to attach to a bug report.
 | 2002 | `DesktopWindowCloseAfterOpen` | Warning | `RUNIC_APPLICATION_CLOSE_AFTER_OPEN=1` closed a Desktop window right after it opened. | `Variable` |
 | 2003 | `DesktopPortalDiagnostic` | Warning or Debug | On Linux, xdg-desktop-portal reports a diagnostic for the portal services `AddRunicPlatformServices()` registers (notifications, status icon, login startup and inhibition): Warning for a rejected identity, an unavailable portal or a denied request, Debug for an accepted request or registration. | `Code`, `DiagnosticMessage`, `Remediation` |
 | 2004 | `DesktopMenuCommandFailed` | Error | A menu bar command of a Window's root ViewModel (`IRunicMenuCommandSource`) or of `RunicDesktopHost.UseApplicationMenu` threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |
+| 2005 | `DesktopDevelopmentAssetsServed` | Information | `dotnet runic dev` without a development server: a Development host serves the frontend output directory live (`RUNIC_APPLICATION_DEVELOPMENT_ASSETS`) and reloads its windows when it changes. Once per directory and start page. | `Directory` |
+| 2006 | `DesktopDevelopmentAssetsUnavailable` | Warning | That directory, or the `www/` folder behind it, cannot be served, for example because it lacks the start page or contains a symbolic link; the window serves the other folder. | `Directory`, `ErrorType`, `Instead` |
+| 2007 | `DesktopDevelopmentReloadFailed` | Debug | A window did not reload after the directory changed, for example because it closed meanwhile. | |
 | 2100 | `CsWebUiWindowShowFailed` | Error | CS-WebUI cannot show a window: it finds no browser, the selected browser does not exist or start, its page does not connect in time, or the WebView does not start. `OpenWindowAsync` fails with a `RunicWindowConfigurationException`. | `Window`, `Code`, `Browser`, `BrowserPath`, `DiagnosticMessage` |
 | 3000 | `WindowCloseCancellationCallbackFailed` | Error | A Runic Desktop close-cancellation callback throws. | `ErrorType` |
 | 3001 | `WindowCloseConfirmationFailed` | Error | A Runic Desktop close confirmation throws; the Window stays open. | `ErrorType` |
@@ -1900,7 +1932,7 @@ exception types, never arguments or state.
 Spans are named `<kind> <Model>.<Member>` and have the tags
 `runic.bridge.kind`, `runic.bridge.model`, `runic.bridge.member`,
 `runic.bridge.route` and `runic.bridge.outcome`. The outcome is `ok`,
-`rejected`, `cancelled`, `failed`, `domain_failed` or `disconnected`. An
+`rejected`, `cancelled`, `failed`, `domain_failed` or `released` (`disconnected` before 0.10). An
 admission can also be `unavailable`, `capacity`, `duplicate` or `expired`, and
 an operation whose result could not be delivered is `delivery_failed`. A failed
 span has the status `Error` and `error.type`. A `domain_failed` call is an

@@ -195,11 +195,12 @@
         </table>
       </div>
       <p>
-        <code>Runic.Platform.Administration.Windows</code> supports Windows x64 only.
-        Managed packages and Command Line apps run wherever .NET 10 does; Command
-        Line NativeAOT apps are supported on the RIDs its CI publishes. On musl, Runic
-        Desktop needs an Alpine release that .NET 10 supports, with GTK 3 and WebKitGTK
-        4.1.
+        <code>Runic.Platform.Administration.Windows</code> supports Windows x64
+        only, by policy; no arm64 or x86 support is planned. On Windows on Arm,
+        publish it for <code>win-x64</code>. Managed packages and Command Line
+        apps run wherever .NET 10 does; Command Line NativeAOT apps are
+        supported on the RIDs its CI publishes. On musl, Runic Desktop needs an
+        Alpine release that .NET 10 supports, with GTK 3 and WebKitGTK 4.1.
       </p>
     </DocSection>
     <DocSection title=".NET versions" id="dotnet">
@@ -223,7 +224,11 @@
           <a
             href="https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/experimental.md"
             rel="external">experimental APIs</a
-          > page.
+          >
+          page. An npm package exports experimental APIs only from its
+          <code>./experimental</code> subpath. No .NET or npm API is
+          experimental since 0.10.0, which removed every
+          <code>./experimental</code> entry.
         </li>
         <li>
           <strong>Preview:</strong>

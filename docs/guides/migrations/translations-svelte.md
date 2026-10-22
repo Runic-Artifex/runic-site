@@ -2,7 +2,7 @@
 
 Runic Translations now owns its Svelte integrations independently of the SDK.
 Use the published Translations `0.7.0-preview.4` package family; its version does
-not need to match Application SDK `0.9.0`. Existing applications can
+not need to match Application SDK `0.10.0`. Existing applications can
 keep their current SDK release while migrating localization. See the
 [Translations SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.4/docs/guides/translations/quickstart-sveltekit.md).
 

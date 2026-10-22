@@ -13,15 +13,15 @@ does not have, and where the SDK does not help yet.
 
 Each platform section ends with a **Checked with** note. "Runic CI" means the
 SDK's
-[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/.github/workflows/ci.yml):
+[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/.github/workflows/ci.yml):
 its `Native` jobs run test applications that use Runic Desktop, and its
 `Packaging` jobs package the
-[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.9.1/tests/native/Runic.Packaging.Probe),
+[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/tests/native/Runic.Packaging.Probe),
 a test application with the template's identity, with the template's
 `package.mjs` on each platform, install the package without the maintainers'
 signing credentials and open it through its URL scheme. The probe opens no
 window: it records what the installed package gives it, and
-[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/eng/ci/packaging-probe-check.mjs)
+[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/eng/ci/packaging-probe-check.mjs)
 checks that record. CI does not package the template application itself or
 retain the packages. "Not executed" means the step uses the platform vendor's
 documented tools and has not been run for Runic.
@@ -63,7 +63,7 @@ numeric part (`1.2.3-preview.4` becomes `1.2.3.0` and `1.2.3`).
 
 `icons/` holds a neutral placeholder icon as `icon.svg`, `icon.png` (512 px)
 and `icon.ico`. Replace it as the generated README's
-[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
+[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
 section describes; the packages take their icons from these files.
 
 ### Choose the publish mode
@@ -88,7 +88,7 @@ first can publish NativeAOT with
 `dotnet publish --no-build -p:PublishAot=true` after a `dotnet build` with the
 same configuration, target framework and `PublishAot`: the publish reuses the
 Bridge code of that build and reports
-[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/docs/diagnostics.md#runicbridge022)
+[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/docs/diagnostics.md#runicbridge022)
 when it is missing. Before publishing, ask
 the CLI what the target needs on the machine that publishes:
 
@@ -98,7 +98,7 @@ dotnet runic doctor --runtime win-x64 --aot --fail-on fail
 ```
 
 The `target-rid` check reads the
-[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/eng/support.json):
+[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/eng/support.json):
 for Runic Desktop every supported RID (`win-x64`, `win-arm64`, `osx-arm64`,
 `linux-x64`, `linux-arm64` and the musl RIDs) is CI-verified except
 `osx-x64`, which ships native support without CI coverage. Test it on a real
@@ -175,7 +175,7 @@ without arguments or data.
 With NativeAOT on `win-x64` or `win-arm64`, Runic Desktop's build targets link
 the WebView2 loader statically into the executable, so the publish folder
 contains no `WebView2Loader.dll`
-([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
+([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
 A JIT build (self-contained or framework-dependent) copies
 `WebView2Loader.dll` next to the executable; ship it, or Desktop reports
 `webview2-loader-unavailable`. The template sets the Explorer icon of the
@@ -393,7 +393,7 @@ guidance for the hardened runtime, which includes
 
 The entitlements file needs entries only for the App Sandbox (required for
 the Mac App Store). The CI fixture's
-[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/tests/native/platform-sandbox/entitlements.plist)
+[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tests/native/platform-sandbox/entitlements.plist)
 is the tested starting point: `com.apple.security.app-sandbox`,
 `com.apple.security.network.server` and `com.apple.security.network.client`
 for the loopback listener and its WebSocket, and
@@ -413,7 +413,7 @@ also publishes `Runic.Platform.Runtime.Tests` (a NativeAOT application whose
 native window is a Runic Desktop WKWebView), signs it ad hoc with the sandbox
 entitlements and retains it as the `platform-sandbox-osx-arm64-<run>` artifact
 for
-[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/tests/native/platform-sandbox/README.md).
+[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tests/native/platform-sandbox/README.md).
 Developer ID signing, notarization, stapling, universal binaries and `osx-x64`
 were not executed: they need an Apple Developer account or an Intel Mac.
 
@@ -556,7 +556,7 @@ exported SVG icon and runs the application with its URL; the probe's record
 shows `FLATPAK_ID` and the content root `/app/lib/<executable>/www`. The probe
 opens no window. A Runic Desktop GTK 4 window with WebKit's nested sandbox in
 the same runtime is covered by the
-[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
+[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
 which is run by hand in the SDK's [container runner](container-automation.md),
 not in CI; its README records the verified runtime commit. Repository signing,
 Flathub submission, AppImage and distribution packages were not executed.
@@ -570,14 +570,14 @@ package: a `windows.protocol` extension in the MSIX manifest,
 desktop entry. Windows and Linux start the application with the URL as its
 argument; macOS sends it as an Apple event. `IDesktopOpenRequests` in
 Runic.Platform delivers them to the running instance; see the SDK's
-[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/specs/platform/open-activation.md).
+[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/specs/platform/open-activation.md).
 
 File types are commented examples in each manifest, not filled in by
 `package.mjs`: a `windows.fileTypeAssociation` extension,
 `CFBundleDocumentTypes` with a `UTExportedTypeDeclarations` entry, and a MIME
 type in the desktop entry with a shared-mime-info definition for a type of
 your own. The generated README's
-[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
+[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
 section describes them. Runic CI opens each package through a URL scheme; it
 does not check file types in packages. Treat opened URLs and files as untrusted
 input.

@@ -10,7 +10,7 @@ Primitives 9.0.0; the fork also tests Primitives 8.4.0 used by ReactiveUI 25.
 
 DynamicData's cache, filtering, grouping, transforms and disposal stay in .NET.
 Runic exports the resulting collection through a generated, reflection-free
-bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.9.1/examples/dynamicdata/README.md)
+bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/examples/dynamicdata/README.md)
 has a 100,000-row source cache, keyed browser rendering and an independent
 viewport for each presentation.
 
@@ -69,10 +69,12 @@ delta; duplicates never apply twice.
 
 Keep the large source cache shared and the viewport request and bound
 collection per presentation. `SortAndVirtualize` suppresses updates outside
-that viewport. The experimental browser helper computes a fixed-height range:
+that viewport. The browser helper `collectionViewport` computes a fixed-height
+range. Since SDK `0.10.0` it is exported from the `@runic-artifex/views` root;
+the `./experimental` entry is removed:
 
 ```ts docs-test=skip:illustrative-fragment
-import { collectionViewport } from '@runic-artifex/views/experimental';
+import { collectionViewport } from '@runic-artifex/views';
 
 const range = collectionViewport({
   totalCount,

@@ -54,8 +54,8 @@ const program = Effect.gen(function* () {
 | `command(() => client.method(...))` | `Effect<A, ViewError>` | Runs a command, setter, `can…` query or checked write. A command that declares a failure succeeds with its value and adds `ViewDomainFailure<F>`. |
 | `operation(start, options?)` | `Effect<Result, ViewOperationError>` | Starts a `start<Command>` operation and waits for its terminal status; `Result` is `void` for a command without one. A declared failure adds `ViewDomainFailure<F>`. |
 | `catchCase(effect, handlers)` | `Effect<A \| …, E \| …, R \| …>` | Handles every `$case` of a declared `[RunicUnion]` failure in the error channel; a missing case is a type error. |
-| `viewportChanges(controller)` (`/experimental`) | `Stream<CollectionViewport>` | The rows a `createCollectionViewportController` requests, as a stream. |
-| `followViewport(controller, request)` (`/experimental`) | `Effect<void, E, R>` | Sends each new row range to .NET and interrupts the request for a range the user scrolled past. |
+| `viewportChanges(controller)` | `Stream<CollectionViewport>` | The rows a `createCollectionViewportController` requests, as a stream. |
+| `followViewport(controller, request)` | `Effect<void, E, R>` | Sends each new row range to .NET and interrupts the request for a range the user scrolled past. |
 | `createEffectAction(program, { runFork? })` | `EffectAction` | A latest-wins runner with `status`, `pending`, `value`, `error` and `cause`, for any UI framework. |
 | `fromBridgeError(error)` | `ViewError` | Maps a `BridgeError` from plain code. |
 
@@ -72,12 +72,12 @@ select them. Each keeps the original `BridgeError` as `cause` and its `route`.
 | Tag | `BridgeError` kind | Meaning |
 | --- | --- | --- |
 | `ViewUnavailable` | `unavailable` | No host installed `window.__runicBridge`, for example a page served by plain Vite. |
-| `ViewDisconnected` | `disconnected` | The Bridge is not connected to .NET: the transport closed or the host ended. |
+| `ViewDisconnected` | `disconnected` | The Bridge is not connected to .NET: the transport closed or the host ended. The client decides this; .NET never sends it. |
 | `ViewReleased` | `released` | The Bridge is connected, but this View was released: the client was disposed, or .NET released the View, for example because navigation replaced it. |
 | `ViewTimeout` | `timeout` | A Bridge exists but did not connect in time. |
-| `ViewRejected` | `rejected` | .NET refused the call. |
+| `ViewRejected` | `rejected` | .NET refused the call. `cause.reason` says why when .NET sent it: `unavailable` (`CanExecute` is false) or `invalid-input`. |
 | `ViewCancelled` | `cancelled` | .NET cancelled the call. |
-| `ViewFailed` | `failed` | The handler threw or the reply was invalid. `detail` has the .NET exception type, message and stack in development. |
+| `ViewFailed` | `failed` | The handler threw or the reply was invalid, or the .NET host speaks another Views protocol version (connect fails with a `protocol` diagnostic). `detail` has the .NET exception type, message and stack in development. |
 
 `ViewError` is the union of these. Operations add four more, together
 `ViewOperationError`:

@@ -87,10 +87,10 @@
             <span>{row.product} on {row.registry}</span>
             {#if row.name === 'Runic.Platform.Administration.Windows'}
               <span>
-                Experimental Windows administration APIs. Administrative writes
-                and domain services still need native validation. See the
-                <a href={currentRelease.url} rel="external">release notes</a> for
-                tested scenarios.
+                Supported on Windows x64 only. Its local, LDAP/AD, DNS and Group
+                Policy scenarios are accepted on disposable fixtures under
+                NativeAOT and JIT. See the
+                <a href={currentRelease.url} rel="external">release notes</a>.
               </span>
             {/if}
             <pre class="code-block"><code>{packageInstallCommand(row)}</code
