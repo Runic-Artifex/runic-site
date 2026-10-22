@@ -262,8 +262,10 @@ Help, parse errors and faults are English by default. The
 translates them with a [Translations](../translations/README.md) catalog. It
 ships English and German text for every framework key, and it looks up your
 own command descriptions in your catalog, including the prompt text that
-Command Line `0.7.0-preview.1` added. Translations `0.7.0-preview.4` needs
-Command Line `0.7.0-preview.1` or later.
+Command Line `0.7.0-preview.1` added. Translations `0.7.0-preview.4` is built
+against Command Line `0.7.0-preview`; Command Line `0.8.0` renames APIs it uses, so
+keep Command Line `0.7.0-preview.2` with it until the next Translations release,
+which supports `0.8.0`.
 Add the adapter and the build package to the project from
 [your first command](#your-first-command):
 

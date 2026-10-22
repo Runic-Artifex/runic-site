@@ -85,9 +85,9 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  // 1.875 MiB since 0.8.0-preview.5 added Runic.Platform.Linux.DBus (19 public
-  // types) and grew the Platform APIs; 0.8.0-preview.5 needs about 1.83 MiB.
-  assert.ok(inputs <= 1.875 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  // 1.9375 MiB since 0.10.0 grew the Platform and Windows administration APIs
+  // (about 34 KB); 0.10.0 needs about 1.89 MiB.
+  assert.ok(inputs <= 1.9375 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
   // __data.json payloads that client-side navigation loads. 176 KiB per page
   // since 0.9.0, whose @runic-artifex/views page needs about 166 KiB.

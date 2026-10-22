@@ -56,7 +56,7 @@ first search, then only its terms' shards, the texts that may still gain the
 phrase bonus and the texts of the results shown, and ranks them in the browser.
 One-character terms match titles, headings and paths only.
 `tests/search.test.mjs` checks representative queries against a full-text
-search and the 400 KiB raw and 104 KiB gzip budget for what one search loads.
+search and the 432 KiB raw and 112 KiB gzip budget for what one search loads.
 `tests/link-check.test.mjs` resolves every
 internal `href`, `src`, `srcset` and social image in `build/`, and every
 fragment against the target page's `id` attributes. It checks the syntax of
