@@ -352,11 +352,11 @@ export const products: Product[] = [
         label: 'Get started with Command Line',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.8.0/README.md',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.9.0/README.md',
         label: 'Command Line repository README',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.8.0/specs/command-line',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.9.0/specs/command-line',
         label: 'Command Line specifications',
       },
     ],

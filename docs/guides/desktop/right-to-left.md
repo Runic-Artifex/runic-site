@@ -46,7 +46,7 @@ Then let CSS follow the direction:
 - Wrap values of the other direction in right-to-left text, such as file
   names, paths and identifiers, in `<bdi>`, or in the isolates U+2068 and
   U+2069 in plain text (`isolateBidi` in
-  `@runic-artifex/translations-svelte/translations/testing`). Translations does
+  `@runic-artifex/translations-svelte/testing`). Translations does
   not isolate message inputs for you.
 - Use `dir="auto"` on inputs and on text the user wrote.
 

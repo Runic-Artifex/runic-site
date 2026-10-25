@@ -3,17 +3,17 @@
 An existing WPF application can adopt Runic one capability or screen at a time.
 Keep the WPF shell, application services and ViewModels. This guide follows
 Application SDK `0.11.0` and independently versioned Translations
-`0.7.0-preview.4`; use exact versions within each product family.
+`0.8.0`; use exact versions within each product family.
 
 ## 1. Start with independent products
 
 Localization can move one screen at a time. Follow the
-[Translations WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.7.0-preview.4/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
+[Translations WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.8.0/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
 to add `Runic.Translations.Wpf` and build integration, author an RMF2 catalog,
 and supply a `TranslationSource` over the generated `text.Messages` surface.
 `{rt:Message}` binds plain messages; `TranslationProperties.RichMessage` renders
 inline rich content with typed slots. These bindings coexist with `.resx` and
-resource dictionaries. Optional `TranslationsXamlCatalog` assertions enable
+resource dictionaries. Optional `RunicTranslationsXamlCatalog` assertions enable
 build-time checks of static XAML declarations. Locale switching remains separate
 from the WPF culture and `FrameworkElement.Language` you configure.
 
