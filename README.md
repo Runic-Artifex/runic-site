@@ -59,7 +59,7 @@ Do not edit those files by hand; change the brand source and run
 - `runic-artifex.eu` serves the static `build/` output from this repository.
 - `www.runic-artifex.eu` redirects permanently to the apex origin.
 - `docs.runic-artifex.eu` serves the independent `docs/build/` output from this repository.
-- `/schemas/translations/*` on the apex is included in root `build/` by deterministically mirroring the portal's pinned Translations schemas. Preserve these public schema URLs when changing deployments.
+- `/schemas/translations/*` on the apex is included in root `build/` by deterministically mirroring the portal's pinned Translations schemas (currently Runic Translations 0.8.0) plus retained legacy schemas such as `editor-state-v1`, which a newer pin no longer ships but whose URL stays published. Preserve these public schema URLs when changing deployments.
 - `/ci/` remains a lightweight link to SDK Actions for existing bookmarks.
 
 ## License
