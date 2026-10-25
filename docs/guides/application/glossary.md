@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
@@ -23,6 +23,8 @@ clients and these guides. The first seven follow the glossary of the
 - **`ViewOutlet`**: the component that renders the View for a ViewModel content
   reference, in React, Vue, Svelte and Angular. A `ViewRegistry` maps each kind
   of reference to a component, and the compiler checks that every kind has one.
+  Since SDK `0.11.0`, its optional `missing` replaces the English alert shown
+  for a kind without a component.
 - **Generated client**: the TypeScript module the build writes for each
   ViewModel to `Frontend/src/generated`, such as `counter.ts` with
   `CounterState` and `CounterClient`. It is regenerated on every build and not
@@ -56,6 +58,11 @@ clients and these guides. The first seven follow the glossary of the
   Desktop window, or an `INativeWindowOwner` for another host. With
   `AddRunicPlatformServices()`, the services a ViewModel takes in its
   constructor bind to the Window's owner when it opens.
+- **Menu bar**: the menus a host declares, `DesktopHostOptions.MenuBar` on
+  Runic Desktop or `RunicCsWebUiHostOptions.MenuBar` on CS-WebUI. Since SDK
+  `0.11.0` Runic Desktop shows it natively by default, and a page can render it
+  with its own components through `useMenuBar()` (React, Vue, Svelte) or
+  `injectMenuBar()` (Angular); Runic ships no menubar component.
 
 ## State and threads
 

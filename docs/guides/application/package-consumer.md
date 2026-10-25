@@ -20,7 +20,12 @@ dotnet runic dev
 
 Install .NET 10 and the frontend tools reported by `dotnet runic doctor`.
 The creator takes its destination with `--output` (`-o`), as `dotnet new` does.
-Its `--format json` option selects JSON output. Commit generated versions and lockfiles. The
+Its `--format json` option selects JSON output. Since SDK `0.11.0`,
+`--application-id` sets the reverse-DNS application ID, `--restore` restores
+the NuGet packages for an IDE, `--force` creates the project in a directory
+that is not empty, and `--no-install` uses the installed template. New
+projects write `packages.lock.json` on their first restore; commit it with the
+frontend's lock file. The
 [creator](https://docs.runic-artifex.eu/create/) previews other choices; see
 [existing-app setup](existing-app.md) to add Runic to an app.
 
@@ -87,13 +92,14 @@ Use the template's entry point before any top-level `await`:
 ```csharp docs-test=template:Program.cs host=desktop linuxGtk=4
 var options = new DesktopHostOptions { DiagnosticSink = ReportDiagnostic }.WithGtk4(ApplicationIdentity.Id);
 ...
-return RunicDesktopHost.Run(provider, options, RunAsync);
+return RunicDesktopHost.Run(provider, options, hostOptions, RunAsync);
 ```
 
 This keeps GTK 4 on Linux's process main thread. `RunAsync` runs on the event
 loop and returns when the Window closes; dispose the Window and other native
 resources inside it, while the event loop is active. Retain the diagnostic sink
-for missing runtimes and fallback.
+for missing runtimes and fallback. Since SDK `0.11.0`, `hostOptions` send a
+Content-Security-Policy without `'unsafe-eval'` outside `Development`.
 
 ## Bind native services to the opened presentation
 
@@ -144,8 +150,14 @@ dotnet publish -c Release -r linux-x64
 ```
 
 Distribute the whole publish directory, including `www`; the frontend needs no
-Node.js or package manager at runtime. A framework-dependent publish still needs
-the matching .NET runtime, and embedded hosting still needs the native libraries.
+Node.js or package manager at runtime. A framework-dependent publish still
+needs the matching .NET runtime, and embedded hosting still needs the native
+libraries. With `RunicApplicationFrontendDelivery=Embedded` (since SDK
+`0.11.0`) the frontend is in the application assembly and there is no `www`.
+Since SDK `0.11.0`, `dotnet runic package` publishes with NativeAOT and builds
+an MSIX, a macOS `.app` and disk image, a Flatpak, an AppImage, a deb or an
+rpm; see [ship a Desktop application](../desktop/shipping.md).
+
 Run the published native output as well as the development host. Check initial
 state, a long operation with responsive Cancel, unavailable native services,
 and close during recovery. Managed or browser-only checks do not verify the

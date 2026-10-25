@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.10.0",
+  "version": "0.11.0",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "373946771c763bdbedb84a089723abcdd0e4c046"
@@ -94,7 +94,7 @@
     },
     {
       "name": "Runic.Application.Views.CsWebUi",
-      "version": "0.10.0-preview.1",
+      "version": "0.11.0-preview.1",
       "project": "packages/dotnet/Runic.Application.Views.CsWebUi/Runic.Application.Views.CsWebUi.csproj"
     },
     {
@@ -178,9 +178,21 @@
         "packages/dotnet/Runic.Platform"
       ]
     },
-    "desktop": {
+    "linux-dbus": {
       "dependsOn": [
         "platform-contracts"
+      ],
+      "paths": [
+        "packages/dotnet/Runic.Platform.Linux.DBus",
+        "packages/dotnet/Runic.Platform.Linux.DBus.Generator",
+        "tests/dotnet/Runic.Platform.Linux.DBus.Tests",
+        "tests/dotnet/Runic.Platform.Linux.DBus.Generator.Tests"
+      ]
+    },
+    "desktop": {
+      "dependsOn": [
+        "platform-contracts",
+        "linux-dbus"
       ],
       "paths": [
         "packages/dotnet/Runic.Desktop",
@@ -246,6 +258,7 @@
         "tools/Runic.Application.Views.Codegen.ReactiveUI",
         "tools/Runic.Application.Views.Dev",
         "tools/dotnet-runic",
+        "tools/Runic.Application.Templates/content/runic-app/packaging",
         "tests/dotnet/Runic.Application.Tool.Tests",
         "tests/dotnet/Runic.Application.Testing.Tests",
         "tests/dotnet/Runic.Application.Logging.Tests",
@@ -313,10 +326,10 @@
         "application"
       ],
       "paths": [
-        "tools/Runic.Application.Templates/content/runic-app/packaging",
         "tools/Runic.Application.Templates/content/runic-app/ApplicationIdentity.cs",
         "tools/Runic.Application.Templates/content/runic-app/icons",
-        "tests/native/Runic.Packaging.Probe"
+        "tests/native/Runic.Packaging.Probe",
+        "tests/fixtures/flathub"
       ]
     },
     "templates": {
@@ -386,10 +399,6 @@
         "tests/native/Runic.Lifetime.Smoke",
         "packages/dotnet/Runic.Platform.Linux.Polkit",
         "tests/dotnet/Runic.Platform.Linux.Polkit.Tests",
-        "packages/dotnet/Runic.Platform.Linux.DBus",
-        "packages/dotnet/Runic.Platform.Linux.DBus.Generator",
-        "tests/dotnet/Runic.Platform.Linux.DBus.Tests",
-        "tests/dotnet/Runic.Platform.Linux.DBus.Generator.Tests",
         "tests/native/Runic.Privileged.Smoke",
         "tests/native/Runic.Volumes.Smoke",
         "packages/dotnet/Runic.Platform.Windows.Elevation",

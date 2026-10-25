@@ -7,6 +7,8 @@ import reactApp from '../../sources/sdk/tools/Runic.Application.Templates/conten
 import reactIndex from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/frontends/react/index.html?raw';
 import svelteApp from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.svelte?raw';
 import svelteIndex from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/index.html?raw';
+import sveltekitIndex from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/app.html?raw';
+import sveltekitPage from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/routes/+page.svelte?raw';
 import vueApp from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.vue?raw';
 import vueIndex from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/frontends/vue/index.html?raw';
 import program from '../../sources/sdk/tools/Runic.Application.Templates/content/runic-app/Program.cs?raw';
@@ -44,6 +46,10 @@ const frontends: Readonly<
   svelte: {
     app: ['Frontend/src/App.svelte', 'svelte', svelteApp],
     index: ['Frontend/index.html', svelteIndex],
+  },
+  sveltekit: {
+    app: ['Frontend/src/routes/+page.svelte', 'svelte', sveltekitPage],
+    index: ['Frontend/src/app.html', sveltekitIndex],
   },
   angular: {
     app: ['Frontend/src/app/app.ts', 'ts', angularApp],

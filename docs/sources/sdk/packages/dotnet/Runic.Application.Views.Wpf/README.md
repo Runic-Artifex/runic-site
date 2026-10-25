@@ -41,13 +41,14 @@ The host owns the hosting lifecycle:
 - It opens when it is **loaded** with a `ViewModel` and `Services`, and waits for
   the native child's `Loaded` before starting the presentation.
 - It closes when it is **unloaded** or `ViewModel` becomes `null`. Changing
-  `ViewModel`, `Services`, `ModelContext`, `ContentRoot`, `StartPage` or
-  `SurfaceOptions` closes the session and opens a fresh one.
+  `ViewModel`, `Services`, `ModelContext`, `ContentRoot`, `StartPage`,
+  `SurfaceOptions`, `ContentSecurityPolicy`, `WebContent` or `Desktop` closes the session and opens a
+  fresh one.
 - Changes run **one at a time**. A newer change cancels an open in progress,
   and changes that queue behind a running one collapse into the latest.
 - Closing releases the Bridge session first, which drains its accepted
-  operations, then the `DesktopHost`, and only then removes and disposes the
-  native child.
+  operations, then its Desktop surface and its own `DesktopHost`, and only then
+  removes and disposes the native child.
 - When the presentation can't open (no WebView2 Runtime, no Bridge registered
   for the model, a missing frontend), the host shows its content, the
   **fallback**, sets `State` to `Failed` and keeps the exception in `Error`.
@@ -65,13 +66,53 @@ derive from it only to style it.
 
 `ContentRoot` (default `www`) is the built frontend's directory relative to the
 application's base directory, and `StartPage` the page to open in it (default
-`index.html`), as `RunicWindowOptions.StartPage` is for a Runic Window. Set `SurfaceOptions` for anything else. `ModelContext` defaults
+`index.html`), as `RunicWindowOptions.StartPage` is for a Runic Window. With
+`RunicApplicationFrontendDelivery=Embedded`, a host without `ContentRoot`
+serves the frontend the build embedded in the application instead. Set `SurfaceOptions` for anything else. `ModelContext` defaults
 to the `IRunicModelContext` registered in `Services`; pass the navigator's
 dispatcher context when navigation and the web View present the same model.
 `State`, `Error` and `StateChanged` report progress; `Surface` is the open
 presentation's `DesktopSurface`, and `WaitForPresentationAsync()` returns when
 no change is pending. The host borrows the model, services and context: it
 never creates or disposes a ViewModel, a scope or a navigation entry.
+
+`WebContent` sets what the page may do beyond the application's origins, as
+`DesktopWindowOptions.WebContent` does for a Desktop window: external
+navigation, downloads and developer tools. `null`, the default, is
+`DesktopWebContentPolicy.Default`.
+
+`ContentSecurityPolicy` sends a `Content-Security-Policy` with the HTML of the
+presentation's surface, unless `SurfaceOptions` set one of their own
+(`DesktopSurfaceOptions.ContentSecurityPolicy`). It is a header of its own next
+to the surface's `frame-ancestors` policy, and WebView2 enforces both. The
+Bridge needs `'self'` scripts and connections and no `'unsafe-eval'`, as in
+`default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'`;
+only `DesktopSurface.ExecuteJavaScriptAsync`, which evaluates a string in the
+page, needs `'unsafe-eval'`. A value with a line break or another control
+character is rejected.
+
+### Share one Desktop host between hosts
+
+By default each `RunicViewHost` starts its own `DesktopHost`, with its own
+listener, when it opens, and disposes it when it closes. To serve every host
+from one listener, create a `DesktopHost` in the application, set it as each
+host's `Desktop`, directly or through a `Style`, and dispose it after the hosts
+that use it have unloaded:
+
+```csharp
+_desktop = await DesktopHost.StartAsync(new DesktopHostOptions { LoggerFactory = loggerFactory });
+editorHost.Desktop = _desktop;
+previewHost.Desktop = _desktop;
+
+// On shutdown, after the hosts have unloaded:
+await _desktop.DisposeAsync();
+```
+
+Each host then creates its own surface on the shared `DesktopHost`, presents it
+through its own `RunicWebView`, and releases only that surface when it closes;
+it never disposes the shared host. The shared host's `WindowHostFactory` option
+is not used for these surfaces. A host whose `Desktop` was disposed before it
+opens fails to open: `State` becomes `Failed` and the fallback shows.
 
 ## Lower-level API
 
@@ -140,8 +181,9 @@ native WebView2 controller and native loader, including origin-bound document
 start credentials, permission policy and the web content policy: external links
 open in the default browser, downloads are refused and developer tools are
 available only in Development (see [Links, new windows, downloads and developer tools](../Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools)).
-`WpfBridgeView` and `RunicViewHost` open with the defaults; a surface you open
-yourself through `RunicWebView.CreateWindowHostFactory()` takes
+`WpfBridgeView` and `RunicViewHost` open with the defaults unless you set their
+`WebContent`, which the next `OpenAsync` (or the host's next open) applies; a
+surface you open yourself through `RunicWebView.CreateWindowHostFactory()` takes
 `DesktopWindowOptions.WebContent`.
 Install Microsoft Edge WebView2 Runtime on the Windows machine. It creates no
 separate WPF window or UI thread.
@@ -154,6 +196,15 @@ control closes presentation admission promptly and drains accepted operations
 before releasing its session. Keep application services alive until that
 completion. Reloading the page reconnects within the same presentation; a new
 view after unload uses a fresh surface/session.
+
+When the model is a page that a `RunicNavigator` owns, such as the content a
+`NavigationHost` presents, the child's session registers with that navigator
+(since 0.11): retiring the page cancels its operations declared
+`RunicOperationRetirement.Cancel`, and the navigator disposes the page after
+its `Cancel` and `Drain` operations ended; see
+[Operations and navigation entries](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#operations-and-navigation-entries).
+Unloading the child still asks its remaining operations to cancel, as before,
+so in a child view a `Drain` operation runs only until the view unloads.
 
 Each factory presents one surface at a time in its control. WPF owns layout,
 DPI, visibility, focus routing and the containing window. The child advertises
@@ -197,6 +248,40 @@ modal to it. Until the window has a native handle (it is shown, or
 closes, the services wait for operations in progress, release the file access
 they acquired, and report `OwnerClosed`; they need no disposal. Each call
 creates services with their own lifetime.
+
+`AnnounceAsync(message, priority)` raises a UI Automation notification from the
+window's automation peer, as Runic Desktop's WebView2 window does, which
+Narrator and NVDA speak: `Polite` messages are queued and `Assertive` ones
+replace those not yet spoken. While the page of a `RunicWebView` in the window
+(a `RunicViewHost`'s, for example) has the keyboard focus, the page's Bridge
+says the message instead, in a visually hidden live region it adds to the page
+(`div[data-runic-announcer]` at the end of `<body>`): the focus is then in
+WebView2's browser process, and NVDA speaks a notification only from the
+application that has the focus. The page and its Content-Security-Policy need
+no change ([Runic.Desktop](../Runic.Desktop/README.md), "Why WebView2 announces
+through the page"). It returns `Success` once the window raised it or the page
+received it, `OwnerUnavailable` before the window has a handle and
+`OwnerClosed` after it closed. Send each message one way: a live region of the
+page's own reaches the screen reader too.
+
+`Clipboard` is also an `IDesktopClipboard`, with HTML, RTF, PNG images and files,
+and `SetBadgeAsync` and `SetProgressAsync` show a badge and progress on the
+window's taskbar button, as for a Runic Desktop window. The services hook the
+window's `HwndSource` for Explorer's `TaskbarButtonCreated`, so the badge and
+progress return after Explorer restarts.
+
+`ShowContextMenuAsync(items, options)` opens a WPF `ContextMenu` and returns the
+chosen item, `null` when the user dismissed it or a later menu of the window
+replaced it; cancelling the token closes it. Entries follow the Windows menu
+rules: `AccessKey` underlined, shortcuts as hints in `InputGestureText`, check
+and radio items with the check mark, disabled entries and menus grayed. Without
+`options.X` and `Y` it opens at the pointer; with them at that page point of the
+`RunicWebView` with the keyboard focus, or the window's first one, in CSS pixels
+times the page zoom. The snapshot reports `platform.contextMenu` available and
+no `platform.menuBar`: the WPF window owns its chrome, so a menu bar is the
+application's own WPF `Menu`. A ViewModel in a `RunicViewHost` gets the same
+menus at its control through its Runic window's services: the hosted Desktop
+window reports `DesktopWindowCapabilities.ContextMenu` and the placement `None`.
 
 ## Bring the window forward for a second launch
 

@@ -5,11 +5,14 @@ import test from 'node:test';
 import {
   creatorCommands,
   creatorOptions,
+  creatorTexts,
   creatorToggles,
   defaultSelection,
+  isValidApplicationId,
   isValidProjectName,
   templateReplacements,
   templateSymbols,
+  viewCommand,
 } from '../src/lib/creator.ts';
 import { evaluate, renderTemplate } from '../src/lib/template-conditions.ts';
 
@@ -34,6 +37,10 @@ test('picker options are the template choice parameters in order', () => {
     creatorOptions.every((option) => option.choices.length >= 2),
     'every option is a choice',
   );
+  assert.deepEqual(
+    creatorOptions[0].choices.map((choice) => choice.value),
+    ['react', 'vue', 'svelte', 'sveltekit', 'angular'],
+  );
 });
 
 test('picker toggles are the template Boolean parameters', () => {
@@ -43,9 +50,92 @@ test('picker toggles are the template Boolean parameters', () => {
       ['--tests', false],
       ['--nix', false],
       ['--packaging', false],
+      ['--restore', false],
     ],
   );
   assert.equal(defaultSelection().tests, 'false');
+});
+
+test('picker text options are the template text parameters', () => {
+  assert.deepEqual(
+    creatorTexts.map((text) => text.flag),
+    ['--application-id'],
+  );
+  assert.equal(defaultSelection().applicationId, '');
+});
+
+test('a given application ID follows the toggles and replaces the default', () => {
+  const selection = {
+    ...defaultSelection(),
+    restore: 'true',
+    applicationId: ' org.example.Notes ',
+  };
+  const commands = creatorCommands('1.2.3', 'MyApp', selection);
+  assert.equal(
+    commands.creator,
+    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui --restore --application-id org.example.Notes',
+  );
+  assert.match(
+    commands.create,
+    / --view-models reactiveui --restore --application-id org\.example\.Notes$/,
+  );
+  assert.deepEqual(
+    templateReplacements(selection, 'MyApp').find(
+      ([token]) => token === '__RUNIC_APPLICATION_ID__',
+    ),
+    ['__RUNIC_APPLICATION_ID__', 'org.example.Notes'],
+  );
+  // Left out, the template derives com.example. and the project name.
+  assert.deepEqual(
+    templateReplacements(defaultSelection(), 'My-App').find(
+      ([token]) => token === '__RUNIC_APPLICATION_ID__',
+    ),
+    ['__RUNIC_APPLICATION_ID__', 'com.example.MyApp'],
+  );
+  assert.doesNotMatch(
+    creatorCommands('1.2.3', 'MyApp', defaultSelection()).creator,
+    /--application-id|--restore/,
+  );
+  assert.ok(isValidApplicationId('org.example.Notes'));
+  assert.ok(!isValidApplicationId('Notes'));
+  assert.ok(!isValidApplicationId('org.example.my-notes'));
+  assert.ok(!isValidApplicationId('org.2example.Notes'));
+  assert.ok(!isValidApplicationId(`org.${'a'.repeat(50)}`));
+});
+
+test('the runic-view item template command follows the ViewModel choice', () => {
+  assert.equal(
+    viewCommand('Settings', defaultSelection()),
+    'dotnet new runic-view --name Settings --view-models reactiveui',
+  );
+  assert.equal(
+    viewCommand(
+      'Preferences',
+      { ...defaultSelection(), viewModels: 'toolkit' },
+      true,
+    ),
+    'dotnet new runic-view --name Preferences --view-models toolkit --window',
+  );
+});
+
+test('the SvelteKit frontend renders cleanly and loads the Views client', () => {
+  const symbols = templateSymbols({
+    ...defaultSelection(),
+    frontend: 'sveltekit',
+  });
+  for (const path of [
+    'frontends/sveltekit/src/routes/+page.svelte',
+    'frontends/sveltekit/src/app.html',
+  ])
+    assert.doesNotMatch(
+      renderTemplate(read(path), symbols),
+      /^\s*(#|<!--#)(if|elif|else|endif)\b/m,
+      path,
+    );
+  assert.match(
+    read('frontends/sveltekit/src/app.html'),
+    /<script src="runic-views\.js">/,
+  );
 });
 
 test('the tests toggle adds its flag and the test command', () => {
@@ -179,6 +269,20 @@ test('conditions support the template engine operators', () => {
     ),
     'a\ndesktop\nz',
   );
+  // Text after a markup directive on its line stays, as in the README.
+  assert.equal(
+    renderTemplate(
+      [
+        '<!--#if (host == "cswebui") -->',
+        'cswebui',
+        '<!--#else -->',
+        'other',
+        '<!--#endif --> Shared text.',
+      ].join('\n'),
+      symbols,
+    ),
+    'other\nShared text.',
+  );
 });
 
 test('computed template symbols follow the host choice', () => {
@@ -207,7 +311,7 @@ test('every template file renders cleanly for every host and ViewModel choice', 
     'frontends/react/index.html',
     'frontends/angular/src/index.html',
   ];
-  for (const frontend of ['react', 'vue', 'svelte', 'angular'])
+  for (const frontend of ['react', 'vue', 'svelte', 'sveltekit', 'angular'])
     for (const [host, linuxGtk] of [
       ['cswebui', '3'],
       ['desktop', '3'],

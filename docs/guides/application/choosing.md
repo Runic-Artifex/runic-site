@@ -42,6 +42,11 @@ installed browser and writes the reason to standard error; `dotnet runic doctor`
 lists what a machine needs. `--host desktop` uses GTK 3 with WebKitGTK 4.1 on
 Linux. Adding `--linux-gtk 4` selects GTK 4.12 or newer with WebKitGTK 6.0 and
 xdg-desktop-portal file dialogs, and changes nothing on Windows and macOS.
+Since SDK `0.11.0`, a declared menu bar (`DesktopHostOptions.MenuBar`) also
+shows natively in Windows and GTK windows, and can move into the Linux global
+menu; `MenuBarPresentation = Page` or `None` keeps it out of the window.
+`RunicApplicationFrontendDelivery=Embedded` packs the frontend into the
+application assembly, so a single-file or NativeAOT executable carries it.
 [Ship a Desktop application](../desktop/shipping.md) covers publishing, signing
 and packaging for each platform.
 
@@ -60,11 +65,20 @@ runtime is smaller: in one
 application was 5.16 MiB with CS-WebUI and 10.42 MiB with Runic Desktop,
 excluding the browser.
 
+`Runic.Application.Views.CsWebUi` is a prerelease, `0.11.0-preview.1`, and
+needs CsWebUi 2.5.0-beta.4.8 or later. Since SDK `0.11.0` it can declare a menu
+bar that the page renders (`RunicCsWebUiHostOptions.MenuBar`), and its Bridge
+works under a policy without `'unsafe-eval'`. Update any copy of
+`runic-cswebui.js` that you keep outside `www/`; an older script receives no
+state.
+
 |                                        | Runic Desktop                                                          | CS-WebUI                                                      |
 | -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
 | Window                                 | Native window with the embedded WebView; installed browser as fallback | Installed browser in app mode; platform WebView as fallback   |
 | File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                           | Report `OwnerUnavailable`                                     |
 | Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                 | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1          |
+| Menu bar                               | Native, in the Linux global menu, or rendered by the page              | Rendered by the page                                          |
+| Frontend                               | `www` folder, or in the assembly (`Embedded`)                          | `www` folder                                                  |
 | .NET package                           | `Runic.Application.Views.Desktop`                                      | `Runic.Application.Views.CsWebUi`                             |
 | Host script in `index.html`            | `runic-views.js` (before 0.7.0-preview.9: `runic-desktop-views.js`)    | `runic-views.js` (before 0.7.0-preview.9: `runic-cswebui.js`) |
 | Support                                | First-class                                                            | Best effort                                                   |
@@ -87,8 +101,12 @@ Only the entry point names the host. Runic Desktop runs the body on the event
 loop the platform needs:
 
 ```csharp docs-test=template:Program.cs
-return RunicDesktopHost.Run(provider, options, RunAsync);
+return RunicDesktopHost.Run(provider, options, hostOptions, RunAsync);
 ```
+
+Since SDK `0.11.0`, the template's `hostOptions` send a
+Content-Security-Policy without `'unsafe-eval'` outside `Development`
+(`RunicDesktopHostOptions.ContentSecurityPolicy`).
 
 CS-WebUI runs the same body:
 
@@ -98,6 +116,8 @@ return RunicCsWebUiHost.Run(provider, RunAsync);
 
 To switch, change that line and its `using`, the host package in the project
 file, and, before SDK `0.7.0-preview.9`, the host script in `index.html`.
+CS-WebUI takes no `RunicDesktopHostOptions`: give its page a policy with a
+`<meta http-equiv="Content-Security-Policy">` element instead.
 Since `0.7.0-preview.9`, both hosts also provide their Views client as
 `runic-views.js`. A page that loads it, as the template does, names no host
 and needs no change. Generate a project with the other `--host` in the

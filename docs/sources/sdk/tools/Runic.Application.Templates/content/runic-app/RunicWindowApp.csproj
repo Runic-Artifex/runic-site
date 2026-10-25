@@ -13,7 +13,7 @@
     <ApplicationTitle>__RUNIC_APPLICATION_NAME__</ApplicationTitle>
     <Version>1.0.0</Version>
 <!--#if (packaging) -->
-    <!-- packaging/package.mjs reads these too. The summary software centers and the Start menu show. -->
+    <!-- dotnet runic package reads these too. The summary software centers and the Start menu show. -->
     <Description>A Runic desktop application</Description>
     <PackageProjectUrl>https://example.com</PackageProjectUrl>
     <!-- The MSIX package's publisher: the subject of the certificate that signs it. -->
@@ -21,14 +21,25 @@
     <!-- URL schemes the application opens, separated by semicolons, such as the redirect of an OAuth sign-in. The
          packages register them; see "Package it" in the README. -->
     <RunicApplicationUrlSchemes></RunicApplicationUrlSchemes>
+    <!-- File types the application opens, separated by semicolons: an extension with its dot, optionally with its MIME
+         type, such as .notes=application/x-example-notes. The packages declare each as the application's own type. -->
+    <RunicApplicationFileTypes></RunicApplicationFileTypes>
+    <!-- Hosts whose https links the application opens, separated by semicolons, such as notes.example.org: Windows app
+         URI handlers and macOS universal links, which also need a file on each host; see the README. -->
+    <RunicApplicationWebLinkHosts></RunicApplicationWebLinkHosts>
+    <!-- true when the application serves D-Bus activation on Linux (PortalApplication.ExportApplicationAsync): the
+         desktop entry sets DBusActivatable=true and the Flatpak exports a D-Bus service file. -->
+    <RunicApplicationDBusActivatable>false</RunicApplicationDBusActivatable>
 <!--#endif -->
     <!-- The Explorer and taskbar icon; icons/ holds the same placeholder as SVG and PNG. -->
     <ApplicationIcon>icons/icon.ico</ApplicationIcon>
-<!--#if (nix) -->
-    <!-- dotnet restore writes packages.lock.json, and dotnet restore -p:PublishAot=true writes
-         packages.aot.lock.json, whose graph adds the NativeAOT compiler. flake.nix restores from them in locked
-         mode for linux-x64, so both lock files list that runtime's packages too. -->
+    <!-- dotnet restore writes packages.lock.json with the exact version and content hash of every NuGet package.
+         Commit it: a later restore that resolves a different package fails instead of using it. -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+<!--#if (nix) -->
+    <!-- dotnet restore -p:PublishAot=true writes packages.aot.lock.json, whose graph adds the NativeAOT compiler.
+         flake.nix restores from both lock files in locked mode for linux-x64, so they list that runtime's packages
+         too. -->
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <NuGetLockFilePath Condition="'$(PublishAot)' == 'true'">packages.aot.lock.json</NuGetLockFilePath>
 <!--#endif -->

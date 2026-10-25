@@ -85,24 +85,26 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  // 1.9375 MiB since 0.10.0 grew the Platform and Windows administration APIs
-  // (about 34 KB); 0.10.0 needs about 1.89 MiB.
-  assert.ok(inputs <= 1.9375 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  // 2.375 MiB since 0.11.0 added the menu, clipboard, monitor, shortcut,
+  // message box and other platform services (about 460 KB); 0.11.0 needs
+  // about 2.34 MiB.
+  assert.ok(inputs <= 2.375 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads. 176 KiB per page
-  // since 0.9.0, whose @runic-artifex/views page needs about 166 KiB.
+  // __data.json payloads that client-side navigation loads. 192 KiB per page
+  // since 0.11.0, whose @runic-artifex/views page needs about 186 KiB.
   let compressed = 0;
   for (const file of files(buildApi)) {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 176 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 192 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 4.5 MiB since the Runic.Platform.Linux.DBus pages of 0.8.0-preview.5,
-  // which needs about 4.4 MiB.
+  // 5.25 MiB since the platform services of 0.11.0 (menus, clipboard,
+  // monitors, global shortcuts, message boxes and more), which needs about
+  // 5.12 MiB.
   assert.ok(
-    compressed <= 4.5 * 1024 * 1024,
+    compressed <= 5.25 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });

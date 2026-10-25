@@ -27,7 +27,7 @@ without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
 This store, from the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/multi-window),
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/multi-window),
 loads the settings on demand and saves them by writing a temporary file and
 moving it over the old one, so a crash never leaves a half-written file. It
 uses System.Text.Json's source generator, so it works with NativeAOT:
@@ -98,7 +98,8 @@ services.AddSingleton(new SettingsStore(SettingsStore.DefaultPath));
   the desktop's settings service going away and coming back.
 
 `DesktopAppearance` has a `ColorScheme` (`NoPreference`, `Light` or `Dark`),
-an `AccentColor`, and `HighContrast` and `ReducedMotion`. A preference that
+an `AccentColor`, `HighContrast` and `ReducedMotion`, and since SDK `0.11.0`
+`TextScale`, the desktop's text size factor (Windows, GNOME). A preference that
 the platform doesn't report is `null`, not `false`. Every read returns a
 `PlatformResult<DesktopAppearance>`, so an unavailable or failed read is a
 value that you handle, not an exception.

@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "fcc71ba13aa56c8f1a720909c1074825a1f5dd6f",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/fcc71ba13aa56c8f1a720909c1074825a1f5dd6f.tar.gz",
+  "revision": "318762a9d5dcdd74303ca30b095fed355a1ab21f",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/318762a9d5dcdd74303ca30b095fed355a1ab21f.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -88,14 +88,18 @@
     "tools/Runic.Application.Templates/content/runic-app/frontends/react/src/pages/CounterPage.tsx",
     "tools/Runic.Application.Templates/content/runic-app/frontends/svelte/index.html",
     "tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.svelte",
+    "tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/app.html",
+    "tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/routes/+page.svelte",
     "tools/Runic.Application.Templates/content/runic-app/frontends/vue/index.html",
     "tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.vue",
     "tools/Runic.Application.Templates/content/runic-app/packaging/linux/app.desktop",
     "tools/Runic.Application.Templates/content/runic-app/packaging/linux/flatpak.yml",
     "tools/Runic.Application.Templates/content/runic-app/packaging/macos/Info.plist",
     "tools/Runic.Application.Templates/content/runic-app/packaging/windows/AppxManifest.xml",
+    "tools/Runic.Application.Templates/content/runic-view/.template.config/dotnetcli.host.json",
+    "tools/Runic.Application.Templates/content/runic-view/.template.config/template.json",
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:c0a3a90ed76566d81244498eea3b21ad59859a1bef323f28827d80f8e818c1c4"
+  "contentDigest": "sha256:0d6e7a1a27355218f8958e7d6d2e9c9109710b0faa0f8e7cfc0a0e3d97a80492"
 }

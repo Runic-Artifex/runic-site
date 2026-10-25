@@ -59,14 +59,14 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
 `WhenNavigatedTo`, the result commands, `ReactiveLeaveConfirmation` and
-`GuardClose` are new in SDK `0.7.0-preview.7`. This guide follows `0.10.0`.
+`GuardClose` are new in SDK `0.7.0-preview.7`. This guide follows `0.11.0`.
 
 ### Coming from ReactiveUI navigation
 
@@ -86,6 +86,7 @@ navigator, not the View, owns the pages it created.
 | Go back                                   | `Main.CreateBackCommand()`, or `await Main.BackAsync()`                    |
 | Enable a Back button                      | `Main.WhenCanGoBackChanged()`, included in the Back command                |
 | Show a busy state                         | `Main.WhenIsTransitioningChanged()`                                        |
+| Bind a history list or breadcrumb         | `Main.WhenHistoryChanged()`, since SDK `0.11.0`                            |
 | Run code each time a page becomes current | `entry.WhenNavigatedTo(...)`, or `INavigationAware`                        |
 | Refuse to leave a page                    | `INavigationDepartureGuard` with `ReactiveLeaveConfirmation`               |
 | Return a value to the caller              | `PushForResult<TPage, TResult>()` and `entry.CreateCompleteCommand()`      |
@@ -103,10 +104,15 @@ Add the ReactiveUI adapter, which brings `Runic.Navigation`:
 dotnet add package Runic.Navigation.ReactiveUI --version <VERSION>
 ```
 
+An app on ReactiveUI's System.Reactive distribution adds
+`Runic.Navigation.ReactiveUI.Reactive` instead. Reference one of the two:
+since SDK `0.11.0`, a project whose references contain both gets build warning
+`RUNICNAV002`.
+
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -125,7 +131,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -265,6 +271,27 @@ a completed command task does not mean the page changed. After the `await`,
 the command is back on the Window's model context, so it sets state directly.
 [ViewModel state and threads](model-context.md) explains why.
 
+### Busy state and history
+
+Since SDK `0.8.0-preview.5`, a region has `IsBusy` from a request's admission
+until its task completes, including the retirement of the entries it departed.
+`IsTransitioning` ends earlier, in the commit turn. Bind a progress indicator
+to `Main.WhenIsBusyChanged()`. Since SDK `0.10.0`, `RunicNavigator.IsBusy` says
+whether the navigator's `WhenIdleAsync()` would wait now. It is a snapshot
+without change notification, so don't bind to it.
+
+Two operations change the history without a new page:
+
+- `BackToAsync(entryId)` retires every entry above that entry, which resumes.
+- `ClearHistoryAsync()` retires the retained entries; the current entry stays.
+
+Both return a `NavigationResult<TContent>` like the other operations. Since SDK
+`0.10.0`, the non-generic `NavigationRegion` has them too, returning a
+`NavigationResult<object>`, for hosts typed `NavigationRegion`, such as the WPF
+`NavigationHost.Region`. Since SDK `0.11.0`, `WhenHistoryChanged()` emits the
+retained entries below the current one, bottom to top; a breadcrumb binds to it
+and goes back with `BackToAsync(entry.Id)`.
+
 ### The page and its entry
 
 Each visit is an entry with a `NavigationEntryContext`: its id, its state, and
@@ -389,6 +416,13 @@ The guard fails closed:
   `signal` aborts, and a late answer is ignored. The discard runs only when
   the departure commits.
 
+A question for the whole region rather than one page, such as unsaved work
+anywhere in the Window, is a region guard that you register with
+`Main.AddDepartureGuard(guard)` or `navigator.AddDepartureGuard(guard)`. Since
+SDK `0.11.0`, `ReactiveNavigationRegionGuard.WithInteraction(interaction,
+prompt, hasUnsavedChanges, discard)` creates one that asks through an
+`Interaction`, with the same fail-closed rules.
+
 Guards, factories and initialize hooks run outside the model context's turns.
 An initialize hook may set state directly on a page that was created for its
 entry, with `PushAsync<TPage>()`, `NavigationTarget.Create` or a new instance
@@ -502,7 +536,7 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   taking `IRunicWindowContext` in its constructor and calling its
   `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
   it is new in SDK `0.7.0-preview.8`; see
-  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -517,7 +551,10 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   the user edits where that matters. `RequestCloseAsync` still asks there.
 - `CloseAsync`, disposal and a host shutdown don't ask.
 - In WPF, set `GuardWindowClose="True"` on the `NavigationHost` instead. It
-  also guards a host on an unselected tab.
+  also guards a host on an unselected tab. Since SDK `0.11.0`,
+  `WindowCloseConfirmation.Create` and `WindowCloseConfirmation.OncePerClose`
+  make a region guard that such a close asks once, however many regions it
+  clears.
 
 ### Render a region
 
@@ -526,6 +563,12 @@ empty, so its TypeScript type includes `null`. Give the `ViewOutlet` a fallback
 for that case. Going Back presents the earlier page's reference again, and the
 outlet mounts a fresh View for its retained ViewModel. Reloading the page or
 reconnecting never changes the history.
+
+`NavigationRequestOptions.RetainView`, new in SDK `0.11.0`, asks a presentation
+to keep (`true`) or rebuild (`false`) one entry's view while the entry is
+retained; the entry reports it as `NavigationEntry.RetainView`. It never
+changes the entry's lifetime. The WPF `NavigationHost` reads it in place of its
+`RetainViews`. Runic Views pages ignore it, because the frontend owns the DOM.
 
 ## With CommunityToolkit.Mvvm
 
@@ -557,6 +600,11 @@ public Task OpenNotesAsync() => !CanNavigate || Main.Current is DocumentViewMode
 `NavigationRequestOptions.ExpectedCurrent`, the entry id passed here, makes a
 request conditional: a double click, or an answer that arrives after the user
 moved on, is rejected instead of opening a second page.
+`NavigationRequestOptions.Requester`, new in SDK `0.11.0`, names the entry a
+request is made for, such as a page whose operation completes and then opens a
+page in a parent region. The request is rejected as `NotCurrent` unless that
+entry, and every entry whose content owns its region up to a root region, is
+current at admission and at commit.
 
 CommunityToolkit.Mvvm has no interaction type, so the leave guard asks in the
 dialog region with `LeaveConfirmation.InDialog`. The confirm dialog takes its
@@ -581,6 +629,10 @@ private async Task CloseEditorAsync()
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.
+- Since SDK `0.11.0`, `RunicTestNavigationEntry.CreateAsync` in
+  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Testing/README.md)
+  unit-tests a page that takes its `NavigationEntryContext`, such as a confirm
+  dialog, without a Window.

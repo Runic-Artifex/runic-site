@@ -39,6 +39,15 @@ Responses carry the manifest's entity tag and cache policy, `Accept-Ranges` and
 sent with `; charset=utf-8`, as `Runic.Assets.AspNetCore` sends it, so one
 archive gets the same `Content-Type` on both hosts.
 
+`AssetRoutingOptions.ContentSecurityPolicy` is sent with HTML assets. The
+surface sends its `frame-ancestors` policy as a header of its own next to it,
+and the WebView enforces both. The Views Bridge works under `script-src 'self'`
+without `'unsafe-eval'`; only `DesktopSurface.ExecuteJavaScriptAsync` needs it.
+See the Runic.Desktop README. To give every HTML response of the surface a
+policy, including content the adapter does not serve, set
+`DesktopSurfaceOptions.ContentSecurityPolicy` instead; the same policy from both
+is sent once.
+
 An unexpected exception while the adapter prepares a response, after the path
 resolved and before the body starts, becomes an empty `500`; the adapter does
 not log it. A malformed `Range` header is ignored, and an unsatisfiable one

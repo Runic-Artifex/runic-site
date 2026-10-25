@@ -27,6 +27,12 @@ install them again when `package.json` or the lock file changes; set
 `RunicApplicationFrontendInstallEnabled` to `false` to install them yourself.
 These commands build the production frontend instead of starting a development server.
 
+The first restore writes `packages.lock.json`, which pins every NuGet package
+to its version and content hash (`RestorePackagesWithLockFile`). Commit it with
+the frontend's lock file; a restore that would resolve a different package
+fails until you restore again on purpose, for example with
+`dotnet restore --force-evaluate` after changing a package reference.
+
 ## What opens
 
 `RunAsync` in `Program.cs` opens `WorkspaceWindow` with
@@ -57,6 +63,28 @@ another presentation, call `DesktopEventLoop.Run` and create a
 [Runic.Desktop guide](https://github.com/Runic-Artifex/runic-sdk/blob/v__RUNIC_NUGET_VERSION__/packages/dotnet/Runic.Desktop/README.md)
 for native prerequisites and platform services. Create the project with
 `--linux-gtk 4` to use GTK 4 and WebKitGTK 6 on Linux.
+
+Outside the `Development` environment, `Program.cs` sends a
+Content-Security-Policy with the Window's pages
+(`RunicDesktopHostOptions.ContentSecurityPolicy`): scripts, styles and
+connections come only from the application itself, and the page can load no
+plugins and cannot be framed. Without `'unsafe-eval'`, the page cannot turn
+strings into code; the Views Bridge does not need it, because its state
+arrives as data. `DesktopSurface.ExecuteJavaScriptAsync` evaluates its script,
+so it fails under this policy. Add the origins of anything else the page
+loads, such as an API or a font service, to the policy.
+<!--#if (frontend == "sveltekit") -->
+SvelteKit starts the page with an inline script. `kit.csp` in
+`Frontend/vite.config.ts` adds a page policy that allows that script by its
+hash, and the browser enforces both policies. The policy in `Program.cs` also
+allows the style attribute of SvelteKit's route announcer by its hash
+(`style-src-attr`); update that hash when an update of `@sveltejs/kit` changes
+the announcer.
+<!--#elif (frontend == "angular") -->
+The policy allows inline styles, which Angular adds for component styles, and
+`angular.json` turns off critical-CSS inlining, which would need an inline
+script.
+<!--#endif -->
 <!--#else -->
 `RunicCsWebUiHost.Run` in `Program.cs` uses CS-WebUI. It opens the app
 in an installed browser in app mode (Chrome, Edge or another Chromium-based
@@ -69,9 +97,19 @@ the template's default Runic Desktop host (create the project without
 [host selection guide](https://docs.runic-artifex.eu/guides/desktop/host-selection/).
 <!--#endif -->
 
+<!--#if (frontend == "sveltekit") -->
+The page names no host: `Frontend/src/app.html`, SvelteKit's page template,
+loads `webui.js` and `runic-views.js`, which the host package copies into
+`www/` from its own Views client.
+<!--#elif (frontend == "angular") -->
+The page names no host: `Frontend/src/index.html` loads `webui.js` and
+`runic-views.js`, which the host package copies into `www/` from its own
+Views client.
+<!--#else -->
 The page names no host: `Frontend/index.html` loads `webui.js` and
 `runic-views.js`, which the host package copies into `www/` from its own
-Views client. Switching hosts changes the host package and `Program.cs`, not
+Views client.
+<!--#endif --> Switching hosts changes the host package and `Program.cs`, not
 the frontend. A project that
 references both hosts sets `RunicApplicationHost` to `desktop` or `cswebui`.
 
@@ -122,10 +160,13 @@ clipboard on the default Runic Desktop host (create the project without
 <!--#endif -->
 | `icons/` | The application's placeholder icon: `icon.svg`, `icon.png` (512 px) and `icon.ico` (16 to 256 px). |
 <!--#if (packaging) -->
-| `packaging/` | `package.mjs` and the manifests it fills: MSIX on Windows, `.app` and disk image on macOS, Flatpak on Linux. See [Package it](#package-it). |
+| `packaging/` | The manifests `dotnet runic package` fills, which replace its built-in ones: MSIX on Windows, `.app` on macOS, the desktop entry, AppStream metadata and Flatpak manifest on Linux. See [Package it](#package-it). |
 <!--#endif -->
 <!--#if (frontend == "angular") -->
 | `Frontend/src/app` | Components connect generated clients with `injectView()` and render the page that `WorkspaceViewModel.Main` selects with `ViewOutlet`, both from `@runic-artifex/angular`. |
+<!--#elif (frontend == "sveltekit") -->
+| `Frontend/src/routes/+page.svelte`, `Frontend/src/lib/pages` | The root route connects generated clients with `useView` and renders the page that `WorkspaceViewModel.Main` selects with `ViewOutlet`, both from `@runic-artifex/svelte`. `+layout.ts` prerenders it as an empty shell (`ssr = false`): it renders in the window, where the Views client connects. |
+| `Frontend/src/hooks.ts` | Routes `index.html`, the file a Window opens, to the root route. |
 <!--#elif (frontend == "svelte") -->
 | `Frontend/src/App.svelte`, `Frontend/src/pages` | Connect generated clients with `useView` and render the page that `WorkspaceViewModel.Main` selects with `ViewOutlet`, both from `@runic-artifex/svelte`. |
 <!--#elif (frontend == "vue") -->
@@ -133,8 +174,12 @@ clipboard on the default Runic Desktop host (create the project without
 <!--#else -->
 | `Frontend/src/App.tsx`, `Frontend/src/pages` | Connect generated clients with `useView` from `@runic-artifex/react` and render the page that `WorkspaceViewModel.Main` selects. |
 <!--#endif -->
-<!--#if (frontend != "angular") -->
-| `Frontend/vite.config.ts` | Adds `runic()` from `@runic-artifex/vite-plugin-runic` for Runic development diagnostics. To add its Runic DevTools dock, install `@vitejs/devtools` and register `DevTools()`. |
+<!--#if (frontend == "sveltekit") -->
+| `Frontend/vite.config.ts` | Configures SvelteKit with `runicAdapter()` from `@runic-artifex/sveltekit`, which prerenders the page into `Frontend/dist`, the folder the build copies to `www/`. SvelteKit writes relative URLs, so the page runs below any path. `runicDevSession()` from `@runic-artifex/vite-plugin-runic` lets `dotnet runic dev` confirm that the development server on its port is the one it started. |
+<!--#elif (frontend == "angular") -->
+| `Frontend/proxy.conf.mjs` | The development server's proxy configuration (`proxyConfig` in `angular.json`). `runicDevSessionProxy()` from `@runic-artifex/vite-plugin-runic` lets `dotnet runic dev` confirm that the development server on its port is the one it started; add your own proxy entries next to it. |
+<!--#else -->
+| `Frontend/vite.config.ts` | Adds `runic()` from `@runic-artifex/vite-plugin-runic` for Runic development diagnostics, and so that `dotnet runic dev` can confirm that the development server on its port is the one it started. To add its Runic DevTools dock, install `@vitejs/devtools` and register `DevTools()`. |
 <!--#endif -->
 | `Frontend/src/generated` | Typed clients generated from the ViewModels. They import the shared `@runic-artifex/views` runtime. |
 <!--#if (tests) -->
@@ -232,6 +277,17 @@ way. Give status such as `IsDirty`, `Error` or a collection a private setter
 form fields publicly settable.
 <!--#endif -->
 
+## Security
+
+The page renders the application, but treat what it sends as untrusted input:
+any script that runs in it can call every public setter and command of the
+Window's ViewModels. Check values in C#, keep state that the page only reads
+behind private setters, and let the user choose files and confirm destructive
+steps in native UI instead of taking paths from the page. The
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v__RUNIC_NUGET_VERSION__/docs/security.md)
+covers embedded windows and browsers, admission, Content-Security-Policy,
+permissions and what to keep out of the frontend build.
+
 ## Identity and icons
 
 The project file declares the application's identity once:
@@ -292,38 +348,54 @@ ship those two together, without debug symbols. Users need no Node.js or package
 manager, only the platform WebView or a browser described above. The
 [Ship a Desktop application](https://github.com/Runic-Artifex/runic-site/blob/main/docs/guides/desktop/shipping.md)
 guide covers publish modes, signing and packaging per platform.
-<!--#if (packaging) -->
 
 ## Package it
 
-`packaging/package.mjs` packages the application on the platform it runs on.
-It reads `ApplicationId`, `ApplicationTitle`, `Version`,
-`Description`, `PackageProjectUrl`, `RunicApplicationPublisher` and
-`RunicApplicationUrlSchemes` from the project file, publishes with NativeAOT, fills the `{{...}}` fields of
-the manifests in `packaging/` and writes the package to `artifacts/package/`.
-Run it with Node 22 or later (or Bun) from the project directory:
+`dotnet runic package <target>` packages the application on the platform it
+runs on. It reads `ApplicationId`, `ApplicationTitle`, `Version`,
+`Description`, `PackageProjectUrl`, `RunicApplicationPublisher`,
+`RunicApplicationUrlSchemes`, `RunicApplicationFileTypes`,
+`RunicApplicationWebLinkHosts` and `RunicApplicationDBusActivatable` from the
+project file, publishes with NativeAOT, fills its manifests and writes the
+package to `artifacts/package/<target>/`:
 
 ```sh
-node packaging/package.mjs windows   # MSIX, on Windows with the Windows SDK
-node packaging/package.mjs macos     # .app in a disk image, on macOS with Xcode's command line tools
-node packaging/package.mjs flatpak   # Flatpak, on Linux with flatpak and flatpak-builder
+dotnet runic package windows    # MSIX, on Windows with the Windows SDK
+dotnet runic package macos      # .app in a disk image, on macOS with Xcode's command line tools
+dotnet runic package flatpak    # Flatpak, on Linux with flatpak-builder
+dotnet runic package appimage   # AppImage, on Linux with appimagetool
+dotnet runic package deb        # Debian package, on Linux with dpkg-deb
+dotnet runic package rpm        # rpm, on Linux with rpmbuild (also on Debian and Ubuntu)
 ```
 
-On Debian and Ubuntu, the Flatpak target needs `flatpak flatpak-builder
-appstream appstream-compose librsvg2-common desktop-file-utils` and the
-Flathub remote (`flatpak remote-add --user --if-not-exists flathub
-https://dl.flathub.org/repo/flathub.flatpakrepo`), from which flatpak-builder
-installs the GNOME runtime and SDK on the first build.
+<!--#if (packaging) -->
+The manifests in `packaging/` replace the command's built-in ones: edit them to
+change a package. A manifest you delete falls back to the built-in default.
+<!--#else -->
+To edit the manifests, create the project with `--packaging`, which copies the
+command's built-in manifests to `packaging/`, where they replace the defaults.
+<!--#endif -->
+`RunicPackageIcon` names the 512 px icon (`icons/icon.png`; the `icon.svg`
+beside it is the scalable icon on Linux) and `RunicPackageName` the deb and rpm
+package name (the lower-cased assembly name). `--format json` reports what was
+written. See
+[Package the application](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/dotnet-runic/README.md#package-the-application)
+and the [packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/packaging.md)
+for each format's tools and for signing.
 
 | Platform | Package | Without credentials | To ship it |
 | --- | --- | --- | --- |
-| Windows | `<id>_<version>_x64.msix` from `packaging/windows/AppxManifest.xml` | Unsigned; Windows installs only signed packages. Sign it with a test certificate to try it. | A code-signing certificate whose subject is `RunicApplicationPublisher`: `--certificate app.pfx` (password in `RUNIC_SIGNING_PASSWORD`) or `--thumbprint <sha1>` from the certificate store, and `--timestamp-url` from your provider. A cloud signing service signs the unsigned package with its own `signtool` options. The Microsoft Store signs packages itself. |
-| macOS | `<name>.app` and `<name>-<version>.dmg` from `packaging/macos/Info.plist` and `entitlements.plist` | Ad-hoc signed with the hardened runtime: it runs on this Mac; Gatekeeper blocks it elsewhere. | An Apple Developer Program membership with a Developer ID Application certificate in the keychain (`--sign "Developer ID Application: Example Ltd (TEAMID)"`), and notarization credentials stored once with `xcrun notarytool store-credentials <profile>` (`--notary-profile <profile>`), which notarizes and staples the disk image. `--rid osx-arm64,osx-x64` builds a universal executable. |
-| Linux | `<id>.flatpak` and a repository in `artifacts/package/flatpak/repo`, from `packaging/linux/flatpak.yml`, `app.desktop` and `app.metainfo.xml` | Unsigned: install the bundle with `flatpak install --user <id>.flatpak`. | A GPG key for your own repository (`--gpg-sign <key id>`). Flathub reviews a submission from your account and builds from source in its own sandbox, which needs a manifest that builds the .NET project offline (the `org.freedesktop.Sdk.Extension.dotnet` SDK extension and generated NuGet sources) instead of installing this published folder. |
+| Windows | `<id>_<version>_x64.msix` from `windows/AppxManifest.xml` | Unsigned; Windows installs only signed packages. Sign it with a test certificate to try it. | A code-signing certificate whose subject is `RunicApplicationPublisher`: `--certificate app.pfx` (password in `RUNIC_SIGNING_PASSWORD`) or `--thumbprint <sha1>` from the certificate store, and `--timestamp-url` from your provider. A cloud signing service signs the unsigned package with its own `signtool` options. The Microsoft Store signs packages itself. |
+| macOS | `<name>.app` and `<name>-<version>.dmg` from `macos/Info.plist` and `entitlements.plist` | Ad-hoc signed with the hardened runtime: it runs on this Mac; Gatekeeper blocks it elsewhere. | An Apple Developer Program membership with a Developer ID Application certificate in the keychain (`--sign "Developer ID Application: Example Ltd (TEAMID)"`), and notarization credentials stored once with `xcrun notarytool store-credentials <profile>` (`--notary-profile <profile>`), which notarizes and staples the disk image. `--runtime osx-arm64,osx-x64` builds a universal executable. |
+| Linux | `<id>.flatpak` and a repository from `linux/flatpak.yml`, `app.desktop` and `app.metainfo.xml` | Unsigned: install the bundle with `flatpak install --user <id>.flatpak`. | A GPG key for your own repository (`--gpg-sign <key id>`). |
+| Linux | `<Name>-<version>-<arch>.AppImage` | Unsigned; it uses the system's GTK and WebKitGTK. | `appimagetool --sign` with your key; see the packaging guide. |
+| Linux | `<package>_<version>_<arch>.deb` and `<package>-<version>-1.<arch>.rpm` | Unsigned; they depend on the distribution's GTK and WebKitGTK. | Sign the apt repository, or the rpm with `rpmsign`. |
 
 The Flatpak runs on the GNOME runtime, which provides GTK 4 and WebKitGTK 6,
 so create the project with `--linux-gtk 4` for it. Inside Flatpak the
-application ID is `FLATPAK_ID`, which `WithGtk4` accepts when it matches.
+application ID is `FLATPAK_ID`, which `WithGtk4` accepts when it matches. The
+deb and rpm depend on GTK 3 and WebKitGTK 4.1, or on GTK 4 and WebKitGTK 6 with
+`--linux-gtk 4`.
 
 ### Identity on each platform
 
@@ -331,9 +403,9 @@ application ID is `FLATPAK_ID`, which `WithGtk4` accepts when it matches.
   the AppUserModelID `<package family name>!App` that notifications use; Runic
   uses it in the package. An unpackaged copy (a ZIP or another installer)
   registers its AppUserModelID itself, with a Start menu shortcut whose
-  `System.AppUserModel.ID` is the ID. Login startup in a package needs a
-  `desktop:StartupTask` extension in the manifest; Runic's login startup
-  reports it unavailable there.
+  `System.AppUserModel.ID` is the ID. The manifest declares a
+  `desktop:StartupTask` (`TaskId="LoginStartup"`, off until the application
+  turns it on), which Runic's login startup uses in the package.
 - **macOS**: the bundle identifier is the application ID, and the frontend is
   in `Contents/Resources/www`, where Runic finds it.
 - **Linux**: the desktop entry, the AppStream metadata and the icons are named
@@ -349,12 +421,42 @@ redirect to `org.example.notes:/callback`) adds the scheme to every package:
 a `windows.protocol` extension in the MSIX manifest, `CFBundleURLTypes` in
 `Info.plist` and `x-scheme-handler/<scheme>` in the desktop entry. Windows and
 Linux start the application with the URL as its argument; macOS sends it as
-an Apple event. File types are commented examples in the manifests: a
-`windows.fileTypeAssociation` extension, `CFBundleDocumentTypes` with a
-`UTExportedTypeDeclarations` entry, and a MIME type in the desktop entry with
-a shared-mime-info definition for a type of your own. Treat opened URLs and
-files as untrusted input.
-<!--#endif -->
+an Apple event.
+
+`RunicApplicationFileTypes` lists the file types the application opens, such
+as `.notes=application/x-example-notes;.md`: an extension with its dot and,
+optionally, its MIME type. In `Info.plist` each becomes a document type with
+an exported uniform type identifier `<ApplicationId>.<extension>` that
+conforms to `public.data`, as the application's own type; for a standard type,
+such as Markdown, edit the generated entry to name the system's type instead.
+In the MSIX manifest each becomes a `uap3:FileTypeAssociation` with
+`MultiSelectModel="Player"`, so files the user opens together reach one
+process; read them with `DesktopPlatformServices.GetLaunch(args)`. In the
+desktop entry each is a MIME type (its own, or
+`application/x-<last part of the ID>-<extension>`), whose shared-mime-info
+definition the Linux packages install.
+
+`RunicApplicationDBusActivatable` set to `true` adds `DBusActivatable=true` to
+the desktop entry and a D-Bus service file to the Flatpak, deb and rpm (not to the
+AppImage, which has no fixed path): GNOME and KDE then
+start the application through the session bus and deliver later opens to the
+running process. The application must then serve the activation, after
+claiming its instance:
+`await DesktopPlatformServices.ExportApplicationAsync(ApplicationIdentity.Id, instance)`.
+
+`RunicApplicationWebLinkHosts` lists hosts, such as `notes.example.org`, whose
+`https` links open the application; pass the same hosts as
+`DesktopOpenOptions.WebLinkHosts`. On macOS these are universal links: sign the
+bundle with the `com.apple.developer.associated-domains` entitlement
+(`applinks:notes.example.org`), which needs a provisioning profile from your
+Apple Developer account embedded as `Contents/embedded.provisionprofile`, and
+serve `https://notes.example.org/.well-known/apple-app-site-association` with
+`{"applinks":{"details":[{"appIDs":["TEAMID.<ApplicationId>"],"components":[{"/":"/*"}]}]}}`.
+An ad-hoc signed bundle cannot carry the entitlement, so `dotnet runic package`
+does not add it. On Windows these are app URI handlers: the MSIX manifest lists each
+host in a `uap3:AppUriHandler`, and each host serves
+`https://notes.example.org/.well-known/windows-app-web-link` with
+`[{"packageFamilyName":"<family name>","paths":["*"]}]`. Treat opened URLs and files as untrusted input.
 <!--#if (nix) -->
 
 ## Build it with Nix

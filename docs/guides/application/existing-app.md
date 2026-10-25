@@ -6,7 +6,8 @@ nothing, [create a project](getting-started/README.md) instead; the steps below
 reproduce what the template sets up. Replace `<VERSION>` with the current
 release from the [package catalog](https://docs.runic-artifex.eu/packages/) and
 keep Application SDK packages on that version;
-`Runic.Application.Views.CsWebUi` is still a prerelease, `0.10.0-preview.1`.
+`Runic.Application.Views.CsWebUi` is still a prerelease, `0.11.0-preview.1`,
+and needs CsWebUi 2.5.0-beta.4.8 or later.
 Runic Translations and Runic Command Line have independent release versions.
 
 For a package-only GTK 4 consumer and its scoped/native shutdown ownership, see
@@ -77,6 +78,15 @@ public sealed partial class CounterView : ReactiveRunicView<CounterViewModel>;
 With CommunityToolkit.Mvvm, the Views are `RunicView<TViewModel>`. A Window
 with a single ViewModel needs no Views.
 
+Since SDK `0.11.0`, the `runic-view` item template from
+`Runic.Application.Templates` writes a View and its ViewModel into a project
+that references a Runic host or `Runic.Application.Views`:
+`dotnet new runic-view --name Settings` adds `SettingsView.cs` and
+`SettingsViewModel.cs`. `--window` declares a Window instead,
+`--view-models toolkit` uses CommunityToolkit.Mvvm, and `--namespace` sets the
+namespace (by default the project's `RootNamespace` once it has been
+restored). Register the new ViewModel yourself.
+
 ## 4. Register and open the Window
 
 Register each ViewModel with the lifetime your application needs; the Window's
@@ -112,7 +122,7 @@ await using var provider = new ServiceCollection().AddWorkspace().BuildServicePr
     ValidateOnBuild = true
 });
 ...
-return RunicDesktopHost.Run(provider, options, RunAsync);
+return RunicDesktopHost.Run(provider, options, hostOptions, RunAsync);
 ...
 static async Task<int> RunAsync(IRunicWindowHost host)
 {
@@ -124,8 +134,13 @@ static async Task<int> RunAsync(IRunicWindowHost host)
 
 The Window serves the built frontend from the `www` folder next to the
 executable. With CS-WebUI, call `RunicCsWebUiHost.Run(provider, RunAsync)`
-instead; the body is the same. The [tutorial](tutorial/README.md#4-register-and-open-the-window)
-walks through the generated `Program.cs`.
+instead; the body is the same. The template's `hostOptions` set
+`RunicDesktopHostOptions.ContentSecurityPolicy` outside `Development`; pass
+`RunicDesktopHost.Run(provider, options, RunAsync)` to send no policy. Since SDK
+`0.11.0` the Views Bridge works without `'unsafe-eval'`, so remove it from your
+pages' policy unless another dependency evaluates strings. The
+[tutorial](tutorial/README.md#4-register-and-open-the-window) walks through the
+generated `Program.cs`.
 
 ## 5. Connect the frontend
 
@@ -138,9 +153,16 @@ npm install --save-exact @runic-artifex/react@<VERSION>
 ```
 
 Use `@runic-artifex/vue`, `@runic-artifex/svelte` or `@runic-artifex/angular`
-for those frameworks, or only `@runic-artifex/views` for plain TypeScript. Vite
-projects can add `@runic-artifex/vite-plugin-runic` as a development
-dependency for Runic diagnostics.
+for those frameworks, or only `@runic-artifex/views` for plain TypeScript. A
+SvelteKit app adds `@runic-artifex/sveltekit`, whose `runicAdapter()`
+prerenders the pages, next to `@runic-artifex/svelte`. Add
+`@runic-artifex/vite-plugin-runic` as a development dependency for Runic
+diagnostics and for `dotnet runic dev`'s session check, which confirms that the
+development server on its port is the one it started. Since SDK `0.11.0`,
+`runic()` in a Vite configuration needs the plugin's `0.11` release, a
+SvelteKit configuration adds `runicDevSession()` next to `sveltekit()`, and an
+Angular project puts `runicDevSessionProxy()` in the serve target's
+`proxyConfig`. Without them, an older project is not checked.
 
 The page loads the host's scripts before your module. The template loads a
 host-neutral Views client:
@@ -159,18 +181,25 @@ project that references both host packages sets `RunicApplicationHost` to
 `desktop` or `cswebui`. Before `0.7.0-preview.9`, pages loaded
 `runic-desktop-views.js` with Runic Desktop and used `runic({ desktop: true })`,
 which also loads the Desktop bootstrap, or loaded `runic-cswebui.js` with
-CS-WebUI. Those pages keep working.
+CS-WebUI. Those pages keep working; since SDK `0.11.0`, update a copy of
+`runic-cswebui.js` that you keep outside `www/`, because an older script
+receives no state.
 
 `dotnet build` now writes the typed clients to `Frontend/src/generated`, builds
 the frontend with its `build` script and copies `Frontend/dist` to `www` next
 to the executable. Add `Frontend/src/generated` to `.gitignore`. Build the
 frontend with relative asset URLs (Vite's `base: "./"`) so the `www` folder can
 move. The [tutorial](tutorial/README.md#5-render-the-views) shows how the
-generated clients are used from components.
+generated clients are used from components. Since SDK `0.11.0`,
+`<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`
+packs the frontend into the application assembly instead of `www`, for Runic
+Desktop and WPF hosts; CS-WebUI keeps `www` and warns with `RUNICBRIDGE030`.
+`RunicApplicationFrontendPackageManager` takes `npm`, `pnpm` or `bun`; another
+value warns with `RUNICBRIDGE029`.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
 in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the
@@ -184,3 +213,9 @@ dotnet runic dev
 ```
 
 `dotnet runic doctor` reports a missing opt-in, package or frontend lock file.
+Since SDK `0.11.0` it also warns when the installed `@runic-artifex/views`
+does not match the restored `Runic.Application.Views` (`views-package-versions`)
+and when the project's `ApplicationId` is not a valid reverse-DNS name
+(`application-id`). Node.js 24 is the certified version; Node.js 26 passes
+with a warning. `dotnet runic dev` takes `--launch-profile`, `--no-build`,
+`-e`/`--environment NAME=VALUE` and `-v`/`--verbosity`.

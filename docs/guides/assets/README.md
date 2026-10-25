@@ -9,9 +9,15 @@ same way.
 Use it when the application should ship as one executable instead of an
 executable and a folder, or when an ASP.NET Core application serves a single
 page application. Projects created with `dotnet new runic-app` do not need it:
-they copy the built frontend to a `www` folder next to the executable.
+they copy the built frontend to a `www` folder next to the executable. Since
+SDK `0.11.0` such a Views project embeds its frontend with one build property
+instead, `<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`:
+the Views build packs what it would copy to `www/` with Runic Assets, and Runic
+Desktop and WPF hosts serve it without application code. Do not also set
+`RunicAssetsDist` in such a project; `RunicDesktopHostOptions.Assets` serves an
+archive from elsewhere.
 
-> This guide follows Runic SDK 0.10.0. The few differences in
+> This guide follows Runic SDK 0.11.0. The few differences in
 > 0.6.0-preview.1 are marked where they occur.
 
 Replace `<VERSION>` below with the current release from the
@@ -65,11 +71,14 @@ AssetArchiveSource assets = AssetArchive.ReadEmbedded(
 | `RunicAssetsDist`                 | Folder to pack and embed.                                                                                                                                        |
 | `RunicAssetsEntryPoint`           | Entry document inside the folder. Defaults to `index.html`.                                                                                                      |
 | `RunicAssetsDistExclude`          | Paths to leave out, separated by semicolons. Defaults to `runic-assets.zip`; setting it replaces the default, so list that file again if the folder contains it. |
+| `RunicAssetsDefaultExcludes`      | Since 0.11.0, `true` by default: `.git` directories and files whose names start with `.env` are never packed. Set `false` to pack them.                          |
 | `RunicAssetsEmbeddedArchive`      | Embed an archive that was packed in a separate step (see below) instead of `RunicAssetsDist`.                                                                    |
 | `RunicAssetsEmbeddedResourceName` | Resource name, if not `Runic.Assets.StaticFiles`. Pass the same name to `ReadEmbedded`.                                                                          |
 
 Hashed file names, such as Vite's `index-Cf3tzbYH.js`, are cached as immutable.
 Every other file, including `index.html`, is revalidated with its entity tag.
+A packed source map (`*.map`) is build warning `RAS1005` since 0.11.0;
+`<NoWarn>$(NoWarn);RAS1005</NoWarn>` silences it.
 
 ## 3. Serve it from ASP.NET Core
 
@@ -107,6 +116,15 @@ app.MapRunicAssetSource(assets, routing: new AssetRoutingOptions
 });
 ```
 
+Since 0.11.0, `AssetRoutingOptions.ContentSecurityPolicy` sends a policy with
+every HTML asset (the archive carries none, because only the application knows
+its origins). A minimal-API handler can return
+`RunicAssetResults.Asset(assets, path)`, and `RunicAssetFileProvider` exposes a
+source as an `IFileProvider` for `UseStaticFiles` and other file provider
+consumers; the
+[ASP.NET Core adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Assets.AspNetCore/README.md#content-security-policy)
+shows both.
+
 In 0.6.0-preview.1 `MapRunicAssetSource` serves exact manifest paths only, so
 the entry point is at `/index.html` and there is no `AssetRoutingOptions`.
 
@@ -138,8 +156,16 @@ and takes `DesktopAssetOptions? options`; in 0.7 and 0.8 it extends
 Most applications let `dotnet build` pack the folder. Run the packer yourself
 when the archive is produced in a separate step: a CI job that builds the
 frontend once for several .NET builds, an application that loads an archive
-file at run time, or to inspect exactly what the build would embed. The packer
-ships inside the `Runic.Assets` package:
+file at run time, or to inspect exactly what the build would embed. Since SDK
+`0.11.0` the packer is also the `dotnet runic assets pack` command, with the
+same arguments, exit codes and JSON payload:
+
+```sh docs-test=readme:tools/Runic.Assets.Packer/README.md
+dotnet runic assets pack Client.Web/dist artifacts/app.runic-assets --trusted-generated-output
+```
+
+The packer itself ships inside the `Runic.Assets` package, so builds do not
+need `dotnet runic`:
 
 ```sh docs-test=readme:tools/Runic.Assets.Packer/README.md
 packer="$HOME/.nuget/packages/runic.assets/<VERSION>/tools/net10.0/Runic.Assets.Packer.dll"
@@ -147,8 +173,12 @@ dotnet "$packer" Client.Web/dist artifacts/app.runic-assets --trusted-generated-
 ```
 
 Embed the result with `RunicAssetsEmbeddedArchive`, or open the file at run time
-with `AssetArchive.Read`. The
-[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tools/Runic.Assets.Packer/README.md)
+with `AssetArchive.Read` or, since 0.11.0, `AssetArchive.ReadAsync`. Both
+packers leave out `.git` and `.env*` unless you pass `--no-default-excludes`.
+From .NET code, `AssetArchive.WriteTrustedDirectoryAsync` packs your own build
+output on Linux, Windows and macOS, with `AssetArchiveDirectoryOptions` for the
+entry point and exclusions. The
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tools/Runic.Assets.Packer/README.md)
 lists its options, JSON output and exit codes.
 
 ### Trusted generated output
@@ -182,11 +212,11 @@ directory.
 
 ## Reference
 
-- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Assets/README.md):
+- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Assets/README.md):
   explicit embedded resources, the development directory source,
   validation and inspection.
-- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Assets.AspNetCore/README.md)
-  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Assets.Desktop/README.md):
+- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Assets.AspNetCore/README.md)
+  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Assets.Desktop/README.md):
   HTTP behavior and routing.
-- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/specs/assets/archive-v1.md)
+- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/specs/assets/archive-v1.md)
   and the [framework-neutral asset boundary](adr/0013-framework-neutral-asset-boundary.md).

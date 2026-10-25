@@ -8,7 +8,7 @@ still rejects with `BridgeError`.
 
 > Declared failures are new in Runic SDK 0.7.0-preview.1 and are not in
 > 0.6.0-preview.1. Every code block is an excerpt of the
-> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/notes-view-first),
+> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/notes-view-first),
 > which the SDK's CI builds and tests, or of a package README.
 
 ## Before you add a declaration
@@ -36,7 +36,7 @@ TypeScript does not flag the old code: an ignored
 `Promise<BridgeOutcome<...>>` compiles like an ignored `Promise<State>`.
 Callers that already read the result, or use a framework command helper, only
 need to show the new `failure`. The
-[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/eng/release/notes/0.7.0-preview.1.md#upgrading)
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/eng/release/notes/0.7.0-preview.1.md#upgrading)
 list this with the other breaking changes.
 
 ## Shape the failure
@@ -93,6 +93,18 @@ With ReactiveUI, or any other command property, it goes on the property:
 public ReactiveCommand<RxVoid, RxVoid> SaveCommand { get; }
 ```
 
+Since SDK `0.11.0`, `RunicFailureException<TFailure>` derives from
+`RunicFailureException`, which is no longer sealed, and keeps the failure's
+type. Code that catches it, such as a test or a `ThrownExceptions`
+subscription, reads `Failure` without a cast; the Bridge treats both the same
+way:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+throw new RunicFailureException<SaveFailure>(new TitleTaken(existing.Title));
+
+catch (RunicFailureException<SaveFailure> error) when (error.Failure is TitleTaken taken) { /* ... */ }
+```
+
 The Bridge replies `domain-failed` with the encoded failure in every
 environment, never with the development `detail` of an unexpected failure. It
 logs the failure at Debug, not as an error, and its trace span ends with the
@@ -100,7 +112,7 @@ outcome `domain_failed`. A misplaced, repeated or unsupported declaration is
 the build error `RUNICBRIDGE012`. A synchronous plain `ICommand` reports only a
 failure thrown before `Execute` returns; use an asynchronous command for
 failures that happen after an `await`. The
-[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
 has the full rules.
 
 ## Handle the outcome in TypeScript
@@ -172,7 +184,7 @@ like `wait()` and resolves the same `BridgeOutcome` as the command; it rejects
 with `BridgeError` when the operation failed unexpectedly, was cancelled or
 timed out, and with `BridgeOperationUncertainError` when its outcome is
 unknown. A stream keeps the values it published before the failure. The
-[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/web/views/README.md#declared-failures)
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/web/views/README.md#declared-failures)
 maps every terminal status to `outcome()`.
 
 ## Framework command helpers
@@ -300,6 +312,19 @@ DiscardCommand.ObserveBridgeExceptions(error => status.Report(error));
 
 A raw `ThrownExceptions` subscription doesn't stop the Bridge's logging.
 
+Hand-written code that runs a bridged command and handles its failure itself,
+for example a wrapper command that saves and then closes, uses
+`command.RunAsync(input, cancellationToken)`, new in SDK `0.11.0`. It
+completes after zero or more values, cancelling the token disposes the
+execution, and a failure is rethrown unchanged and never logged as event 1042.
+Also since `0.11.0`, a ReactiveUI command cancelled after its page detached no
+longer ends the process when it reports the cancellation on
+`ThrownExceptions`. The
+[ReactiveUI reference](../reference/reactiveui.md) and the Views.ReactiveUI
+README's
+[Which call to use](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#which-call-to-use)
+compare the calls.
+
 ## Test declared failures
 
 In .NET, `RunicWindowTestHost` drives the command by ViewModel member. The
@@ -316,10 +341,15 @@ await Assert.That(status.Kind).IsEqualTo(RunicOperationStatusKind.DomainFailed);
 await Assert.That(status.Failure?.GetProperty("$case").GetString()).IsEqualTo("titleTaken");
 ```
 
+Since SDK `0.11.0`, a reply's `ErrorReason` refines a `rejected` call:
+`unavailable`, `invalid-input` or `unresolved-key`.
+
 In the frontend, the generated typed mock fails with a declared failure in
 three ways: a handler throws `mockFailure(failure)` from
 `@runic-artifex/views/mock`, as .NET throws `RunicFailureException`;
-`failNext(method, { kind: "domain-failed", failure })` fails the next call; and
+`failNext(method, { kind: "domain-failed", failure })` fails the next call
+(since SDK `0.11.0`, `{ kind: "rejected", reason }` injects a rejection with a
+reason); and
 a `"manual"` operation's `failWith(failure)` ends it `domain-failed`.
 `failNext` and `failWith` are type-checked against the method's failure type.
 Unexpected failures still reject:

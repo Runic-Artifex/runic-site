@@ -4,6 +4,11 @@ export type TemplateSymbols = Readonly<Record<string, string>>;
 
 const directive =
   /^\s*(?:#|<!--#)(if|elif|else|endif)\b\s*(?:\((.*)\))?\s*(?:-->)?\s*$/;
+// A markup directive that text follows on its line, such as
+// `<!--#endif --> More text`: the engine removes the directive and keeps the
+// text.
+const inlineDirective =
+  /^\s*<!--#(if|elif|else|endif)\b\s*(?:\((.*?)\))?\s*-->\s*(\S.*)$/;
 
 /** Applies `#if (...)` and `<!--#if (...) -->` line conditionals. */
 export function renderTemplate(
@@ -15,30 +20,31 @@ export function renderTemplate(
   const stack: { parent: boolean; taken: boolean; active: boolean }[] = [];
   const emitting = () => stack.at(-1)?.active ?? true;
   for (const line of source.split('\n')) {
-    const match = directive.exec(line);
+    const match = directive.exec(line) ?? inlineDirective.exec(line);
     if (!match) {
       if (emitting()) output.push(line);
       continue;
     }
-    const [, keyword, condition] = match;
+    const [, keyword, condition, rest] = match;
     if (keyword === 'if') {
       const parent = emitting();
       const active = parent && evaluate(condition ?? '', selection);
       stack.push({ parent, taken: active, active });
-      continue;
-    }
-    const frame = stack.at(-1);
-    if (!frame) throw new Error(`Unmatched #${keyword}`);
-    if (keyword === 'endif') {
-      stack.pop();
-    } else if (keyword === 'elif') {
-      frame.active =
-        frame.parent && !frame.taken && evaluate(condition ?? '', selection);
-      frame.taken ||= frame.active;
     } else {
-      frame.active = frame.parent && !frame.taken;
-      frame.taken = true;
+      const frame = stack.at(-1);
+      if (!frame) throw new Error(`Unmatched #${keyword}`);
+      if (keyword === 'endif') {
+        stack.pop();
+      } else if (keyword === 'elif') {
+        frame.active =
+          frame.parent && !frame.taken && evaluate(condition ?? '', selection);
+        frame.taken ||= frame.active;
+      } else {
+        frame.active = frame.parent && !frame.taken;
+        frame.taken = true;
+      }
     }
+    if (rest !== undefined && emitting()) output.push(rest);
   }
   if (stack.length > 0) throw new Error('Unclosed #if');
   return output.join('\n');

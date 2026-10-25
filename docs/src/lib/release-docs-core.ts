@@ -27,6 +27,7 @@ const productLabels: Readonly<Record<string, string>> = {
   application: 'Application',
   assets: 'Assets',
   desktop: 'Desktop',
+  'linux-dbus': 'Linux D-Bus',
   platform: 'Platform',
   'platform-contracts': 'Platform contracts',
   svelte: 'Svelte',

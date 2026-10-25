@@ -22,8 +22,10 @@ dotnet runic dev
 
 Replace `<VERSION>` with the current release from the
 [package catalog](https://docs.runic-artifex.eu/packages/). These are the
-template defaults: React, npm, the Runic Desktop host and ReactiveUI.
-[Choosing a host and MVVM library](../choosing.md) explains the alternatives.
+template defaults: React, npm, the Runic Desktop host and ReactiveUI. The
+other frontends are `vue`, `svelte`, `angular` and, since SDK `0.11.0`,
+`sveltekit`. [Choosing a host and MVVM library](../choosing.md) explains the
+alternatives.
 The app opens in a native window with a Welcome page and a Counter page. Keep
 `dotnet runic dev` running; frontend edits reload in place and C# edits
 rebuild and restart the app.
@@ -96,7 +98,10 @@ The build compiles the project, inspects these partial classes and writes one
 TypeScript module per ViewModel to `Frontend/src/generated`, for example
 `counter.ts` with `CounterState` and a typed client. The folder is ignored by
 Git and regenerated on every build. With CommunityToolkit.Mvvm the Views are
-`RunicView<TViewModel>`.
+`RunicView<TViewModel>`. Since SDK `0.11.0`, `dotnet new runic-view --name
+Settings` adds a `SettingsView` and its `SettingsViewModel` to the project
+(`--window` declares a Window instead); register the ViewModel as in the next
+step.
 
 ## 4. Register and open the Window
 
@@ -121,7 +126,9 @@ frontend from the `www` folder next to the executable, and waits until the user
 closes it:
 
 ```csharp docs-test=template:Program.cs
-return RunicDesktopHost.Run(provider, options, RunAsync);
+var hostOptions = new RunicDesktopHostOptions { ContentSecurityPolicy = developing ? null : contentSecurityPolicy };
+...
+return RunicDesktopHost.Run(provider, options, hostOptions, RunAsync);
 ...
 // The application is the same on every host: open the Window, then wait until it closes.
 static async Task<int> RunAsync(IRunicWindowHost host)
@@ -135,8 +142,13 @@ static async Task<int> RunAsync(IRunicWindowHost host)
 `RunicDesktopHost.Run` starts the event loop the platform needs, so call it
 before any `await`. With `--host cswebui` the only difference is the entry
 point, `RunicCsWebUiHost.Run(provider, RunAsync)`, which opens a browser
-window instead. To serve the frontend from an embedded archive instead of a
-folder, see [Embed and serve assets](../../assets/README.md).
+window instead. Since SDK `0.11.0` a new project sends a
+Content-Security-Policy without `'unsafe-eval'` outside `Development` through
+`RunicDesktopHostOptions.ContentSecurityPolicy`; a page dependency that
+evaluates strings needs `'unsafe-eval'` added back. To serve the frontend from
+an embedded archive instead of a folder, set
+`<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`
+or see [Embed and serve assets](../../assets/README.md).
 
 ## 5. Render the Views
 
@@ -156,8 +168,9 @@ export default function App() {
 ```
 
 The registry is checked against the generated union of page kinds, so adding a
-View without a page is a compile error. Each page connects the reference it
-receives:
+View without a page is a compile error. A kind without a component renders an
+English alert; since SDK `0.11.0`, `ViewOutlet`'s optional `missing` replaces
+it. Each page connects the reference it receives:
 
 <!-- prettier-ignore -->
 ```tsx docs-test=template:frontends/react/src/pages/CounterPage.tsx
@@ -181,6 +194,11 @@ Angular has `injectView()`, `injectCommand()` and `ViewOutlet` from
 `@runic-artifex/angular`. Before 0.7.0-preview.7 Angular's outlet was named
 `RunicViewOutlet`; the old name remains a deprecated alias for one preview.
 
+Since SDK `0.11.0`, `useBridgeConnection()` (React, Vue, Svelte) and
+`injectBridgeConnection()` (Angular) follow the page's connection to .NET
+(`connecting`, `connected`, `reconnecting` or `lost`), for example to show a
+banner when the application stops responding.
+
 ## 6. Write state from the frontend
 
 `Step` has a public setter, so the generated client gains `setStep`, which
@@ -197,13 +215,13 @@ const error = increment.error ?? setStep.error ?? connection;
 
 A rejected write or command rejects with the `BridgeError` from
 `@runic-artifex/views`, which `useCommand` keeps as its `error`. The
-[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/first-window)
+[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/first-window)
 uses the same client without a framework.
 
 ## 7. Test the Window and the frontend
 
 Both halves can be tested without a browser or a native window. The
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/notes-view-first)
+[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/notes-view-first)
 nests a sidebar, a document and an editor, and tests each side. Its .NET tests
 drive the real ViewModels and generated Bridges through `RunicWindowTestHost`
 from `Runic.Application.Testing`, with a fake clock:
@@ -244,11 +262,11 @@ test("a rejected field write stops the save that follows it", async () => {
   const client = await connectEditor();
 ```
 
-The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Testing/README.md)
-and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/packages/web/views#testing)
+The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Testing/README.md)
+and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/packages/web/views#testing)
 cover the test host and the generated mocks. To test the real page against the
 real ViewModels in a browser, its
-[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
+[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
 starts the built application in serve-only mode for any browser driver.
 
 ## Where next
@@ -257,11 +275,11 @@ starts the built application in serve-only mode for any browser driver.
   pages with Back history and guards.
 - [ViewModel state and threads](../guides/model-context.md) explains why
   commands can set state after `await`.
-- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/notes-reactive-views)
+- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/notes-reactive-views)
   uses ReactiveUI routing and several Views over one model.
-- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/examples/dynamicdata)
+- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/dynamicdata)
   presents a large keyed collection through viewports.
-- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md)
+- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md)
   lists the build properties, generator diagnostics, checked writes and
   operations.
 - [Typed domain failures](../guides/typed-failures.md) returns expected

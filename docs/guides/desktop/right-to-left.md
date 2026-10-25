@@ -58,25 +58,58 @@ state, to `navigator.language`, which each WebView takes from somewhere else:
 | WebView            | `navigator.language`                                                                                                                                                            |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | WebKitGTK (Linux)  | The process locale, from `LANGUAGE`, `LC_ALL`, `LC_MESSAGES` and `LANG`, for example `ar-EG`. Under the `C` locale it is `C`, which is not a language tag, so guard against it. |
-| WebView2 (Windows) | The Windows display language. Runic sets no WebView2 `Language`.                                                                                                                |
+| WebView2 (Windows) | The Windows display language.                                                                                                                                                   |
 | WKWebView (macOS)  | The user's preferred languages for the application.                                                                                                                             |
+
+Since SDK `0.11.0`, `DesktopWindowOptions.Language`, a BCP 47 tag such as
+`ar-EG`, sets WebView2's language and WebKitGTK's preferred languages: their
+built-in text, such as the context menu and form validation messages,
+`navigator.language` and `Accept-Language`, also under the `C` locale.
+WebView2 takes the closest language it ships, such as `ar` for `ar-EG`, and
+windows sharing a `ProfilePath` must use the same language. WKWebView and
+installed browsers ignore it. The page still sets its own `lang`.
 
 ## Native pieces
 
-| Piece                           | Linux                                                  | Windows                                                                      | macOS                                                         |
-| ------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Window frame and GTK header bar | GTK's direction, from the process locale               | Not mirrored ([#389](https://github.com/Runic-Artifex/runic-sdk/issues/389)) | AppKit's direction for the application                        |
-| Menu bar                        | None                                                   | None                                                                         | AppKit's direction; Runic's default items have English titles |
-| Status icon menu                | Drawn by the panel, in the session's language          | Not mirrored (#389)                                                          | AppKit's direction for the application                        |
-| File dialogs                    | Drawn by the desktop portal, in the session's language | Windows display language                                                     | AppKit's direction for the application                        |
-| Notifications                   | Drawn by the notification server                       | Windows display language                                                     | Drawn by the system                                           |
+| Piece                           | Linux                                                                 | Windows                                                | macOS                                                              |
+| ------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------ |
+| Window frame and GTK header bar | GTK's direction, from the process locale, or `LayoutDirection`        | Mirrored with `LayoutDirection`                        | AppKit's direction for the application                             |
+| Menu bar and context menus      | GTK's direction, or `LayoutDirection`; a global menu is the desktop's | Mirrored with `LayoutDirection`                        | AppKit's direction; standard menu titles from `StandardMenuTitles` |
+| Status icon menu                | Drawn by the panel, in the session's language                         | Mirrored with `DesktopStatusIconState.LayoutDirection` | AppKit's direction for the application                             |
+| Message boxes                   | GTK 3: the window's direction; GTK 4: the application's language      | The window's direction                                 | The application's language                                         |
+| File dialogs                    | Drawn by the desktop portal, in the session's language                | Windows display language                               | AppKit's direction for the application                             |
+| Notifications                   | Drawn by the notification server                                      | Windows display language                               | Drawn by the system                                                |
+
+Since SDK `0.11.0`, `DesktopWindowOptions.LayoutDirection` (`Default`,
+`LeftToRight` or `RightToLeft`, from `Runic.Platform`) sets the direction of a
+window's native parts; `Default` keeps the platform's. `RightToLeft` mirrors
+the Windows frame, its caption buttons, system menu, menu bar and context menus
+([#389](https://github.com/Runic-Artifex/runic-sdk/issues/389)); the WebView2
+page is not mirrored and sets its own `dir`. On Linux it sets the direction of
+the GTK window, its header bar with GTK 4, and Runic's menu bar and context
+menus. macOS and installed browsers ignore it, and `Validate` reports each
+option a presentation ignores. Choose it with the application's language, as
+in the
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Desktop/README.md#right-to-left-languages):
+
+```csharp docs-test=skip:illustrative-fragment
+var culture = CultureInfo.CurrentUICulture;
+var window = await surface.OpenWindowAsync(new DesktopWindowOptions
+{
+    LayoutDirection = culture.TextInfo.IsRightToLeft ? DesktopLayoutDirection.RightToLeft : DesktopLayoutDirection.LeftToRight,
+    Language = culture.Name,
+});
+```
+
+Both options change nothing unless set.
 
 On Linux, GTK 4 takes its direction from the script of the process locale's
 language, and GTK 3 from its own translation for the locale, which on Ubuntu
 comes with the `language-pack-gnome-*` packages. A user whose session is
 Arabic gets a mirrored header bar; an application that only switches its page
 to Arabic does not. An application whose language differs from the session's
-can set GTK 4's direction itself; GTK applies it on its own thread:
+can set `LayoutDirection` on its windows, or GTK 4's default direction for
+every widget itself; GTK applies it on its own thread:
 
 ```csharp docs-test=skip:illustrative-fragment
 GLib.Functions.IdleAdd(GLib.Constants.PRIORITY_DEFAULT, () =>
@@ -91,6 +124,6 @@ declares: list it in `CFBundleLocalizations` in `Info.plist`, or ship an
 `<language>.lproj` folder. See [Ship a Desktop application](shipping.md) for
 the bundle.
 
-Text you pass to native pieces, such as notification titles, window titles
-and menu items, is shown as given. Isolate embedded values of the other
+Text you pass to native pieces, such as notification titles, window titles,
+menu items and message boxes, is shown as given. Isolate embedded values of the other
 direction there as well.
