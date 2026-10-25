@@ -59,7 +59,7 @@ opt-in is now the default; delete it.
 
 Keep shared domain DTOs independent of the GUI and let both hosts call the same
 workflow. Runic Command Line has its own release train: use its published
-`0.8.0` packages independently of Application `0.11.0`.
+`0.9.0` packages independently of Application `0.11.0`.
 
 Since Command Line `0.6.0-preview.3`, generated result codecs preserve the
 source-generated JSON context's defaults. The bridge still uses its own
@@ -76,5 +76,5 @@ a recognized identity with `TryGet`. Failure data reports recovery state; it doe
 not make automatic retry safe.
 
 Follow the independent
-[Command Line guide](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.8.0/packages/dotnet/Runic.CommandLine/README.md)
+[Command Line guide](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.9.0/packages/dotnet/Runic.CommandLine/README.md)
 for the owning contract and adoption instructions.

@@ -106,7 +106,8 @@ Views but has no `Frontend` folder fails with `RUNICBRIDGE014`.
 ### Where the Translations catalog goes
 
 With [Runic Translations](../../translations/README.md), the WPF project's
-build-time XAML checks (`TranslationsXamlCatalog`) need to see the catalog,
+build-time XAML checks (`RunicTranslationsXamlCatalog`, `TranslationsXamlCatalog`
+before Translations `0.8.0`) need to see the catalog,
 and ViewModels that use the typed `AppText` class need to reference it. In the
 split layout these pull in different directions:
 
