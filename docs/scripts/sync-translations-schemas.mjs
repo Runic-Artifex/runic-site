@@ -1,11 +1,16 @@
 #!/usr/bin/env bun
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { copyFile, mkdir, readFile, readdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import source from '../sources/translations-schemas.json' with { type: 'json' };
+import { digestInputs } from './source-inputs.mjs';
+import {
+  retainedNames,
+  schemaFiles,
+  verifyRetainedSchemas,
+} from './translation-schema-set.mjs';
 
 const [sourceDirectory, revision, ...extra] = process.argv.slice(2);
 assert(
@@ -23,29 +28,28 @@ assert.equal(
   'Source revision must match docs/sources/translations-schemas.json',
 );
 
-const names = async (root) =>
-  (await readdir(root)).filter((name) => name.endsWith('.schema.json')).sort();
-const schemaNames = await names(sourceRoot);
+const schemaNames = await schemaFiles(sourceRoot);
 assert.ok(schemaNames.length, 'Source contains no translation schemas');
-
-const digest = createHash('sha256');
-for (const name of schemaNames) {
-  digest.update(name);
-  digest.update('\0');
-  digest.update(await readFile(path.join(sourceRoot, name)));
-  digest.update('\0');
-}
 assert.equal(
-  `sha256:${digest.digest('hex')}`,
+  await digestInputs(sourceRoot, schemaNames),
   source.contentDigest,
   'Source schemas do not match the pinned digest',
 );
+for (const name of schemaNames)
+  assert.ok(
+    !retainedNames.has(name),
+    `${name} is shipped by the pin again; drop it from "retained"`,
+  );
 
-await rm(mirrorRoot, { recursive: true, force: true });
+// Retained legacy schemas are no longer in the source; keep their frozen bytes.
 await mkdir(mirrorRoot, { recursive: true });
+const retained = await verifyRetainedSchemas(mirrorRoot);
+for (const name of await readdir(mirrorRoot))
+  if (!retainedNames.has(name))
+    await rm(path.join(mirrorRoot, name), { recursive: true, force: true });
 for (const name of schemaNames)
   await copyFile(path.join(sourceRoot, name), path.join(mirrorRoot, name));
 
 console.log(
-  `Synchronized ${schemaNames.length} translation schemas from ${source.repository}@${source.revision}.`,
+  `Synchronized ${schemaNames.length} translation schemas from ${source.repository}@${source.revision}; kept ${retained.length} retained.`,
 );
