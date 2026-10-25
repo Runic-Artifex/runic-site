@@ -71,6 +71,26 @@ if (await files.OpenFileAsync(new()) is PickerResult<IReadFileLease>.Selected(va
 }
 ```
 
+Where only the value matters, `PlatformResult<T>` also has `Succeeded`,
+`TryGetValue(out T value)` and `Match`, which calls one function per case:
+
+```csharp
+var token = await secrets.GetAsync("com.example.Mail", account);
+if (token.TryGetValue(out var value)) { /* value is null when none is stored */ }
+string status = token.Match(_ => "ready", unavailable => $"unavailable: {unavailable.Reason}", failed => $"failed: {failed.Code}");
+```
+
+`PickerResult<T>` has `TryGetValue(out T value)` and `Match` too; its `Match`
+passes the `Selected` case, which also carries `SelectedFilter`, and has a
+function for `Dismissed`. The caller owns the selected resource either way:
+
+```csharp
+if ((await files.OpenFileAsync(new())).TryGetValue(out var lease))
+{
+    await using (lease) { /* read */ }
+}
+```
+
 ## File dialog options
 
 `OpenFileOptions` and `SaveFileOptions` take `Filters` and `InitialDirectory`,
@@ -94,7 +114,15 @@ if (await files.OpenFilesAsync(options) is PickerResult<IReadFileLeaseList>.Sele
 A `FileDialogFilter` names a file type and lists its extensions without the dot,
 such as `png` or `tar.gz`, or `*` for every file. The first filter is selected
 when the dialog opens; no filters offer every file. Extensions match without
-regard to case on every platform. Filters and the initial folder are hints to the
+regard to case on every platform. `MimeTypes`, such as `image/png` or `image/*`,
+widen a filter where the dialog matches content types: macOS maps them to uniform
+type identifiers and the Linux choosers match the file's MIME type. Windows filters
+by extension only, so a filter always lists its extensions:
+
+```csharp
+var pictures = new FileDialogFilter("Pictures", ["png", "jpg", "webp"]) { MimeTypes = ["image/*"] };
+```
+ Filters and the initial folder are hints to the
 dialog: a folder that does not exist is ignored, and the user can still choose or
 type a name that matches no filter on some platforms. Runic does not reject such
 a selection or add an extension to a saved name, so check the content you read.
@@ -106,29 +134,194 @@ opened, all are released and the result is `Failed`. Each lease holds its file
 open until it, the list or the presentation is disposed. A provider without
 multiple selection returns `Unavailable(BackendUnavailable)`, and the
 `platform.files.openMultiple` capability reports the same.
+`OpenDirectoriesAsync` selects several directories the same way and returns an
+`IDirectoryLeaseList`; the `platform.directories.openMultiple` capability reports
+whether the window's dialogs can.
+
+`PickerResult<T>.Selected.SelectedFilter` is the filter that was active when the
+user confirmed the dialog, so a save can add that filter's extension or an import
+can pick a parser. It is `null` without filters, for directories and where the
+dialog does not say. macOS shows a filter pop-up, and so reports the filter, only
+when `ShowFilterChoice` is set on `OpenFileOptions` or `SaveFileOptions`:
+
+```csharp
+var options = new SaveFileOptions("drawing") { Filters = [png, svg], ShowFilterChoice = true };
+if (await files.SaveFileAsync(options) is PickerResult<ISaveFileLease>.Selected { SelectedFilter: var format } saved)
+    await using (saved.Value) { /* write the drawing as format ?? png */ }
+```
 
 | Option | Windows | macOS | Linux portal (GTK 3 and GTK 4) | Linux GTK 3 native chooser |
 | --- | --- | --- | --- | --- |
-| Filters | File type list (`SetFileTypes`) | The union of every filter restricts the panel (`allowedContentTypes`); no filter pop-up | FileChooser `filters` and `current_filter` | File type list |
+| Filters | File type list (`SetFileTypes`) | The union of every filter restricts the panel (`allowedContentTypes`); with `ShowFilterChoice`, a pop-up below the panel selects one filter | FileChooser `filters` and `current_filter` | File type list |
+| MIME types | Ignored: extensions only | `UTType(mimeType:)`; `image/*`, `audio/*`, `video/*`, `text/*`, `font/*` and `model/*` map to their abstract types, other wildcards are skipped | `(1, type)` patterns in each filter | `gtk_file_filter_add_mime_type` |
+| Chosen filter (`SelectedFilter`) | `GetFileTypeIndex` | The pop-up's filter with `ShowFilterChoice`, otherwise `null` | The response's `current_filter`, when the portal returns it | `gtk_file_chooser_get_filter` |
 | Multiple selection | `FOS_ALLOWMULTISELECT` | `allowsMultipleSelection` | FileChooser `multiple` | `select-multiple` |
+| Multiple directories | `FOS_PICKFOLDERS` with `FOS_ALLOWMULTISELECT` | `canChooseDirectories` with `allowsMultipleSelection`, security scope per URL | FileChooser `directory` with `multiple` (version 3 and later) | `SELECT_FOLDER` with `select-multiple` |
 | Initial folder | `SetFolder`, which overrides the folder Windows remembers | `directoryURL` | FileChooser `current_folder`; ignored when opening by portals before FileChooser version 4 | `current-folder` |
 | Suggested name | `SetFileName` | `nameFieldStringValue` | FileChooser `current_name` | `current-name` |
 
-On macOS a save panel with filters may add the first allowed extension to a
-name the user types without one. Applications that need the user to pick between
-filters on macOS can offer the choice in their own interface for now.
+On macOS a save panel with filters may add the first allowed extension, or with
+`ShowFilterChoice` the chosen filter's, to a name the user types without one.
 
 ## Window services
 
-`IWindowPlatformServices` groups the file dialogs, text clipboard and file
+`IWindowPlatformServices` groups the file dialogs, clipboard and file
 launcher of one window, and reports their capabilities together under
 `WindowPlatformServices.CapabilityIds`. Host adapters register it, and its
 parts, per window scope through `services.AddRunicPlatformServices()`, so a
-ViewModel can take `IFileDialogs`, `ITextClipboard`, `IDesktopFileLauncher` or
-`IWindowPlatformServices` in its constructor. Runic.Application.Views.Desktop binds
+ViewModel can take `IFileDialogs`, `ITextClipboard`, `IDesktopClipboard`, `IDesktopFileLauncher`,
+`IDesktopMonitors`, `IDesktopMessageBoxes` or `IWindowPlatformServices` in its constructor. Runic.Application.Views.Desktop binds
 them to the native window when it opens. A host without a native owner
 registers `WindowPlatformServices.Unavailable(reason)`, whose operations and
 capabilities all report that reason. Tests can use the same instance.
+
+`AnnounceAsync(message, priority)` asks the screen reader to speak a status
+message for the window, such as "Saved", through the platform's accessibility
+API: the native counterpart of an ARIA live region. `PlatformAnnouncementPriority.Polite`,
+the default, waits for what the screen reader is saying and `Assertive`
+interrupts it, as `aria-live` does; the enum is closed. It returns `Success`, or
+`Unavailable` with `OwnerUnavailable` before the window opens or without a native
+owner, `OwnerClosed` after it closed and `BackendUnavailable` when the window
+cannot announce. An `IWindowPlatformServices` implementation that does not
+override it reports `OwnerUnavailable`.
+
+`Monitors` lists the desktop's monitors (`IDesktopMonitors`): `ListAsync`
+returns each `DesktopMonitor` with an opaque `Id`, a `DisplayName`, its
+`Bounds` and `WorkArea` as `DesktopRect` in the units of the window's position
+and size, its `Scale` and whether it `IsPrimary`, the primary one first.
+`WatchAsync` reports the list, then the whole list again after each change, and
+ends with the result when reading fails. The monitors come from the window's
+host, such as `DesktopHost.Monitors`, under `PlatformCapabilityIds.Monitors`;
+`DesktopMonitors.Unavailable(reason)` stands in where there are none, and an
+implementation that does not override the member reports `OwnerUnavailable`.
+
+### Message boxes
+
+`MessageBoxes` (`IDesktopMessageBoxes`) shows a native message box modal to the
+window: a task dialog on Windows, a sheet (`NSAlert`) on macOS, a
+`GtkMessageDialog` for a GTK 3 window and a `GtkAlertDialog` (GTK 4.10 and later)
+for a GTK 4 window. Use one where the
+page cannot answer, such as before it loaded, while it is busy, or for a close
+confirmation in `GuardClose` that must follow the platform's button order and
+keys; screen readers announce it as a system alert. Keep ordinary prompts in the
+page, where they follow the application's design.
+
+```csharp
+var save = new DesktopMessageBoxButton("save", "Save") { Role = DesktopMessageBoxButtonRole.Default, AccessKey = 's' };
+var discard = new DesktopMessageBoxButton("discard", "Don't Save") { Role = DesktopMessageBoxButtonRole.Destructive, AccessKey = 'n' };
+var cancel = new DesktopMessageBoxButton("cancel", "Cancel") { Role = DesktopMessageBoxButtonRole.Cancel };
+var result = await services.MessageBoxes.ShowAsync(new DesktopMessageBox("Save changes to “Notes”?")
+{
+    Detail = "Your changes are lost if you don't save them.",
+    Kind = DesktopMessageBoxKind.Warning,
+    Buttons = [save, discard, cancel],
+});
+if (result is PlatformResult<DesktopMessageBoxButton?>.Success { Value.Id: "save" }) await SaveAsync();
+```
+
+`ShowAsync` returns the chosen button, one of `Buttons`, or `null` when the box
+had no buttons of the application (it then shows one localized OK button) or
+GTK closed it without one. A box has at most six buttons with unique ids, at most
+one `Default` button, which Return chooses, and one `Cancel` button, which Esc
+and the close button choose; without a cancel button Windows and macOS can only
+be answered with a button. Each platform places the buttons by role: Windows
+shows the default button first and the cancel button last, macOS the default
+button rightmost with the cancel button beside it, and GTK the default button
+last with the cancel button before it. Esc in a GTK box without a cancel button
+closes it with `null`. `Destructive` is styled on macOS 11 and later and on GTK 3;
+Windows and GTK 4 alert dialogs have no destructive style, and GTK 4 alert dialogs
+show no icon. `AccessKey` marks a letter
+as for menu items; `&` and `_` in a label are shown as written. `Title` is the
+caption on Windows (the owner window's title when `null`) and the GTK 3 title;
+macOS sheets and GTK 4 alert dialogs have none. A right-to-left window on Windows
+and GTK 3 gets a right-to-left box; macOS and GTK 4 alert dialogs follow the
+application's language. Cancelling the token closes the box and throws. The
+capability is `PlatformCapabilityIds.MessageBoxes`: `OwnerUnavailable` before the
+window opens and on hosts without a native owner, `OwnerClosed` after it closed
+(closing the window closes its box), `BackendUnavailable` where Windows cannot
+activate Common Controls 6 or GTK 4 is older than 4.10.
+`DesktopMessageBoxes.Unavailable(reason)` stands in where there are none, and an
+implementation that does not override the member reports `OwnerUnavailable`.
+
+### Clipboard
+
+`Clipboard` reads and writes bounded Unicode text (`ITextClipboard`). The
+clipboard of Runic's hosts is also an `IDesktopClipboard`, which a ViewModel can
+take directly or reach with `services.Clipboard as IDesktopClipboard`: HTML,
+Rich Text Format, PNG images and lists of local files, from C# code such as a
+command or a background export. A page can still use the browser's clipboard,
+but only under a user gesture and the web view's permission rules, and never for
+files.
+
+```csharp
+await clipboard.WriteAsync(new DesktopClipboardContent
+{
+    Text = "Name\tTotal\nApples\t3",
+    Html = "<table><tr><th>Name</th><th>Total</th></tr><tr><td>Apples</td><td>3</td></tr></table>",
+});
+if (await clipboard.GetFormatsAsync() is PlatformResult<DesktopClipboardFormats>.Success { Value: var formats }
+    && formats.HasFlag(DesktopClipboardFormats.Image)
+    && await clipboard.ReadImageAsync(16 << 20) is PlatformResult<byte[]?>.Success { Value: { } png })
+    await InsertImageAsync(png);
+```
+
+`WriteAsync` replaces the clipboard with every format the
+`DesktopClipboardContent` sets, offered together, so each application pastes
+the one it understands best. Set at least one format; text, HTML and RTF must not
+contain NUL characters, the image must be a PNG file, and files must be fully
+qualified (at most 4096) and exist, or the write reports `InvalidData` or
+`NotFound` and changes nothing. Each read takes only the format it names and is
+bounded, as `ReadTextAsync` is: `ReadHtmlAsync` and `ReadRtfAsync` in
+characters, `ReadImageAsync` in PNG bytes and `ReadFilesAsync` in paths; more
+reports `TooLarge`, and a successful `null` or empty list means the format is
+not there. `GetFormatsAsync` reads which formats are there without reading any.
+
+| | Windows | macOS | Linux (GTK 3 and GTK 4) |
+| --- | --- | --- | --- |
+| HTML | `CF_HTML` ("HTML Format"); a write wraps a fragment in a document, a read returns the copied fragment | `public.html`, as written | `text/html`, as written |
+| RTF | "Rich Text Format" | `public.rtf` | `text/rtf` (`application/rtf` and `text/richtext` read too) |
+| Image | "PNG", else a bitmap converted to PNG; a write also offers `CF_DIBV5` for applications that read only bitmaps | `public.png`, else `public.tiff` converted to PNG | `image/png`, else another image format converted to PNG by gdk-pixbuf (GTK 3) or GDK (GTK 4) |
+| Files | `CF_HDROP` with a copy drop effect | One `public.file-url` item per file | `text/uri-list` and `x-special/gnome-copied-files`; GTK 4 also the FileTransfer portal in Flatpak |
+| Watch | `WM_CLIPBOARDUPDATE` | The change count, compared four times a second | `owner-change` (GTK 3), `changed` (GTK 4) |
+
+RTF is bytes: each character is one byte (Latin-1), and RTF's escapes such as
+`\u8364?` carry other characters. `WatchAsync` reports the formats now and again
+after each change, never the content: read it when the user pastes, as other
+applications' content is theirs. The capabilities are
+`ClipboardReadData`, `ClipboardWriteData` and `ClipboardWatch`; a custom
+`ITextClipboard` stays text-only, and a provider without the formats reports
+them `BackendUnavailable`. On Wayland the compositor tells only a focused
+application about the clipboard, so the watch reports changes when a window of
+the application gains focus.
+
+### Badges and progress
+
+`SetBadgeAsync` shows a count (`DesktopBadge.Count`, `99+` above 99) or, without
+one, a dot that asks for attention; `SetProgressAsync` shows a `DesktopProgress`
+from 0 to 1, or indeterminate progress with a `null` value. `null` removes either.
+
+```csharp
+await services.SetBadgeAsync(new DesktopBadge { Count = unread, Description = $"{unread} unread messages" });
+await services.SetProgressAsync(new DesktopProgress(done / (double)total));
+await services.SetProgressAsync(null);
+```
+
+On Windows both belong to the window's taskbar button: Runic draws the badge as
+an overlay icon at the window's scale, with `Description` as its accessible
+text, and colours the bar for `DesktopProgressState.Paused` and `Error`; the state
+comes back after Explorer restarts. On macOS both belong to the application's
+Dock icon, which all windows share: the most recent call wins, and a window's
+badge and progress go when it closes; the Dock draws `Paused` and `Error` as a
+normal bar. On Linux they belong to the application's launcher entry, as on
+macOS, through the Unity launcher API that KDE Plasma, Ubuntu Dock and Dash to Dock
+read (stock GNOME shows nothing; the call still succeeds); a dot is shown as a
+request for attention, and paused, failed or indeterminate progress as normal or
+no bar. The entry needs the application ID of `AddRunicPlatformServices(applicationId)`
+or the Flatpak ID, else the calls report `BackendUnavailable`
+(Runic.Platform.Linux.Portal). The capabilities are `TaskbarBadge` and `TaskbarProgress`:
+`OwnerUnavailable` before the window opens and on hosts without a native owner,
+`OwnerClosed` after it closed. An implementation that does not override the members reports
+`OwnerUnavailable`.
 
 The capability identifiers are constants of `PlatformCapabilityIds`, so a typo
 does not compile:
@@ -204,6 +397,38 @@ and `DesktopInhibition.Unavailable(reason)`. Unavailable inhibition supports no
 effects, still validates the effects and reason as a provider does, and returns
 `Unavailable(reason)` from every acquisition.
 
+To decide whether to offer a feature at all, read an application service's status
+with `DesktopServiceStatus.Get(service)`. A service an `Unavailable(reason)` factory
+created, for example because no provider supports the host or Windows notifications
+have no application ID, reports `CapabilityStatus.Unavailable` with that reason;
+any other service reports `CapabilityStatus.Available`. Available means a native
+provider was created, not that each request succeeds: requests still report what the
+desktop does, including `Unavailable` when a desktop service turns out to be missing.
+A service implements `IDesktopServiceStatus` to report its own status.
+
+```csharp
+bool offerRememberMe = DesktopServiceStatus.Get(secrets) is CapabilityStatus.Available;
+```
+
+`DesktopAppearance.TextScale` is the desktop's text size preference as a factor of
+the default size: the Windows Accessibility "Text size" setting (1 to 2.25) and,
+on Linux, GNOME's text scaling factor (0.5 to 3, "Large Text" is 1.25), which the
+GNOME and GTK portal backends expose through the Settings portal. macOS has no
+system-wide text size that applications can read, so it is `null` there, as on a
+desktop that has no such setting, such as Plasma. Multiply font sizes by it, for
+example a page's root font size; it is independent of the display scale. A watch
+reports a change of it like any other preference.
+
+A notification's `Activated` event is untrusted input. `DesktopNotificationActivation.IsTrusted`
+is `true` when the provider matched the activation to a notification the
+application showed, so its identifiers and `ActivationUri` are the ones the
+application supplied: on Windows and macOS, and on Linux for a notification the
+running process showed. On Linux an activation can also arrive after a restart,
+when the process no longer knows the notification, and any process on the session
+bus can send one; such an activation is not trusted, and its `ActivationUri` is
+`null` unless it is an `http`, `https` or `mailto` URI. Check the identifiers of an
+untrusted activation against the application's own state before acting on them.
+
 ### Hosts without a native owner
 
 One `services.AddRunicPlatformServices()` call registers every service above on
@@ -216,12 +441,17 @@ either.
 
 | Service | Desktop window with a native owner | Desktop window without one, or outside a window scope | CS-WebUI |
 | --- | --- | --- | --- |
-| `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, `IDesktopFileLauncher` | Native provider; `OwnerClosed` after the window closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
-| Announcements and `DesktopPlatformServices.PresentAsync` | Native window | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, `IDesktopClipboard`, `IDesktopFileLauncher` | Native provider; `OwnerClosed` after the window closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Badges and progress, `IWindowPlatformServices.SetBadgeAsync` and `SetProgressAsync` | The taskbar button (Windows, also a WPF window's), the Dock tile (macOS) or the Unity launcher entry (GTK 3 and GTK 4, with an application ID) | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| `IDesktopMessageBoxes`, `IWindowPlatformServices.MessageBoxes` | Task dialogs (Windows, also a WPF window's), sheets (macOS), GTK 3 message dialogs and GTK 4 alert dialogs | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| `IDesktopMonitors`, `IWindowPlatformServices.Monitors` | The host's monitors (Windows, macOS, GTK 3 and GTK 4; a WPF window's on Windows) | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Announcements, `IWindowPlatformServices.AnnounceAsync`, and `DesktopPlatformServices.PresentAsync` | Native window | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
 | Window state, `DesktopPlatformServices.GetWindowState` | The window's bounds and state, also the last ones after it closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
-| Dropped files, `IRunicFileDropTarget` | Native paths, once per drop | None | None |
-| Menu bar commands, `IRunicMenuCommandSource` | The macOS menu bar, while the window is key | None | None |
-| `IDesktopSettings`, `IDesktopNotifications`, `IDesktopStatusIcon`, `IDesktopLoginStartup`, `IDesktopInhibition`, `IDesktopSecretStore`, `IDesktopTrash`, `IDesktopFileTransfers`, `IDesktopVolumes`, `IDesktopApplications`, `IDesktopThumbnails` | Operating system provider | Operating system provider, the same instance | `Unavailable(ProviderNotConfigured)` |
+| Dropped files, `IRunicFileDropTarget` | Native paths and promised files, once per drop | None | None |
+| Drags out, `IWindowPlatformServices.StartDragAsync` | The window's native drag where it has `DesktopWindowCapabilities.FileDrag` (Windows, macOS, a WPF window); `BackendUnavailable` elsewhere | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| Menu bar commands, `IRunicMenuCommandSource` | The native menu bar (macOS; the GTK 3 and GTK 4 windows' own bar), while the window is key, and `DesktopWindow.TryExecuteMenuItemAsync` | None | None |
+| Context menus, `IWindowPlatformServices.ShowContextMenuAsync` | The window's native menu where it has `DesktopWindowCapabilities.ContextMenu` (macOS, GTK 3, GTK 4); `BackendUnavailable` elsewhere | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| `IDesktopSettings`, `IDesktopNotifications`, `IDesktopStatusIcon`, `IDesktopLoginStartup`, `IDesktopInhibition`, `IDesktopSecretStore`, `IDesktopTrash`, `IDesktopFileTransfers`, `IDesktopVolumes`, `IDesktopNetworkStatus`, `IDesktopApplications`, `IDesktopThumbnails` | Operating system provider | Operating system provider, the same instance | `Unavailable(ProviderNotConfigured)` |
 
 On Runic Desktop the application services behave the same with or without a
 native owner. The macOS settings, notifications and status icon need the AppKit
@@ -238,15 +468,17 @@ it starts a host.
 
 ## Menus
 
-Status icon menus (`DesktopStatusIconState.Menu`) and the Runic Desktop menu bar
+Status icon menus (`DesktopStatusIconState.Menu`), context menus
+(`IWindowPlatformServices.ShowContextMenuAsync`) and the Runic Desktop menu bar
 (`DesktopHostOptions.MenuBar`) share one model:
 
 | Type | Is |
 | --- | --- |
 | `DesktopMenuEntry` | The base of every entry. The set is open: a minor release may add entry kinds, so give a `switch` over entries a default arm. Code that walks a menu skips entries it does not know. |
-| `DesktopMenuItem(Title, CommandId)` | An item that runs a command, with `IsEnabled`, `IsChecked` (`null` for a plain item) and `Shortcut` |
+| `DesktopMenuItem(Title, CommandId)` | An item that runs a command, with `IsEnabled`, `IsChecked` (`null` for a plain item), `Shortcut`, `CommandParameter`, `AccessKey` and `RadioGroup` |
 | `DesktopMenuSeparator` | A line between groups of entries |
-| `DesktopMenu(Title, Items)` | A submenu, or a menu of the menu bar, with `IsEnabled` and the menu bar's `Role` |
+| `DesktopMenu(Title, Items)` | A submenu, or a menu of the menu bar, with `IsEnabled`, `AccessKey` and the menu bar's `Role` |
+| `DesktopContextMenuOptions` | Where a context menu opens: `X` and `Y` in CSS pixels of the page's viewport, or at the pointer |
 | `DesktopShortcut`, `DesktopShortcutModifiers` | A key and its modifiers, written as `Primary+Shift+S` |
 
 ```csharp
@@ -265,16 +497,136 @@ The title comes first. A title is literal user-visible text: not blank, at most
 and `_` as written. A command id is an application-owned routing key, never a
 command line: 1 to 64 ASCII letters, digits, dots, underscores or hyphens. Ids
 starting with `runic.`, in any letter case, are reserved for Runic's standard
-commands. Each surface checks these rules when it receives a menu and throws an
-`ArgumentException` that names the id or title and the rule.
+commands. `CommandParameter` is passed to the command with the item: at most 1024
+characters without NUL, application-owned like the id. `AccessKey` is one letter
+or digit, which Windows and Linux underline: Runic places the marker, or shows
+the key in parentheses after a title without it. Items with the same
+`RadioGroup` in one menu level are a radio group: the name follows the command id
+rule, each item needs `IsChecked`, and at most one is checked. Each surface checks
+these rules when it receives a menu and throws an `ArgumentException` that names
+the id or title and the rule.
 
-| | Status icon menu | Menu bar (Runic Desktop) |
-| --- | --- | --- |
-| Command ids | Unique in the menu | May repeat |
-| Limits | Four nested submenus, 256 entries | None beyond the rules above |
-| `IsEnabled`, `IsChecked` | Shown as declared | Shown as declared; an item is also disabled while no command target can run it |
-| `Shortcut`, `Role` | Ignored | The macOS key equivalent and where the menu goes |
-| Choosing an item | `IDesktopStatusIcon.Activated` with `Kind` `MenuItem` and the item's `CommandId` | The command target's `Execute(DesktopMenuItem)` |
+| | Status icon menu | Context menu | Menu bar (Runic Desktop) |
+| --- | --- | --- | --- |
+| Command ids | Unique with their `CommandParameter` in the menu | May repeat | May repeat |
+| Limits | Four nested submenus, 256 entries | Four nested submenus, 256 entries, at least one entry | None beyond the rules above |
+| `IsEnabled`, `IsChecked`, `RadioGroup` | Shown as declared | Shown as declared | Shown as declared; an item is also disabled while no command target can run it |
+| `Shortcut` | Ignored | Shown as a hint, not registered | The item's shortcut; on macOS its key equivalent |
+| `Role`, `AccessKey` | Ignored | `Role` ignored; access key on Windows and Linux | Where the menu goes; access key on Windows and Linux |
+| Choosing an item | `IDesktopStatusIcon.Activated` with `Kind` `MenuItem`, the item's `CommandId` and `CommandParameter` | `Success` with the chosen item, `null` when dismissed | The command target's `Execute(DesktopMenuItem)` |
+
+The status icon reports `CommandParameter` on every platform, so one command id
+can serve several items with different parameters, such as one per recent file;
+two items with the same id and parameter are rejected.
+
+`DesktopStatusIconState.LayoutDirection` mirrors the Windows status icon's menu
+for `DesktopLayoutDirection.RightToLeft` (`TPM_LAYOUTRTL`, items read right to
+left); the default keeps the platform's layout. Linux and macOS desktops lay the
+menu out for the user's language and ignore it.
+
+`IWindowPlatformServices.ShowContextMenuAsync` checks its arguments, then shows the
+window's native menu, or reports `Unavailable`: `OwnerUnavailable` before the window
+opens and on a host without a native owner, `OwnerClosed` after it closed, and
+`BackendUnavailable` for a window without native context menus. An implementation
+written before 0.11 reports `OwnerUnavailable`. The capability snapshot reports
+`PlatformCapabilityIds.ContextMenu` (`platform.contextMenu`) and
+`PlatformCapabilityIds.MenuBar` (`platform.menuBar`, a bar shown natively in the
+window or a global menu bar; an in-page bar does not count).
+
+```csharp
+// From the page's contextmenu event: showRowMenu(row.key, event.clientX, event.clientY).
+async Task ShowRowMenuAsync(string key, double x, double y)
+{
+    var result = await platform.ShowContextMenuAsync(
+        [new DesktopMenuItem("Rename", "row.rename") { CommandParameter = key }, new DesktopMenuSeparator(),
+         new DesktopMenuItem("Delete", "row.delete") { CommandParameter = key }],
+        new DesktopContextMenuOptions { X = x, Y = y });
+    if (result is PlatformResult<DesktopMenuItem?>.Success { Value: { } chosen }) Run(chosen.CommandId, chosen.CommandParameter);
+}
+```
+
+## Global shortcuts
+
+`IDesktopGlobalShortcuts` binds named actions to keys that work while another
+application has the focus, such as a quick-note window or a push-to-talk key. It
+is one service for the application, created by a provider's
+`CreateGlobalShortcuts()` or registered by `AddRunicPlatformServices`, and
+disposing it removes every binding.
+
+```csharp
+var bindings = await shortcuts.BindAsync(
+[
+    new DesktopGlobalShortcut("quick-note", "Open a quick note")
+    {
+        PreferredShortcut = DesktopShortcut.TryParse(settings.QuickNoteKey, out var key) ? key : null,
+    },
+]);
+shortcuts.Activated += (_, activation) => { if (activation.Id == "quick-note") OpenQuickNote(activation.PlatformContext); };
+```
+
+`BindAsync` replaces the whole set: at most 32 actions, each with a unique id
+under the command id rule (1 to 64 ASCII letters, digits, dots, underscores or
+hyphens) and a description of at most 256 characters, which the Linux desktop
+shows where the user assigns keys. It throws `ArgumentException` for a set outside
+these rules. The result has one `DesktopGlobalShortcutBinding` per action, in
+order, with its `Status`:
+
+| Status | Means |
+| --- | --- |
+| `Bound` | The key starts the action; `Shortcut` and `TriggerDescription` show it |
+| `Unbound` | No key: the action has no `PreferredShortcut`, or the user left it unassigned |
+| `Conflict` | Another application, or another action of the set, has the key |
+| `Refused` | The platform does not allow the key, such as F12 on Windows, ⌘Q or Ctrl+C, or a character the keyboard layout cannot type |
+
+The set is open: handle unknown statuses. A key that cannot be bound fails alone,
+and the result is still `Success`. `ListAsync` returns the current bindings, and
+`BindingsChanged` reports bindings the user or the desktop changed.
+
+| | Windows | macOS | Linux |
+| --- | --- | --- | --- |
+| Mechanism | `RegisterHotKey` on a message-only window on its own thread | Carbon `RegisterEventHotKey`; needs no Accessibility permission, and the Desktop event loop must run | The desktop's `org.freedesktop.portal.GlobalShortcuts` (KDE Plasma 5.27+, GNOME 48+, Hyprland); elsewhere `Unavailable(BackendUnavailable)` |
+| Who chooses the key | The application, from its own settings | The application, from its own settings | The user, in the desktop's settings; `PreferredShortcut` is a suggestion and the desktop keeps the user's choice per application and action id |
+| `ConfigureAsync` | `Unavailable(BackendUnavailable)` | `Unavailable(BackendUnavailable)` | Opens the desktop's dialog where the portal has version 2 |
+| Punctuation and letters | The key that types the character on the current layout, with Shift when the layout needs it; a character that needs AltGr is refused | The key that types the character on the current ASCII-capable layout, registered again after the input source changes (`BindingsChanged`) | The desktop's; `TriggerDescription` is its text and `Shortcut` is `null` where that text has no `DesktopShortcut` form |
+| Refused | F12, kept for debuggers, and the editing and window shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, Ctrl+X, Ctrl+C, Ctrl+V, Ctrl+A, Alt+F4 and F10 alone) | The standard menus' shortcuts (⌘Z, ⇧⌘Z, ⌘X, ⌘C, ⌘V, ⌘A, ⌘Q, ⌘H, ⌥⌘H, ⌘W, ⌘M), F21 to F24, and any combination `RegisterEventHotKey` rejects | Decided by the desktop; an action the user left unassigned is `Unbound` |
+| Activation context | None | None | The portal's activation token |
+
+The Linux portal needs the application's ID: outside Flatpak and Snap, pass the
+installed desktop ID (`AddRunicPlatformServices("org.example.App")` or
+`new PortalApplication("org.example.App")`); without one it reports
+`Failed(PermissionDenied)`. Runic does not grab keys on X11 itself.
+
+On Windows and macOS the application owns the binding: record the user's choice
+in a settings page with `shortcutFromEvent` from `@runic-artifex/views`, keep its
+`DesktopShortcut.ToString()` text in the application's settings and pass it as
+`PreferredShortcut` at startup. Runic stores nothing. Only key presses are
+reported, not releases, and a held key reports one press. `Activated` and
+`BindingsChanged` are raised on a worker thread; present a window through its
+presentation, passing `PlatformContext` where there is one.
+`DesktopGlobalShortcuts.Unavailable(reason)` stands in on hosts without a
+provider.
+
+## Dragging out of a window
+
+`IWindowPlatformServices.StartDragAsync(data)` checks `DesktopDragData` (at least
+one of existing absolute `Paths`, `Text` without NUL up to 1 MiB, or absolute
+non-`file:` `Uris`, at most 1024 each; `Move` and `Link` need paths), then starts
+the window's native drag and returns the drop's effect, or reports `Unavailable`:
+`OwnerUnavailable` before the window opens and on a host without a native owner,
+`OwnerClosed` after it closed, and `BackendUnavailable` for a window that cannot
+start drags. `Success(None)` means the drag was cancelled, dropped nowhere, or no
+mouse button was held when the call arrived. An implementation written before
+0.11 reports `OwnerUnavailable`. The capability snapshot reports
+`PlatformCapabilityIds.DragOut` (`platform.drag.out`).
+
+```csharp
+// From the page's dragstart event, after event.preventDefault(): dragItem(row.key).
+async Task DragItemAsync(string key)
+{
+    var result = await platform.StartDragAsync(new DesktopDragData { Paths = [Find(key).Path] });
+    if (result is PlatformResult<DesktopDragEffects>.Success { Value: not DesktopDragEffects.None }) Status = "Dragged";
+}
+```
 
 ## Opening files and URLs
 
@@ -299,6 +651,42 @@ opened URL and file as untrusted input: any web page can open a URL with the
 application's scheme. The [opening files and URLs design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/open-activation.md) lists what
 each platform's package registers.
 
+`DesktopOpenOptions.WebLinkHosts` adds `https` links to the application's own
+hosts, such as `notes.example.org`: macOS universal links and Windows app URI
+handlers. Only a link whose host is one of them exactly, with the default port
+and no user information, is delivered; every other `https` URL stays with the
+application. The association with the host is the application's (an
+Associated Domains entitlement and an `apple-app-site-association` file on
+macOS, an `AppUriHandler` and a `windows-app-web-link` file on Windows).
+
+### Registering schemes and file types
+
+An application that installs itself, such as a zip or `dotnet run`, registers
+its schemes and file types for the current user with `IDesktopOpenRegistration`
+(`DesktopPlatformServices.CreateOpenRegistration(applicationId)`), when the
+user agrees. A registration never makes the application the default and never
+replaces another application's entry: it checks every item first and reports
+`Conflict`, with nothing written. A packaged or sandboxed application reports
+`Unavailable`: its package declares what it opens. macOS registers the running
+bundle, whose `Info.plist` must declare each item.
+
+```csharp
+var registration = new DesktopOpenRegistration("Notes")
+{
+    UrlSchemes = ["org.example.notes"],
+    FileTypes = [new(".notes") { MimeType = "application/x-example-notes", Description = "Notes document" }],
+};
+var result = await DesktopPlatformServices.CreateOpenRegistration("org.example.Notes").RegisterAsync(registration);
+```
+
+### Keeping access to files
+
+`IDesktopFileBookmarks` (`DesktopPlatformServices.CreateFileBookmarks()`) keeps
+access to a file across launches, as a recent-files list needs: on macOS a
+security-scoped bookmark inside the App Sandbox, elsewhere the path. Store the
+bytes `CreateAsync` returns, and dispose the access `ResolveAsync` returns when
+done with the file; when it `IsStale`, create and store a new bookmark.
+
 ## Secret storage
 
 `IDesktopSecretStore` keeps secrets, such as access tokens, in the user's
@@ -313,9 +701,29 @@ if (await secrets.GetAsync("com.example.Mail", account) is PlatformResult<string
 await secrets.DeleteAsync("com.example.Mail", account); // Success(false): none stored
 ```
 
-Services and accounts are 1 to 256 characters without NUL. Secrets are UTF-8
-text of at most 2560 bytes on every platform; a longer one is
-`Failed(TooLarge)`. No reachable store is `Unavailable(BackendUnavailable)`; a
+Services and accounts are 1 to 256 characters without NUL. Text secrets are
+UTF-8 of at most 2560 bytes on every platform; a longer one is
+`Failed(TooLarge)`. `GetBytesAsync` and `SetBytesAsync` store binary secrets of
+up to 64 KiB (`DesktopSecretStore.MaximumBinarySecretBytes`) on every platform.
+A service and account hold one item in either form: `GetAsync` reads a binary
+item that is UTF-8 text, and `GetBytesAsync` reads a text item as its bytes.
+Clear the arrays the store returns once used. A store implemented before 0.11
+reports the binary members `Unavailable(BackendUnavailable)`.
+
+```csharp
+var background = DesktopPlatformServices.CreateSecretStore("com.example.Mail",
+    new DesktopSecretStoreOptions { AllowUserInteraction = false, RequireEncryption = true });
+if (await background.GetBytesAsync("com.example.Mail", account) is PlatformResult<byte[]?>.Failed { Code: PlatformFailureCode.Locked })
+    { /* refresh later, when the user is present */ }
+```
+
+`DesktopSecretStoreOptions` are store-wide: `AllowUserInteraction = false` fails
+with `Failed(Locked)` instead of an unlock or access prompt (best effort for the
+Linux Secret portal); `RequireEncryption` refuses a Linux Secret Service without
+an encrypted session; `UseDataProtectionKeychain` uses the macOS data-protection
+keychain, which needs a team-signed bundle with the `keychain-access-groups`
+entitlement. To register such a store, add it to the services before
+`AddRunicPlatformServices()`. No reachable store is `Unavailable(BackendUnavailable)`; a
 locked store that cannot ask the user to unlock it is `Failed(Locked)`; a
 dismissed unlock or access prompt is `Failed(UserDismissed)`. A request may wait
 while the store asks the user. Hosts without a provider register
@@ -351,6 +759,19 @@ result is `Success`. A missing item is `Failed(NotFound)`, a refused move
 `DesktopTrash.Unavailable(reason)`. The
 [trash design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/trash.md)
 has the per-platform behaviour and its verification.
+
+`MoveAllToTrashAsync` trashes several items one after another with progress,
+each with its own result. On Windows and on Linux outside Flatpak and Snap,
+`ListAsync` lists what is in the trash, `RestoreAsync` puts an item back where
+it came from without replacing anything there, and `EmptyAsync` deletes every
+item permanently; ask the user before emptying. macOS and sandboxed Linux report
+`Unavailable(BackendUnavailable)` for these three:
+
+```csharp
+var results = await trash.MoveAllToTrashAsync(selection, new Progress<DesktopTrashProgress>(p => ShowProgress(p.Completed, p.Total)));
+if (await trash.ListAsync() is PlatformResult<ImmutableArray<DesktopTrashItem>>.Success(var items))
+    foreach (var item in items.OrderByDescending(static i => i.DeletedAt)) { /* item.OriginalPath, item.Size, item.IsDirectory */ }
+```
 
 ## Desktop applications
 
@@ -595,15 +1016,66 @@ locked encrypted volume `Failed(Locked)`, and a volume that is gone
 unmounts every volume of the drive first. An operation the volume or platform
 does not offer is `Unavailable(BackendUnavailable)`.
 
+A locked encrypted volume has `IsLocked`, `IsEncrypted` and `CanMount = false`.
+Its `UnlockMethod` says how to unlock it: `SystemPrompt` with `UnlockAsync(id)`,
+which shows the system's own prompt (BitLocker on Windows), or `Passphrase` with
+`UnlockAsync(id, passphrase, token)` (APFS on macOS). `MountAsync(id, options,
+token)` mounts read-only or with platform mount options where the platform
+takes them (Linux and macOS); Windows mounts volumes itself and takes none. A
+LUKS volume on Linux unlocks with its passphrase through UDisks2, which returns
+the cleartext filesystem as a new volume:
+
+```csharp
+if (vault is { IsLocked: true, UnlockMethod: DesktopVolumeUnlockMethod.Passphrase })
+{
+    char[] passphrase = AskPassphrase();
+    try { await volumes.UnlockAsync(vault.Id, passphrase, cancellationToken); }
+    finally { Array.Clear(passphrase); }
+}
+await volumes.MountAsync(stick.Id, new DesktopVolumeMountOptions { ReadOnly = true }, cancellationToken);
+```
+
 | Platform | Provider |
 | --- | --- |
-| Linux | UDisks2 on the system bus, which asks Polkit; inside Flatpak add `--system-talk-name=org.freedesktop.UDisks2` |
-| Windows | The volume management API: drive letters and mounted folders. Windows mounts volumes itself, so `MountAsync` and `UnmountAsync` only succeed for a volume already in that state and otherwise report `Unavailable(BackendUnavailable)`; `EjectAsync` is "Safely Remove Hardware" |
-| macOS | Disk Arbitration, as Finder does; an application with a file open on the volume makes an unmount or eject `Failed(ResourceBusy)`. The startup disk's volumes are never unmounted or ejected |
+| Linux | UDisks2 on the system bus, which asks Polkit; inside Flatpak add `--system-talk-name=org.freedesktop.UDisks2`. A LUKS volume unlocks with its passphrase; mount options go to UDisks2, which accepts those its configuration permits |
+| Windows | The volume management API: drive letters and mounted folders. Windows mounts volumes itself, so `MountAsync` and `UnmountAsync` only succeed for a volume already in that state and otherwise report `Unavailable(BackendUnavailable)`; `EjectAsync` is "Safely Remove Hardware", or opens an optical drive's tray. A locked BitLocker volume is listed and unlocks through Explorer's prompt |
+| macOS | Disk Arbitration, as Finder does; an application with a file open on the volume makes an unmount or eject `Failed(ResourceBusy)`. The startup disk's volumes are never unmounted or ejected. A locked APFS volume is listed and unlocks with its passphrase; mount options go to `DADiskMountWithArguments` |
 
 Hosts without a provider register `DesktopVolumes.Unavailable(reason)`. The
 [volumes design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/volumes.md)
 has the per-platform behaviour and its verification.
+
+## Network status
+
+`IDesktopNetworkStatus` reports what the operating system knows about the
+network: `ReadAsync` returns a `DesktopNetworkState`, and `WatchAsync` reports the
+current state, then each change; a change that leaves the state as it was is not
+reported. `IsAvailable` says whether a usable route exists (`false` always comes
+with `Connectivity` `None`), `Connectivity` how far it reaches as the operating
+system's own check found (`Local`, `Limited`, `CaptivePortal`, `Internet`, or
+`Unknown` where it does not check), and `IsMetered` whether the connection is
+metered, `null` when unknown. It is the operating system's view, not a promise
+that a server answers: try the request, and use the state to explain a failure
+or postpone work, such as a large download on a metered connection or until the
+user signed in to a captive portal.
+
+```csharp
+await foreach (var result in network.WatchAsync(cancellationToken))
+    if (result is PlatformResult<DesktopNetworkState>.Success(var state))
+        ShowOfflineBanner(!state.IsAvailable || state.Connectivity == DesktopNetworkConnectivity.CaptivePortal);
+```
+
+| Platform | Source |
+| --- | --- |
+| Windows | The Network List Manager's connectivity hint (Windows 10 version 2004 and later; earlier `Unavailable(BackendUnavailable)`). Its check reports a captive portal, and a network whose check failed otherwise, as constrained internet access, which is `CaptivePortal`. A fixed or variable cost, a connection over its data limit and roaming are metered |
+| macOS | Network.framework's path monitor. macOS has no public captive-portal or internet check: an available network has `Unknown` connectivity. Expensive paths (cellular, a personal hotspot) and constrained ones (Low Data Mode) are metered |
+| Linux | The NetworkMonitor desktop portal, which xdg-desktop-portal answers for sandboxed and unsandboxed applications; NetworkManager on the system bus where no portal answers. Both report captive portals and metered connections. Neither answering is `Unavailable(BackendUnavailable)` with the `network-monitor-unavailable` diagnostic |
+
+When the source goes away, the watch reports `Unavailable` and continues with a
+fresh state once it is back; without a source it reports `Unavailable` once and
+waits. `DesktopPlatformServices.CreateNetworkStatus()` and
+`AddRunicPlatformServices()` create one instance for the application. Hosts without a
+provider register `DesktopNetworkStatus.Unavailable(reason)`.
 
 ## Thumbnails
 
@@ -619,7 +1091,10 @@ else
     ShowIcon(path); // No thumbnail: show the type's icon, from IDesktopApplications.GetIconAsync.
 ```
 
-`size` is the largest edge to display, up to 1024 pixels. The image keeps the
+`size` is the largest edge to display, up to 1024 pixels. For a high-density
+display, pass the window's scale too: `GetThumbnailAsync(path, 128, scale: 2,
+cancellationToken)` asks for 256 device pixels, at most 1024 (scales 1 to 16,
+`DesktopThumbnails.MaximumScale`). The image keeps the
 file's aspect ratio and can differ in size from the request, so scale it to
 display: Linux returns the cached size at least as large (128, 256, 512 or 1024
 pixels), Windows and macOS at most `size`. A file without a thumbnail, such as

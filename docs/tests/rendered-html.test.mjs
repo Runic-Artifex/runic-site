@@ -182,7 +182,7 @@ test('create page prerenders the default project and every template choice', asy
     ),
   );
   for (const [name, values] of [
-    ['frontend', ['react', 'vue', 'svelte', 'angular']],
+    ['frontend', ['react', 'vue', 'svelte', 'sveltekit', 'angular']],
     ['packageManager', ['npm', 'pnpm', 'bun']],
     ['host', ['desktop', 'cswebui']],
     ['linuxGtk', ['3', '4']],
@@ -210,11 +210,19 @@ test('create page prerenders the default project and every template choice', asy
   );
   assert.match(
     html,
-    /return RunicDesktopHost\.Run\(provider, options, RunAsync\);/,
+    /return RunicDesktopHost\.Run\(provider, options, hostOptions, RunAsync\);/,
   );
   assert.doesNotMatch(
     html,
     /#if|#endif|RunicWindowApp|return RunicCsWebUiHost/,
+  );
+  // The --application-id text option and the runic-view item template.
+  assert.match(markup, /--application-id/);
+  assert.match(markup, /placeholder="org\.example\.Notes"/);
+  assert.ok(
+    html.includes(
+      'dotnet new runic-view --name Settings --view-models reactiveui dotnet new runic-view --name Preferences --view-models reactiveui --window',
+    ),
   );
   // The creator links the guide that explains the host and ViewModel choices.
   assert.match(markup, /href="[^"]*\/guides\/application\/choosing\/?"/);

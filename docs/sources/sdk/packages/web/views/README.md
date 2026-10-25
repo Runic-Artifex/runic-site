@@ -55,6 +55,50 @@ with a `BridgeError` whose `kind` is `rejected`, `cancelled`, `failed`,
 `disconnected`, `released`, `timeout` or `unavailable`; see
 [Errors and diagnostics](#errors-and-diagnostics).
 
+### Cancellation and `using`
+
+`connect<Name>({ signal })`, `waitForBridge({ signal })` and an operation's
+`wait({ signal })` and `outcome({ signal })` take an `AbortSignal`. When it
+aborts first, the call rejects with `signal.reason`: an `AbortError`
+`DOMException`, unless `abort(reason)` gave another value. An aborted signal
+rejects at once and calls no route. An aborted connect releases what it had
+connected, including the View's mount, and reports no diagnostic. Aborting after
+the client was returned has no effect, and every call removes its abort listener
+when it settles. Aborting an operation wait abandons only that wait: unlike
+`timeout`, it sends no cancellation request, and the operation and other waits
+continue; call `cancel()` to stop it.
+
+```ts
+const controller = new AbortController();
+const editor = await connectEditor({ signal: controller.signal });
+const save = await editor.startSave();
+const status = await save.wait({ signal: controller.signal });
+```
+
+A generated `connect<Name>()` resolves to the client with `[Symbol.dispose]()`,
+and `createViewController`, `createCommandController`,
+`createOperationController`, `createLatestOperationController` and
+`createCollectionViewportController` return controllers with it, so a `using`
+declaration disposes them at the end of its block. `[Symbol.dispose]()` calls
+`dispose()`:
+
+```ts
+{
+  using counter = await connectCounter();
+  await counter.increment();
+} // counter.dispose()
+```
+
+The member exists where the engine defines `Symbol.dispose`, or a polyfill did
+before the client or controller was created; it is looked up then, not when the
+package loads. On engines without it, such as older WebKitGTK and WKWebView, the
+package loads unchanged and `dispose()` is the way to release. The interfaces
+(`ViewClient`, `<Name>Client`, `ViewController` and the other controllers)
+are unchanged, so objects that implement them need no new member. The package's
+declarations reference TypeScript's `esnext.disposable` library, so `using`
+type-checks with `lib: ["ES2022", "DOM"]` (TypeScript 5.2 or later); running
+`using` still needs an engine or polyfill with `Symbol.dispose`.
+
 All generated modules on a page share one runtime instance, even when several
 bundles or copies of this package load: a route has one push callback and one
 revision, and `instanceof BridgeError` holds for errors from any copy.
@@ -69,9 +113,9 @@ controllers in [Framework bindings](#framework-bindings).
 | Entry | For |
 | --- | --- |
 | `@runic-artifex/views` | Applications: errors, diagnostics, controllers and client types |
-| `@runic-artifex/views/mock` | Development and tests without .NET: `createMockBridge`, `installMockBridge`, `mockFailure` and the `Mock*` types of generated mocks |
+| `@runic-artifex/views/mock` | Development and tests without .NET: `createMockBridge`, `installMockBridge`, `installMockMenuBar`, `mockFailure` and the `Mock*` types of generated mocks |
 | `@runic-artifex/views/bindings` | Framework bindings such as `@runic-artifex/react`: `viewSourceIdentity`, `isViewClient` |
-| `@runic-artifex/views/generated` | Generated modules: `connectView`, `viewReferences`, `defineCollection(s)`, `defineInteractions`, `bridgeOperations`, `decodeBridgeValidation` |
+| `@runic-artifex/views/generated` | Generated modules: `connectView`, `viewReferences`, `disposable`, `defineCollection(s)`, `defineInteractions`, `bridgeOperations`, `decodeBridgeValidation` |
 | `@runic-artifex/views/generated/wire` | Generated modules and generated `*.mock.ts` files: the wire decoders, imported as `import * as bridgeWire` |
 | `@runic-artifex/views/generated/mock` | Generated `*.mock.ts` files: `mockTypedView` and its spec types |
 
@@ -327,6 +371,81 @@ instead of detecting it from `navigator`. See the
 [shortcut guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#keyboard-shortcuts-in-the-page)
 for which keys to leave to text fields and the web view.
 
+`shortcutFromEvent(event)` records a key press as that text, such as
+`Primary+Shift+S`, for a settings page where the user chooses a key: send it
+through an ordinary command, keep it in the application's settings and pass it
+to `DesktopShortcut.Parse`, for example for a global shortcut
+(`IDesktopGlobalShortcuts`). It gives `null` for a modifier pressed alone, a dead
+key, input method composition and, outside Apple platforms, the Windows or Super
+key. A punctuation character is recorded as typed, without Shift, and a digit as
+its key on the top row or the keypad.
+
+```ts
+input.addEventListener("keydown", (event) => {
+  const shortcut = shortcutFromEvent(event);
+  if (shortcut === null) return;
+  event.preventDefault();
+  void settings.setQuickNoteShortcut(shortcut);
+});
+```
+
+## In-page menu bar
+
+A Runic Desktop window with `MenuBarPresentation = DesktopMenuBarPresentation.Page`
+leaves its menu bar to the page, so the bar can match the application's look; a
+CS-WebUI window, which has no native bar, always does with
+`RunicCsWebUiHostOptions.MenuBar`. `createMenuBarController()` follows the
+window's declared bar (`DesktopHost.MenuBar` or `RunicCsWebUiHost.MenuBar`)
+as headless state; the page renders it with the menubar component of its own UI
+library (Base UI, Radix, Reka UI, Bits UI, Angular CDK Menu or its own markup).
+Runic ships no menubar component. The framework adapters wrap the controller as
+reactive state: `useMenuBar` in `@runic-artifex/react`, `@runic-artifex/vue` and
+`@runic-artifex/svelte`, and `injectMenuBar` in `@runic-artifex/angular`.
+
+| Runic provides | The application provides |
+| --- | --- |
+| `current`: the menus in the platform's order, with keys, labels and access keys, separators, submenus, checked and radio state, `enabled` (the declaration and the command's `CanExecute`), roles and shortcuts (`shortcut`, `shortcutText`, `ariaKeyShortcuts`); `subscribe` for changes | The menubar component, markup, styling, icons and animation |
+| `invoke(item)`: the native bar's command path, with the window's and then the application's commands | Calling `invoke` from the component's select or click handler |
+| The items' shortcuts, matched by the host or by the controller; `shortcuts: "app"` and `handleKeyDown` for a page that matches them itself | Nothing by default |
+| `onRequest`: `focus` for an Alt tap and F10, `open` for Alt plus a menu's access key (Windows and Linux); `accessKeyHints` while Alt is held; `placement` | Focusing the first menu or opening one; underlining the `splitAccessKey(entry)` parts while `accessKeyHints` is true |
+| `ariaKeyShortcuts` and platform labels | The WAI-ARIA menubar roles, roving focus, arrow keys, typeahead and Escape |
+
+```ts
+import { createMenuBarController, splitAccessKey } from "@runic-artifex/views";
+
+const bar = createMenuBarController();
+bar.onRequest(request => request.kind === "open" ? openMenu(request.menu.key) : focusFirstMenu());
+bar.subscribe(() => {
+  const { placement, menus, accessKeyHints } = bar.current;
+  // Render a bar only while placement is "page": on macOS the application menu bar keeps the menus ("global").
+  render(placement === "page" ? menus : [], accessKeyHints);
+});
+// In the component's select handler:
+await bar.invoke(item); // "executed", "disabled" or "stale"
+```
+
+- `status` is `connecting`, then `ready`; `unavailable` on a host without the
+  in-page menu bar routes (an earlier Runic Desktop or CS-WebUI host), and `failed`
+  with `error` otherwise. `placement` is `page`, `window`, `global` or `none`.
+- By default Runic keeps the items' shortcuts, so they work whichever component
+  renders the bar: the host matches them after the page saw the key
+  (`shortcuts` `host`), or, where the host has no key path such as an installed
+  browser or CS-WebUI, the controller matches them in a bubbling `keydown` listener
+  (`shortcuts` `page`). Either way a page that keeps a key calls
+  `preventDefault()`. With `createMenuBarController({ shortcuts: "app" })` the
+  page matches them itself, for example with `bar.handleKeyDown(event)`, and the
+  host stops matching them for this page while the bar is in the page.
+- `keyboard: false` turns off the Alt and F10 requests and `accessKeyHints`.
+  macOS has neither.
+- `dispose()`, or the `signal` option, stops the controller and returns the
+  `"app"` lease. The controller follows the window across reconnects.
+
+`installMockMenuBar(menus, options)` from `@runic-artifex/views/mock` serves
+the routes on the mock Bridge for tests and development without .NET; its
+`update` changes the bar and `invocations` lists the invoked items. The wire is
+specified in
+[specs/desktop/menu-bar-page.md](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/desktop/menu-bar-page.md).
+
 ## Developing without .NET
 
 `@runic-artifex/views/mock` provides an in-memory Bridge. Install it before the
@@ -406,6 +525,14 @@ A definition takes:
   error becomes the client's `BridgeError`, with its `kind` when it has one. A
   setter's value is applied first; checked writes (`write<Property>`) use the
   same handler and answer `conflict` for a stale baseline.
+  A command whose `CanExecute` is false rejects with reason `unavailable`, as
+  .NET does.
+- `resolveKey`: for a command with `[RunicCommandKey]` (since 0.11), whether
+  .NET would find an object for the key, by client method:
+  `resolveKey: { deleteItem: (state, id) => state.items.some(item => item.id === id) }`.
+  It runs before `canExecute`; `false` rejects the command with reason
+  `unresolved-key` and makes `can<Command>(key)` false. Absent, every key
+  resolves.
 - `operations`: runs `start<Command>()`. Without a handler the command handler
   runs and the operation succeeds. `"manual"` keeps each operation running
   until the test calls `succeed(result)`, `fail(message)`, `failWith(failure)`
@@ -427,7 +554,7 @@ A definition takes:
   and a start with the id begins a new operation.
 
 The returned mock has `state`, `update(changes)` (pushes a full state like a
-.NET publication), `calls`, `failNext(method, { kind, message, detail })` or
+.NET publication), `calls`, `failNext(method, { kind, message, detail, reason })` or
 `failNext(method, { kind: "domain-failed", failure })` for a method's declared failure,
 `pushFailure({ message })` (a failure notice: the client keeps its last state
 and reports the error), `collections.<field>` with `add`, `remove`, `replace`
@@ -538,9 +665,12 @@ A `BridgeError` names what failed and why:
   including a declared failure of a command whose client does not declare it, is
   `failed`.
 - `reason` refines `kind` when .NET sent one (`BridgeErrorReason`, open): a
-  `rejected` command whose `CanExecute` is false has `unavailable`, and a setter
+  `rejected` command whose `CanExecute` is false has `unavailable`, a setter
   value or command argument that does not decode or is rejected has
-  `invalid-input`. `unresolved-key` is reserved for a later release.
+  `invalid-input`, and a `[RunicCommandKey]` command whose key names no object
+  has `unresolved-key` (since 0.11). An operation start rejected as
+  `unavailable` or `unresolved-key` carries the same reason (since 0.11), with
+  the token as its message.
 - A connect to a .NET host that speaks another Views protocol version, for example
   a page of this release with `Runic.Application.Views` of another one, rejects
   with `failed` and a message that names both versions. Use the .NET and npm
@@ -651,3 +781,11 @@ unloads (`pagehide`), the state is not reported, so a reload or a navigation to
 another page does not show `reconnecting`. A host script without
 `onConnectionChange`, from a release before it, reports the first connection
 and each reconnect but not a loss.
+
+Each subscription follows the host from the moment it starts, so one that starts
+while the connection is down reports `connecting`, not `reconnecting`. The
+framework packages wrap it for components: `useBridgeConnection` in
+`@runic-artifex/react`, `@runic-artifex/vue` and `@runic-artifex/svelte`, and
+`injectBridgeConnection` in `@runic-artifex/angular`. During `vite dev`,
+`@runic-artifex/vite-plugin-runic` shows the page's state on its DevTools dock from
+page load.

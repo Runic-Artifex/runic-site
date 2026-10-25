@@ -93,6 +93,27 @@ plain synchronous `ICommand`. It generates only fire-and-snapshot execution;
 there is no operation result, stream, or cancellation shape to infer from that
 interface.
 
+Since SDK `0.11.0`, `[RunicCommandKey(nameof(Resolver))]` presents a command
+whose parameter has no wire form. The wire carries the resolver's key; .NET
+resolves it inside the generated call, evaluates `CanExecute` with the resolved
+object and runs the command with it. A key that resolves to `null` is rejected
+with reason `unresolved-key`. A repeated operation start with the same request
+ID and key observes the admitted operation: its identity is the key, not the
+object. Misuse is `RUNICBRIDGE027`.
+
+Operations belong to the window, not to the page that started them. Since SDK
+`0.11.0`, `[RunicOperationRetirement]` (`Keep`, `Cancel` or `Drain`) declares
+what happens to an operation when the navigation entry whose page started it
+retires. `Cancel` and `Drain` defer the page's disposal, through the navigator's
+`INavigationPresentation.ForgetAsync`, until the operation's work ended,
+without holding up the navigation itself.
+
+Every decoded input is bounded. Since SDK `0.11.0`, setter values, command
+arguments, checked writes, operation starts and interaction messages share one
+limit per window, `MaximumInputBytes` in UTF-8 bytes (1 MiB by default, from
+1 KiB to 64 MiB); a larger input is rejected as `invalid-input` before it
+reaches the model.
+
 The permanent status, wait, cancel, and stream routes validate contract and
 request identity. Generated clients turn an unobservable admission or status
 into `BridgeOperationUncertainError`; callers recover the same request ID and
@@ -130,6 +151,11 @@ outbound queue. This avoids re-entering model mutation while a native transport
 is synchronously publishing JavaScript. Full snapshots can coalesce at the
 delivery boundary; operation terminals and interaction requests do not use the
 broadcast channel.
+
+Since SDK `0.11.0`, replies read their own writes: the reply to a command,
+setter or checked write is sent after the state frames that the call produced
+on every View of the window, waiting at most 5 s. Code after an awaited call
+can therefore read another View's snapshot.
 
 The `Runic.Application.Views.ReactiveUI` adapters expose a context-backed
 scheduler provider. The default flavor returns `ReactiveUI.Primitives.Concurrency.ISequencer`; the System.Reactive
@@ -209,14 +235,17 @@ generated bridge calls the command helpers of the adapter the project
 references, so there is no flavor property to set; setting the removed
 `RunicApplicationFrontendReactiveUiFlavor` fails with `RUNICBRIDGE017`, and
 adapters of both flavors, directly or through another package or project, fail
-with `RUNICBRIDGE023`.
+with `RUNICBRIDGE023`. Since SDK `0.11.0`, a project that references both
+navigation adapters, `Runic.Navigation.ReactiveUI` and
+`Runic.Navigation.ReactiveUI.Reactive`, without a Views ReactiveUI adapter gets
+warning `RUNICNAV002`.
 
 The exact generated codec/command path is covered by a ReactiveUI Native AOT
 fixture with no warnings. That verifies the bridge contract under AOT; it does
 not represent every native host or frontend combination.
 
-The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
-[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
-[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
-and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
+The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
+[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
+[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
+and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).

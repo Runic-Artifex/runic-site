@@ -14,7 +14,14 @@ several, and `--configuration` overrides Release. The host and the
 compare them by measuring each project configuration into its own report.
 
 The command uses Release, self-contained NativeAOT and size optimization by
-default. Use `--no-aot` for a managed comparison. It preserves your project's
+default. Use `--no-aot` for a managed comparison; since SDK `0.11.0`,
+`--no-aot --no-self-contained` measures a framework-dependent build.
+`--property Name=Value`, also new in `0.11.0`, passes another MSBuild property
+to the evaluation and the publish, as `dotnet publish -p` does, and the report
+lists it in `effectiveProperties`; `--property OptimizationPreference=Speed`
+measures a speed-optimized build. The properties that have their own options
+are refused with `RAPPSIZE1006`. `-v`/`--verbosity` sets the publish's MSBuild
+verbosity. It preserves your project's
 culture and diagnostic settings. Each report needs a new path so previous
 evidence is retained. `--format json` selects the command's JSON envelope;
 `--report` selects the measurement file. Progress streams to stderr in JSON mode.
@@ -85,7 +92,13 @@ This property has no role in CS-WebUI, which has no ASP.NET Core dependency.
   does not change the linked executable. Do not remove the loader for a native
   presentation mode your application uses.
 - Embedded frontend assets are included inside their executable or assembly.
-  An assembly list cannot attribute NativeAOT bytes. Startup time and process-tree
+  Since SDK `0.11.0`,
+  `<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`
+  packs the frontend into the application assembly without code, so a
+  single-file or NativeAOT executable carries it and the publish folder has no
+  `www`; measure both deliveries with `--property`, because the frontend's
+  bytes move from `www` into the executable. An assembly list cannot attribute
+  NativeAOT bytes. Startup time and process-tree
   memory need separate measurements; neither is inferred from file size.
 
 A Linux x64 package-consumer measurement (2026-09-07, .NET SDK 10.0.302) published

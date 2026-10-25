@@ -46,6 +46,20 @@ message sent both ways is heard twice. An installed browser, used as a
 fallback, cannot announce (`window-capability-unavailable`); keep a live
 region for that case only.
 
+Since SDK `0.11.0`, a WebView2 window speaks `AnnounceAsync` through a hidden
+live region in the page while the page has the keyboard focus, so NVDA says
+it; otherwise it sends a UI Automation notification. A WPF `RunicWebView`
+does the same, and `WpfPlatformServices.ForWindow` announces through UI
+Automation instead of reporting `Unavailable`. The ViewModel's
+`IWindowPlatformServices` has `AnnounceAsync(message, priority)` with
+`PlatformAnnouncementPriority.Polite` or `Assertive`.
+
+Where the page cannot answer, such as before it loaded, a native message box
+(`IWindowPlatformServices.MessageBoxes`, new in `0.11.0`) is announced by
+screen readers as a system alert. On Windows, the native menu bar that a
+window shows since `0.11.0` is a Win32 menu bar, which Windows exposes to
+screen readers; see [menus](../desktop-services.md#menus).
+
 ## WebKitGTK pitfalls
 
 - A `ul` or `ol` without list markers (`list-style: none`, Tailwind's base

@@ -455,6 +455,41 @@ closes during the question, the guard's answer is "keep", so the Window stays
 open (see
 [Leave confirmation in a web View](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#leave-confirmation-in-a-web-view)).
 
+A guard can also ask with a native message box, which needs no page: it works
+while the page is loading or busy, follows the platform's button order and
+keys, and screen readers announce it as an alert. The ViewModel takes
+`IDesktopMessageBoxes` (or `IWindowPlatformServices.MessageBoxes`) from the
+window's scope, and the Window's override asks it:
+
+```csharp
+// EditorWindow
+protected override async ValueTask<bool> CanCloseAsync(CancellationToken cancellationToken) =>
+    await base.CanCloseAsync(cancellationToken) && (DataContext is not { } editor || await editor.ConfirmCloseAsync(cancellationToken));
+
+// EditorViewModel(IDesktopMessageBoxes messageBoxes)
+public async ValueTask<bool> ConfirmCloseAsync(CancellationToken cancellationToken)
+{
+    if (!IsDirty) return true;
+    var result = await messageBoxes.ShowAsync(new DesktopMessageBox($"Save changes to “{Title}”?")
+    {
+        Kind = DesktopMessageBoxKind.Warning,
+        Buttons = [Save, DontSave, Cancel], // Default, Destructive and Cancel roles
+    }, cancellationToken);
+    return result switch
+    {
+        PlatformResult<DesktopMessageBoxButton?>.Success { Value.Id: "save" } => await SaveAsync(cancellationToken),
+        PlatformResult<DesktopMessageBoxButton?>.Success { Value.Id: "discard" } => true,
+        PlatformResult<DesktopMessageBoxButton?>.Success => false,
+        // No native box on this host, such as CS-WebUI: ask in the page instead.
+        _ => await AskInPageAsync(cancellationToken),
+    };
+}
+```
+
+The box is modal to the window and closes with it. See
+[Message boxes](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#message-boxes)
+for the rules and each platform's behaviour.
+
 To close a Window from code the way the close button does, call
 `RequestCloseAsync(cancellationToken)`. It returns `true` when the window
 closed and `false` when `CanCloseAsync` kept it open, like `Window.Close()`
@@ -588,14 +623,41 @@ public sealed partial class EditorViewModel : ObservableObject, IRunicMenuComman
 
 The host asks once for each id when the Window opens, and again after
 `DesktopHost.SetMenuBar`, in the ViewModel's model turn. An item is enabled
-while its declared `IsEnabled` and its command's `CanExecute(null)` are `true`,
-following `CanExecuteChanged`, and runs `Execute(null)` in the model turn; a
-failure is logged as event 2004,
-`DesktopMenuCommandFailed`. An id the ViewModel returns `null` for goes to the
-application's commands, `RunicDesktopHost.UseApplicationMenu`, such as New or
-Settings…, which also run while no Window is open. Runic Desktop shows the menu
-bar on macOS; elsewhere, and on CS-WebUI, render menus in the page, bound to the
-same commands.
+while its declared `IsEnabled` and its command's `CanExecute(parameter)` are
+`true`, following `CanExecuteChanged`, and runs `Execute(parameter)` in the
+model turn, where `parameter` is the item's `CommandParameter` (`null` for
+none). One command can therefore serve several items, such as one per zoom
+level in a radio group:
+
+```csharp
+new DesktopMenu("View",
+[
+    new DesktopMenuItem("Small", "view.zoom") { RadioGroup = "zoom", IsChecked = zoom == 0.8, CommandParameter = "0.8" },
+    new DesktopMenuItem("Large", "view.zoom") { RadioGroup = "zoom", IsChecked = zoom == 1.5, CommandParameter = "1.5" },
+])
+```
+
+A failure is logged as event 2004, `DesktopMenuCommandFailed` (2102,
+`CsWebUiMenuCommandFailed`, on CS-WebUI). An id the
+ViewModel returns `null` for goes to the application's commands,
+`RunicDesktopHost.UseApplicationMenu`, such as New or Settings…, which also run
+while no Window is open. Runic Desktop shows the menu bar natively on macOS, in
+the Windows window and in GTK 3 and GTK 4 windows. A
+Window whose `DesktopWindowOptions.MenuBarPresentation` is `Page` renders the
+bar in its page instead and runs its items through
+`DesktopWindow.TryExecuteMenuItemAsync`, which uses the same commands; see
+[the Desktop guide](../Runic.Desktop/README.md#where-the-bar-is-shown). A Runic
+Window's page does this with `createMenuBarController` from
+`@runic-artifex/views` and its own menubar component; see
+[In-page menu bar](../../web/views/README.md#in-page-menu-bar). A CS-WebUI
+window has no native bar, so `RunicCsWebUiHostOptions.MenuBar` always goes to
+the page, through the same routes and the root ViewModel's commands; see
+[the CS-WebUI guide](../Runic.Application.Views.CsWebUi/README.md#menu-bar).
+
+A ViewModel shows a context menu with
+`IWindowPlatformServices.ShowContextMenuAsync`, from a command the page runs in
+its `contextmenu` handler, and runs the chosen item itself; see
+[Runic.Platform](../Runic.Platform/README.md#menus).
 
 ### Keyboard shortcuts in the page
 
@@ -627,11 +689,49 @@ saveButton.setAttribute("aria-keyshortcuts", "Control+S Meta+S");
   keys: ⌘Q, ⌘W, ⌘H and ⌘M on macOS, Alt+F4 on Windows, F12 and the zoom keys in
   embedded windows. A key the page handles with `preventDefault()` does not
   reach a menu item with the same shortcut, so declare a command's shortcut on
-  the macOS menu item or in the page, not both.
+  the menu item or in the page, not both.
 - **Make shortcuts discoverable.** Show them beside the control or in the
   page's menus with `formatShortcut`, and set `aria-keyshortcuts` so screen
-  readers announce them. Global shortcuts, which work while the application is
-  in the background, are not supported yet.
+  readers announce them.
+
+Global shortcuts, which work while the application is in the background, are
+the application's `IDesktopGlobalShortcuts`, not the page's. Let the user choose
+the key on a settings page: `shortcutFromEvent` records a `keydown` as the same
+text, which the page sends through an ordinary command; the ViewModel keeps it
+in the application's settings and binds it.
+
+```ts
+import { shortcutFromEvent } from "@runic-artifex/views";
+
+keyField.addEventListener("keydown", (event) => {
+  const shortcut = shortcutFromEvent(event);
+  if (shortcut === null) return; // A modifier alone, a dead key or composition.
+  event.preventDefault();
+  void settings.chooseQuickNoteKey(shortcut);
+});
+```
+
+```csharp
+[RelayCommand]
+public async Task ChooseQuickNoteKeyAsync(string shortcut, CancellationToken cancellationToken)
+{
+    if (!DesktopShortcut.TryParse(shortcut, out var key)) return;
+    var result = await _shortcuts.BindAsync(
+        [new DesktopGlobalShortcut("quick-note", "Open a quick note") { PreferredShortcut = key }], cancellationToken);
+    if (result is PlatformResult<ImmutableArray<DesktopGlobalShortcutBinding>>.Success([{ Status: DesktopGlobalShortcutStatus.Bound }]))
+        _settings.QuickNoteKey = key.ToString();
+    else
+        QuickNoteKeyProblem = "That key is taken or not allowed; choose another.";
+}
+```
+
+Windows and macOS bind the key the application passes and report a key another
+application holds as `Conflict` and a key the system keeps, such as F12 or ⌘Q,
+as `Refused`. On Linux the desktop owns the keys: the key is a suggestion, the
+user assigns or changes it in the desktop's settings (`ConfigureAsync` opens
+them), and `BindingsChanged` reports the change, so show the desktop's
+`TriggerDescription` instead of a recorder there. See
+[Global shortcuts](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#global-shortcuts).
 
 ### Receiving dropped files
 
@@ -673,6 +773,68 @@ and never for an access decision. In a Flatpak sandbox the paths are
 document-portal paths under `/run/user/<uid>/doc`, which the application can
 open; a macOS App Sandbox grants access to dropped files while the application
 runs.
+
+`RunicFileDrop.Effect` is `Copy`, `Move` or `Link`, as the drag source, the
+user's modifier keys and the page agreed; mark where a drop copies, moves, links
+or is refused with `data-runic-drop-effect="copy|move|link|none"`, and treat the
+effect like the label. Files without a local path, such as a macOS Mail
+attachment, arrive in `RunicFileDrop.PromisedFiles` (`Files` may then be empty):
+read each once with `OpenReadAsync` and dispose it; the host disposes the ones
+the handler did not open when it returns. Drops into a frame of the page's own
+origin arrive as drops onto the page; frames of other origins deliver none.
+Dragged text and links stay with the page's own `drop` event.
+
+### Dragging files out
+
+A ViewModel drags files, text or links out of its Window with
+`IWindowPlatformServices.StartDragAsync`, while the user holds the mouse button.
+The page cancels its own drag in `dragstart` and runs an ordinary command with a
+key; the ViewModel builds the data from its own state:
+
+```js
+row.addEventListener("dragstart", (event) => {
+  event.preventDefault();
+  void files.dragItem(row.dataset.key);
+});
+```
+
+```csharp
+[RelayCommand]
+private async Task DragItemAsync(string key)
+{
+    var result = await _platform.StartDragAsync(new DesktopDragData
+    {
+        Paths = [_items[key].Path], AllowedEffects = DesktopDragEffects.Copy | DesktopDragEffects.Move,
+    });
+    if (result is PlatformResult<DesktopDragEffects>.Success(DesktopDragEffects.Move)) await RemoveAsync(key);
+}
+```
+
+The result is the drop's effect, or `None` when the drag was cancelled or no
+button was held. Runic Desktop's WebView2 and WKWebView windows and WPF windows
+(`WpfPlatformServices.ForWindow`) start drags; see
+[the Desktop guide](../Runic.Desktop/README.md#dragging-files-out).
+
+### Copying and pasting from C#
+
+A ViewModel that copies or pastes more than text takes `IDesktopClipboard`, the
+window's clipboard with HTML, RTF, PNG images and file lists
+([Runic.Platform's clipboard](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#clipboard)):
+
+```csharp
+public sealed partial class ReportViewModel(IDesktopClipboard clipboard) : ObservableObject
+{
+    [RelayCommand]
+    private async Task CopyChartAsync() => await clipboard.WriteAsync(new() { Image = await RenderChartPngAsync(), Text = Summary });
+}
+```
+
+Use it for what the page cannot do: a command from a menu or a shortcut, work
+that finishes after the click, such as copying an export, and file lists. The
+page's own `navigator.clipboard` stays the simple choice for text and images it
+already has, under a user gesture and the web view's permission rules; it cannot
+copy files. Runic Desktop windows (Windows, macOS, GTK 3 and GTK 4) and WPF windows
+provide the formats; CS-WebUI reports them unavailable.
 
 ### Moved and renamed since 0.7.0-preview.6
 
@@ -787,6 +949,44 @@ private async Task SaveAsync(CancellationToken token)
 - With WPF, `DispatcherModelContext` is the UI dispatcher, so the same rule
   holds there. Navigation hooks are not commands; see
   [Runic.Navigation threading](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md#threading).
+
+## State before a reply
+
+A command, setter or checked write often changes another View than the one
+it was called on, such as a page command that adds a document to its shell's
+list. The call's reply carries only its own View's state; the other Views'
+states travel as separate frames. Since 0.11, Runic sends every state frame
+that the call produced, on every route of the window, before it sends the
+reply (read-your-writes). When the page's call resolves, the other Views'
+clients have already applied those states, so code after `await` can read
+them without waiting for a subscription:
+
+```ts
+await workspace.load(request);
+const document = shell.snapshot.documents.at(-1); // includes what load added
+```
+
+- "Produced" means requested before the reply was ready: a change made in the
+  command, or in a model turn that ran before its reply, is included. A
+  change that work outside the command makes later, such as a timer or a
+  `Task.Run` that commits afterwards, arrives as an ordinary frame.
+- The guarantee covers awaited and synchronous commands (`{View}{Command}`),
+  setters (`{View}Set{Property}`) and checked writes (`{View}Write{Property}`)
+  on Runic Desktop, CS-WebUI, WPF and `Runic.Application.Testing`'s
+  in-memory transport. An operation's admission (`start{Command}`) replies at
+  once, as before; its status follows the [operation rules](#operation-results-and-parameterised-queries).
+- A reply waits at most 5 seconds for those frames. A page that takes no
+  frames for longer, for example because it is frozen in the debugger, gets
+  the reply anyway, and the states follow.
+- A synchronous route that a test calls inside the model turn, for example
+  through `IRunicModelContext.InvokeAsync`, replies at once: the states
+  cannot be captured until that turn ends.
+- A custom `IBridgeTransport` keeps the guarantee when `Publish` (or
+  `PublishAsync`/`PublishUtf8Async`) returns once the frame is on the
+  connection ahead of later sends, as Runic's hosts do.
+
+The wire is unchanged (Views protocol 3); clients of earlier releases see the
+same frames, only in this order.
 
 ## Read-only and settable state
 
@@ -1056,8 +1256,8 @@ generator, such as a CommunityToolkit `[ObservableProperty]`, points at its
 a link to its entry in the [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 for the release you use.
 
-`RUNICBRIDGE013`, `015`, `019` and `020` are warnings; the generator's
-(`013` and `020`) repeat on builds that reuse the cached generation. Every other
+`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029` and `030` are warnings; the generator's
+(`013`, `020` and `028`) repeat on builds that reuse the cached generation. Every other
 code fails the build. The
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 lists every code with its severity, what reports it, its cause and its fix.
@@ -1072,6 +1272,35 @@ of a check that passes stay in the command output. A
 failed command that reports no such error gets one summary error instead:
 `RUNICBRIDGE024` (an internal generator error) for the generator,
 `RUNICBRIDGE016` for the frontend commands.
+
+## Ship the frontend inside the executable
+
+By default the build copies the frontend to `www/` next to the application.
+With `RunicApplicationFrontendDelivery` set to `Embedded`, it packs the same
+files into the application assembly as a Runic Assets archive instead, so the
+build and publish output have no `www/`, and a single-file or NativeAOT
+executable carries its frontend:
+
+```xml
+<PropertyGroup>
+  <RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>
+</PropertyGroup>
+```
+
+The application needs no code for it. The build composes the tree in
+`obj/<configuration>/<framework>/runic-www/`, packs it as `RunicAssetsDist`
+(the Runic.Assets defaults apply: `.git` and `.env*` are left out, and source
+maps warn with `RAS1005`), and names the resource in the
+`Runic.Application.FrontendArchive` runtime option. `RunicDesktopHost` and the
+WPF `RunicViewHost` then serve the archive in place of the web root, with each
+Window's `StartPage` at its root. A Window's `ContentRoot`, the host's
+`SurfaceOptions` and `dotnet runic dev`, which builds with `Files` and serves
+the live frontend, still take precedence. `RunicDesktopHostOptions.Assets`
+serves another source, such as an archive read at run time.
+
+`Embedded` needs the Runic Desktop host (`Runic.Application.Views.Desktop`,
+which brings Runic.Assets); the CS-WebUI host serves a folder and builds as
+`Files` with `RUNICBRIDGE030`.
 
 ## Build properties
 
@@ -1097,7 +1326,7 @@ an extension point.
 | --- | --- | --- |
 | `RunicApplicationFrontendDirectory` | `$(MSBuildProjectDirectory)/Frontend` | Frontend package directory. |
 | `RunicApplicationFrontendGeneratedDirectory` | `<frontend>/src/generated` | Generated TypeScript clients. |
-| `RunicApplicationFrontendPackageManager` | `packageManager` in `package.json`, then `pnpm-lock.yaml`, `bun.lock`, else `npm` | Selects the default build and install commands. |
+| `RunicApplicationFrontendPackageManager` | `packageManager` in `package.json`, then `pnpm-lock.yaml`, `bun.lock`, else `npm` | `npm`, `pnpm` or `bun`: selects the default build and install commands. Another value, such as `yarn`, uses the npm commands and warns with [`RUNICBRIDGE029`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge029) unless the project sets both commands. |
 | `RunicApplicationFrontendBuildCommand` | `npm run build`, `pnpm run build`, or `bun run --bun build` | Production frontend build. |
 | `RunicApplicationFrontendInstallCommand` | `npm ci`, `pnpm install --frozen-lockfile`, or `bun install --frozen-lockfile`, each with `--ignore-scripts` | Runs before the frontend build when `package.json` or a lock file changed since the last install (stamp: `obj/runic-bridge-frontend-install.stamp`), or when declared dependencies have no `node_modules`. A `package.json` without dependencies needs no `node_modules`. |
 | `RunicApplicationFrontendAllowUnlockedInstall` | `false` | The default install is locked: when `package.json` declares dependencies and the package manager's lock file (`package-lock.json` or `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `bun.lock` or `bun.lockb`) is missing, the build fails with [`RUNICBRIDGE026`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge026) before installing. Set `true` to run `npm install`, `pnpm install` or `bun install` (with `--ignore-scripts`) without one instead. |
@@ -1107,6 +1336,7 @@ an extension point.
 | `RunicApplicationFrontendCopyEnabled` | `true` | Mirrors the frontend's output directory to the web root in the build output: a file that an earlier copy wrote and the output directory no longer has is deleted. Publish always mirrors it. |
 | `RunicApplicationFrontendOutputDirectory` | `dist` | The frontend build's output directory, relative to the frontend directory, which build and publish copy and `dotnet runic dev` serves from. |
 | `RunicApplicationFrontendWebRoot` | `www` | The directory below the build and publish output that receives the frontend and the hosts serve. Another name reaches the hosts as the `Runic.Application.FrontendWebRoot` runtime option; `RunicWindowOptions.ContentRoot` and WPF's `RunicViewHost.ContentRoot` still win. |
+| `RunicApplicationFrontendDelivery` | `Files` | `Files` copies the frontend to the web root. `Embedded` packs the same tree (referenced projects' frontends, this project's output and the host's `runic-views.js`) into the assembly with Runic.Assets, and the Runic Desktop and WPF hosts serve it; see [Ship the frontend inside the executable](#ship-the-frontend-inside-the-executable). Closed: another value, the CS-WebUI host, or a project that sets `RunicAssetsDist` itself warns with [`RUNICBRIDGE030`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge030) and builds as `Files`. |
 | `RunicApplicationHost` | the only host adapter referenced | `desktop` or `cswebui`: whose Views client the build copies to `runic-views.js` in the web root. Set it when a project references both hosts. The frontend build receives it as `RUNIC_APPLICATION_HOST`. |
 | `RunicApplicationFrontendCompositionType` | `<RootNamespace>.RunicViewsComposition` (host adapters), with the namespace made a valid C# name | Generated composition class. |
 | `RunicApplicationFrontendModelAssembly` | the project itself | Inspect a separately built ViewModel assembly instead of a bootstrap build. |
@@ -1243,6 +1473,17 @@ changes. A frontend that a referenced project builds, such as the model project
 of a WPF application, sees that project's host, which is empty when it
 references no host package; such a frontend cannot depend on the application's
 host.
+
+On every host the Bridge works under a Content-Security-Policy that allows
+only same-origin scripts and connections and no `'unsafe-eval'`, such as
+`default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'`.
+The host's scripts are served from the page's origin, and Bridge calls and
+state are data: the host's bridge script parses each state with `JSON.parse` before it calls
+`__{route}Changed`. Runic Desktop sends the policy as a header
+(`RunicDesktopHostOptions.ContentSecurityPolicy`); a CS-WebUI page carries it
+in a `<meta>` element. APIs that run your own script in the page, such as
+`DesktopSurface.ExecuteJavaScriptAsync`, still need `'unsafe-eval'`. See the
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/security.md#framing-and-content-security-policy).
 
 ## Adding a Window to an existing web app
 
@@ -1409,6 +1650,65 @@ Each field retains at most 64 receipts within a default 256 KiB encoded-value
 and receipt-metadata budget. Evicted or oversized receipts leave bounded
 request-ID tombstones; reconcile authoritative state before issuing a new ID.
 The write may have succeeded even when its receipt could not be retained.
+
+## Commands whose parameter has no wire form
+
+A command whose parameter is a .NET object that cannot cross the Bridge, such as
+`ReactiveCommand<Item, RxVoid>` bound directly by WPF, is presented as is with
+`[RunicCommandKey]` (since 0.11). It names a ViewModel method that resolves a key
+the page sends to the parameter; `null` means "no such object":
+
+```csharp
+public ItemsViewModel()
+{
+    DeleteItemCommand = ReactiveCommand.CreateFromTask<Item>(DeleteAsync, canDelete);
+}
+
+[RunicCommandKey(nameof(FindItem))]
+public ReactiveCommand<Item, RxVoid> DeleteItemCommand { get; }
+
+public Item? FindItem(ulong id) => _items.Lookup(id).ValueOrDefault();
+```
+
+The generated client takes the resolver's parameter, with its name and wire
+type: `deleteItem(id: bigint)`, `canDeleteItem(id: bigint)` and, for an
+asynchronous command, `startDeleteItem(id: bigint, options?)`. .NET decodes the
+key, resolves it, evaluates the command's `CanExecute` with the resolved object
+and runs the command with it, inside the generated call: the model turn,
+failure replies, cancellation and logging are those of any generated command.
+No wrapper command is needed.
+
+- **Unresolved key.** When the resolver returns `null`, the call is `rejected`
+  with reason `unresolved-key` (`BridgeError.reason` in the page,
+  `RunicCallReply.ErrorReason` in tests) and the command does not run;
+  `canDeleteItem(id)` is `false`. Nothing is logged.
+- **Resolver shapes.** One method of the ViewModel or a base class, not
+  overloaded, instance or static, `public` or `internal`:
+  `P? Find(TKey key)`, `ValueTask<P?> FindAsync(TKey key)` or
+  `ValueTask<P?> FindAsync(TKey key, CancellationToken cancellationToken)`
+  (`Task<P?>` works too). `TKey` is any command input type; `P` is the command's
+  parameter type (for a plain `ICommand`, whatever the resolver returns).
+- **Turns.** A synchronous resolver runs in the call's model turn. An
+  asynchronous one starts in that turn; `CanExecute` and the command run in a
+  new turn after it completes. The resolution is window work like an awaited
+  command: closing the window waits for it and then cancels its token, which is
+  also cancelled when the page cancels the call.
+- **No side effects.** A resolver can run more than once for one request: for
+  `canX(key)` and then `x(key)`, or when a page repeats an operation start. A
+  repeated start with the same `requestId` and key observes the admitted
+  operation whatever the key resolves to now; the operation's identity is the
+  key, not the object.
+- **Exceptions.** A resolver that throws `ArgumentException`, `FormatException`
+  or `JsonException` rejects the call with `invalid-input`; any other exception
+  fails it, as a command's would.
+- **Libraries.** ReactiveUI commands of both flavors, CommunityToolkit
+  `IRelayCommand<T>` and `IAsyncRelayCommand<T>` (put the attribute on the
+  property or on the `[RelayCommand]` method) and a plain `ICommand`, which takes
+  `[RunicCommandKey]` instead of `[RunicCommandInput]`. A command without a
+  parameter cannot have a key.
+
+The generator reports a misplaced attribute or an unusable resolver as
+[`RUNICBRIDGE029`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge029).
 
 ## Operation results and parameterised queries
 
@@ -1618,6 +1918,28 @@ validation details are incomplete. Nested `ErrorsChanged` notifications publish 
 state, and removed objects lose their subscriptions. This projection works
 across model frameworks; it does not run validation rules itself.
 
+Each object is read with `GetErrors(null)` for its own errors and
+`GetErrors(member)` for each Bridge member. Many implementations, including
+CommunityToolkit's `ObservableValidator`, also return every property's errors
+for `null`. A `ValidationResult` from `GetErrors(null)` whose `MemberNames` all
+name Bridge members of the same object is therefore left to `GetErrors(member)`
+and reported once, at the member's path. Other member names still resolve
+relative to the object, and a result without member names reports at the
+object's path. Strings and `RunicValidationMessage`s from `GetErrors(null)`
+are reported as before.
+
+A ViewModel that implements ReactiveUI.Validation's `IValidatableViewModel`
+(`RunicArtifex.ReactiveUI.Validation` or its `.Reactive` flavor), such as a
+`ReactiveValidationObject`, is read through its `ValidationContext` instead of
+`GetErrors(null)`: a validation with properties reports at each property's
+path, and every other validation, such as a rule created with
+`ValidationRule(observable, message)`, at the object's path. Each message
+appears once. The generated Bridge emits this reader, so no further package is
+needed. A Bridge member's messages still come from `GetErrors(member)` and keep
+the ViewModel's formatter, as in the per-property `…Errors` arrays; the other
+messages are the validation text on one line, separated by spaces. `ReactiveValidationObject.GetErrors(null)`
+itself is unchanged.
+
 Use `[RunicIgnore]` on validation-only DTO properties such as a computed
 `HasErrors`; their values are represented by the validation projection.
 
@@ -1699,6 +2021,23 @@ in one process can differ. A Bridge attached without a window session follows
 the environment. Detail can contain file paths and application data, so do not
 enable it for a distributed build.
 
+## Bridge input limit
+
+A window decodes each Bridge input up to one limit in UTF-8 bytes: a setter
+value, a command argument, a checked write, an operation start, and an
+interaction request or reply. A larger one is answered as invalid input
+(`rejected` with reason `invalid-input`) and does not reach the ViewModel. The
+default is 1 MiB. Raise it for a window that takes larger values, such as a text
+editor bound to a `string`, or lower it, with `RunicWindowOptions.MaximumInputBytes`
+(per Window), `RunicDesktopHostOptions.MaximumInputBytes` or
+`RunicCsWebUiHostOptions.MaximumInputBytes` (the host's default for Windows that
+set none), `WindowContentSessionOptions.MaximumInputBytes` for a session you
+create, or `RunicWindowTestHostOptions.MaximumInputBytes` in tests. A value must
+be between 1 KiB and 64 MiB; another one throws `ArgumentOutOfRangeException`.
+The WPF host uses the default. Independently of the limit, exact number strings
+(`long`, `ulong`, `BigInteger`, `decimal`) are at most 4 096 characters, and a
+window runs at most 64 awaited command calls at once.
+
 ## Declared failures
 
 A command declares its expected failure type with `[RunicFailure(typeof(SaveFailure))]`
@@ -1733,6 +2072,17 @@ The generated client's `save()` then returns
 the generated mock encodes the failure. A ReactiveUI command also reports the
 failure on `ThrownExceptions`; the generated Bridge observes it there and does
 not log it, so the ViewModel needs no subscription.
+
+`RunicFailureException<TFailure>` derives from `RunicFailureException` and
+keeps the failure's type, so code that catches it, such as a test or a
+`ThrownExceptions` subscription, reads `Failure` without a cast. The Bridge
+treats both the same way:
+
+```csharp
+throw new RunicFailureException<SaveFailure>(new TitleTaken(existing.Title));
+
+catch (RunicFailureException<SaveFailure> error) when (error.Failure is TitleTaken taken) { /* ... */ }
+```
 
 ## Navigation
 
@@ -1795,6 +2145,121 @@ kind, it carries no exception message, which can contain application data:
 the hook's exception is logged as event 1076, and code that needs it awaits the
 region's request in its own command and reads `Committed.ArrivalError`.
 
+### Operations and navigation entries
+
+Operations belong to the Window, not to the page that started them: their
+status, wait, Cancel and stream routes are Window routes, so a remounted or
+another presentation still observes them. By default an operation keeps running
+when the navigation entry whose page started it retires (Back, Replace, Reset
+or Clear removed the entry), and the navigator disposes the page, its entry
+scope and its model-context lease at once. When the operation uses the page or
+services of that entry scope, declare what retirement does with
+`[RunicOperationRetirement]` (since 0.11), on the command property or on the
+ViewModel class for all of its operations:
+
+| `RunicOperationRetirement` | At retirement | The page, its entry scope and its lease are disposed |
+| --- | --- | --- |
+| `Keep` (default) | The operation keeps running. | At once, as before. |
+| `Cancel` | Its cancellation token is cancelled, as by the client's `cancel()`; it usually ends `cancelled`. | After the operation's work ended. |
+| `Drain` | The operation keeps running to its end. | After the operation's work ended. |
+
+```csharp
+public sealed class UploadViewModel : ReactiveObject
+{
+    // Uses the entry's scoped IUploadClient: retiring the page cancels it, and the client is disposed afterwards.
+    [RunicOperationRetirement(RunicOperationRetirement.Cancel)]
+    public ReactiveCommand<RxVoid, RxVoid> UploadCommand { get; }
+}
+
+[RunicOperationRetirement(RunicOperationRetirement.Drain)] // every operation of the page
+public sealed partial class ExportViewModel : ObservableObject
+{
+    [RelayCommand]
+    private Task ExportAsync(CancellationToken cancellationToken) => ...;
+
+    // A property declaration wins over the class's; [property:] forwards it to the generated command.
+    [RelayCommand]
+    [property: RunicOperationRetirement(RunicOperationRetirement.Keep)]
+    private Task RefreshAsync(CancellationToken cancellationToken) => ...;
+}
+```
+
+- Retirement never waits for the work: Back commits and completes at once,
+  and `RunicNavigator.IsBusy` and `WhenIdleAsync` do not wait for it. Only the
+  disposal of that page moves to the end of its `Cancel` and `Drain` operations.
+  `RunicNavigator.DisposeAsync` waits for them up to its `CloseTimeout`, then
+  logs Navigation event 1077 and returns; the page is still disposed when they
+  end.
+- The disposal waits for the work, not for the operation's reply. A ReactiveUI
+  command's operation reports `cancelled` as soon as its cancellation is
+  requested, while a `CreateFromTask` body can still be running; the page and
+  its entry scope are disposed after that body ended. A cancelled
+  `CreateFromObservable` execution ends with its unsubscription. A
+  CommunityToolkit operation ends with its method's task, so its reply already
+  waits for the body.
+- The policy covers the operations that the page started, and those of the
+  ViewModels presented under it (its content properties and collections,
+  transitively) when the operation started. A ViewModel presented elsewhere
+  later is not followed.
+- A retained entry (a push covered it) keeps every operation, whatever the
+  policy. Unmounting a presentation, a reload or a disconnect is not
+  retirement either.
+- It applies to content the navigator owns (`Own`, `Create`, `Share`).
+  Borrowed content is never retired by the navigator, and a page that a
+  non-navigator `Present`, `Clear` or content property replaces is
+  application-owned: own its work with an [`AcceptedWorkScope`](#accepted-application-work).
+- Only operations, the asynchronous commands that the client starts with
+  `start…`, carry a policy. An awaited call (`upload()`) is window work that
+  ends with its caller or the Window. On a synchronous command, a state
+  property or a class without operations, the attribute has no effect and the
+  generator warns (`RUNICBRIDGE028`).
+- A cancelled ReactiveUI command reports the cancellation on
+  `ThrownExceptions` when its work ends, which for `Cancel` can be after the
+  page's Bridge detached. Since 0.11 the Bridge keeps observing the command
+  until that work ended, so the cancellation never reaches ReactiveUI's default
+  exception handler, which ends the process, and the ViewModel needs no
+  `ThrownExceptions` subscription for it.
+- Each operation that retirement cancels or waits for is logged at Debug
+  (event 1017). The policy is not part of the contract: the generated
+  TypeScript, the contract hash and the mocks do not change.
+- A Window whose root ViewModel is a page that a navigator holds, such as a
+  WPF `WpfBridgeView` or `RunicViewHost` that a `NavigationHost` presents,
+  follows the same policy for that page. Unloading such a child view still
+  asks its remaining operations to cancel, as before, so a `Drain` there runs
+  only until the view unloads.
+
+A late completion that navigates should not navigate from a page that is no
+longer shown. `NavigationEntryContext.BackAsync` and `CompleteAsync` already
+reject a retained or retired entry with `NotCurrent`; for a request to another
+region, pass the page's entry as `NavigationRequestOptions.Requester`, which
+rejects the request unless that entry and the entries owning its region are
+current when it is admitted and when it commits:
+
+```csharp
+await shell.Main.PushAsync(NavigationTarget.Create<ReportViewModel>(),
+    new NavigationRequestOptions { Requester = _entry.Id });
+```
+
+### Operations that outlive a window
+
+The registry of operations is per Window: a second Window, or a second launch,
+cannot observe an operation the first Window started, and closing the Window
+waits for its operations up to the close timeout, then cancels them. Work that
+must outlive a Window, or that several Windows observe, belongs to an
+application-owned service registered outside the Window's scope, as
+nix-manager's `IOperationService`:
+
+- The service runs at most one operation of a kind and keeps its state and an
+  ordered event stream (progress, log lines, the result).
+- A Window's ViewModel subscribes to that stream when it opens and publishes
+  what it shows as state; a new Window, or a reattached one, reads the current
+  state first and then follows the stream.
+- `WaitAsync` lets a command or a Window await the end of a run; stopping that
+  wait does not stop the run.
+- Cancellation is the application's decision: a Window asks the service to
+  cancel, and the service decides who may. Runic does not keep a cross-window
+  operation registry.
+
 ## Logging and telemetry
 
 Registering logging is all an application needs: with `services.AddLogging(...)`,
@@ -1833,7 +2298,7 @@ NativeAOT symbols and what to attach to a bug report.
 | 1002 | `BridgeFieldWriteFailed` | Error | A checked field write throws. | `Model`, `Member`, `Route`, `ErrorType` |
 | 1003 | `BridgeOperationAdmissionFailed` | Error | Admitting an operation throws. | `Model`, `Member`, `Route`, `ErrorType` |
 | 1004 | `BridgeOperationFailed` | Error | An admitted operation throws. | `Member`, `ErrorType` |
-| 1005 | `BridgeOperationCancellationCallbackFailed` | Warning | A cancellation callback throws while a Window closes. | `ErrorType` |
+| 1005 | `BridgeOperationCancellationCallbackFailed` | Warning | A cancellation callback throws while a Window closes, or while a retiring navigation entry cancels its operations. | `ErrorType` |
 | 1006 | `BridgeCommandDomainFailed` | Debug | A command throws its declared failure. | `Model`, `Member`, `Route`, `FailureType` |
 | 1007 | `BridgeOperationDomainFailed` | Debug | An admitted operation throws its declared failure. | `Member`, `FailureType` |
 | 1008 | `BridgeDomainFailureNotEncoded` | Error | A `RunicFailureException` from a command or operation is undeclared, cannot be encoded or is over 4 KiB, so it is reported as failed. When the encoder threw, the entry carries both exceptions. | `Model`, `Member`, `Route`, `FailureType`, `Reason` |
@@ -1844,11 +2309,12 @@ NativeAOT symbols and what to attach to a bug report.
 | 1014 | `AcceptedWorkDomainFailed` | Debug | A task owned by an `AcceptedWorkScope` throws a declared failure. | `FailureType` |
 | 1015 | `PathWatchProblem` | Warning | A `RunicPathWatcher` started without a `failed` callback meets a problem it works around: lost events, a watch limit or a watch that could not start. Always written to `Trace`. | `Problem` |
 | 1016 | `PathWatchPolling` | Debug | A `RunicPathWatcher` started without a `failed` callback polls for a directory that does not exist yet, such as a state directory created on the first start. Not written to `Trace`. | `Problem` |
+| 1017 | `BridgeOperationRetired` | Debug | The navigation entry whose page started an operation declared `RunicOperationRetirement.Cancel` or `Drain` retires: a `Cancel` operation is asked to cancel, and the page is disposed after the operation ends. | `Member`, `Policy`, `Route` |
 | 1020 | `ViewMountFailed` | Error | A .NET View fails to mount. | `Route`, `ErrorType` |
 | 1021 | `ViewRemountFailed` | Error | A View fails to mount again after a reconnect. | `Route`, `ErrorType` |
 | 1033 | `ModelContextReleaseFailed` | Error | A window session's own model context fails to shut down in the background. | `ErrorType` |
 | 1040, 1041 | Retired | | Reported by `ReactiveRoutedRegion<T>`, removed in 0.9; not reused. | |
-| 1042 | `ReactiveCommandFailed` | Error | A bridged ReactiveUI command reports on `ThrownExceptions` an exception that no Bridge call received, while a generated Bridge presents it, or a command or object observed with `ObserveBridgeExceptions(logger)` reports one; declared `RunicFailureException`s and cancellations are not logged. An exception raised in a Bridge call's flow, such as by a plain `Execute` in a wrapper command, is held until the outermost Bridge call in that flow ends, and not logged if a call received it or an exception wrapping it. Still logged when hand-written code receives and handles it itself; a streamed operation holds nothing. | `Source` (`Model.Command` for the Bridge; the command expression or `sourceName` for `ObserveBridgeExceptions`), `ErrorType` |
+| 1042 | `ReactiveCommandFailed` | Error | A bridged ReactiveUI command reports on `ThrownExceptions` an exception that no Bridge call received, while a generated Bridge presents it, or a command or object observed with `ObserveBridgeExceptions(logger)` reports one; declared `RunicFailureException`s and cancellations are not logged. An exception raised in a Bridge call's flow, such as by a plain `Execute` in a wrapper command, is held until the outermost Bridge call in that flow ends, and not logged if a call received it or an exception wrapping it. Still logged when hand-written code receives and handles it from a plain `Execute`; never when it ran the command with `RunAsync`. A streamed operation holds nothing. Also logged after the Bridge detached, with its logger, for an execution that a Bridge call or `RunAsync` stopped awaiting when it was cancelled, such as an operation that a retiring navigation entry cancels. | `Source` (`Model.Command` for the Bridge; the command expression or `sourceName` for `ObserveBridgeExceptions`), `ErrorType` |
 | 1043 | `ReactiveSchedulerOutsideModelTurn` | Warning | Work is scheduled on the model-context main-thread scheduler that `AddRunicReactiveModelContext()` installs, outside a model turn and outside any async flow that a still-open model context's turn started, so it runs on the scheduler it replaced. Logged once per ViewModel type found on the call stack, and once for work with no ViewModel there, such as a timer. Runic Desktop, CS-WebUI and `RunicWindowTestHost.Create` pass the application's logger factory when a window opens; before that, or without one, it goes to `Trace`. | `Source`, `Fallback` |
 | 1050 | `WindowRegistrationMissing` | Error | `ValidateWindow` or `OpenWindowAsync` finds a Window's generated Bridge unregistered, on any host. | `Code`, `DiagnosticMessage`, `Remediation` |
 | 1051 | `WindowReleaseFailed` | Error | `IRunicWindowService` fails to release a Window it opened, after that Window closed. | `Window`, `ErrorType` |
@@ -1873,6 +2339,8 @@ NativeAOT symbols and what to attach to a bug report.
 | 2006 | `DesktopDevelopmentAssetsUnavailable` | Warning | That directory, or the `www/` folder behind it, cannot be served, for example because it lacks the start page or contains a symbolic link; the window serves the other folder. | `Directory`, `ErrorType`, `Instead` |
 | 2007 | `DesktopDevelopmentReloadFailed` | Debug | A window did not reload after the directory changed, for example because it closed meanwhile. | |
 | 2100 | `CsWebUiWindowShowFailed` | Error | CS-WebUI cannot show a window: it finds no browser, the selected browser does not exist or start, its page does not connect in time, or the WebView does not start. `OpenWindowAsync` fails with a `RunicWindowConfigurationException`. | `Window`, `Code`, `Browser`, `BrowserPath`, `DiagnosticMessage` |
+| 2101 | `CsWebUiNativeLibraryUnchecked` | Warning | CS-WebUI loads a WebUI library that the application selected through `CSWEBUI_NATIVE_LIBRARY` or `WebUiNativeLibrary.SetLibraryPath`, whose version Runic cannot check; it needs WebUI commit `efac0e24` or later and is tested with `2b35db13f` (CsWebUi 2.5.0-beta.4.8). Once per process, before the first window opens. | `Path` |
+| 2102 | `CsWebUiMenuCommandFailed` | Error | A menu bar command of a CS-WebUI Window's root ViewModel (`IRunicMenuCommandSource`, `RunicCsWebUiHostOptions.MenuBar`) threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |
 | 3000 | `WindowCloseCancellationCallbackFailed` | Error | A Runic Desktop close-cancellation callback throws. | `ErrorType` |
 | 3001 | `WindowCloseConfirmationFailed` | Error | A Runic Desktop close confirmation throws; the Window stays open. | `ErrorType` |
 | 3002 | `DesktopConfigurationInvalid` | Error | `DesktopHost.Validate` finds a check that fails the window request. | `Code`, `Option`, `DiagnosticMessage`, `Remediation` |
@@ -1886,6 +2354,11 @@ NativeAOT symbols and what to attach to a bug report.
 | 3010 | `EmbeddedWindowDiagnostic` | Warning or Error | An embedded window reports an event of its own: on Linux, `web-process-terminated` when the WebKitGTK web process crashed and the page was reloaded (Warning), or was not reloaded after three reloads within a minute (Error). | `Code`, `DiagnosticMessage`, `Remediation` |
 | 3011 | `WindowStateHandlerFailed` | Error | A `DesktopWindow.StateChanged` handler threw; later handlers and events still run. | `ErrorType` |
 | 3012 | `FileDropHandlerFailed` | Error | A `DesktopWindow.FilesDropped` handler threw; later handlers and drops still run. | `ErrorType` |
+| 3013 | `WindowClosedHandlerFailed` | Error | A `DesktopWindow.Closed` handler threw; later handlers still run. | `ErrorType` |
+| 3014 | `MenuCommandFailed` | Error | A menu command target's `CanExecute` or `Execute` threw; the item counts as not runnable. | `Member`, `CommandId`, `ErrorType` |
+| 3015 | `MenuBarPlacementChanged` | Information | On Linux, a window's menu bar moved into the desktop's global menu or back into the window, or a Flatpak cannot reach the global menu registrar (`global-menu-permission`, the placement unchanged). | `OldPlacement`, `NewPlacement`, `Reason` |
+| 3016 | `GlobalMenuFailed` | Warning | On Linux, the window's menu could not be exported or the global menu registrar refused the window (`global-menu-failed`); the bar stays in the window. Once per window. | `DiagnosticMessage` |
+| 3017 | `MenuBarPlacementHandlerFailed` | Error | A `DesktopWindow.MenuBarPlacementChanged` handler threw; later handlers and events still run. | `ErrorType` |
 
 `Model` is the ViewModel type name, `Member` the command or property, and
 `Route` the Bridge route (a content presentation's route is per instance, such
@@ -1902,8 +2375,8 @@ or `Trace` without one.
 Navigation (1060-1075) and the model context (1030-1033) log under
 `Runic.Navigation` and `Runic.Navigation.RunicModelContext`; see the
 [Runic.Navigation logging](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md#logging)
-section. Events 2000, 2002 and 2004 use `Runic.Application.Views.Desktop`, and event 2100
-uses `Runic.Application.Views.CsWebUi` and the factory of the Window's scope. Events 3000-3012
+section. Events 2000, 2002 and 2004 use `Runic.Application.Views.Desktop`, and events 2100-2102
+use `Runic.Application.Views.CsWebUi` and the factory of the Window's scope. Events 3000-3012
 use `Runic.Desktop` and `DesktopHostOptions.LoggerFactory`, which `RunicDesktopHost.Run`
 and `RunicViewHost` fill from the application's services.
 
@@ -2058,6 +2531,26 @@ and `packed-refs` itself; it starts no `git` process. With the reftable format
 any update of the ref stack counts, of the repository's and, in a linked
 worktree, of the worktree's own, so other branches and fetches are reported
 too. To react to work-tree edits, add `Directory` or `File` targets for them.
+
+A change's `Targets` are the targets that changed; its `Entries` name the paths,
+each with its `Target` and a `RunicPathChangeKind`: `Created`, `Deleted` or
+`Changed` (the set is open; treat an unknown kind as `Changed`). A `File` target
+reports the file. A `Directory` or `Files` target reports the matching entries
+that were added or removed, a rename being both, in ordinal order of their
+names, and a `Files` target also those whose size, write time, kind or link
+target changed. Where the watcher cannot name what changed, as for `Link` and
+`GitHead`, an unreadable directory, or an event that named an entry whose
+metadata stayed the same, the entry is the target's own full path with
+`Changed`. Entries compare two readings, so an entry created and deleted again
+between them is not listed:
+
+```csharp
+change =>
+{
+    foreach (var entry in change.Entries)
+        if (entry.Kind == RunicPathChangeKind.Created) Records.Add(Load(entry.Path));
+}
+```
 
 Problems never throw on a watcher thread. They reach the `failed` callback,
 in a model turn, or `System.Diagnostics.Trace` (event 1015) without one, and the watcher

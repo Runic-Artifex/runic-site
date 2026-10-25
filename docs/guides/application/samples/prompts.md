@@ -200,6 +200,12 @@ for the dialog region in the same way.
   ViewModel state: a nullable property holding the question, set by the
   command, and an answer command that the dialog calls. The SDK has no example
   of this yet.
+- Where the page cannot answer, such as before it loaded or for a close
+  confirmation that must follow the platform's button order, Runic Desktop and
+  WPF windows show a native message box since SDK `0.11.0`:
+  `IWindowPlatformServices.MessageBoxes` (`IDesktopMessageBoxes`). Keep
+  ordinary prompts in the page; see the
+  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Platform/README.md#message-boxes).
 
 ## Next steps
 

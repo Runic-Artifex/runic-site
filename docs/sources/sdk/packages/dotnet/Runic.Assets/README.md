@@ -23,13 +23,14 @@ Runic has two ways to ship a frontend, and they do not share settings:
   its frontend inside the executable. `Runic.Assets.AspNetCore` and
   `Runic.Assets.Desktop` serve it.
 
-A Views application can serve an embedded archive instead of `www/` by setting
-`RunicDesktopHost.SurfaceOptions` to a `DesktopSurfaceOptions` whose `Content`
-is `new DesktopContent.Handler(assets.ToDesktopContentHandler())`. The archive
-must then hold everything the build copies to `www/`, including the host's
-`runic-views.js` client, and `dotnet runic dev` then serves it instead of the
-live `dist/`. A build property that connects the two pipelines is planned for a
-later 1.x release.
+A Views application on Runic Desktop embeds its frontend with one build
+property, `<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`:
+the Views build composes what it would copy to `www/`, including the host's
+`runic-views.js`, packs it as `RunicAssetsDist`, and the host serves the archive
+without application code; `dotnet runic dev` keeps serving the live frontend.
+See [Ship the frontend inside the executable](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#ship-the-frontend-inside-the-executable).
+Do not set `RunicAssetsDist` in such a project. To serve an archive from
+elsewhere, set `RunicDesktopHostOptions.Assets`.
 
 ## Install
 
@@ -70,12 +71,17 @@ The default entry point is `index.html`. Set `RunicAssetsEntryPoint` for a
 different entry file; set `RunicAssetsDistExclude` to omit files such as build
 statistics (by default `runic-assets.zip`; the value replaces that default, and
 an empty `<RunicAssetsDistExclude></RunicAssetsDistExclude>` in the project file
-packs every file). To use an existing canonical archive, set
+packs every file). `.git` directories and files whose names start with `.env`
+(such as `.env.local` or `.envrc`) are never packed unless you set
+`RunicAssetsDefaultExcludes` to `false`; a packed source map (`*.map`) is build
+warning `RAS1005`, which `<NoWarn>$(NoWarn);RAS1005</NoWarn>` silences. To use
+an existing canonical archive, set
 `RunicAssetsEmbeddedArchive` instead of `RunicAssetsDist`. Set
 `RunicAssetsEmbeddedResourceName` if you need a resource name other than
 `Runic.Assets.StaticFiles`, and supply that name to `ReadEmbedded`.
-To produce an archive in a separate step, run the packaged packer directly; see
-the [packer README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/Runic.Assets.Packer/README.md).
+To produce an archive in a separate step, run `dotnet runic assets pack`, the
+packer's command in the `dotnet-runic` tool; see the
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/Runic.Assets.Packer/README.md).
 
 Directory archives mark a file `Immutable` (`public, max-age=31536000,
 immutable`) only when its name carries a content hash, such as Vite's
@@ -83,6 +89,35 @@ immutable`) only when its name carries a content hash, such as Vite's
 `main.<hex>.js`. Every other file, including `.html`/`.htm` documents and
 unhashed `public/` files such as `favicon.ico`, `robots.txt` or `sw.js`, uses
 `Revalidate` with its strong entity tag.
+
+## Archives from code
+
+`AssetArchive.WriteTrustedDirectoryAsync` packs a directory that your own build
+produced, on Linux, Windows and macOS, with the same snapshot rules as the
+build: it rejects the symbolic links, and on Windows the junctions and other
+reparse points, that it sees, and it assumes that nobody changes the directory
+while it reads it. `AssetArchiveDirectoryOptions` selects the entry point
+(`index.html` by default), exact `ExcludedPaths`, and `ExcludeDefaultPatterns`,
+which leaves `.git` directories and `.env*` files out (`true` by default). On
+Linux, `AssetArchive.WriteDirectoryAsync(directory, destination, options,
+cancellationToken)` reads through pinned no-follow handles instead, for a
+directory that a less trusted process can write. The older
+`WriteDirectoryAsync(directory, destination, entryPoint, excludedPaths)` overload
+packs every file it is not told to exclude.
+
+```csharp
+await using FileStream output = File.Create("artifacts/app.runic-assets");
+await AssetArchive.WriteTrustedDirectoryAsync(
+    "Client.Web/dist",
+    output,
+    new AssetArchiveDirectoryOptions { ExcludedPaths = ["stats.html"] },
+    cancellationToken);
+```
+
+`AssetArchive.ReadAsync(stream, options, cancellationToken)` loads an archive
+from a stream without blocking, for example from an HTTP response or a file
+opened for asynchronous reads; the stream need not be seekable. It applies the
+same `AssetArchiveReadOptions` limits and validation as `AssetArchive.Read`.
 
 ## Small explicit bundles
 
@@ -165,9 +200,12 @@ and `AssetManifest.TryResolveRequestPath` return `false` for such paths instead
 of throwing, so request handlers can pass untrusted paths to them directly.
 `AssetManifest` is immutable and ordinally ordered.
 Each entry carries media type, length, SHA-256 digest, strong entity tag,
-Subresource Integrity token, and cache policy. CSP is host policy rather than
-archive content: the archive cannot safely invent an application's script or
-connect origins. ASP.NET Core delivery supports RFC conditional requests and
+Subresource Integrity token, and cache policy. A Content-Security-Policy is
+host policy rather than archive content, because the archive cannot know an
+application's script or connect origins. Set it with
+`AssetRoutingOptions.ContentSecurityPolicy`, which the ASP.NET Core and Desktop
+adapters send with HTML assets, or with `DesktopSurfaceOptions.ContentSecurityPolicy`
+for a whole Runic Desktop surface. ASP.NET Core delivery supports RFC conditional requests and
 single byte ranges directly from this metadata. Archive reads validate declared content and can be bounded with
 `AssetArchiveReadOptions` when input is not trusted.
 

@@ -2,26 +2,39 @@
 
 This guide takes a Runic Desktop application (`--host desktop`, with
 `--linux-gtk 3` or `4`) from `dotnet publish` to something you can hand to
-users on Windows, macOS and Linux. Since SDK `0.8.0-preview.5`,
-`dotnet new runic-app --packaging` (or `--packaging` with `dnx Runic.Create`)
-adds packaging recipes to the project: `packaging/package.mjs` publishes the
-application with NativeAOT and builds an MSIX package on Windows, a signed
-`.app` in a disk image on macOS, or a Flatpak on Linux, with the platform's own
-tools. There is no `dotnet runic package` command. The guide says which steps
-Runic CI exercises, which ones need signing credentials or accounts that CI
-does not have, and where the SDK does not help yet.
+users on Windows, macOS and Linux. Since SDK `0.11.0`,
+`dotnet runic package <target>` publishes the application with NativeAOT and
+packages it with the platform's own tools: an MSIX package on Windows, an
+`.app` in a disk image on macOS, and a Flatpak, AppImage, Debian package or rpm
+on Linux. `dotnet runic package flathub` writes a manifest for a Flathub
+submission. `dotnet new runic-app --packaging` (or `--packaging` with
+`dnx Runic.Create`) copies the command's built-in manifests to `packaging/`,
+where you edit them. The guide says which steps Runic CI exercises, which ones
+need signing credentials or accounts that CI does not have, and where the SDK
+does not help yet. The SDK's
+[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/docs/packaging.md)
+lists each format's tools, and the
+[dotnet-runic README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tools/dotnet-runic/README.md#package-the-application)
+has every option, manifest field and `RAPPPKG` code.
+
+From SDK `0.8.0-preview.5` to `0.10.0`, `--packaging` wrote a
+`packaging/package.mjs` script instead. `dotnet runic package` does not run it,
+and an existing project keeps it unchanged. The command reads the manifests in
+`packaging/`, and a manifest that uses a field the command does not fill fails
+with `RAPPPKG1006`: replace the old manifests with those of a new
+`--packaging` project, or delete them to use the built-in ones.
 
 Each platform section ends with a **Checked with** note. "Runic CI" means the
 SDK's
-[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/.github/workflows/ci.yml):
+[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/.github/workflows/ci.yml):
 its `Native` jobs run test applications that use Runic Desktop, and its
-`Packaging` jobs package the
-[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.10.0/tests/native/Runic.Packaging.Probe),
-a test application with the template's identity, with the template's
-`package.mjs` on each platform, install the package without the maintainers'
-signing credentials and open it through its URL scheme. The probe opens no
-window: it records what the installed package gives it, and
-[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/eng/ci/packaging-probe-check.mjs)
+`Packaging` jobs run `dotnet runic package` for the
+[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/tests/native/Runic.Packaging.Probe),
+a test application with the template's identity, on each platform, install the
+package without the maintainers' signing credentials and open it through its
+URL scheme. The probe opens no window: it records what the installed package
+gives it, and
+[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/eng/ci/packaging-probe-check.mjs)
 checks that record. CI does not package the template application itself or
 retain the packages. "Not executed" means the step uses the platform vendor's
 documented tools and has not been run for Runic.
@@ -38,7 +51,7 @@ in code. `--packaging` adds the properties that only the packages read:
 <ApplicationId>com.example.MyApp</ApplicationId>
 <ApplicationTitle>MyApp</ApplicationTitle>
 <Version>1.0.0</Version>
-<!-- packaging/package.mjs reads these too. The summary software centers and the Start menu show. -->
+<!-- dotnet runic package reads these too. The summary software centers and the Start menu show. -->
 <Description>A Runic desktop application</Description>
 <PackageProjectUrl>https://example.com</PackageProjectUrl>
 <!-- The MSIX package's publisher: the subject of the certificate that signs it. -->
@@ -46,6 +59,15 @@ in code. `--packaging` adds the properties that only the packages read:
 <!-- URL schemes the application opens, separated by semicolons, such as the redirect of an OAuth sign-in. The
      packages register them; see "Package it" in the README. -->
 <RunicApplicationUrlSchemes></RunicApplicationUrlSchemes>
+<!-- File types the application opens, separated by semicolons: an extension with its dot, optionally with its MIME
+     type, such as .notes=application/x-example-notes. The packages declare each as the application's own type. -->
+<RunicApplicationFileTypes></RunicApplicationFileTypes>
+<!-- Hosts whose https links the application opens, separated by semicolons, such as notes.example.org: Windows app
+     URI handlers and macOS universal links, which also need a file on each host; see the README. -->
+<RunicApplicationWebLinkHosts></RunicApplicationWebLinkHosts>
+<!-- true when the application serves D-Bus activation on Linux (PortalApplication.ExportApplicationAsync): the
+     desktop entry sets DBusActivatable=true and the Flatpak exports a D-Bus service file. -->
+<RunicApplicationDBusActivatable>false</RunicApplicationDBusActivatable>
 <!-- The Explorer and taskbar icon; icons/ holds the same placeholder as SVG and PNG. -->
 <ApplicationIcon>icons/icon.ico</ApplicationIcon>
 ```
@@ -56,15 +78,22 @@ It defaults to `com.example.` and the project name's ASCII letters and digits;
 choose it before you ship, because changing it later makes the platforms see a
 different application. Set it with `--application-id org.example.Notes` or in
 the project file: a reverse-DNS name for a domain you control, of ASCII letters,
-digits and dots, each part starting with a letter, at most 50 characters
-(`package.mjs` rejects other IDs). `PackageProjectUrl` becomes the AppStream
-homepage, and `Version` the package version: MSIX and `Info.plist` take its
-numeric part (`1.2.3-preview.4` becomes `1.2.3.0` and `1.2.3`).
+digits and dots, each part starting with a letter, at most 50 characters.
+`dotnet runic package` rejects other IDs with `RAPPPKG1001`, and since SDK
+`0.11.0` `dotnet runic doctor` warns about them in its `application-id`
+check. `PackageProjectUrl` becomes the AppStream homepage, and `Version` the
+package version: MSIX and `Info.plist` take its numeric part
+(`1.2.3-preview.4` becomes `1.2.3.0` and `1.2.3`), and deb and rpm sort a
+prerelease before its release (`1.2.3~preview.4`).
 
 `icons/` holds a neutral placeholder icon as `icon.svg`, `icon.png` (512 px)
 and `icon.ico`. Replace it as the generated README's
-[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
+[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
 section describes; the packages take their icons from these files.
+`RunicPackageIcon` names another 512 px PNG (an `icon.svg` beside it is the
+scalable icon on Linux), `RunicPackageName` the deb and rpm package name (the
+lower-cased assembly name by default), `PackageLicenseExpression` the rpm
+`License`, and `RunicPackagingDirectory` another folder for the manifests.
 
 ### Choose the publish mode
 
@@ -80,15 +109,16 @@ dotnet publish -c Release -r osx-arm64 --self-contained true
 ```
 
 NativeAOT gives one native executable per runtime identifier (RID); it is what
-`package.mjs` publishes and what Runic CI publishes on every platform. It
-cannot cross operating systems, so publish and package on Windows for `win-*`,
-on macOS for `osx-*` and on Linux for `linux-*`; a CI matrix with one runner
-per OS is the usual setup. Since SDK `0.8.0-preview.2`, a CI job that builds
-first can publish NativeAOT with
+`dotnet runic package` publishes and what Runic CI publishes on every platform.
+It cannot cross operating systems, so publish and package on Windows for
+`win-*`, on macOS for `osx-*` and on Linux for `linux-*`; a CI matrix with one
+runner per OS is the usual setup. `dotnet runic package` refuses a target or
+RID of another operating system with `RAPPPKG1004`. Since SDK
+`0.8.0-preview.2`, a CI job that builds first can publish NativeAOT with
 `dotnet publish --no-build -p:PublishAot=true` after a `dotnet build` with the
 same configuration, target framework and `PublishAot`: the publish reuses the
 Bridge code of that build and reports
-[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/docs/diagnostics.md#runicbridge022)
+[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/docs/diagnostics.md#runicbridge022)
 when it is missing. Before publishing, ask
 the CLI what the target needs on the machine that publishes:
 
@@ -98,7 +128,7 @@ dotnet runic doctor --runtime win-x64 --aot --fail-on fail
 ```
 
 The `target-rid` check reads the
-[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/eng/support.json):
+[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/eng/support.json):
 for Runic Desktop every supported RID (`win-x64`, `win-arm64`, `osx-arm64`,
 `linux-x64`, `linux-arm64` and the musl RIDs) is CI-verified except
 `osx-x64`, which ships native support without CI coverage. Test it on a real
@@ -118,11 +148,32 @@ await using var window = await host.OpenWindowAsync<WorkspaceWindow>(new RunicWi
 ```
 
 Ship the executable and `www` together, or embed the frontend in the
-executable with [Runic Assets](../assets/README.md) and serve it with
-`Runic.Assets.Desktop`, so the package holds a single file. NativeAOT also
-writes debug symbols (`.pdb` on Windows, `.dbg` on Linux, `.dSYM` on macOS).
-`package.mjs` leaves them out of the package; keep them per release for
-[crash analysis](crash-reporting.md).
+executable. Since SDK `0.11.0`, one property does that without code:
+
+```xml docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+<PropertyGroup>
+  <RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>
+</PropertyGroup>
+```
+
+The build then packs the frontend into the application assembly with
+[Runic Assets](../assets/README.md), the build and publish output have no
+`www`, and `RunicDesktopHost` and the WPF `RunicViewHost` serve it, so a
+single-file or NativeAOT executable carries its frontend. `Files` stays the
+default; another value, or the CS-WebUI host, warns with `RUNICBRIDGE030` and
+builds as `Files`. `dotnet runic dev` still serves the live frontend. See
+[ship the frontend inside the executable](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#ship-the-frontend-inside-the-executable).
+NativeAOT also writes debug symbols (`.pdb` on Windows, `.dbg` on Linux,
+`.dSYM` on macOS). `dotnet runic package` leaves them out of the package; keep
+them per release for [crash analysis](crash-reporting.md).
+
+Since SDK `0.11.0`, asset archives leave out `.git` and `.env*` files at any
+depth, and source maps warn with `RAS1005`; `RunicAssetsDefaultExcludes=false`
+packs them again. New projects also send a Content-Security-Policy without
+`'unsafe-eval'` outside `Development`
+(`RunicDesktopHostOptions.ContentSecurityPolicy`); test the published
+application with it, because a page dependency that evaluates strings fails
+under it.
 
 The window icon at run time comes from `DesktopWindowOptions.IconFile`, which
 an application sets through the `WindowOptions` of its
@@ -132,28 +183,39 @@ file you pass. GTK 4 windows reject `IconFile`; their icon comes from the
 installed desktop entry (see [Linux](#linux)). The icon that a file manager,
 Dock or launcher shows comes from the package metadata described below.
 
-### Run the packaging recipes
+### Run dotnet runic package
 
-`package.mjs` reads `ApplicationId`, `ApplicationTitle`, `Version`,
-`Description`, `PackageProjectUrl`, `RunicApplicationPublisher` and
-`RunicApplicationUrlSchemes` from the project file, publishes with NativeAOT,
-fills the `{{...}}` fields of the manifests in `packaging/` and writes the
-package to `artifacts/package/<target>/`. Run it with Node 22 or later (or
-Bun) from the project directory, on the platform you package for:
+`dotnet runic package` reads the identity properties above from the project
+file, publishes with NativeAOT, fills the `{{...}}` fields of its manifests and
+writes the package to `artifacts/package/<target>/`. Run it from the project
+directory, on the platform you package for:
 
 ```sh docs-test=template:README.md packaging=true
-node packaging/package.mjs windows   # MSIX, on Windows with the Windows SDK
-node packaging/package.mjs macos     # .app in a disk image, on macOS with Xcode's command line tools
-node packaging/package.mjs flatpak   # Flatpak, on Linux with flatpak and flatpak-builder
+dotnet runic package windows    # MSIX, on Windows with the Windows SDK
+dotnet runic package macos      # .app in a disk image, on macOS with Xcode's command line tools
+dotnet runic package flatpak    # Flatpak, on Linux with flatpak-builder
+dotnet runic package appimage   # AppImage, on Linux with appimagetool
+dotnet runic package deb        # Debian package, on Linux with dpkg-deb
+dotnet runic package rpm        # rpm, on Linux with rpmbuild (also on Debian and Ubuntu)
 ```
 
-Without signing options, the MSIX and the Flatpak are unsigned and the `.app`
-is signed ad hoc: enough to install and test the package on your own machine.
-The platform sections below list what each platform needs to ship it. The
-manifests are yours to edit; `package.mjs` fails when a manifest uses a field
-it does not fill. `--project`, `--output` and `--rid` override the project
-file, the output folder and the RID (by default `osx-arm64` on macOS, and
-the machine's x64 or arm64 RID on Windows and Linux).
+Without signing options, the MSIX, Flatpak, AppImage, deb and rpm are unsigned
+and the `.app` is signed ad hoc: enough to install and test the package on your
+own machine. Runic signs nothing for you; the platform sections below list what
+each platform needs to ship it. A missing tool stops the command before it
+builds anything (`RAPPPKG1002`, which names the package that provides it).
+`--project` (`-p`), `--configuration` (`-c`), `--runtime` (`-r`, the host's
+architecture by default) and `--output-directory` (`-o`) override the
+project, the configuration, the RID and the output folder. `--format json`
+reports what was written as the `runic.application.tool.package/1` payload,
+with each package's `signing` (`none`, `adhoc`, `test` or `identity`) and its
+warnings, such as `RAPPPKG2001` for an unsigned package.
+
+The command has a built-in copy of each manifest: `windows/AppxManifest.xml`,
+`macos/Info.plist`, `macos/entitlements.plist`, `linux/app.desktop`,
+`linux/app.metainfo.xml`, `linux/app.service` and `linux/flatpak.yml`. A file
+with the same path in `packaging/` replaces the built-in one; a manifest you
+delete falls back to the default.
 
 ## Windows
 
@@ -175,7 +237,7 @@ without arguments or data.
 With NativeAOT on `win-x64` or `win-arm64`, Runic Desktop's build targets link
 the WebView2 loader statically into the executable, so the publish folder
 contains no `WebView2Loader.dll`
-([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
+([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
 A JIT build (self-contained or framework-dependent) copies
 `WebView2Loader.dll` next to the executable; ship it, or Desktop reports
 `webview2-loader-unavailable`. The template sets the Explorer icon of the
@@ -199,13 +261,14 @@ below `Environment.SpecialFolder.LocalApplicationData`.
 
 ### MSIX
 
-`node packaging/package.mjs windows` publishes into
-`artifacts/package/windows/msix/`, writes the filled
-`packaging/windows/AppxManifest.xml` and the icon there, and packs it with the
-Windows SDK's `makeappx pack` into
-`<application ID>_<version>_<x64|arm64>.msix`. The manifest declares a
-full-trust desktop application; the package name is the application ID, and
-`Publisher` comes from `RunicApplicationPublisher` (or `--publisher`):
+`dotnet runic package windows` publishes into
+`artifacts/package/windows/msix/`, writes the filled `AppxManifest.xml` and
+the icon there, and packs it with the Windows SDK's `makeappx pack` into
+`<application ID>_<version>_<x64|arm64>.msix`. The command finds `makeappx`
+and `signtool` on `PATH` or in the newest Windows SDK folder. The manifest
+declares a full-trust desktop application; the package name is the
+application ID, and `Publisher` comes from `RunicApplicationPublisher` (or
+`--publisher`):
 
 ```xml docs-test=template:packaging/windows/AppxManifest.xml
 <Identity Name="{{ApplicationId}}" Publisher="{{Publisher}}" Version="{{PackageVersion}}" ProcessorArchitecture="{{Architecture}}" />
@@ -215,37 +278,41 @@ full-trust desktop application; the package name is the application ID, and
 <rescap:Capability Name="runFullTrust" />
 ```
 
-Each scheme in `RunicApplicationUrlSchemes` becomes a `windows.protocol`
-extension (see [Opened URLs and files](#opened-urls-and-files)). Windows
-installs only signed packages, and `Publisher` must equal the subject of the
-signing certificate. `package.mjs` signs the package with `signtool` when you
-pass a certificate:
+The `{{Extensions}}` field declares the URL schemes, file types and app URI
+handlers of the project file and the login startup task (see
+[Opened URLs and files](#opened-urls-and-files)). Windows installs only signed
+packages, and `Publisher` must equal the subject of the signing certificate.
+The command signs the package with `signtool` when you pass a certificate:
 
 ```powershell docs-test=skip:needs-signing-credentials
 $env:RUNIC_SIGNING_PASSWORD = '<password>'
-node packaging/package.mjs windows --certificate app.pfx --timestamp-url <timestamp-url>
-node packaging/package.mjs windows --thumbprint <sha1> --timestamp-url <timestamp-url>
+dotnet runic package windows --certificate app.pfx --timestamp-url <timestamp-url>
+dotnet runic package windows --thumbprint <sha1> --timestamp-url <timestamp-url>
 ```
 
 `--certificate` signs with a PFX file (its password in
-`RUNIC_SIGNING_PASSWORD`), `--thumbprint` with a certificate from the
-certificate store. Code-signing certificates issued today keep their private
-key on a hardware token or a cloud signing service; such a service signs the
-unsigned package with its own `signtool` options. The Microsoft Store signs
-packages itself. To try a package without a code-signing certificate, sign it
-with a self-signed certificate whose subject is the publisher and trust that
-certificate on the test machine only, as Runic CI does.
+`RUNIC_SIGNING_PASSWORD`, which the command never prints), `--thumbprint`
+with a certificate from the certificate store or a hardware token. Code-signing
+certificates issued today keep their private key on a hardware token or a cloud
+signing service; such a service signs the unsigned package with its own
+`signtool` options. The Microsoft Store signs packages itself. To try a package
+without a code-signing certificate, sign it with a self-signed certificate
+whose subject is the publisher and trust that certificate in
+`Cert:\LocalMachine\TrustedPeople` on the test machine only, as Runic CI does;
+the payload then reports `"signing": "test"`.
 
 ### Identity in a package, and without one
 
 In an MSIX package, Windows registers the AppUserModelID
 `<package family name>!App`. Since `0.8.0-preview.5`, Runic's notifications
 use it there and ignore the ID passed to `AddRunicPlatformServices(...)` or
-`CreateNotifications(...)`. Login startup reports
-`Unavailable(BackendUnavailable)` in a package, because Windows redirects a
-package's writes to the `Run` key; a packaged application declares a
-`windows.startupTask` extension (`uap5:StartupTask`) in its manifest instead,
-which the template's manifest does not include and Runic has no API for.
+`CreateNotifications(...)`. Since SDK `0.11.0`, the manifest declares a
+`desktop:StartupTask` (`TaskId="LoginStartup"`, off until the application turns
+it on), and Runic's login startup drives it in the package; before, it reported
+`Unavailable(BackendUnavailable)` there. A packaged application passes
+`DesktopPlatformServices.GetLaunch(args)` to `ApplicationInstance.ClaimAsync`,
+because its protocol and file activations do not arrive in `args`; see
+[desktop services](../desktop-services.md#status-icon-single-instance-and-login-startup).
 
 An unpackaged copy (a ZIP or another installer) has no package identity.
 Register its AppUserModelID yourself with a Start menu shortcut whose
@@ -254,7 +321,10 @@ to `AddRunicPlatformServices(ApplicationIdentity.Id)` for notifications.
 
 ### ZIP and other installers
 
-- **ZIP**: archive the publish folder. Nothing needs registering.
+- **ZIP**: archive the publish folder. Nothing needs registering; to open URL
+  schemes and file types, the application registers them itself with
+  `IDesktopOpenRegistration` (see
+  [desktop services](../desktop-services.md#opened-urls-file-types-and-web-links)).
 - **Installer**: any installer that copies a folder works (for example WiX or
   Inno Setup). Add the WebView2 bootstrapper as a prerequisite for Windows 10
   machines that may not have the runtime, and a Start menu shortcut with the
@@ -264,11 +334,11 @@ The SDK provides no installer project or WebView2 bootstrapper integration.
 
 ### Sign with Authenticode
 
-`package.mjs` signs the MSIX, not the executable inside it. For a ZIP or
-another installer, sign the executable before packaging it, then sign the
-installer itself. With NativeAOT the executable is the only binary you build;
-JIT builds also contain your own assemblies, which you can sign the same way
-(`WebView2Loader.dll` is already signed by Microsoft).
+`dotnet runic package windows` signs the MSIX, not the executable inside it.
+For a ZIP or another installer, sign the executable before packaging it, then
+sign the installer itself. With NativeAOT the executable is the only binary you
+build; JIT builds also contain your own assemblies, which you can sign the same
+way (`WebView2Loader.dll` is already signed by Microsoft).
 
 ```powershell docs-test=skip:needs-signing-credentials
 signtool sign /fd SHA256 /tr <timestamp-url> /td SHA256 /f <certificate.pfx> /p <password> MyApp.exe
@@ -283,15 +353,16 @@ Use the `signtool` options your certificate provider documents instead of
 `dotnet publish -c Release -r win-x64 --self-contained true -p:PublishAot=true`,
 asserts that no `WebView2Loader.dll` was published, copies only the `.exe` into
 an empty folder and runs it with WebView2. Its `Packaging / windows` job runs
-`package.mjs windows` for the probe, signs the MSIX with a self-signed
-certificate trusted on the runner only, installs it with `Add-AppxPackage` and
-opens its URL scheme. The probe's record shows the AppUserModelID
+`dotnet runic package windows` for the probe with a self-signed certificate
+trusted on the runner only, installs the MSIX with `Add-AppxPackage` and opens
+its URL scheme. The probe's record shows the AppUserModelID
 `org.runic.tests.PackagingProbe_<publisher hash>!App`, notifications that
-report `Success` and login startup that reports
-`Unavailable(BackendUnavailable)`. The same `WinExe` started outside the
-package writes its diagnostic to a redirected standard error and to
-`diagnostics.log`. Publicly trusted code signing, the timestamp server,
-installers, Start menu shortcuts and the Microsoft Store were not executed.
+report `Success`, a protocol activation, and the startup task turned on and
+off again. The job then opens two of the package's files at once, which reach
+one process. The same `WinExe` started outside the package writes its
+diagnostic to a redirected standard error and to `diagnostics.log`. Publicly
+trusted code signing, the timestamp server, app URI handlers, installers, Start
+menu shortcuts and the Microsoft Store were not executed.
 
 ## macOS
 
@@ -306,7 +377,7 @@ lipo -create -output MyApp publish/osx-arm64/MyApp publish/osx-x64/MyApp
 `osx-arm64` is CI-verified; `osx-x64` is packaged but not run by Runic CI.
 Ship one bundle per architecture, or combine the two NativeAOT executables
 into a universal binary with `lipo` (the `www` folders are identical):
-`node packaging/package.mjs macos --rid osx-arm64,osx-x64` publishes both and
+`dotnet runic package macos --runtime osx-arm64,osx-x64` publishes both and
 runs `lipo`. Desktop supports macOS 15 and later, the oldest version .NET 10
 supports; WKWebView is part of macOS.
 
@@ -317,8 +388,9 @@ notarization, permissions, notifications and Launch Services rely on.
 
 ### Bundle layout
 
-`node packaging/package.mjs macos` builds this bundle in
-`artifacts/package/macos/`, with the icon converted from `icons/icon.png`:
+`dotnet runic package macos` builds this bundle in `artifacts/package/macos/`,
+named after `ApplicationTitle`, with an `.icns` icon made from the 512 px PNG
+with `sips` and `iconutil`:
 
 ```text docs-test=skip:diagram
 MyApp.app/
@@ -335,14 +407,16 @@ Apple expects only code under `Contents/MacOS`. Since `0.8.0-preview.5`, an
 application in an `.app` bundle without a `www` folder next to its executable
 loads its frontend from `Contents/Resources/www`; `RunicWindowOptions.ContentRoot`
 still overrides it. A bundle you build yourself needs no content-root code
-either. Alternatively, embed the frontend with Runic Assets so that the bundle
-holds only the executable.
+either. An application that embeds its frontend
+(`RunicApplicationFrontendDelivery=Embedded`) has no `www` folder, and the
+bundle holds only the executable.
 
 ### Info.plist
 
-`package.mjs` fills `packaging/macos/Info.plist`: the bundle identifier is the
-application ID, both bundle versions are the numeric part of `Version`, and
-`CFBundleURLTypes` lists the schemes of `RunicApplicationUrlSchemes`:
+The command fills `macos/Info.plist`: the bundle identifier is the application
+ID, both bundle versions are the numeric part of `Version`, `CFBundleURLTypes`
+lists the schemes of `RunicApplicationUrlSchemes`, and the document types come
+from `RunicApplicationFileTypes`:
 
 ```xml docs-test=template:packaging/macos/Info.plist
 <key>CFBundleIdentifier</key><string>{{ApplicationId}}</string>
@@ -354,7 +428,7 @@ application ID, both bundle versions are the numeric part of `Version`, and
 <key>CFBundleVersion</key><string>{{BundleVersion}}</string>
 <key>CFBundleIconFile</key><string>icon</string>
 <key>LSMinimumSystemVersion</key><string>15.0</string>
-<key>NSHighResolutionCapable</key><true/>{{UrlSchemes}}
+<key>NSHighResolutionCapable</key><true/>{{UrlSchemes}}{{DocumentTypes}}
 ```
 
 Runic Desktop loads the page from `http://127.0.0.1:<port>`; the bundle
@@ -364,8 +438,8 @@ bundle supports, add `CFBundleLocalizations` (see
 
 ### Sign, notarize and staple
 
-`package.mjs` signs the bundle with the hardened runtime
-(`codesign --force --options runtime`) and `packaging/macos/entitlements.plist`,
+The command signs the bundle with the hardened runtime
+(`codesign --force --options runtime`) and `macos/entitlements.plist`,
 verifies it with `codesign --verify --strict`, and puts it in a compressed disk
 image (`<name>-<version>.dmg`, made with `hdiutil`) next to a link to
 `/Applications`. Without `--sign` it signs ad hoc: the application runs on the
@@ -375,25 +449,27 @@ in the keychain, and notarization credentials stored once with
 `xcrun notarytool store-credentials <profile>`:
 
 ```sh docs-test=skip:needs-signing-credentials
-node packaging/package.mjs macos --sign "Developer ID Application: Example Ltd (TEAMID)" --notary-profile <profile>
+dotnet runic package macos --sign "Developer ID Application: Example Ltd (TEAMID)" --notary-profile <profile>
 spctl --assess --type open --context context:primary-signature --verbose MyApp-1.0.0.dmg
 ```
 
-With `--sign`, `package.mjs` adds a secure timestamp and signs the disk image
+With `--sign`, the command adds a secure timestamp and signs the disk image
 too; with `--notary-profile` it submits the disk image with
 `xcrun notarytool submit --wait` and staples the ticket to it with
 `xcrun stapler staple`. Use `xcrun notarytool log <submission-id>` to read why
-a submission was rejected.
+a submission was rejected. In CI, import the certificate into a temporary
+keychain first, and keep the certificate and the notarization key in your CI
+system's secrets.
 
 A NativeAOT executable generates no code at run time, so it needs no JIT
-entitlement under the hardened runtime, and the template's
+entitlement under the hardened runtime, and the built-in
 `entitlements.plist` is empty. A JIT build does: start from Microsoft's .NET
 guidance for the hardened runtime, which includes
 `com.apple.security.cs.allow-jit`. Prefer NativeAOT on macOS.
 
 The entitlements file needs entries only for the App Sandbox (required for
-the Mac App Store). The CI fixture's
-[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tests/native/platform-sandbox/entitlements.plist)
+the Mac App Store) and for universal links. The CI fixture's
+[`entitlements.plist`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tests/native/platform-sandbox/entitlements.plist)
 is the tested starting point: `com.apple.security.app-sandbox`,
 `com.apple.security.network.server` and `com.apple.security.network.client`
 for the loopback listener and its WebSocket, and
@@ -401,8 +477,8 @@ for the loopback listener and its WebSocket, and
 file dialogs.
 
 **Checked with**: Runic CI's `Packaging / macos` job runs
-`package.mjs macos` for the probe on `macos-26` (`osx-arm64`), verifies the
-bundle with `codesign --verify --strict`, checks that it is signed
+`dotnet runic package macos` for the probe on `macos-26` (`osx-arm64`),
+verifies the bundle with `codesign --verify --strict`, checks that it is signed
 `(adhoc,runtime)`, lints its `Info.plist` with `plutil`, checks that the icon
 and `Contents/Resources/www` are in the bundle and `www` is not in
 `Contents/MacOS`, mounts the disk image and verifies the bundle and the
@@ -413,9 +489,10 @@ also publishes `Runic.Platform.Runtime.Tests` (a NativeAOT application whose
 native window is a Runic Desktop WKWebView), signs it ad hoc with the sandbox
 entitlements and retains it as the `platform-sandbox-osx-arm64-<run>` artifact
 for
-[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tests/native/platform-sandbox/README.md).
-Developer ID signing, notarization, stapling, universal binaries and `osx-x64`
-were not executed: they need an Apple Developer account or an Intel Mac.
+[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tests/native/platform-sandbox/README.md).
+Developer ID signing, notarization, stapling, universal links, universal
+binaries and `osx-x64` were not executed: they need an Apple Developer account
+or an Intel Mac.
 
 ## Linux
 
@@ -440,15 +517,21 @@ When they are missing, Desktop reports `webkitgtk-runtime-missing` or
 falls back to an installed browser. Do not bundle GTK or WebKitGTK in a plain
 folder: WebKitGTK starts helper processes from its own installation paths.
 Use a Flatpak runtime that provides them, or declare them as package
-dependencies.
+dependencies, as the deb and rpm do.
+
+Since SDK `0.11.0`, `Runic.Desktop` depends on `Runic.Platform.Linux.DBus`
+and Tmds.DBus.Protocol on every OS, for the Linux global menu, so a JIT
+build ships those two managed assemblies on Windows and macOS too, unused
+there.
 
 ### Desktop entry and icons
 
 Launchers find an application through a desktop entry named after its
-application ID, with icons in the hicolor theme under the same name. The
-template's Flatpak recipe fills `packaging/linux/app.desktop`; `%U` passes
-opened URLs to the application, and a `MimeType=x-scheme-handler/<scheme>;`
-line follows for the schemes of `RunicApplicationUrlSchemes`:
+application ID, with icons in the hicolor theme under the same name. Every
+Linux target fills `linux/app.desktop`; `%U` passes opened URLs to the
+application, and the `{{MimeTypes}}` and `{{DBusActivatable}}` fields add a
+`MimeType=` line for the URL schemes and file types and `DBusActivatable=true`
+when the project declares them:
 
 ```ini docs-test=template:packaging/linux/app.desktop
 [Desktop Entry]
@@ -459,8 +542,8 @@ Exec={{Executable}} %U
 Icon={{ApplicationId}}
 ```
 
-Install it as `share/applications/<application ID>.desktop`, and the icons as
-`share/icons/hicolor/<size>x<size>/apps/<application ID>.png` and
+The packages install it as `share/applications/<application ID>.desktop`, and
+the icons as `share/icons/hicolor/512x512/apps/<application ID>.png` and
 `scalable/apps/<application ID>.svg`. GTK 4 matches windows to the entry
 through its application ID, which the template passes from the project file:
 
@@ -468,30 +551,34 @@ through its application ID, which the template passes from the project file:
 var options = new DesktopHostOptions { DiagnosticSink = ReportDiagnostic }.WithGtk4(ApplicationIdentity.Id);
 ```
 
-Check the entry with `desktop-file-validate`.
+The command checks the entry with `desktop-file-validate` and the AppStream
+metadata `linux/app.metainfo.xml` with `appstreamcli` where they are
+installed. Before you publish a Linux package, set the license, a longer
+description and screenshots in the metadata; its homepage is
+`PackageProjectUrl`.
 
 ### Flatpak
 
-Flatpak is the Linux package the template's recipes build. It runs on the
-standard `org.gnome.Platform` 50 runtime, which provides GTK 4 and WebKitGTK 6,
-so create the project with `--host desktop --linux-gtk 4` for it; the GTK 3
-host has not been tested in Flatpak. On Debian and Ubuntu,
-`node packaging/package.mjs flatpak` needs these packages and the Flathub
-remote, from which `flatpak-builder` installs the GNOME runtime and SDK on the
-first build:
+The Flatpak runs on the standard `org.gnome.Platform` 50 runtime, which
+provides GTK 4 and WebKitGTK 6, so create the project with
+`--host desktop --linux-gtk 4` for it; the GTK 3 host has not been tested in
+Flatpak. On Debian and Ubuntu, `dotnet runic package flatpak` needs these
+packages and the Flathub remote, from which `flatpak-builder` installs the
+GNOME runtime and SDK on the first build:
 
 ```sh docs-test=skip:illustrative-command
 sudo apt-get install flatpak flatpak-builder appstream appstream-compose librsvg2-common desktop-file-utils
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 ```
 
-`package.mjs` publishes the application, fills the desktop entry, the AppStream
-metadata `packaging/linux/app.metainfo.xml` and the `flatpak-builder` manifest
-`packaging/linux/flatpak.yml`, and checks the entry with
-`desktop-file-validate` and the metadata with `appstreamcli validate`. The manifest installs the published folder in
-`/app/lib/<executable>/` with a launcher in `/app/bin/`, the desktop entry, the
-metadata and both icons under the application ID, which is also the
-manifest's `app-id`, with this runtime and these permissions:
+The command publishes into `flatpak-source/`, fills the desktop entry, the
+metadata and the `flatpak-builder` manifest `linux/flatpak.yml`, and builds
+with `flatpak-builder --install-deps-from=flathub`. The manifest installs the
+published folder in `/app/lib/<executable>/` with a launcher in `/app/bin/`,
+the desktop entry, the metadata, both icons, and the file types' MIME
+definitions and the D-Bus service file when the project has them, under the
+application ID, which is also the manifest's `app-id`, with this runtime and
+these permissions:
 
 ```yaml docs-test=template:packaging/linux/flatpak.yml
 runtime: org.gnome.Platform
@@ -507,25 +594,82 @@ finish-args:
   - --share=network
 ```
 
+Since SDK `0.11.0`, a GTK window can move its menu bar into KDE Plasma's
+global menu. In a Flatpak this needs one more finish argument,
+`--talk-name=com.canonical.AppMenu.Registrar`, which the built-in manifest
+does not add; without it the bar stays in the window and the application
+reports `global-menu-permission`. Add it to your `packaging/linux/flatpak.yml`
+if the application declares a menu bar; see
+[menus](../desktop-services.md#menus).
+
 `flatpak-builder` exports the build to the repository
 `artifacts/package/flatpak/repo`, and `flatpak build-bundle` writes
 `<application ID>.flatpak`. Both are unsigned unless you pass
 `--gpg-sign <key id>`; install the bundle with
-`flatpak install --user <application ID>.flatpak`. Before you publish, set the
-license, a longer description and screenshots in the AppStream metadata; its
-homepage is `PackageProjectUrl`.
+`flatpak install --user <application ID>.flatpak`.
 
 Inside Flatpak the GTK 4 runner takes the application ID from `FLATPAK_ID`;
 an explicit `WithGtk4(...)` ID must match it, or Desktop throws. The template
 passes `ApplicationId`, which is the Flatpak's `app-id`. File dialogs
 must go through the XDG portal: the GTK 4 template already references
 `Runic.Platform.Linux.Portal` (see [desktop services](../desktop-services.md)).
+Since SDK `0.11.0`, a Flatpak without Secret Service permission stores secrets
+through the Secret portal.
 
-The recipe packages a folder published on the build machine. Flathub builds
-from source in its own sandbox and reviews a submission from your account,
-which needs a manifest that builds the .NET project offline (the
-`org.freedesktop.Sdk.Extension.dotnet` SDK extension and generated NuGet
-sources); the SDK does not provide one.
+### Flathub
+
+The Flatpak target packages a folder published on the build machine. Flathub
+builds from source in its own sandbox, without network access, and reviews a
+submission from your account. Since SDK `0.11.0`, `dotnet runic package
+flathub` writes that source-build manifest: `<ApplicationId>.yml` on the GNOME
+runtime with the .NET and, for a frontend, Node.js SDK extensions, a `git`
+source at your commit or tag, the desktop entry and metadata, and
+`nuget-sources.json` and `npm-sources.json` with every package of your
+committed lock files. It runs on any OS; `--build` then builds the manifest
+offline on Linux, as Flathub's builders do, and writes a bundle to try:
+
+```bash docs-test=readme:tools/dotnet-runic/README.md
+dotnet runic package flathub --git-url https://github.com/example/notes.git --git-tag v1.2.0   # Flathub manifest, on any OS
+```
+
+The project needs a NuGet lock file for the NativeAOT restore whose
+`RuntimeIdentifiers` list `linux-x64` and `linux-arm64`, and npm with its
+`package-lock.json` for the frontend. A missing commit or tag, lock file, hash
+or RID is `RAPPPKG1007`. Generate the manifest again whenever a lock file
+changes, and submit it as Flathub's submission guide describes; Runic submits
+nothing. The SDK's
+[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/docs/packaging.md#flathub)
+lists the lock file settings and the review's expectations.
+
+### AppImage, deb and rpm
+
+Since SDK `0.11.0`, `dotnet runic package appimage`, `deb` and `rpm` build the
+other Linux formats. None of them bundles GTK or WebKitGTK: they use the target
+system's libraries listed above.
+
+- **AppImage**: needs `appimagetool` on `PATH` and the matching AppImage
+  runtime (`runtime-x86_64` or `runtime-aarch64` from the type2-runtime
+  releases) beside it, or named by `RUNIC_APPIMAGE_RUNTIME`, so packaging
+  downloads nothing. On a machine without FUSE 2, set
+  `APPIMAGE_EXTRACT_AND_RUN=1`. It writes
+  `<ApplicationTitle>-<version>-<arch>.AppImage`. An AppImage registers no URL
+  schemes or file types by itself and is not D-Bus activatable, because it has
+  no fixed path. Document the WebKitGTK package your users need, and sign it
+  with `appimagetool --sign` or a detached GPG signature.
+- **deb**: needs `dpkg-deb`. The package installs the publish folder in
+  `/usr/lib/<application ID>/` with a `/usr/bin/<assembly name>` link, the
+  desktop entry, icons, metadata, MIME definitions and, with
+  `RunicApplicationDBusActivatable`, the D-Bus service file. It depends on
+  `libgtk-3-0t64 | libgtk-3-0, libwebkit2gtk-4.1-0`, or on
+  `libgtk-4-1, libwebkitgtk-6.0-4` for GTK 4. A deb is not signed itself:
+  publish it in an apt repository signed with your key.
+- **rpm**: needs `rpmbuild` (`rpm-build` on Fedora, `rpm` on Debian and
+  Ubuntu) and stages the same tree. It requires only `webkit2gtk4.1`, or
+  `webkitgtk6.0` for GTK 4, with automatic dependencies off, because the
+  executable loads GTK with `dlopen`. Sign it with `rpmsign --addsign`.
+
+The SDK's packaging guide also has a Snap recipe, which repacks the deb; Snap
+is not a `dotnet runic package` target.
 
 ### Nix
 
@@ -534,32 +678,30 @@ sandbox from its lock files, with GTK and WebKitGTK as run-time dependencies,
 and its NixOS and Home Manager modules install it. See
 [Package a Runic application with Nix](nix-packaging.md).
 
-### AppImage
-
-The SDK has no AppImage recipe and Runic has not run one. Because WebKitGTK is
-not bundled (see above), an AppImage can only carry the executable, `www`,
-the desktop entry and icons in an AppDir and rely on the host's GTK and
-WebKitGTK libraries listed in the table. Build it with `appimagetool` on the
-oldest supported distribution and test it on each distribution you support.
-For distribution packages (`.deb`, `.rpm`), declare the same libraries as
-dependencies.
-
 **Checked with**: Runic CI installs `libwebkit2gtk-4.1-0` and
 `libwebkitgtk-6.0-4` on `ubuntu-24.04`, publishes `Runic.Desktop.Gtk4.Smoke`
 with
 `dotnet publish -c Release -r linux-x64 --self-contained true -p:PublishAot=true`
 and runs the executable under Xvfb, including its event-loop and no-display
-paths. Its `Packaging / flatpak` job runs `package.mjs flatpak` for the probe
-on `ubuntu-24.04`, installs the bundle with `flatpak install --user --bundle`,
-validates the exported desktop entry and its `MimeType` line, checks the
-exported SVG icon and runs the application with its URL; the probe's record
-shows `FLATPAK_ID` and the content root `/app/lib/<executable>/www`. The probe
-opens no window. A Runic Desktop GTK 4 window with WebKit's nested sandbox in
-the same runtime is covered by the
-[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
+paths. Its `Packaging` jobs run `dotnet runic package` for the probe on
+`ubuntu-24.04`. The `flatpak` job installs the bundle with
+`flatpak install --user --bundle`, validates the exported desktop entry with
+its `MimeType` and `DBusActivatable` lines, checks the exported MIME
+definition, D-Bus service file and SVG icon, and runs the application with its
+URL; the probe's record shows `FLATPAK_ID` and the content root
+`/app/lib/<executable>/www`. The `appimage` job extracts and runs the AppImage
+with its URL. The `deb` job installs the package with its dependencies on
+Ubuntu and opens its URL through the registered handler, and the `rpm` job
+builds on Ubuntu and installs and opens the rpm in a Fedora container. The
+`flathub` job generates the manifest of a fixture, builds it offline with
+`--build`, installs the bundle and runs it. The probe opens no window. A Runic
+Desktop GTK 4 window with WebKit's nested sandbox in the same runtime is
+covered by the
+[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
 which is run by hand in the SDK's [container runner](container-automation.md),
 not in CI; its README records the verified runtime commit. Repository signing,
-Flathub submission, AppImage and distribution packages were not executed.
+Flathub submission, D-Bus activation from GNOME and KDE, and the Snap recipe
+were not executed.
 
 ## Opened URLs and files
 
@@ -570,27 +712,51 @@ package: a `windows.protocol` extension in the MSIX manifest,
 desktop entry. Windows and Linux start the application with the URL as its
 argument; macOS sends it as an Apple event. `IDesktopOpenRequests` in
 Runic.Platform delivers them to the running instance; see the SDK's
-[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/specs/platform/open-activation.md).
+[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/specs/platform/open-activation.md).
 
-File types are commented examples in each manifest, not filled in by
-`package.mjs`: a `windows.fileTypeAssociation` extension,
-`CFBundleDocumentTypes` with a `UTExportedTypeDeclarations` entry, and a MIME
-type in the desktop entry with a shared-mime-info definition for a type of
-your own. The generated README's
-[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
-section describes them. Runic CI opens each package through a URL scheme; it
-does not check file types in packages. Treat opened URLs and files as untrusted
-input.
+Since SDK `0.11.0`, the packages are also filled from these properties:
+
+- `RunicApplicationFileTypes` lists file types, such as
+  `.notes=application/x-example-notes;.md`: an extension with its dot and,
+  optionally, its MIME type. `Info.plist` declares each as a document type
+  with an exported type identifier `<ApplicationId>.<extension>`; for a
+  standard type, such as Markdown, edit the generated entry to name the
+  system's type. The MSIX manifest declares a `uap3:FileTypeAssociation` with
+  `MultiSelectModel="Player"`, so files the user opens together reach one
+  process; read them with `DesktopPlatformServices.GetLaunch(args)`. The
+  desktop entry lists a MIME type for each, whose shared-mime-info definition
+  the Linux packages install.
+- `RunicApplicationWebLinkHosts` lists hosts, such as `notes.example.org`,
+  whose `https` links open the application; pass the same hosts as
+  `DesktopOpenOptions.WebLinkHosts`. On Windows the MSIX manifest declares a
+  `uap3:AppUriHandler` for each, and each host serves
+  `/.well-known/windows-app-web-link` naming the package family. On macOS these
+  are universal links, which need the
+  `com.apple.developer.associated-domains` entitlement, a provisioning profile
+  embedded as `Contents/embedded.provisionprofile` and an
+  `apple-app-site-association` file on each host. An ad-hoc signature cannot
+  carry the entitlement, so the command does not add it: add it to your
+  `macos/entitlements.plist` before you sign.
+- `RunicApplicationDBusActivatable` set to `true` adds `DBusActivatable=true`
+  to the desktop entry and a D-Bus service file to the Flatpak, deb and rpm.
+  GNOME and KDE then start the application through the session bus and deliver
+  later opens to the running process, which serves the activation after
+  claiming its instance:
+  `await DesktopPlatformServices.ExportApplicationAsync(ApplicationIdentity.Id, instance)`.
+
+The generated README's
+[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
+section has the exact files each host serves. An application without a
+package, such as a ZIP, registers its schemes and file types itself with
+`IDesktopOpenRegistration`. Runic CI opens each package through a URL scheme
+and the MSIX with two files at once; universal links, app URI handlers and
+D-Bus activation from a desktop are manual checks. Treat opened URLs and files
+as untrusted input.
 
 ## Not provided by the SDK yet
 
-- A `dotnet runic package` command; `package.mjs` and the platform tools are
-  the supported path.
-- AppImage, `.deb`, `.rpm` and Snap packages, and installer projects such as
-  WiX or Inno Setup.
-- A Flathub-ready manifest that builds from source.
+- Installer projects such as WiX or Inno Setup, and a Snap target (the
+  packaging guide has a recipe).
 - Fixed-version WebView2 runtimes.
-- An API for the MSIX `StartupTask`, and file type registrations filled in
-  from the project file.
 - CI on `osx-x64`, and universal macOS binaries in CI.
-- Signed, notarized or retained packages from CI.
+- Signed, notarized or retained packages from CI, and a Flathub submission.

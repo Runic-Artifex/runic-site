@@ -162,6 +162,19 @@ injected scheduler is the Window's own, resolved before the ViewModel is
 constructed, so it also serves a source that replays when the constructor
 subscribes.
 
+A ViewModel that doesn't take the context in its constructor can call
+`ReactiveSchedulers.For(this)`, new in SDK `0.11.0`: each scheduled item goes to
+the context the ViewModel is bound to at that time. While it isn't bound, for
+example in its constructor before the Window binds it, the work goes to
+`RxSchedulers.MainThreadScheduler` and is logged as event 1043. So keep the
+injected scheduler for a source that replays when the constructor subscribes.
+
+<!-- prettier-ignore -->
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views.ReactiveUI/README.md
+public ClockViewModel(IClock clock) =>
+    clock.Ticks.ObserveOn(ReactiveSchedulers.For(this)).Subscribe(time => Now = time);
+```
+
 ## Translations in ViewModels
 
 [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk)
@@ -221,7 +234,7 @@ service provider and register the instance.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands, progress and cancellation.
 - The
-  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
+  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
   and
-  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
+  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
   in the SDK guides cover the details, including WPF's dispatcher context.

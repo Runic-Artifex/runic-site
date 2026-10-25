@@ -64,11 +64,24 @@ The same Window and `async host => ...` body run on CS-WebUI with
   to `RunicDesktopHost.Run(provider, desktopOptions, hostOptions, async host => ...)`,
   or to `new RunicDesktopHost(provider, desktop, hostOptions)` for a host on a
   `DesktopHost` you started yourself. `RunicDesktopHost.DefaultWindowOptions` opens
-  the embedded WebView and falls back to an installed browser. To serve a
-  frontend embedded with `Runic.Assets` instead of `www/`, set `SurfaceOptions`
-  to `new DesktopSurfaceOptions { Content = new DesktopContent.Handler(assets.ToDesktopContentHandler()) }`
-  from `Runic.Assets.Desktop`; see
-  [Runic.Assets or the Views `www/` folder](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Assets/README.md#runicassets-or-the-views-www-folder).
+  the embedded WebView and falls back to an installed browser. A build with
+  `RunicApplicationFrontendDelivery=Embedded` embeds the frontend in the
+  assembly, and the host serves that archive in place of `www/`; see
+  [Ship the frontend inside the executable](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#ship-the-frontend-inside-the-executable).
+  `RunicDesktopHostOptions.Assets` serves another `IAssetSource`, such as an
+  archive read with `AssetArchive.ReadAsync`. `SurfaceOptions`, a Window's
+  `ContentRoot` and `dotnet runic dev`'s live frontend take precedence.
+- `RunicDesktopHostOptions.ContentSecurityPolicy` sends a `Content-Security-Policy`
+  with the HTML of every Window's surface, unless `SurfaceOptions` set one of
+  their own (`DesktopSurfaceOptions.ContentSecurityPolicy`). It is a header of
+  its own next to the surface's `frame-ancestors` policy, and the WebView
+  enforces both. The Bridge needs `'self'` scripts and connections and no
+  `'unsafe-eval'`: `DesktopBridgeTransport` sends state as data, which the
+  served bridge script parses with `JSON.parse` before it calls the View, so
+  `default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`
+  works and blocks inline, foreign and evaluated scripts. Only
+  `DesktopSurface.ExecuteJavaScriptAsync`, which evaluates a string in the
+  page, needs `'unsafe-eval'`.
 - `RunicDesktopHostOptions.Resources` serves application files that are not part of
   the frontend build, such as icons from a cache, from each Window's own
   address. It is called with each Window as it opens, after its ViewModel is
@@ -111,7 +124,10 @@ The same Window and `async host => ...` body run on CS-WebUI with
   It exposes `ViewModel`, `Surface`, `Window`, `WaitForCloseAsync`, and `CloseAsync`, which
   stops new operations and waits for accepted ones before releasing the scope.
   `RunicDesktopHost.GetSurface(window)` returns the `Surface` of any Window of
-  this host without naming its ViewModel type, and `null` for another host's.
+  this host without naming its ViewModel type, and `null` for another host's;
+  `DesktopPlatformServices.GetDesktopWindow(window)` returns its `DesktopWindow` the
+  same way, also `null` under `RUNIC_APPLICATION_SERVE_ONLY=1`, for example to
+  hide it with `HideAsync` or subscribe to `Closed`.
   It implements `IBridgeWindow`, the lifetime contract shared with the CS-WebUI
   host, and returns the same `RunicWindowCloseResult`.
 - A Window with `GuardClose` (see
@@ -132,8 +148,10 @@ The same Window and `async host => ...` body run on CS-WebUI with
   [Accessibility](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md#accessibility)).
   WebKitGTK reports no ARIA live region to Orca, so on Linux this is how a
   page's status reaches a screen reader. A ViewModel takes
-  `DesktopWindowPlatformServices` and calls its `AnnounceAsync(message, priority)`.
-  Both return `Success`, or `Unavailable` with `OwnerUnavailable` for a Window
+  `IWindowPlatformServices` and calls its `AnnounceAsync(message, priority)`,
+  which works on every host, or takes `DesktopWindowPlatformServices` and calls
+  its `AnnounceAsync(message, priority)` with a `DesktopAnnouncementPriority`.
+  All return `Success`, or `Unavailable` with `OwnerUnavailable` for a Window
   without an embedded window (an installed browser, serve-only mode, another
   host, or a ViewModel's window that has not opened yet), `OwnerClosed` once it
   closed, and `BackendUnavailable` for a window host without announcements,
@@ -178,7 +196,17 @@ The same Window and `async host => ...` body run on CS-WebUI with
   implements `IRunicMenuCommandSource`
   runs its own while the Window is key (see
   [Menu bar commands](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#menu-bar-commands)).
-  Declare the menus in `DesktopHostOptions.MenuBar`; macOS shows them.
+  Declare the menus in `DesktopHostOptions.MenuBar`; macOS and the GTK 3 and GTK 4
+  windows show them. With `MenuBarPresentation = DesktopMenuBarPresentation.Page`
+  in `WindowOptions` the page renders the bar with its own components through
+  `createMenuBarController` in `@runic-artifex/views`; every Window serves its
+  routes (see
+  [In-page menu bar](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#in-page-menu-bar)),
+  and a page's invoke runs through `DesktopWindow.TryExecuteMenuItemAsync`. Each
+  item's `CommandParameter` is the command's parameter. A ViewModel that takes
+  `IWindowPlatformServices` shows a native context menu with
+  `ShowContextMenuAsync`, which `DesktopWindowPlatformServices` implements for the
+  embedded window.
 - A Window's root ViewModel that implements `IRunicFileDropTarget` receives the
   files the user drops onto the embedded window, with their native paths, in
   its model turn (see
@@ -186,9 +214,13 @@ The same Window and `async host => ...` body run on CS-WebUI with
   A window served under `RUNIC_APPLICATION_SERVE_ONLY` or shown in an installed
   browser after a fallback receives none.
 - `services.AddRunicPlatformServices()` registers native file dialogs, the
-  text clipboard, and the file launcher for each window scope:
-  `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, and
-  `IDesktopFileLauncher`. A ViewModel takes them in its constructor before its
+  clipboard, and the file launcher for each window scope:
+  `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`,
+  `IDesktopClipboard` (HTML, RTF, images, files and a format watch), and
+  `IDesktopFileLauncher`; `IWindowPlatformServices` also sets the window's taskbar
+  badge and progress (Windows), the Dock tile's (macOS) or the application's Unity
+  launcher entry (GTK 3 and GTK 4), which `AddRunicPlatformServices(applicationId)`
+  names with the application ID (inside Flatpak the Flatpak ID serves). A ViewModel takes them in its constructor before its
   window opens. They bind to the window's native owner when it opens, and the
   provider is selected from the backend that is actually running:
   - Windows: `Runic.Platform.Windows`.
@@ -350,9 +382,27 @@ The same Window and `async host => ...` body run on CS-WebUI with
   bus with either toolkit; Windows uses the volume management API and ejects as
   "Safely Remove Hardware" does; macOS uses Disk Arbitration. See
   [Volumes](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#volumes).
+- `AddRunicPlatformServices()` also registers `IDesktopNetworkStatus`, one
+  singleton created by `DesktopPlatformServices.CreateNetworkStatus()`: online,
+  metered and captive portal, read or watched, from the Network List Manager's
+  connectivity hint on Windows, Network.framework's path monitor on macOS and the
+  NetworkMonitor portal or NetworkManager on Linux; see
+  [Network status](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#network-status).
+  Per window it registers `IDesktopMessageBoxes`, the window's native message
+  boxes: task dialogs on Windows, also for a WPF window, sheets on macOS and GTK
+  message or alert dialogs on Linux; see
+  [Message boxes](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#message-boxes).
+- The secret store and the application database are registered without an
+  application ID, also by `AddRunicPlatformServices(applicationId)`.
+  `DesktopPlatformServices.CreateSecretStore(applicationId)` and
+  `CreateApplications(applicationId)` create them for an ID, checked as the
+  overload above checks it; on Linux their portal requests and diagnostics then
+  carry it, and the application database's portal connection registers it as
+  notifications do. Register one before calling `AddRunicPlatformServices` to
+  use it. Secrets are stored the same way with or without an ID.
 - `DesktopBridgeWindow<TViewModel>.NativeOwner` (a `DesktopNativeOwner`) is the
   presentation's `INativeWindowOwner`, which the services above bind to. The
-  window services (file dialogs, the clipboard and file handoff) are created only
+  window services (file dialogs, the clipboard, file handoff and message boxes) are created only
   here, through `DesktopPlatformServices.ForWindow`; the providers keep them internal.
   Pass the owner where an API asks for a window, such as
   `WindowsElevationOptions.Owner` for the UAC prompt.
@@ -498,7 +548,9 @@ each window then serves that directory before its `www/` folder (which still
 supplies `runic-views.js`) and reloads when the directory changes: it navigates
 to the last HTML page it loaded, or to its start page, without the page's
 query, hash or `history.pushState` route, and its Bridge reconnects as after
-any reload. Outside `Development` the host ignores the variable. Events 2005 to
+any reload. A connected page is navigated through its Bridge; a window whose
+page has no Bridge, such as a half-written `index.html` or a build error page,
+is navigated through its WebView instead. Neither runs page script. Outside `Development` the host ignores the variable. Events 2005 to
 2007 report it. The
 [dotnet-runic README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/dotnet-runic/README.md)
 describes the frontend modes.

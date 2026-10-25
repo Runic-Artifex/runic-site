@@ -33,10 +33,27 @@ var options = new DesktopHostOptions
 };
 #endif
 
+// Outside Development, the Window's pages get a Content-Security-Policy: scripts and connections only from the
+// application itself, no string evaluation, no plugins, no foreign <base> and no framing. The Views Bridge needs
+// nothing more: its state arrives as data. Development (dotnet runic dev and its development server) sends none.
+var developing = string.Equals(Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT"), "Development", StringComparison.OrdinalIgnoreCase);
+#if (frontend == "sveltekit")
+// SvelteKit starts the page with an inline script. vite.config.ts makes it add a policy of its own that allows
+// only that script by its hash; the browser enforces both policies. style-src-attr allows exactly the style attribute
+// of SvelteKit's route announcer (root.svelte in @sveltejs/kit 3.0.0) by its hash; update it with SvelteKit.
+const string contentSecurityPolicy = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src-attr 'unsafe-hashes' 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+#elif (frontend == "angular")
+// Angular adds component styles as <style> elements.
+const string contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+#else
+const string contentSecurityPolicy = "default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'";
+#endif
+var hostOptions = new RunicDesktopHostOptions { ContentSecurityPolicy = developing ? null : contentSecurityPolicy };
+
 // Opens Windows natively with the embedded WebView, falling back to an installed browser, on the event loop
 // this platform and backend need. Call it before any await. RunicCsWebUiHost.Run(provider, RunAsync), from
 // Runic.Application.Views.CsWebUi, runs the same application on CS-WebUI.
-return RunicDesktopHost.Run(provider, options, RunAsync);
+return RunicDesktopHost.Run(provider, options, hostOptions, RunAsync);
 #else
 // Opens Windows in an installed browser in app mode, with the platform WebView as a fallback, while the main
 // thread waits for WebUI. RunicDesktopHost.Run(provider, RunAsync), from Runic.Application.Views.Desktop, runs the same

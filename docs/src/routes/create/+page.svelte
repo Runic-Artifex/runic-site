@@ -5,10 +5,14 @@
     choiceFor,
     creatorCommands,
     creatorOptions,
+    creatorTexts,
     creatorToggles,
     defaultSelection,
+    isValidApplicationId,
     isValidProjectName,
     optionApplies,
+    textValue,
+    viewCommand,
   } from '#lib/creator.js';
   import { catalogRows, currentRelease } from '#lib/release-docs.js';
   import { previewFiles } from '#lib/template-preview.js';
@@ -56,9 +60,34 @@
 
   let validName = $derived(isValidProjectName(name));
   let projectName = $derived(validName ? name : 'MyApp');
-  let commands = $derived(creatorCommands(version, projectName, selection));
+  // A text parameter such as --application-id is passed only when it is
+  // valid; an invalid value is shown as an error and left out.
+  let validTexts = $derived(
+    Object.fromEntries(
+      creatorTexts.map((text) => {
+        const value = textValue(text, selection);
+        return [
+          text.symbol,
+          !value ||
+            text.symbol !== 'applicationId' ||
+            isValidApplicationId(value),
+        ];
+      }),
+    ),
+  );
+  let effectiveSelection = $derived({
+    ...selection,
+    ...Object.fromEntries(
+      creatorTexts
+        .filter((text) => !validTexts[text.symbol])
+        .map((text) => [text.symbol, '']),
+    ),
+  });
+  let commands = $derived(
+    creatorCommands(version, projectName, effectiveSelection),
+  );
   let files = $derived(
-    previewFiles(projectName, version, selection, csWebUiVersion),
+    previewFiles(projectName, version, effectiveSelection, csWebUiVersion),
   );
   let shownOptions = $derived(
     creatorOptions.filter((option) => optionApplies(option, selection)),
@@ -94,6 +123,10 @@
       if (value === 'true' || value === 'false')
         selection[toggle.symbol] = value;
     }
+    for (const text of creatorTexts) {
+      const value = query.get(text.flag.slice(2));
+      if (value) selection[text.symbol] = value;
+    }
     ready = true;
   });
 
@@ -109,6 +142,10 @@
     for (const toggle of creatorToggles)
       if (selection[toggle.symbol] !== String(toggle.defaultValue))
         query.push([toggle.flag.slice(2), selection[toggle.symbol]]);
+    for (const text of creatorTexts) {
+      const value = textValue(text, effectiveSelection);
+      if (value) query.push([text.flag.slice(2), value]);
+    }
     const search =
       query.length > 0
         ? `?${query.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&')}`
@@ -232,6 +269,35 @@
           </div>
         </fieldset>
       {/each}
+
+      {#each creatorTexts as text (text.symbol)}
+        <label class="creator-field">
+          <span class="creator-legend"
+            >{text.label} <code class="creator-flag">{text.flag}</code></span
+          >
+          <input
+            class="creator-input"
+            bind:value={selection[text.symbol]}
+            placeholder={text.symbol === 'applicationId'
+              ? 'org.example.Notes'
+              : undefined}
+            autocomplete="off"
+            spellcheck="false"
+            aria-invalid={!validTexts[text.symbol]}
+            aria-describedby={`${text.symbol}-help`}
+          />
+          <span
+            id={`${text.symbol}-help`}
+            class={validTexts[text.symbol]
+              ? 'creator-help'
+              : 'creator-help creator-error'}
+          >
+            {validTexts[text.symbol]
+              ? `${text.description} Optional.`
+              : 'Use at least two dot-separated parts of ASCII letters and digits, each starting with a letter, at most 50 characters.'}
+          </span>
+        </label>
+      {/each}
     </form>
 
     <div class="creator-output">
@@ -274,6 +340,19 @@
             command={commands.nextSteps.join('\n')}
             label="Copy next steps"
           />
+        </div>
+        <div class="creator-group">
+          <h3>Add a View later</h3>
+          <CommandBlock
+            command={`${viewCommand('Settings', effectiveSelection)}\n${viewCommand('Preferences', effectiveSelection, true)}`}
+            label="Copy View commands"
+          />
+          <p class="creator-help">
+            Run in the project directory. The <code>runic-view</code> item
+            template comes with <code>Runic.Application.Templates</code> and
+            adds a View, or with <code>--window</code> a Window, and its ViewModel;
+            the next build writes its typed client.
+          </p>
         </div>
         <div class="creator-group">
           <h3>You need</h3>
@@ -381,6 +460,13 @@
   .creator-help code,
   .creator-help a {
     color: var(--rune-ink);
+  }
+
+  .creator-flag {
+    margin-left: 0.35rem;
+    color: var(--rune-ink-soft);
+    font-size: var(--text-small);
+    font-weight: 400;
   }
 
   .creator-error {

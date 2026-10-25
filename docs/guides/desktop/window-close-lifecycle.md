@@ -33,6 +33,17 @@ its policy. Keep the decision tied to current application state; disconnected or
 unknown state should keep the window open. A native close callback must stay
 responsive while the confirmation is pending.
 
+Since SDK `0.11.0`, a confirmation that must follow the platform's button order
+and keys, or that runs while the page cannot answer, can ask with a native
+message box (`IWindowPlatformServices.MessageBoxes`; see
+[desktop services](../desktop-services.md#more-platform-services)).
+`DesktopWindow.Closed` is raised once after the window closed, whatever closed
+it, such as the user, `RequestCloseAsync`, `CloseAsync` or disposal; a handler
+that throws is logged as event 3013. `HideAsync` and `SetVisibleAsync(false)`
+hide an embedded window without closing it, so they ask no confirmation, and
+the hidden window's page keeps running. A GTK 4 window closed natively now
+completes `WaitForCloseAsync` and surface disposal.
+
 ## Contract
 
 - The native close event is suppressed immediately. The callback runs on the thread
@@ -77,7 +88,7 @@ Rejecting unsupported configuration avoids silently dropping a data-loss guard.
 `DesktopWindowCapabilities.CloseConfirmation` reflects the actual embedded host.
 
 Custom window hosts (stable since SDK `0.10.0`; see
-[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
+[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
 remain source compatible:
 `IDesktopWindowHost.SupportsCloseConfirmation` defaults to false. To opt in, return true and honor `DesktopWindowHostOptions.CloseRequested`:
 when it is set, suppress the native user close event and invoke the callback instead.
@@ -101,7 +112,7 @@ thread. It checks bridge responsiveness during the pending decision, veto, retry
 approved destruction. Root CI runs this smoke on Linux x64, Windows x64 and macOS Apple Silicon. Local execution evidence is retained with the native smoke outputs;
 adding CI coverage is not evidence that a remote platform run has passed.
 
-The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
+The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
 also exercises close veto/retry on its own dispatcher. Select the native backend
 you ship when verifying your application's close and cleanup behavior.
 

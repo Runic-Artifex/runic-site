@@ -25,7 +25,8 @@ restarts the Window after C# edits. `--no-restore`, `--no-frontend-watch`,
 `--no-dotnet-watch`, and `--dry-run` select parts of that loop. `dev` installs
 the frontend packages itself and passes
 `RunicApplicationFrontendInstallEnabled=false`, so the build does not install
-them a second time; with `--no-restore` nothing
+them a second time (and `RunicApplicationFrontendDelivery=Files`, so a project
+that embeds its frontend serves it live while developing); with `--no-restore` nothing
 installs them, and a frontend that declares dependencies but has no
 `node_modules` stops with `RAPPDEV1008`. When `dotnet watch` restarts or `dev`
 stops the Window, the application's expected exit code after SIGTERM or Ctrl+C
@@ -54,6 +55,32 @@ it. A restart after a C# or frontend compiler edit gets the same grace;
 `dev` sets `DOTNET_WATCH_PROCESS_CLEANUP_TIMEOUT_MS=5000` for `dotnet watch`
 unless you set it yourself.
 
+`dev` picks a free loopback port for the development server, and on a shared
+machine another process could take that port first. Since 0.11, `dev` passes
+the development server process a random value for the session and accepts the
+server as ready only when its `/__runic/state` answers with that value, so
+`dev` never writes a page that another process served into the web root.
+`@runic-artifex/vite-plugin-runic` answers it, and every frontend that
+`dotnet new runic-app` generates is set up for it:
+
+| Frontend | What answers `/__runic/state` | When `dev` requires the answer |
+| --- | --- | --- |
+| React, Vue, Svelte | `runic()` in `vite.config.ts` | The resolved Vite configuration has `runic()` or `runicDevSession()` |
+| SvelteKit | `runicDevSession()` in `vite.config.ts`, next to `sveltekit()` (SvelteKit warns about `runic()`, whose `transformIndexHtml` hook it does not support) | The same |
+| Angular | `runicDevSessionProxy()` in `proxy.conf.mjs`, the serve target's `proxyConfig` in `angular.json` (the Angular CLI loads no Vite plugins) | `package.json` declares `@runic-artifex/vite-plugin-runic` |
+
+A Vite project with the external frontend compiler, where `dev` does not
+resolve the Vite configuration, is also checked when `package.json` declares
+the plugin. The log says
+`[dev] The Vite development server confirmed this dev session.` (or `Angular`).
+A project set up without the plugin, for example one created before 0.11 or an
+Angular project without `runicDevSessionProxy()` and without the plugin
+dependency, is not checked: `dev` then relies on the server exiting when its
+port is taken. In every case, `dev` writes the development documents only while
+its own server process is still running. The plugin and the tool must come from
+the same release; an older plugin does not answer, and readiness times out with
+`RAPPDEV1007`.
+
 Without a Vite or Angular development server, `dev` runs the frontend watcher
 instead: the `RunicApplicationFrontendDevWatchTarget` MSBuild target, or the
 frontend's `dev` script (for example `vite build --watch`), which writes the
@@ -69,7 +96,13 @@ each change, so frontend edits reach the window without a rebuild:
 
 A window reloads the last HTML page it loaded, such as `settings.html`, or
 else its start page; the page's query, hash and `history.pushState` route are
-not kept. The Bridge reconnects as after any reload. On Linux and macOS the
+not kept. The Bridge reconnects as after any reload. A page that was still
+loading or reconnecting when a change arrived reloads once its Bridge
+connects. A page that has no Bridge, such as a half-written `index.html` or a
+build error page, is reloaded by the next change too: the host navigates the
+window's WebView, which runs no page script, so a strict
+Content-Security-Policy does not block it. A window shown in an installed
+browser instead of a WebView must be reloaded by hand then. On Linux and macOS the
 window keeps serving the directory it opened, so a frontend build that deletes
 and recreates the output directory itself, rather than its contents as
 `vite build --watch` does, needs `dev` to be restarted. A CS-WebUI window keeps
@@ -78,11 +111,20 @@ the initial build, and `dev` prints
 An application that sets `RunicDesktopHostOptions.SurfaceOptions` serves its
 own content in `dev` too.
 
+Since 0.11, `dev` takes these options of `dotnet run` and `dotnet build`:
+
+| Option | Effect |
+| --- | --- |
+| `--launch-profile <name>` | Runs the Window with that profile from `Properties/launchSettings.json`, so its `environmentVariables` and `commandLineArgs` apply, under `dotnet watch` too. Without it the Window runs with `--no-launch-profile`, as before. A profile's variables replace `dev`'s defaults and `-e` values of the same name. |
+| `--no-build` | Skips `dev`'s own .NET restore and build, as `dotnet run --no-build` does, and starts from the existing build output; build the project with the same `--configuration` first. The frontend packages are still installed unless you pass `--no-restore`. `dotnet watch` still builds after C# edits. |
+| `-e`, `--environment NAME=VALUE` | Sets an environment variable for the Window process, as `dotnet run -e` does; repeat it for several. It wins over the defaults in the table below, so `-e DOTNET_ENVIRONMENT=Staging` runs the Window in `Staging`. The variables `dev` uses to describe the development server (`RUNIC_APPLICATION_*` below) are refused with `RAPPDEV1012`, and a value without `=` with `RAPPDEV1011`. `--dry-run` prints the names, never the values. |
+| `-v`, `--verbosity <level>` | Passes the MSBuild verbosity (`q[uiet]`, `m[inimal]`, `n[ormal]`, `d[etailed]` or `diag[nostic]`) to the restore, the build and `dotnet watch`. |
+
 `dev` passes these variables to the Window process:
 
 | Variable | Value |
 | --- | --- |
-| `DOTNET_ENVIRONMENT` | `Development`, unless you set it or `ASPNETCORE_ENVIRONMENT` |
+| `DOTNET_ENVIRONMENT` | `Development`, unless you set it or `ASPNETCORE_ENVIRONMENT`, in the environment or with `-e` |
 | `DOTNET_WATCH_PROCESS_CLEANUP_TIMEOUT_MS` | `5000`, unless you set it |
 | `DOTNET_WATCH_RESTART_ON_RUDE_EDIT` | `1` |
 | `RUNIC_APPLICATION_DEVELOPMENT_ASSETS` | Without a development server, the absolute frontend output directory; cleared while one runs. An internal contract with the Runic Desktop host, which reads it only in a `Development` environment. |
@@ -96,6 +138,10 @@ tells you to run `dotnet runic dev` or `dotnet restore`. The browser check
 follows the referenced host: a Runic Desktop project needs no browser, and a
 missing browser is only a warning for a CS-WebUI project because CS-WebUI falls
 back to the platform WebView. Only browser smoke checks require Chromium.
+The JavaScript runtime passes at the certified version and warns for a newer
+release of the same major version. Node 26 is supported as well, with a
+warning, since the starters and the Runic npm packages that run in Node declare
+`engines.node` `^24.18.0 || ^26.0.0` (0.11).
 
 Doctor checks every Views host adapter the project references, not only one.
 It reads the project's direct package and project references, with the
@@ -149,6 +195,21 @@ there is no D-Bus session bus or no installed `xdg-desktop-portal` (the
 `XDG_DATA_DIRS`), because the file dialogs and the file launcher use the portal.
 For CS-WebUI it reports that the services return `OwnerUnavailable`. The check
 describes this machine, so `--runtime` skips it.
+
+Since 0.11, two more checks warn without failing:
+
+- `views-package-versions` compares the installed `@runic-artifex/views`, found
+  in `node_modules` as Node.js resolves it, with the restored
+  `Runic.Application.Views`. A frontend whose packages were not reinstalled
+  after a .NET package update gets a warning that names both versions. The
+  check is omitted until the project is restored and the frontend packages are
+  installed.
+- `application-id` checks the project's `ApplicationId`: a reverse-DNS name of
+  ASCII letters and digits in at least two dot-separated parts, each starting
+  with a letter, at most 50 characters (`org.example.Notes`), which a D-Bus and
+  Flatpak name, a macOS bundle identifier and an MSIX package name all accept.
+  The template's packaging script applies the same rule. Another value warns;
+  a project without `ApplicationId` passes.
 
 ### Deployment checks for a target
 
@@ -254,9 +315,11 @@ diagnostics are warnings. The envelope replaces the message and drops the
 redacts the message key, which always names the check. `payload.checks` is the
 complete list.
 Check identifiers are `dotnet-sdk`, `views-window`, `javascript-runtime`,
-`package-manager`, `lock-file`, `compatibility-set`, `frontend-dev-server`,
-`vite-config`, `vite-entry`, `browser`, `views-hosts`, `desktop-runtime`,
-`wpf-runtime`, `gtk4-profile` and `platform-services`. With `--runtime`, the payload also lists
+`package-manager`, `lock-file`, `compatibility-set`, `views-package-versions`,
+`application-id`, `frontend-dev-server`, `vite-config`, `vite-entry`,
+`browser`, `views-hosts`, `desktop-runtime`, `wpf-runtime`, `gtk4-profile` and
+`platform-services`; `views-package-versions` and `application-id` were added
+in 0.11. New identifiers may appear in later releases. With `--runtime`, the payload also lists
 `target-rid`, `target-runtime-identifiers`, `target-publish` and
 `target-presentation`.
 
@@ -264,16 +327,18 @@ Check identifiers are `dotnet-sdk`, `views-window`, `javascript-runtime`,
 
 Every command writes human-readable text unless you pass `--format json` (or set
 `RUNIC_COMMANDLINE_OUTPUT=json`); then standard output is one
-`runic.commandline/1` envelope, and the human text of `dev` and `size` goes to
-standard error. `--output json`, the spelling before 0.9, still works as a
+`runic.commandline/1` envelope, and the human text of `dev`, `size` and `package`
+goes to standard error. `--output json`, the spelling before 0.9, still works as a
 hidden alias until 2.0. The same `--format human|json` selects the output of
 `runic-create` and `runic-translations`.
 
 A successful envelope carries the command's payload. A failed one carries a
 `fault` with a code from the [diagnostics
 catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#dotnet-runic),
-and, for `doctor` and `size`, the payload in `fault.data` when the command got
-far enough to produce one. Human-readable output is not a contract; the
+the code's catalog entry at this release in `fault.helpUri` (since 0.11; human
+output prints it after the fault line), and, for `doctor` and `size`, the
+payload in `fault.data` when the command got far enough to produce one. A
+cancelled command (`RCLI4000`) has no `helpUri`. Human-readable output is not a contract; the
 payloads are, under these identifiers:
 
 | Command | Payload |
@@ -281,6 +346,8 @@ payloads are, under these identifiers:
 | `dev` | `runic.application.tool.dev/1` |
 | `size` | `runic.application.tool.size/1`; the report file is `runic.size/2` |
 | `doctor` | `runic.application.tool.doctor/1` |
+| `assets pack` | `runic.assets.pack-result/1`, as the asset packer |
+| `package <target>` | `runic.application.tool.package/1` (since 0.11) |
 
 `runic.application.tool/1`, the payload of 0.8 and earlier, is gone: its
 `Command`, `ExitCode` and `Output` properties carried the human text.
@@ -361,13 +428,30 @@ serves (see its
 | `RunicApplicationFrontendOutputDirectory` | `dist`, relative to the frontend directory |
 | `RunicApplicationFrontendWebRoot` | `www`, relative to the build output |
 | `RunicApplicationFrontendDevServerKind` | `angular` with `angular.json`, `vite` with a `vite.config.*`, otherwise none |
-| `RunicApplicationFrontendViteDevServerEntry` | the first of `/src/main.ts`, `/src/main.tsx`, `/src/main.js`, `/src/main.jsx` |
+| `RunicApplicationFrontendViteDevServerEntry` | the first of `/src/main.ts`, `/src/main.tsx`, `/src/main.js`, `/src/main.jsx`; for SvelteKit, which has no main module, its root route: `/src/routes/+page.svelte`, `+layout.svelte`, `+layout.ts` or `+layout.js` |
 | `RunicApplicationFrontendViteConfiguration` | the frontend's `vite.config.*` |
-| `RunicApplicationFrontendDevServerDocument` | every HTML build input with Vite, `index.html` with Angular; set it to override the list and separate several documents with `;` |
+| `RunicApplicationFrontendDevServerDocument` | every HTML build input with Vite, `index.html` with Angular and with SvelteKit, whose development server renders it from its routes; set it to override the list and separate several documents with `;` |
 | `RunicApplicationFrontendDevWatchTarget` | none; an MSBuild target to run as the frontend watcher without a development server |
 
 The package manager comes from `packageManager` in the frontend `package.json`,
 then from its lock file.
+
+## Pack an asset archive
+
+`assets pack` writes a directory, usually a frontend build output such as Vite's
+`dist`, to a canonical Runic Assets archive. It is the command of the asset
+packer that the `Runic.Assets` build runs, with the same arguments, defaults,
+`RAS1xxx` codes and `runic.assets.pack-result/1` payload; it needs no project.
+
+```bash
+dotnet runic assets pack Client.Web/dist artifacts/app.runic-assets --trusted-generated-output
+```
+
+`.git` directories and files whose names start with `.env` are left out unless
+you pass `--no-default-excludes`, and a packed source map (`*.map`) is reported
+as warning `RAS1005` on standard error. See the
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/Runic.Assets.Packer/README.md)
+for every option.
 
 ## Measure size
 
@@ -381,10 +465,26 @@ dotnet runic size --project path/to/App.csproj --runtime linux-x64 --report meas
 
 As in `doctor`, the runtime identifier is `--runtime`, `--rid` or `-r`. `size`
 publishes with Native AOT unless you pass `--no-aot`; `--aot` states the default.
-It always publishes a self-contained, size-optimized build: it passes
-`Configuration` (`--configuration`, `Release` by default), `RuntimeIdentifier`,
-`PublishAot`, `SelfContained=true` and `OptimizationPreference=Size` to MSBuild,
-which override the project's values; the report lists the effective settings.
+It publishes a self-contained, size-optimized build unless you pass
+`--no-self-contained` (since 0.11; `--self-contained` states the default): it
+passes `Configuration` (`--configuration`, `Release` by default),
+`RuntimeIdentifier`, `PublishAot`, `SelfContained` (`true`, or `false` with
+`--no-self-contained`) and `OptimizationPreference=Size` to MSBuild, which
+override the project's values; the report lists the effective settings. A
+framework-dependent build needs `--no-aot` too, because Native AOT is always
+self-contained.
+
+`--property Name=Value` (since 0.11) passes another MSBuild property to the
+evaluation and the publish, as `dotnet publish -p` does; repeat it for several.
+It comes after the properties above, so `--property OptimizationPreference=Speed`
+measures a speed-optimized build. A `;` or `,` in the value is escaped, so each
+`--property` sets exactly one property. The properties that have their own
+options (`Configuration`, `RuntimeIdentifier`, `PublishAot`, `SelfContained`)
+are refused with `RAPPSIZE1006`, and a value that is not `Name=Value` with
+`RAPPSIZE1005`. Each property given this way is also listed in the report's
+`effectiveProperties`. `--property` has no `-p` short form, because `-p` is
+`--project` in every `dotnet runic` command. `-v`, `--verbosity <level>` sets the
+publish's MSBuild verbosity.
 
 `--report` names a file that must not exist yet, so `size` never replaces earlier
 evidence. Without it, each run writes a new
@@ -409,7 +509,8 @@ dotnet runic size --runtime linux-x64 --report measurements/linux.json \
 
 The report's schema is `runic.size/2`. Paths are absolute; `files[].path` is
 relative to the publish directory. Values in `effectiveProperties` are the
-evaluated MSBuild properties, empty when unspecified:
+evaluated MSBuild properties, empty when unspecified, including each
+`--property` name:
 
 ```json
 {
@@ -475,9 +576,183 @@ evaluated MSBuild properties, empty when unspecified:
 and `archive`, and kept `installedRuntimes` as one string.
 
 A missing `--runtime` (`RAPPSIZE1001`), `--verify-argument` without `--verify`
-(`RAPPSIZE1002`) or an existing `--report` (`RAPPSIZE1003`) is a usage error,
-exit code 2. A project whose publish settings MSBuild cannot evaluate
+(`RAPPSIZE1002`), an existing `--report` (`RAPPSIZE1003`) or an invalid
+`--property` (`RAPPSIZE1005`, `RAPPSIZE1006`) is a usage error, exit code 2. A project whose publish settings MSBuild cannot evaluate
 (`RAPPSIZE1004`), a failed publish or a failed verification exits 1.
+
+## Package the application
+
+`package <target>` (since 0.11) publishes the application with Native AOT and
+packages it for one operating system. It runs on that operating system and uses
+the platform's own packaging tools:
+
+```bash
+dotnet runic package windows    # MSIX, on Windows with the Windows SDK
+dotnet runic package macos      # .app in a disk image, on macOS with Xcode's command line tools
+dotnet runic package flatpak    # Flatpak bundle, on Linux with flatpak-builder
+dotnet runic package appimage   # AppImage, on Linux with appimagetool
+dotnet runic package deb        # Debian package, on Linux with dpkg-deb
+dotnet runic package rpm        # rpm, on Linux with rpmbuild (also on Debian and Ubuntu)
+dotnet runic package flathub --git-url https://github.com/example/notes.git --git-tag v1.2.0   # Flathub manifest, on any OS
+```
+
+The [packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/packaging.md)
+lists each format's tools and how to sign with your own credentials.
+
+Every target takes `--project` (`-p`), `--configuration` (`-c`, `Release` by
+default), `--runtime` (`--rid`, `-r`; the host's architecture by default) and
+`--output-directory` (`-o`; `artifacts/package/<target>` beside the project by
+default). The output directory is not `--output`, which stays the hidden alias
+of `--format`. A target of another operating system, or a runtime identifier of
+another operating system, is refused with `RAPPPKG1004` before anything is built.
+
+The package's identity comes from the project file:
+
+| Property | Use |
+| --- | --- |
+| `ApplicationId` | The package name, bundle identifier and Flatpak ID: a reverse-DNS name of ASCII letters and digits, each part starting with a letter, at most 50 characters (`RAPPPKG1001` otherwise) |
+| `ApplicationTitle` | The display name; the assembly name by default |
+| `Version` | The package version; MSIX and `Info.plist` use its numeric part (`1.2.3-preview.4` becomes `1.2.3.0` and `1.2.3`) |
+| `Description`, `PackageProjectUrl` | The package description and homepage |
+| `RunicApplicationPublisher` | The MSIX `Publisher`, which must equal the signing certificate's subject; `--publisher` overrides it |
+| `RunicApplicationUrlSchemes`, `RunicApplicationFileTypes`, `RunicApplicationWebLinkHosts`, `RunicApplicationDBusActivatable` | The URL schemes, file types, web link hosts and D-Bus activation each package declares |
+| `RunicPackageIcon` | The 512 px PNG icon; `icons/icon.png` by default. An `icon.svg` beside it is the scalable icon on Linux |
+| `RunicPackageName` | The deb and rpm package name; the lower-cased assembly name by default, with characters a package name cannot have replaced by `-` |
+| `PackageLicenseExpression` | The rpm `License`; `LicenseRef-proprietary` by default |
+| `RunicPackagingDirectory` | The manifest overrides; `packaging/` by default |
+
+The tool embeds the manifests it fills: `windows/AppxManifest.xml`,
+`macos/Info.plist`, `macos/entitlements.plist`, `linux/app.desktop`,
+`linux/app.metainfo.xml`, `linux/app.service` and `linux/flatpak.yml`. A file
+with the same path in the packaging directory replaces the embedded one, so the
+manifests a `--packaging` project of the `runic-app` template copies are
+editable. Both fill `{{Field}}` from the identity; a field the target does not
+fill is `RAPPPKG1006`.
+
+The packages are unsigned or ad-hoc signed: install them to test them, and sign
+them with your own credentials to ship them. Runic signs nothing for you.
+
+- **`windows`** writes the publish folder with `AppxManifest.xml` to `msix/` and
+  packs `<ApplicationId>_<version>_<arch>.msix` with `makeappx`. The manifest
+  declares the URL schemes, file types (several selected files reach one
+  process), app URI handlers and the login startup task. `--certificate app.pfx`
+  signs with a PFX file whose password is in `RUNIC_SIGNING_PASSWORD`, and
+  `--thumbprint <sha1>` with a certificate from the store; `--timestamp-url`
+  adds an RFC 3161 timestamp. `makeappx` and `signtool` are found on `PATH` or
+  in the newest Windows SDK folder.
+- **`macos`** builds `<ApplicationTitle>.app` (the executable in
+  `Contents/MacOS`, the frontend in `Contents/Resources/www`, none when the
+  application embeds it, and an `.icns` made with `sips` and `iconutil`), signs
+  it with the hardened runtime and `macos/entitlements.plist`, verifies it with
+  `codesign --verify --strict` and writes `<ApplicationTitle>-<version>.dmg`.
+  Without `--sign` the bundle is ad-hoc signed. `--sign "Developer ID
+  Application: …"` signs the bundle and the disk image with your identity, and
+  `--notary-profile <name>` then notarizes and staples the disk image with a
+  `notarytool store-credentials` profile. `--runtime osx-arm64,osx-x64` makes a
+  universal binary with `lipo`.
+- **`flatpak`** publishes into `flatpak-source/`, writes `<ApplicationId>.yml`
+  from `linux/flatpak.yml` on the GNOME runtime (which provides GTK 4 and
+  WebKitGTK 6, so the project uses `Runic.Desktop.Gtk4`), validates the desktop
+  entry and metainfo with `desktop-file-validate` and `appstreamcli`, builds
+  with `flatpak-builder --install-deps-from=flathub` and writes
+  `<ApplicationId>.flatpak` with a repository in `repo/`. `--gpg-sign <key>`
+  signs both with your key.
+- **`appimage`** builds an AppDir (the publish folder in `usr/lib/<ApplicationId>`,
+  `AppRun`, the desktop entry and icon at its root, the metainfo as
+  `<ApplicationId>.appdata.xml`) and makes `<ApplicationTitle>-<version>-<arch>.AppImage`
+  (spaces become `_`) with `appimagetool` from `PATH`. It passes appimagetool a
+  local AppImage runtime, `runtime-<arch>` from the
+  [type2-runtime releases](https://github.com/AppImage/type2-runtime/releases)
+  beside appimagetool or the file `RUNIC_APPIMAGE_RUNTIME` names, so nothing is
+  downloaded while packaging. The AppImage uses the system's GTK and WebKitGTK,
+  so the target system needs them installed; it is not D-Bus activatable,
+  because it has no fixed path.
+- **`deb`** and **`rpm`** stage the same tree: the publish folder in
+  `/usr/lib/<ApplicationId>/`, a `/usr/bin/<AssemblyName>` link, the desktop
+  entry with the URL schemes and file types as `MimeType=`, the hicolor icons,
+  the metainfo, the file types' MIME definitions and, with
+  `RunicApplicationDBusActivatable`, the D-Bus service file. The package name is
+  `RunicPackageName`, and a prerelease version sorts before its release
+  (`1.2.3-preview.4` becomes `1.2.3~preview.4`). The deb depends on `libc6,
+  libgtk-3-0t64 | libgtk-3-0, libwebkit2gtk-4.1-0`, or on `libc6, libgtk-4-1,
+  libwebkitgtk-6.0-4` when the project references `Runic.Desktop.Gtk4`, and is
+  built with `dpkg-deb --root-owner-group`. The rpm requires `webkit2gtk4.1` or
+  `webkitgtk6.0` with automatic dependencies off (the binary loads GTK with
+  `dlopen`, so rpm would not find them), takes its `License` from
+  `PackageLicenseExpression` and is built with `rpmbuild -bb`. Both validate the
+  desktop entry with `desktop-file-validate` when it is installed.
+- **`flathub`** writes a Flathub source-build manifest for your own submission:
+  `<ApplicationId>.yml` on the GNOME runtime with the `dotnet10` and, for a
+  frontend, `node24` SDK extensions, a `git` source at `--git-url` and
+  `--git-commit` or `--git-tag`, the desktop entry and metainfo, and the offline
+  sources `nuget-sources.json` and `npm-sources.json`. The command generates the
+  sources from the committed lock files: the NativeAOT NuGet lock file
+  (`NuGetLockFilePath` with `PublishAot=true`, whose `RuntimeIdentifiers` must list
+  `linux-x64` and `linux-arm64`), the runtime packs the SDK downloads besides it,
+  and the frontend's `package-lock.json` (npm only). It restores the NativeAOT
+  graph for both runtime identifiers in locked mode to take each package's
+  SHA-512 from the NuGet cache, checked against the lock file's content hash
+  first, and pins the build's `RuntimeFrameworkVersion` to the lock file's
+  NativeAOT compiler, so a newer SDK extension restores the same packages.
+  It runs on any operating system; `--build` then builds the manifest on Linux as
+  Flathub does (runtime and extensions, then every source, then the build without
+  network access) and writes `<ApplicationId>.flatpak`. A missing commit or
+  tag, lock file, hash or runtime identifier is `RAPPPKG1007`.
+
+Each target lists what it wrote in the `runic.application.tool.package/1`
+payload. `signing` is `none`, `adhoc`, `test` (a self-signed certificate, as in
+CI) or `identity` (your certificate or Developer ID):
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["target", "identity", "packages", "warnings"],
+  "properties": {
+    "target": { "enum": ["windows", "macos", "flatpak", "appimage", "deb", "rpm", "flathub"] },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": { "id": { "type": "string" }, "version": { "type": "string" } }
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "format", "signing"],
+        "properties": {
+          "path": { "type": "string", "description": "Absolute path of the package file or directory." },
+          "format": { "type": "string", "description": "msix, app, dmg, flatpak, appimage, deb, rpm or flathub-manifest." },
+          "signing": { "enum": ["none", "adhoc", "test", "identity"] }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string", "description": "A RAPPPKG2xxx code, such as RAPPPKG2001 (unsigned) or RAPPPKG2002 (not notarized); an open set." },
+          "message": { "type": "string", "description": "Human-readable; match the code instead." }
+        }
+      }
+    }
+  }
+}
+```
+
+Warnings, such as an unsigned package, do not fail the command: human output
+prints `warning RAPPPKG2001: …` lines and the payload lists them with their
+codes ([`RAPPPKG2001`–`2006`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#rapppkg2001)).
+An invalid identity (`RAPPPKG1001`) or a target or runtime of another
+operating system (`RAPPPKG1004`) is a usage error, exit code 2. A missing
+packaging tool (`RAPPPKG1002`), a failed publish (`RAPPPKG1003`), a failing
+packaging tool (`RAPPPKG1005`) or a failed validation (`RAPPPKG1006`) exits 1.
 
 ## Support envelopes
 

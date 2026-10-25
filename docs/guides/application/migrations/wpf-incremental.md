@@ -2,7 +2,7 @@
 
 An existing WPF application can adopt Runic one capability or screen at a time.
 Keep the WPF shell, application services and ViewModels. This guide follows
-Application SDK `0.10.0` and independently versioned Translations
+Application SDK `0.11.0` and independently versioned Translations
 `0.7.0-preview.4`; use exact versions within each product family.
 
 ## 1. Start with independent products
@@ -24,11 +24,11 @@ Neither product requires Views, navigation, a web frontend or a shell migration.
 
 ## 2. Share navigation, retain native MVVM
 
-Install `Runic.Navigation.Wpf` at `0.10.0`. It brings the host-neutral
+Install `Runic.Navigation.Wpf` at `0.11.0`. It brings the host-neutral
 `Runic.Navigation` engine and adds `DispatcherModelContext`, `NavigationHost`
 and `NavigationDialogHost`. Register `AddRunicWpfNavigation()` and map your
 native Views with `MapView`, a naming convention or data templates. Follow the
-[WPF navigation example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/examples/wpf-navigation/README.md)
+[WPF navigation example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/wpf-navigation/README.md)
 for typed page inputs, results from dialogs, nested tabs and departure guards.
 `NavigationSelector.Region` connects single selection to borrowed replacement;
 `ViewHost` presents a plain application-owned model without a navigation entry.
@@ -38,7 +38,7 @@ and ownership. CommunityToolkit models call its async operations from native
 `AsyncRelayCommand` or `[RelayCommand]` methods and forward their cancellation
 tokens. Handle `Committed`, `Rejected`, `Failed` and `Superseded` results as
 application policy. ReactiveUI models use the
-[navigation adapter's observables and native command recipes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#native-command-composition);
+[navigation adapter's observables and native command recipes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#native-command-composition);
 choose its `.Reactive` package for System.Reactive. Native commands retain their
 framework's behavior. There is no second navigation engine for a later web View.
 
@@ -52,7 +52,12 @@ Set `GuardWindowClose="True"` on a `NavigationHost` so that closing the window
 asks the region's departure guards, as Back does, also for a host on an
 unselected tab. In `NavigationDialogHost`, `Button.IsDefault` and
 `Button.IsCancel` work as in `ShowDialog`. Both are new in SDK
-`0.7.0-preview.7`.
+`0.7.0-preview.7`. Since SDK `0.11.0`, a guard from
+`WindowCloseConfirmation.Create` or `OncePerClose` asks once per window close,
+however many guarded regions the close clears, and
+`NavigationRequestOptions.RetainView` decides per entry whether a
+`NavigationHost` keeps the entry's View while it is retained, overriding the
+host's `RetainViews`.
 
 Which departures ask a page's guard in a tabbed shell:
 
@@ -82,7 +87,7 @@ public PagesTab(string name, RunicNavigator navigator, INavigationTarget<object>
 }
 ```
 
-The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation/README.md#which-departures-ask-a-child-region)
+The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/README.md#which-departures-ask-a-child-region)
 lists which departures ask a child region.
 
 ## 3. Optionally replace one View with a web View
@@ -107,11 +112,18 @@ one-project layout and the optional split into a WPF-free model project, the
 page's `webui.js` script, how the frontend reaches the output, window-close
 guards and why to start windows in code rather than with `StartupUri`.
 
+Since SDK `0.11.0`, `RunicViewHost` also takes `WebContent`,
+`ContentSecurityPolicy` and a shared `Desktop`, and serves a frontend that the
+build embedded with `RunicApplicationFrontendDelivery=Embedded`.
+`WpfPlatformServices.ForWindow` gives ViewModels screen reader announcements,
+context menus, message boxes, file drag-out, clipboard formats beyond text, and
+a taskbar badge and progress for the WPF window.
+
 `Runic.Application.Views.Wpf`, `RunicViewHost` and the one-project layout are
 new in SDK `0.7.0-preview.7`. An
 application built on `0.7.0-preview.6` keeps its `RunicWebView` and
 `DesktopHost` code compiling after the
-[upgrade steps in the 0.7.0-preview.7 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/eng/release/notes/0.7.0-preview.7.md#upgrading),
+[upgrade steps in the 0.7.0-preview.7 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/eng/release/notes/0.7.0-preview.7.md#upgrading),
 which also cover a two-project application.
 
 The host borrows the model, the application service provider and the model
@@ -122,7 +134,7 @@ presentation cleanup finishes. Unloading the host closes the web session, which
 cancels its unfinished operations and drains accepted work; work started through
 native commands remains governed by the application's model lifetime.
 
-The [hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/examples/wpf-hybrid-editor/README.md)
+The [hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/wpf-hybrid-editor/README.md)
 switches a single editor between WPF controls and a generated web client while
 preserving model, navigation entry, store and draft. Reloading or recreating the
 presentation uses the same model; switching back to native controls can preserve
@@ -137,8 +149,12 @@ for embedded web Views. The WPF web adapter is stable since SDK `0.9.0`; remove
 earlier `RUNICWPF001` suppressions, as that ID is retired. Since SDK `0.10.0`,
 `WpfBridgeView` and `RunicViewHost` open with the default web content policy:
 links to other sites open in the default browser, downloads are refused and
-developer tools are on only in Development; there is no option to change it
-yet. The child supports one surface per
+developer tools are on only in Development; since SDK `0.11.0`, their
+`WebContent` property changes that policy. Also since `0.11.0`,
+`Runic.Desktop`, which the WPF adapter brings, depends on
+`Runic.Platform.Linux.DBus` and Tmds.DBus.Protocol on every OS, so a WPF
+application ships those two managed assemblies, unused on Windows.
+The child supports one surface per
 control and follows normal HWND airspace constraints. WPF owns the shell's
 layout, focus and window operations; browser fallback is unavailable. Tab and
 Shift+Tab enter the web document and, at its last or first tab stop, return to
@@ -148,4 +164,4 @@ compile elsewhere; native WPF behavior must run on Windows.
 Do not block the live dispatcher on navigation or disposal with `.Wait()` or
 `.Result`. Synchronous provider disposal starts navigator shutdown without
 waiting; when cleanup must finish, follow the
-[WPF asynchronous exit recipe](https://github.com/Runic-Artifex/runic-sdk/blob/v0.10.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit).
+[WPF asynchronous exit recipe](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit).

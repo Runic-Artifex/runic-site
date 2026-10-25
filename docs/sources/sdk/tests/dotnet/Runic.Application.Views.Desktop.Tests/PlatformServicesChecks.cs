@@ -76,6 +76,13 @@ internal sealed class PlatformServicesChecks
         Require(await viewModel.Files.OpenFileAsync(new()) is PickerResult<IReadFileLease>.Unavailable(PlatformUnavailableReason.OwnerClosed)
             && await viewModel.Clipboard.WriteTextAsync("text") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
             "Services of a closed window did not report the owner closed.");
+        // The window's clipboard is also its desktop clipboard, and the badge follows the window too.
+        Require(viewModel.Clipboard is IDesktopClipboard desktopClipboard
+            && await desktopClipboard.ReadImageAsync(16) is PlatformResult<byte[]?>.Unavailable(PlatformUnavailableReason.OwnerClosed)
+            && await desktopClipboard.WriteAsync(new() { Html = "<b>x</b>" }) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed)
+            && await viewModel.Platform.SetBadgeAsync(new() { Count = 1 }) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed)
+            && await viewModel.Platform.SetProgressAsync(null) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+            "The desktop clipboard and taskbar of a closed window did not report the owner closed.");
         Require(viewModel.Platform.GetSnapshot().Statuses.Values.All(static status => status is CapabilityStatus.Unavailable(PlatformUnavailableReason.OwnerClosed)),
             "Capabilities of a closed window were not all owner-closed.");
     }
@@ -165,8 +172,13 @@ internal sealed class PlatformServicesChecks
                     "A Window did not announce through its embedded window.");
                 Require(await services.AnnounceAsync("The disk is full", DesktopAnnouncementPriority.Assertive) is PlatformResult<PlatformUnit>.Success,
                     "The ViewModel's platform services did not announce.");
+                // The host-neutral member a ViewModel reaches through IWindowPlatformServices.
+                Require(await window.ViewModel.Platform.AnnounceAsync("Copied") is PlatformResult<PlatformUnit>.Success
+                    && await window.ViewModel.Platform.AnnounceAsync("Offline", PlatformAnnouncementPriority.Assertive) is PlatformResult<PlatformUnit>.Success,
+                    "IWindowPlatformServices.AnnounceAsync did not announce through the embedded window.");
                 Require(factory.Hosts[0].Announcements.SequenceEqual(
-                    [("Saved", DesktopAnnouncementPriority.Polite), ("The disk is full", DesktopAnnouncementPriority.Assertive)]),
+                    [("Saved", DesktopAnnouncementPriority.Polite), ("The disk is full", DesktopAnnouncementPriority.Assertive),
+                     ("Copied", DesktopAnnouncementPriority.Polite), ("Offline", DesktopAnnouncementPriority.Assertive)]),
                     "The embedded window did not receive the announcements with their priorities.");
                 await ((DesktopBridgeWindow<FileViewModel>)window.Host).Window.CloseAsync();
                 Require(await DesktopPlatformServices.AnnounceAsync(window, "Late") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
@@ -178,6 +190,8 @@ internal sealed class PlatformServicesChecks
             }
             Require(await services.AnnounceAsync("Late") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
                 "The services of a closed window did not report the owner closed.");
+            Require(await ((IWindowPlatformServices)services).AnnounceAsync("Late") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+                "IWindowPlatformServices.AnnounceAsync of a closed window did not report the owner closed.");
         }
 
         await using (var provider = CreateProvider())
@@ -191,12 +205,138 @@ internal sealed class PlatformServicesChecks
         }
 
         var unbound = new DesktopWindowPlatformServices();
+        IWindowPlatformServices neutral = unbound;
         Require(await unbound.AnnounceAsync("Saved") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
             "Services of a window that has not opened did not report the owner unavailable.");
+        Require(await neutral.AnnounceAsync("Saved", PlatformAnnouncementPriority.Assertive) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            "IWindowPlatformServices.AnnounceAsync of a window that has not opened did not report the owner unavailable.");
         var rejected = false;
         try { _ = await unbound.AnnounceAsync(""); }
         catch (ArgumentException) { rejected = true; }
         Require(rejected, "An empty announcement was accepted.");
+        rejected = false;
+        try { _ = await neutral.AnnounceAsync(" "); }
+        catch (ArgumentException) { rejected = true; }
+        Require(rejected, "An empty announcement was accepted through IWindowPlatformServices.");
+        rejected = false;
+        try { _ = await neutral.AnnounceAsync("Saved", (PlatformAnnouncementPriority)7); }
+        catch (ArgumentOutOfRangeException) { rejected = true; }
+        Require(rejected, "An undefined announcement priority was accepted through IWindowPlatformServices.");
+        await unbound.DisposeAsync();
+        Require(await neutral.AnnounceAsync("Late") is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+            "IWindowPlatformServices.AnnounceAsync of stopped services did not report the owner closed.");
+    }
+
+    // B10: a ViewModel shows a native context menu through IWindowPlatformServices and gets the chosen item; a window
+    // without context menus, or none, reports why, and the snapshot reports both menu capabilities.
+    [Test, NotInParallel(Order = 17)]
+    public async Task ContextMenusReachTheEmbeddedWindowOrReportWhyNot()
+    {
+        System.Collections.Immutable.ImmutableArray<DesktopMenuEntry> menu =
+            [new DesktopMenuItem("Rename", "row.rename") { CommandParameter = "row-7" }, new DesktopMenuSeparator()];
+        await using (var provider = CreateProvider())
+        {
+            await using var host = await DesktopHost.StartAsync(new DesktopHostOptions
+            {
+                WindowHostFactory = new NativeDispatchFactory { ContextMenus = true }, WaitForConnection = false,
+            });
+            var window = await TestWindows.EmbeddedHtml(provider, host).OpenWindowAsync<FileWindow>();
+            var services = window.ViewModel.Platform;
+            Require(window.ViewModel.SnapshotBeforeOpen.Statuses[PlatformCapabilityIds.ContextMenu]
+                is CapabilityStatus.Unavailable(PlatformUnavailableReason.OwnerUnavailable), "The context menu capability was available before the window opened.");
+            try
+            {
+                Require(await services.ShowContextMenuAsync(menu, new DesktopContextMenuOptions { X = 12, Y = 34 })
+                    is PlatformResult<DesktopMenuItem?>.Success(var chosen) && ReferenceEquals(chosen, menu[0]),
+                    "IWindowPlatformServices.ShowContextMenuAsync did not return the item the window's menu chose.");
+                var statuses = services.GetSnapshot().Statuses;
+                Require(statuses[PlatformCapabilityIds.ContextMenu] is CapabilityStatus.Available
+                    && statuses[PlatformCapabilityIds.MenuBar] is CapabilityStatus.Unavailable(PlatformUnavailableReason.BackendUnavailable),
+                    "The snapshot did not report context menus and no native menu bar.");
+                await ((DesktopBridgeWindow<FileViewModel>)window.Host).Window.CloseAsync();
+                Require(await services.ShowContextMenuAsync(menu) is PlatformResult<DesktopMenuItem?>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+                    "The context menu of a closed window did not report the owner closed.");
+            }
+            finally
+            {
+                await window.DisposeAsync();
+            }
+        }
+
+        await using (var provider = CreateProvider())
+        {
+            await using var host = await DesktopHost.StartAsync(new DesktopHostOptions { WindowHostFactory = new NativeDispatchFactory(), WaitForConnection = false });
+            await using var window = await TestWindows.EmbeddedHtml(provider, host).OpenWindowAsync<FileWindow>();
+            Require(await window.ViewModel.Platform.ShowContextMenuAsync(menu) is PlatformResult<DesktopMenuItem?>.Unavailable(PlatformUnavailableReason.BackendUnavailable),
+                "A window host without context menus did not report the backend unavailable.");
+            var rejected = false;
+            try { _ = await window.ViewModel.Platform.ShowContextMenuAsync([]); }
+            catch (ArgumentException) { rejected = true; }
+            Require(rejected, "An empty context menu was accepted.");
+        }
+
+        IWindowPlatformServices unbound = new DesktopWindowPlatformServices();
+        Require(await unbound.ShowContextMenuAsync(menu) is PlatformResult<DesktopMenuItem?>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            "The context menu of a window that has not opened did not report the owner unavailable.");
+        Require(unbound.GetSnapshot().Statuses[PlatformCapabilityIds.MenuBar] is CapabilityStatus.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            "The menu bar capability of a window that has not opened was not unavailable.");
+        await ((DesktopWindowPlatformServices)unbound).DisposeAsync();
+        Require(await unbound.ShowContextMenuAsync(menu) is PlatformResult<DesktopMenuItem?>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+            "The context menu of stopped services did not report the owner closed.");
+    }
+
+    // B11: a ViewModel starts a drag out of the embedded window through IWindowPlatformServices and gets the effect; a
+    // window without drags, or none, reports why, and the snapshot reports the drag capability.
+    [Test, NotInParallel(Order = 17)]
+    public async Task DragsReachTheEmbeddedWindowOrReportWhyNot()
+    {
+        var data = new DesktopDragData { Text = "row 7" };
+        await using (var provider = CreateProvider())
+        {
+            await using var host = await DesktopHost.StartAsync(new DesktopHostOptions
+            {
+                WindowHostFactory = new NativeDispatchFactory { Drags = true }, WaitForConnection = false,
+            });
+            var window = await TestWindows.EmbeddedHtml(provider, host).OpenWindowAsync<FileWindow>();
+            var services = window.ViewModel.Platform;
+            Require(window.ViewModel.SnapshotBeforeOpen.Statuses[PlatformCapabilityIds.DragOut]
+                is CapabilityStatus.Unavailable(PlatformUnavailableReason.OwnerUnavailable), "The drag capability was available before the window opened.");
+            try
+            {
+                Require(await services.StartDragAsync(data) is PlatformResult<DesktopDragEffects>.Success(DesktopDragEffects.Copy),
+                    "IWindowPlatformServices.StartDragAsync did not return the window's effect.");
+                Require(services.GetSnapshot().Statuses[PlatformCapabilityIds.DragOut] is CapabilityStatus.Available,
+                    "The snapshot did not report drags.");
+                await ((DesktopBridgeWindow<FileViewModel>)window.Host).Window.CloseAsync();
+                Require(await services.StartDragAsync(data) is PlatformResult<DesktopDragEffects>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+                    "The drag of a closed window did not report the owner closed.");
+            }
+            finally
+            {
+                await window.DisposeAsync();
+            }
+        }
+
+        await using (var provider = CreateProvider())
+        {
+            await using var host = await DesktopHost.StartAsync(new DesktopHostOptions { WindowHostFactory = new NativeDispatchFactory(), WaitForConnection = false });
+            await using var window = await TestWindows.EmbeddedHtml(provider, host).OpenWindowAsync<FileWindow>();
+            Require(await window.ViewModel.Platform.StartDragAsync(data) is PlatformResult<DesktopDragEffects>.Unavailable(PlatformUnavailableReason.BackendUnavailable),
+                "A window host without drags did not report the backend unavailable.");
+            Require(window.ViewModel.Platform.GetSnapshot().Statuses[PlatformCapabilityIds.DragOut]
+                is CapabilityStatus.Unavailable(PlatformUnavailableReason.BackendUnavailable), "The snapshot reported drags for a window without them.");
+            var rejected = false;
+            try { _ = await window.ViewModel.Platform.StartDragAsync(new DesktopDragData()); }
+            catch (ArgumentException) { rejected = true; }
+            Require(rejected, "An empty drag was accepted.");
+        }
+
+        IWindowPlatformServices unbound = new DesktopWindowPlatformServices();
+        Require(await unbound.StartDragAsync(data) is PlatformResult<DesktopDragEffects>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            "The drag of a window that has not opened did not report the owner unavailable.");
+        await ((DesktopWindowPlatformServices)unbound).DisposeAsync();
+        Require(await unbound.StartDragAsync(data) is PlatformResult<DesktopDragEffects>.Unavailable(PlatformUnavailableReason.OwnerClosed),
+            "The drag of stopped services did not report the owner closed.");
     }
 
     // #313: a Window opened for a forwarded launch is presented with the launch's activation context as soon as it is
