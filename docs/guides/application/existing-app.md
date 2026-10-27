@@ -6,7 +6,7 @@ nothing, [create a project](getting-started/README.md) instead; the steps below
 reproduce what the template sets up. Replace `<VERSION>` with the current
 release from the [package catalog](https://docs.runic-artifex.eu/packages/) and
 keep Application SDK packages on that version;
-`Runic.Application.Views.CsWebUi` is still a prerelease, `0.12.0-preview.1`,
+`Runic.Application.Views.CsWebUi` is still a prerelease, `0.12.1-preview.1`,
 and needs CsWebUi 2.5.0-beta.4.8 or later.
 Runic Translations and Runic Command Line have independent release versions.
 
@@ -34,7 +34,7 @@ injection container at the version the template uses:
 
 ```sh docs-test=commands
 dotnet add package Runic.Application.Views.ReactiveUI --version <VERSION>
-dotnet add package Microsoft.Extensions.DependencyInjection --version 10.0.12
+dotnet add package Microsoft.Extensions.DependencyInjection --version 10.0.14
 ```
 
 For CommunityToolkit.Mvvm ViewModels, add `CommunityToolkit.Mvvm` instead of
@@ -199,7 +199,7 @@ value warns with `RUNICBRIDGE029`.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
 in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the

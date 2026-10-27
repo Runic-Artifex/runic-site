@@ -12,9 +12,9 @@ submission. `dotnet new runic-app --packaging` (or `--packaging` with
 where you edit them. The guide says which steps Runic CI exercises, which ones
 need signing credentials or accounts that CI does not have, and where the SDK
 does not help yet. The SDK's
-[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/packaging.md)
+[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/packaging.md)
 lists each format's tools, and the
-[dotnet-runic README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/tools/dotnet-runic/README.md#package-the-application)
+[dotnet-runic README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/tools/dotnet-runic/README.md#package-the-application)
 has every option, manifest field and `RAPPPKG` code.
 
 From SDK `0.8.0-preview.5` to `0.10.0`, `--packaging` wrote a
@@ -26,15 +26,15 @@ with `RAPPPKG1006`: replace the old manifests with those of a new
 
 Each platform section ends with a **Checked with** note. "Runic CI" means the
 SDK's
-[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/.github/workflows/ci.yml):
+[CI workflow](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/.github/workflows/ci.yml):
 its `Native` jobs run test applications that use Runic Desktop, and its
 `Packaging` jobs run `dotnet runic package` for the
-[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/tests/native/Runic.Packaging.Probe),
+[packaging probe](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.1/tests/native/Runic.Packaging.Probe),
 a test application with the template's identity, on each platform, install the
 package without the maintainers' signing credentials and open it through its
 URL scheme. The probe opens no window: it records what the installed package
 gives it, and
-[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/eng/ci/packaging-probe-check.mjs)
+[`packaging-probe-check.mjs`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/eng/ci/packaging-probe-check.mjs)
 checks that record. CI does not package the template application itself or
 retain the packages. "Not executed" means the step uses the platform vendor's
 documented tools and has not been run for Runic.
@@ -88,7 +88,7 @@ prerelease before its release (`1.2.3~preview.4`).
 
 `icons/` holds a neutral placeholder icon as `icon.svg`, `icon.png` (512 px)
 and `icon.ico`. Replace it as the generated README's
-[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
+[Identity and icons](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/tools/Runic.Application.Templates/content/runic-app/README.md#identity-and-icons)
 section describes; the packages take their icons from these files.
 `RunicPackageIcon` names another 512 px PNG (an `icon.svg` beside it is the
 scalable icon on Linux), `RunicPackageName` the deb and rpm package name (the
@@ -108,6 +108,11 @@ dotnet publish -c Release -r win-x64 -p:PublishAot=true
 dotnet publish -c Release -r osx-arm64 --self-contained true
 ```
 
+Self-contained and NativeAOT builds embed the .NET runtime they were built
+with. After a .NET security release, such as runtime 10.0.14 that SDK `0.12.1`
+requires, rebuild and republish them, including packages from
+`dotnet runic package`.
+
 NativeAOT gives one native executable per runtime identifier (RID); it is what
 `dotnet runic package` publishes and what Runic CI publishes on every platform.
 It cannot cross operating systems, so publish and package on Windows for
@@ -118,7 +123,7 @@ RID of another operating system with `RAPPPKG1004`. Since SDK
 `dotnet publish --no-build -p:PublishAot=true` after a `dotnet build` with the
 same configuration, target framework and `PublishAot`: the publish reuses the
 Bridge code of that build and reports
-[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#runicbridge022)
+[`RUNICBRIDGE022`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#runicbridge022)
 when it is missing. Before publishing, ask
 the CLI what the target needs on the machine that publishes:
 
@@ -128,7 +133,7 @@ dotnet runic doctor --runtime win-x64 --aot --fail-on fail
 ```
 
 The `target-rid` check reads the
-[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/eng/support.json):
+[support matrix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/eng/support.json):
 for Runic Desktop every supported RID (`win-x64`, `win-arm64`, `osx-arm64`,
 `linux-x64`, `linux-arm64` and the musl RIDs) is CI-verified. Since SDK
 `0.12.0`, Runic supports macOS on Apple silicon only: `osx-x64` is
@@ -163,7 +168,7 @@ The build then packs the frontend into the application assembly with
 single-file or NativeAOT executable carries its frontend. `Files` stays the
 default; another value, or the CS-WebUI host, warns with `RUNICBRIDGE030` and
 builds as `Files`. `dotnet runic dev` still serves the live frontend. See
-[ship the frontend inside the executable](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views/README.md#ship-the-frontend-inside-the-executable).
+[ship the frontend inside the executable](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views/README.md#ship-the-frontend-inside-the-executable).
 NativeAOT also writes debug symbols (`.pdb` on Windows, `.dbg` on Linux,
 `.dSYM` on macOS). `dotnet runic package` leaves them out of the package; keep
 them per release for [crash analysis](crash-reporting.md).
@@ -238,7 +243,7 @@ without arguments or data.
 With NativeAOT on `win-x64` or `win-arm64`, Runic Desktop's build targets link
 the WebView2 loader statically into the executable, so the publish folder
 contains no `WebView2Loader.dll`
-([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
+([`Runic.Desktop.targets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Desktop/buildTransitive/Runic.Desktop.targets)).
 A JIT build (self-contained or framework-dependent) copies
 `WebView2Loader.dll` next to the executable; ship it, or Desktop reports
 `webview2-loader-unavailable`. The template sets the Explorer icon of the
@@ -402,7 +407,7 @@ output directly, as before; launch profiles with `commandName: Executable` and
 IDEs that start the output themselves are unaffected. Universal links and the
 data-protection keychain need entitlements an ad-hoc signature cannot carry:
 test them in a package built with `--sign` and `--provisioning-profile`. See
-[Runic.Platform.MacOS: Development bundle](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Platform.MacOS/README.md#development-bundle).
+[Runic.Platform.MacOS: Development bundle](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Platform.MacOS/README.md#development-bundle).
 
 ### Bundle layout
 
@@ -496,7 +501,7 @@ asks; each adds the usage description to `Info.plist` and the
 `com.apple.security.device.camera` or `device.audio-input` entitlement,
 sandboxed or not. Without them WKWebView rejects `getUserMedia` with
 `NotAllowedError` and macOS never asks. The SDK's
-[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/packaging.md#file-types)
+[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/packaging.md#file-types)
 lists the system types the command knows.
 
 ### Sign, notarize and staple
@@ -573,7 +578,7 @@ the App Store, `--pkg` with a **Developer ID Installer** identity writes an
 installer package that `--notary-profile` notarizes and staples like the disk
 image. A `.pkg` without `--installer-sign` is unsigned and warns with
 `RAPPPKG2001`. The SDK's
-[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/packaging.md#app-sandbox-and-the-mac-app-store)
+[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/packaging.md#app-sandbox-and-the-mac-app-store)
 covers export compliance and the details.
 
 **Checked with**: Runic CI's `Packaging / macos` job runs
@@ -596,7 +601,7 @@ also publishes `Runic.Platform.Runtime.Tests` (a NativeAOT application whose
 native window is a Runic Desktop WKWebView), signs it ad hoc with the sandbox
 entitlements and retains it as the `platform-sandbox-osx-arm64-<run>` artifact
 for
-[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/tests/native/platform-sandbox/README.md).
+[manual permission tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/tests/native/platform-sandbox/README.md).
 Developer ID and Apple Distribution signing, provisioning profiles,
 notarization, stapling, App Store Connect validation and universal links were
 not executed: they need an Apple Developer account.
@@ -747,7 +752,7 @@ The project needs a NuGet lock file for the NativeAOT restore whose
 or RID is `RAPPPKG1007`. Generate the manifest again whenever a lock file
 changes, and submit it as Flathub's submission guide describes; Runic submits
 nothing. The SDK's
-[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/packaging.md#flathub)
+[packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/packaging.md#flathub)
 lists the lock file settings and the review's expectations.
 
 ### AppImage, deb and rpm
@@ -807,7 +812,7 @@ builds on Ubuntu and installs and opens the rpm in a Fedora container. The
 `--build`, installs the bundle and runs it. The probe opens no window. A Runic
 Desktop GTK 4 window with WebKit's nested sandbox in the same runtime is
 covered by the
-[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
+[Flatpak sandbox fixture](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/tests/native/Runic.Desktop.Gtk4.Smoke/flatpak/README.md),
 which is run by hand in the SDK's [container runner](container-automation.md),
 not in CI; its README records the verified runtime commit. Repository signing,
 Flathub submission, D-Bus activation from GNOME and KDE, and the Snap recipe
@@ -822,7 +827,7 @@ package: a `windows.protocol` extension in the MSIX manifest,
 desktop entry. Windows and Linux start the application with the URL as its
 argument; macOS sends it as an Apple event. `IDesktopOpenRequests` in
 Runic.Platform delivers them to the running instance; see the SDK's
-[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/specs/platform/open-activation.md).
+[open activation specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/specs/platform/open-activation.md).
 
 Since SDK `0.11.0`, the packages are also filled from these properties:
 
@@ -856,7 +861,7 @@ Since SDK `0.11.0`, the packages are also filled from these properties:
   `await DesktopPlatformServices.ExportApplicationAsync(ApplicationIdentity.Id, instance)`.
 
 The generated README's
-[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
+[Opened URLs and files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/tools/Runic.Application.Templates/content/runic-app/README.md#opened-urls-and-files)
 section has the exact files each host serves. An application without a
 package, such as a ZIP, registers its schemes and file types itself with
 `IDesktopOpenRegistration`. Runic CI opens each package through a URL scheme
