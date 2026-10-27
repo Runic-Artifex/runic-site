@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
@@ -83,6 +83,11 @@ clients and these guides. The first seven follow the glossary of the
   history, departure guards and owned content. Exposed as a get-only property,
   it is a content slot like any ViewModel content. See
   [pages and navigation](guides/pages-and-navigation.md).
+- **Selection**: a `NavigationSelection`, since SDK `0.12.0`, that chooses
+  which of a page's sibling regions is presented, such as tabs that each keep
+  their own stack. Switching is a guarded transition that asks the tab left;
+  in Runic Views its `SelectedIndex` is state, not a content slot. See
+  [tabs that keep their own pages](guides/pages-and-navigation.md#tabs-that-keep-their-own-pages).
 - **Entry**: one visit in a region's history. A borrowed entry presents a
   ViewModel that someone else owns, such as the Window's scope; an owned
   entry's ViewModel belongs to the entry, usually created for the visit, and is

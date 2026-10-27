@@ -135,9 +135,9 @@ const queries = {
 // Each search loads the index, its terms' shards and the texts it shows. The budget
 // grew from 400 KiB raw and 104 KiB gzipped with the 1.0 Desktop guides (crash
 // reporting, right-to-left, accessibility), and from 432 KiB raw and 112 KiB
-// gzipped with the 0.11.0 API types and guides, which need about 474 KiB raw
-// and 127 KiB gzipped.
-const budget = { raw: 496 * 1024, gzip: 132 * 1024 };
+// gzipped with the 0.11.0 API types and guides, and from 132 KiB gzipped with
+// the 0.12.0 API types and guides, which need about 133 KiB gzipped.
+const budget = { raw: 496 * 1024, gzip: 136 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {

@@ -225,7 +225,11 @@ interaction attachment, view location, activation, and scheduler adaptation.
 Each mounted `ReactiveRunicView<T>`, and each open `RunicWindow<T>`, gets a
 separate activation lease. The ViewModel's `IActivatableViewModel.Activator` remains
 active until the final lease releases it. A get-only `NavigationRegion<TContent>`
-property presents its `Current` as generated content. This gives Runic the
+property presents its `Current` as generated content. Since SDK `0.12.0`, a
+get-only `NavigationSelection` property is state: the frontend receives its
+`SelectedIndex` (`number | null`) and selects through a command, such as one
+from `CreateSelectCommand()`, while each tab's region stays a content slot.
+This gives Runic the
 same useful activation and routing boundary as a native integration while the
 frontend retains responsibility for visual layout and DOM binding.
 
@@ -244,8 +248,8 @@ The exact generated codec/command path is covered by a ReactiveUI Native AOT
 fixture with no warnings. That verifies the bridge contract under AOT; it does
 not represent every native host or frontend combination.
 
-The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
-[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
-[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
-and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
+The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
+[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
+[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
+and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).

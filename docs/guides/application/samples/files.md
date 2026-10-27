@@ -123,9 +123,16 @@ public async Task<bool> SaveAsync()
 
 The runtime writes a temporary file next to the target, flushes it to disk and
 renames it over the target. Before the rename, it checks on a best-effort basis
-that the target has not changed since the dialog returned; if it has, the commit returns
-`NotCommitted(Conflict)`. Disposing a transaction without committing removes
-the temporary file.
+that the target has not changed since the application last saw it; if it has,
+the commit returns `NotCommitted(Conflict)`. Disposing a transaction without
+committing removes the temporary file.
+
+Since SDK `0.12.0`, every save lease, including the one `SaveFileAsync`
+returns, can write again: a new `BeginWriteAsync` begins once the previous
+transaction's commit finished, whatever its outcome, or the transaction was
+disposed. While one is open, it returns `Failed(ResourceBusy)`; before, every
+later call did. The commit compares the file with the selected file, then with
+each committed write, so a conflict means another program changed it.
 
 `CommitAsync` returns one of three results:
 
@@ -139,9 +146,49 @@ the temporary file.
 application shows the user which case occurred, for example in a status
 property that the frontend renders.
 
+Since SDK `0.12.0`, on Windows, a target that another program holds open
+without delete sharing is `NotCommitted(ResourceBusy)`, not
+`CommitUnknown(IOError)`: the file was not replaced, so the user can try again
+later.
+
+## Keep working on a document
+
+An editor reads the file the user chose and saves back to it on every Ctrl+S
+and autosave. Since SDK `0.12.0`, `OpenDocumentAsync` and `SaveDocumentAsync`
+(Save As) return an `IDocumentFileLease` for that. Unlike the lease of
+`OpenFileAsync`, which reads the file once, it reads the current file on each
+`OpenReadAsync` and writes it as often as the application saves. Keep it for as
+long as the document is open:
+
+```csharp docs-test=source:tests/dotnet/Runic.Application.Views.Desktop.Tests/PlatformServicesChecks.cs
+    public async Task OpenAsync()
+    {
+        if (await files.OpenDocumentAsync(new() { Filters = [new("Notes", ["txt", "md"])] }) is not PickerResult<IDocumentFileLease>.Selected(var document)) return;
+        if (_document is not null) await _document.DisposeAsync();
+        _document = document;
+        await ReloadAsync();
+    }
+...
+    public async Task<FileCommitResult?> SaveAsync()
+    {
+        if (_document is null || await _document.BeginWriteAsync(FileWritePolicy.RequireAtomicReplace)
+            is not PlatformResult<IFileWriteTransaction>.Success(var transaction)) return null;
+```
+
+A commit compares the file with the content the application last saw, which
+for a document includes each `OpenReadAsync`. After `NotCommitted(Conflict)`,
+ask the user, then reload, or read first and write again to overwrite.
+`LocalPath` tells where the document is, for example to find out whether
+another Window has it open. The `platform.files.openDocument` capability
+reports whether the Window's dialogs return documents. For a recent-files list,
+store the bytes of the lease's `CreateBookmarkAsync` and reopen the document
+with `IDesktopFileBookmarks.OpenDocumentAsync`; see
+[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Platform/README.md#document-apps).
+
 ## When atomic save is unavailable
 
-Atomic replacement needs permission to create a file next to the target.
+Atomic replacement needs a place to stage the new content: next to the target,
+or, in a sandboxed macOS app, the volume's item replacement directory.
 
 - **Windows, Linux and unsandboxed macOS.** The save is available. On Linux,
   a portal selection in an unsandboxed application is the real host path, so
@@ -149,8 +196,10 @@ Atomic replacement needs permission to create a file next to the target.
   portal returns a document whose private view stages the sibling as a host
   tempfile and renames it onto the chosen file. Either way the file is
   replaced atomically, never overwritten in place.
-- **Sandboxed macOS apps.** A selection doesn't grant access to the folder, so
-  the save is unavailable.
+- **Sandboxed macOS apps.** Since SDK `0.12.0` the save is available: a
+  selection grants the file alone, so the write stages in the volume's item
+  replacement directory and `NSFileManager` replaces the file. Before, the save
+  was unavailable there.
 - **Read-only or revoked grants.** On Linux, a document grant that can't be
   written is unavailable.
 
@@ -161,7 +210,7 @@ through it, and an unsandboxed application on GTK 3 can choose GTK's own file ch
 `LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That was a
 lower-level provider API that you composed yourself, with no automatic fallback.
 The
-[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
+[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
 describes both mechanisms.
 
 When the save is unavailable, `BeginWriteAsync` returns
@@ -181,5 +230,5 @@ report success. This SDK has no other write policy: `FileWritePolicy` has only
 - [Desktop preferences, notifications, file handoff, and clipboard](../../desktop-services.md)
   covers the providers behind these services.
 - The
-  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
   lists every per-Window service and owner.

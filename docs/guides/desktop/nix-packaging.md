@@ -2,8 +2,8 @@
 
 Since SDK `0.8.0-preview.1`, the Runic SDK's flake exports a builder for Runic
 applications, a development shell, and NixOS and Home Manager modules that
-install them. This guide follows `0.11.0` and summarizes the SDK's
-[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/nix/README.md),
+install them. This guide follows `0.12.0` and summarizes the SDK's
+[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/nix/README.md),
 which has every argument and option.
 
 `buildRunicApplication` wraps nixpkgs' `buildDotnetModule`. It restores NuGet
@@ -32,6 +32,23 @@ result/bin/RunicWindowApp
 
 With `--tests`, also run `dotnet restore RunicWindowApp.Tests`.
 
+Since SDK `0.12.0`, a NixOS machine without a .NET SDK can create the project
+with the flake's `create` app. It runs `Runic.Create` of the tag's version with
+the .NET 10 SDK, Node, pnpm and Bun from nixpkgs; its arguments follow `--`, as
+they do for `dnx Runic.Create`:
+
+```sh docs-test=skip:release-tag-pin
+nix run github:Runic-Artifex/runic-sdk/v0.12.0#create -- MyApp --frontend react --nix
+cd MyApp
+git init && git add -A
+nix develop              # the .NET SDK, Node and the package manager, from the new flake
+```
+
+The app downloads `Runic.Create` and the template from nuget.org, so it needs
+the network, and installs the template into `~/.templateengine`, as
+`dotnet new install` does. Without `--yes` it asks its questions as
+`dnx Runic.Create` does.
+
 After changing a package reference, restore both again, or the build fails
 with `NU1004`. With pnpm or Bun, the frontend's packages are one fixed-output
 download whose hash in `flake.nix` starts as `lib.fakeHash`: the first
@@ -41,7 +58,9 @@ the lock file changes.
 The package installs the desktop entry `share/applications/<ID>.desktop`, named
 after `ApplicationId` in the project file, with the icons from `icons/`
 under the same name. `flake.nix` repeats the ID; change it there too when you
-change `ApplicationId`.
+change `ApplicationId`. Since SDK `0.12.0`, the entry's `Exec=` passes the
+files and URLs the desktop opens (`%U`); see
+[file types and URL schemes](#file-types-and-url-schemes).
 
 ## A flake for an existing application
 
@@ -52,7 +71,7 @@ SDK input to the release your packages use:
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   runic-sdk = {
-    url = "github:Runic-Artifex/runic-sdk/v0.11.0";
+    url = "github:Runic-Artifex/runic-sdk/v0.12.0";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 };
@@ -94,6 +113,29 @@ meta.mainProgram = "my-app";
 completions = { };                                # my-app completion bash, zsh, fish
 completions.command = [ "--completions" ];        # my-app --completions bash, ...
 ```
+
+## File types and URL schemes
+
+Since SDK `0.12.0`, the build reads `ApplicationId`, `ApplicationTitle`,
+`RunicApplicationFileTypes` and `RunicApplicationUrlSchemes` from the project
+and installs them as `dotnet runic package` does in a deb or rpm, so no
+builder argument repeats them:
+
+```xml docs-test=readme:nix/README.md
+<ApplicationId>org.example.Notes</ApplicationId>
+<RunicApplicationFileTypes>.notes=application/x-example-notes</RunicApplicationFileTypes>
+<RunicApplicationUrlSchemes>org.example.notes</RunicApplicationUrlSchemes>
+```
+
+The file types' shared-mime-info definitions go to
+`$out/share/mime/packages/<ApplicationId>.xml`. The desktop entry named after
+`ApplicationId` (or, without one, every entry the package installs) gets their
+MIME types and `x-scheme-handler/<scheme>` in `MimeType=`, and `%U` in `Exec=`
+when it has no field code. NixOS and Home Manager build the MIME database of
+the profile the package is installed in, so a file manager offers the
+application for its file types. A file type or scheme that the package command
+rejects (`RAPPPKG1001`) fails the build. A project with neither builds as
+before.
 
 ## NuGet and frontend packages
 
@@ -159,7 +201,7 @@ speech synthesis, 72.6 MiB smaller; screen readers still work, but it
 compiles from source for hours, so build it on your own cache.
 
 The policy of the application's
-[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 is installed in `$out/share/polkit-1/actions`. The build exports
 `RunicApplicationInstallPrefix` as `$out`, so an action can name the installed
 program, and fails when a policy names a program outside the package:
@@ -217,4 +259,7 @@ CS-WebUI in a shell without the Desktop libraries.
 under JIT and NativeAOT and the privileged-actions smoke with its policy. A
 NixOS VM test installs them through the NixOS module and checks the desktop
 entry, the user service, `pkaction` and pkexec. The template's `--nix` projects
-are built for npm, pnpm, Bun and NativeAOT against a published release.
+are built for npm, pnpm, Bun and NativeAOT against a published release. Since
+SDK `0.12.0`, a flake check also compares a project's installed MIME
+definitions and `MimeType=` with the package command's expected output, and
+another builds the `create` app's wrapper.

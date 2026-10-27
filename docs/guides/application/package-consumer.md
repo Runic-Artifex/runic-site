@@ -19,6 +19,8 @@ dotnet runic dev
 ```
 
 Install .NET 10 and the frontend tools reported by `dotnet runic doctor`.
+Since SDK `0.12.0`, the build tools also roll forward to a newer major .NET
+SDK, such as .NET 11, when .NET 10 is not installed.
 The creator takes its destination with `--output` (`-o`), as `dotnet new` does.
 Its `--format json` option selects JSON output. Since SDK `0.11.0`,
 `--application-id` sets the reverse-DNS application ID, `--restore` restores
@@ -156,7 +158,9 @@ libraries. With `RunicApplicationFrontendDelivery=Embedded` (since SDK
 `0.11.0`) the frontend is in the application assembly and there is no `www`.
 Since SDK `0.11.0`, `dotnet runic package` publishes with NativeAOT and builds
 an MSIX, a macOS `.app` and disk image, a Flatpak, an AppImage, a deb or an
-rpm; see [ship a Desktop application](../desktop/shipping.md).
+rpm. Since SDK `0.12.0` it also signs a macOS bundle for the App Sandbox and
+writes an installer package for the Mac App Store, for Apple silicon only; see
+[ship a Desktop application](../desktop/shipping.md).
 
 Run the published native output as well as the development host. Check initial
 state, a long operation with responsive Cancel, unavailable native services,

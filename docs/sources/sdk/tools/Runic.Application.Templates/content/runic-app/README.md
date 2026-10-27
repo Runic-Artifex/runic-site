@@ -26,6 +26,10 @@ installs the frontend packages with __PACKAGE_MANAGER_NAME__, and later builds
 install them again when `package.json` or the lock file changes; set
 `RunicApplicationFrontendInstallEnabled` to `false` to install them yourself.
 These commands build the production frontend instead of starting a development server.
+On macOS, `dotnet run` and `dotnet runic dev` start the application from a
+generated, ad-hoc signed development bundle in `obj/`, so notifications, login
+startup and the URL schemes work while you develop; `RunicMacDevelopmentBundle`
+set to `false` turns it off.
 
 The first restore writes `packages.lock.json`, which pins every NuGet package
 to its version and content hash (`RestorePackagesWithLockFile`). Commit it with
@@ -386,7 +390,7 @@ for each format's tools and for signing.
 | Platform | Package | Without credentials | To ship it |
 | --- | --- | --- | --- |
 | Windows | `<id>_<version>_x64.msix` from `windows/AppxManifest.xml` | Unsigned; Windows installs only signed packages. Sign it with a test certificate to try it. | A code-signing certificate whose subject is `RunicApplicationPublisher`: `--certificate app.pfx` (password in `RUNIC_SIGNING_PASSWORD`) or `--thumbprint <sha1>` from the certificate store, and `--timestamp-url` from your provider. A cloud signing service signs the unsigned package with its own `signtool` options. The Microsoft Store signs packages itself. |
-| macOS | `<name>.app` and `<name>-<version>.dmg` from `macos/Info.plist` and `entitlements.plist` | Ad-hoc signed with the hardened runtime: it runs on this Mac; Gatekeeper blocks it elsewhere. | An Apple Developer Program membership with a Developer ID Application certificate in the keychain (`--sign "Developer ID Application: Example Ltd (TEAMID)"`), and notarization credentials stored once with `xcrun notarytool store-credentials <profile>` (`--notary-profile <profile>`), which notarizes and staples the disk image. `--runtime osx-arm64,osx-x64` builds a universal executable. |
+| macOS | `<name>.app` and `<name>-<version>.dmg` from `macos/Info.plist` and `entitlements.plist` | Ad-hoc signed with the hardened runtime: it runs on this Mac; Gatekeeper blocks it elsewhere. | An Apple Developer Program membership with a Developer ID Application certificate in the keychain (`--sign "Developer ID Application: Example Ltd (TEAMID)"`), and notarization credentials stored once with `xcrun notarytool store-credentials <profile>` (`--notary-profile <profile>`), which notarizes and staples the disk image. Apple silicon (`osx-arm64`) only; Runic does not target Intel Macs. For the App Sandbox and the Mac App Store, `--sandbox` (or `RunicMacSandbox`), `RunicMacApplicationCategory`, `--provisioning-profile` and `--pkg` with `--installer-sign`; see the packaging guide. |
 | Linux | `<id>.flatpak` and a repository from `linux/flatpak.yml`, `app.desktop` and `app.metainfo.xml` | Unsigned: install the bundle with `flatpak install --user <id>.flatpak`. | A GPG key for your own repository (`--gpg-sign <key id>`). |
 | Linux | `<Name>-<version>-<arch>.AppImage` | Unsigned; it uses the system's GTK and WebKitGTK. | `appimagetool --sign` with your key; see the packaging guide. |
 | Linux | `<package>_<version>_<arch>.deb` and `<package>-<version>-1.<arch>.rpm` | Unsigned; they depend on the distribution's GTK and WebKitGTK. | Sign the apt repository, or the rpm with `rpmsign`. |
@@ -425,10 +429,16 @@ an Apple event.
 
 `RunicApplicationFileTypes` lists the file types the application opens, such
 as `.notes=application/x-example-notes;.md`: an extension with its dot and,
-optionally, its MIME type. In `Info.plist` each becomes a document type with
-an exported uniform type identifier `<ApplicationId>.<extension>` that
-conforms to `public.data`, as the application's own type; for a standard type,
-such as Markdown, edit the generated entry to name the system's type instead.
+optionally, its MIME type. In `Info.plist` each becomes a document type. An
+extension with a system type, such as `.txt` (`public.plain-text`), `.md`
+(`net.daringfireball.markdown`) or `.png` (`public.png`), names that type with
+the `Alternate` rank, so the application is offered for such files without
+taking them over; `RunicMacFileTypeHandlerRank` set to `Default` asks to be
+their default application instead. Any other extension is the application's
+own: an exported uniform type identifier `<ApplicationId>.<extension>` that
+conforms to `public.data`, with the `Owner` rank. For a standard type the
+command does not know, name it with `RunicMacFileTypeIdentifiers`, such as
+`.log=public.log` (see the [packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/packaging.md#file-types)).
 In the MSIX manifest each becomes a `uap3:FileTypeAssociation` with
 `MultiSelectModel="Player"`, so files the user opens together reach one
 process; read them with `DesktopPlatformServices.GetLaunch(args)`. In the
@@ -502,7 +512,10 @@ The package installs the program in `bin`, the desktop entry
 `share/applications/__RUNIC_APPLICATION_ID__.desktop` with the icons from
 `icons/` under the same name, and GTK and WebKitGTK as run-time libraries.
 `flake.nix` repeats the application ID; change it there too when you change
-`ApplicationId`. `nix develop`
+`ApplicationId`. The build reads `RunicApplicationFileTypes` and
+`RunicApplicationUrlSchemes` from the project: it installs the file types'
+MIME definitions and adds them and the URL schemes to the desktop entry's
+`MimeType=`, as `dotnet runic package` does. `nix develop`
 opens a shell with the .NET SDK, Node, the package manager and those libraries.
 The SDK's
 [Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v__RUNIC_NUGET_VERSION__/nix/README.md)

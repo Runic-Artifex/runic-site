@@ -2,7 +2,7 @@
 
 An existing WPF application can adopt Runic one capability or screen at a time.
 Keep the WPF shell, application services and ViewModels. This guide follows
-Application SDK `0.11.0` and independently versioned Translations
+Application SDK `0.12.0` and independently versioned Translations
 `0.8.0`; use exact versions within each product family.
 
 ## 1. Start with independent products
@@ -24,21 +24,25 @@ Neither product requires Views, navigation, a web frontend or a shell migration.
 
 ## 2. Share navigation, retain native MVVM
 
-Install `Runic.Navigation.Wpf` at `0.11.0`. It brings the host-neutral
+Install `Runic.Navigation.Wpf` at `0.12.0`. It brings the host-neutral
 `Runic.Navigation` engine and adds `DispatcherModelContext`, `NavigationHost`
 and `NavigationDialogHost`. Register `AddRunicWpfNavigation()` and map your
 native Views with `MapView`, a naming convention or data templates. Follow the
-[WPF navigation example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/wpf-navigation/README.md)
+[WPF navigation example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/examples/wpf-navigation/README.md)
 for typed page inputs, results from dialogs, nested tabs and departure guards.
-`NavigationSelector.Region` connects single selection to borrowed replacement;
-`ViewHost` presents a plain application-owned model without a navigation entry.
+`NavigationSelector.Selection`, new in SDK `0.12.0`, connects a `TabControl`
+or other single-selection control to a `NavigationSelection`, for tabs that
+each keep their own stack of pages; `NavigationSelector.Region` connects single
+selection to borrowed replacement, for existing models without stacks of their
+own; `ViewHost` presents a plain application-owned model without a navigation
+entry.
 
 `RunicNavigator` is the shared engine for history, guards, outcomes, cancellation
 and ownership. CommunityToolkit models call its async operations from native
 `AsyncRelayCommand` or `[RelayCommand]` methods and forward their cancellation
 tokens. Handle `Committed`, `Rejected`, `Failed` and `Superseded` results as
 application policy. ReactiveUI models use the
-[navigation adapter's observables and native command recipes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#native-command-composition);
+[navigation adapter's observables and native command recipes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#native-command-composition);
 choose its `.Reactive` package for System.Reactive. Native commands retain their
 framework's behavior. There is no second navigation engine for a later web View.
 
@@ -65,6 +69,12 @@ Which departures ask a page's guard in a tabbed shell:
   they retire, and every page in the regions that a retired owned page owns.
 - **A window close** with `GuardWindowClose` clears the guarded regions, so it
   asks their pages as retiring, whichever tab is selected.
+- **A tab switch** through `NavigationSelector.Selection` (since SDK
+  `0.12.0`) is a guarded `SelectAsync`: it asks the current page of the tab
+  left, and of the regions below it, as a retained departure, and changes no
+  stack. A veto restores the committed tab. Retiring the page that owns the
+  tabs, as a guarded window close does, asks every page of every tab as
+  retiring, also tabs that were never selected.
 - **A tab switch** through `NavigationSelector.Region` first asks the current
   page of each region that the tab model owns, and of the regions below it, as
   a retained departure, then the tab model's own guard. A guard that keeps its
@@ -87,7 +97,39 @@ public PagesTab(string name, RunicNavigator navigator, INavigationTarget<object>
 }
 ```
 
-The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/README.md#which-departures-ask-a-child-region)
+For tabs that each keep their own pages, let the page own one region per tab
+and choose among them with a `NavigationSelection`, as the same tests do:
+
+```csharp docs-test=source:tests/dotnet/Runic.Navigation.Wpf.Tests/Support.cs
+// A page whose tabs each keep their own stack (#648): one region per tab, owned by the page, and a selection among them.
+internal sealed class TabsPage : Page
+{
+    public TabsPage(string name, RunicNavigator navigator, params Page[] roots) : base(name)
+    {
+        Tabs = [.. roots.Select(root => navigator.CreateRegion(this, NavigationTarget.Own<object>(root)))];
+        Selection = navigator.CreateSelection(this, Tabs);
+    }
+
+    public NavigationRegion<object>[] Tabs { get; }
+    public NavigationSelection Selection { get; }
+}
+```
+
+```xml docs-test=skip:illustrative-fragment
+<TabControl rn:NavigationSelector.Selection="{Binding Selection}">
+  <TabItem Header="Customers" />
+  <TabItem Header="Reports" />
+</TabControl>
+```
+
+Moving tab models selected with `Region` to `Selection`: the page owns the tab
+regions and creates the selection, tab header models become plain data or
+static `TabItem`s, the binding changes to `rn:NavigationSelector.Selection`,
+and hand-written "can I leave this tab?" checks go, because the switch asks the
+pages' departure guards. See the Runic.Navigation.Wpf README,
+["Tabs with their own stacks"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-with-their-own-stacks).
+
+The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation/README.md#which-departures-ask-a-child-region)
 lists which departures ask a child region.
 
 ## 3. Optionally replace one View with a web View
@@ -123,7 +165,7 @@ a taskbar badge and progress for the WPF window.
 new in SDK `0.7.0-preview.7`. An
 application built on `0.7.0-preview.6` keeps its `RunicWebView` and
 `DesktopHost` code compiling after the
-[upgrade steps in the 0.7.0-preview.7 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/eng/release/notes/0.7.0-preview.7.md#upgrading),
+[upgrade steps in the 0.7.0-preview.7 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/eng/release/notes/0.7.0-preview.7.md#upgrading),
 which also cover a two-project application.
 
 The host borrows the model, the application service provider and the model
@@ -134,7 +176,7 @@ presentation cleanup finishes. Unloading the host closes the web session, which
 cancels its unfinished operations and drains accepted work; work started through
 native commands remains governed by the application's model lifetime.
 
-The [hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/wpf-hybrid-editor/README.md)
+The [hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/examples/wpf-hybrid-editor/README.md)
 switches a single editor between WPF controls and a generated web client while
 preserving model, navigation entry, store and draft. Reloading or recreating the
 presentation uses the same model; switching back to native controls can preserve
@@ -164,4 +206,4 @@ compile elsewhere; native WPF behavior must run on Windows.
 Do not block the live dispatcher on navigation or disposal with `.Wait()` or
 `.Result`. Synchronous provider disposal starts navigator shutdown without
 waiting; when cleanup must finish, follow the
-[WPF asynchronous exit recipe](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit).
+[WPF asynchronous exit recipe](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit).

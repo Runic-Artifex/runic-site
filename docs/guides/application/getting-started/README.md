@@ -60,13 +60,19 @@ Replace `<VERSION>` with the current release from the
 [package catalog](https://docs.runic-artifex.eu/packages/). You need the .NET 10
 SDK and Node.js 24 with npm or pnpm, or Bun 1.4. Since SDK `0.11.0`, Node.js 26
 works too; `dotnet runic doctor` warns because Node.js 24 is the certified
-version.
+version. Since SDK `0.12.0`, the build tools (the Bridge generator, the asset
+packer, `dotnet runic` and `Runic.Create`) roll forward to a newer major .NET,
+so a machine with only a newer .NET SDK, such as .NET 11, builds the app; .NET
+10 remains the tested runtime.
 
 `dotnet runic dev` restores the .NET and frontend packages, builds the app,
 starts the frontend development server, and opens the app. Since SDK `0.11.0`
 it takes `--launch-profile`, `--no-build`, `-e`/`--environment NAME=VALUE` and
 `-v`/`--verbosity`, and confirms that the development server on its port is the
-one it started. `dotnet runic doctor` checks the prerequisites at any point.
+one it started. Since SDK `0.12.0`, on macOS it and `dotnet run` start the app
+from an ad-hoc signed development bundle in `obj/`, so notifications, login
+startup and the URL schemes work while you develop. `dotnet runic doctor`
+checks the prerequisites at any point.
 The generated README describes the project layout, the ignored
 `Frontend/src/generated` clients, publishing, and the project settings. The
 [project creator](https://docs.runic-artifex.eu/create/) builds the command for
@@ -78,7 +84,8 @@ your choices and previews the generated files.
 dotnet publish -c Release -r linux-x64
 ```
 
-Use `win-x64`, `osx-arm64` or another runtime identifier for other platforms.
+Use `win-x64`, `osx-arm64` or another runtime identifier for other platforms;
+since SDK `0.12.0`, macOS is supported on Apple silicon (`osx-arm64`) only.
 The publish folder contains the executable and a `www` folder with the built
 frontend; distribute the whole folder. Since SDK `0.11.0`,
 `RunicApplicationFrontendDelivery=Embedded` packs the frontend into the
@@ -109,7 +116,7 @@ operation lifetime.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see
-  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/first-window/README.md).
+  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/examples/first-window/README.md).
 
 The code blocks in these guides are checked against a pinned copy of the SDK
 template and examples by

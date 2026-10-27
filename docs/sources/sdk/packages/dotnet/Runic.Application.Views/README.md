@@ -291,6 +291,11 @@ interfaces: it activates an `IActivatableViewModel` on web mount and deactivates
 it on web unmount and detach, and offers `protected virtual` hooks of the same
 names to override without calling `base`.
 
+Runic has no ViewModel lifetime interface. Use `IActivatableViewModel` with
+`ReactiveRunicView<T>`, `INavigationAware` for navigated content, or set
+CommunityToolkit's `ObservableRecipient.IsActive` from a View's
+`OnWebMounted` and `OnWebUnmounted`.
+
 ### Opening a Window from a ViewModel
 
 The host is passed only to the `Run` callback. To open Windows from a command
@@ -844,7 +849,7 @@ API shapes were removed rather than deprecated. Since 0.9 the old build property
 and item names no longer apply: each fails the build with
 [RUNICBRIDGE017](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge017),
 which names the new one. Angular's `RunicViewOutlet` remains a deprecated alias,
-removed in the next preview. The old package IDs get no further releases, so replace them
+removed in the next major release. The old package IDs get no further releases, so replace them
 in `PackageReference` and `Directory.Packages.props`; namespaces are unchanged.
 
 | Before | Now |
@@ -1708,7 +1713,7 @@ No wrapper command is needed.
   parameter cannot have a key.
 
 The generator reports a misplaced attribute or an unusable resolver as
-[`RUNICBRIDGE029`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge029).
+[`RUNICBRIDGE027`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge027).
 
 ## Operation results and parameterised queries
 
@@ -2121,6 +2126,68 @@ capture. Until then it may still hold the old reference. An invocation on that
 reference is rejected like any forgotten route, and the outlet may briefly
 show the old View or nothing. The next capture converges.
 
+**Tabs with a stack each (since 0.12).** Expose each tab's region as its own
+`NavigationRegion<TContent>` slot, and the
+[`NavigationSelection`](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
+that chooses among them as a get-only property. That property is a state slot:
+its wire value is `SelectedIndex`, the index in `Regions`, or `null` when the
+selection has no region, and its TypeScript type is `number | null`. The
+generated Bridge observes the selection's `SelectedIndex` as it observes a
+region's `Current`, so a committed switch publishes the new index and a vetoed
+one publishes nothing. A selection with a public setter is `RUNICBRIDGE008`.
+The web view selects through a command that calls `SelectAsync` and returns the
+request's `NavigationOutcome`, so the frontend learns whether a departure guard
+kept the tab:
+
+```csharp
+public sealed partial class CustomersPageViewModel : ObservableObject
+{
+    public CustomersPageViewModel(RunicNavigator navigator)
+    {
+        List = navigator.CreateRegion<IPage>(this, NavigationTarget.Create<CustomerListViewModel>());
+        Reports = navigator.CreateRegion<IPage>(this, NavigationTarget.Create<ReportsViewModel>());
+        Tabs = navigator.CreateSelection(this, [List, Reports]);
+    }
+
+    public NavigationRegion<IPage> List { get; }
+    public NavigationRegion<IPage> Reports { get; }
+    public NavigationSelection Tabs { get; } // TypeScript: readonly tabs: number | null
+
+    [RelayCommand] // selectTab(index) in TypeScript
+    private async Task<NavigationOutcome> SelectTabAsync(int index) =>
+        (await Tabs.SelectAsync(Tabs.Regions[index])).Outcome;
+}
+```
+
+With ReactiveUI, expose `Tabs.CreateSelectCommand()` from Runic.Navigation.ReactiveUI
+as the command. The frontend shows the slot at the selected index. It can also
+keep every tab's outlet mounted and hide the others, which keeps each tab's DOM,
+such as scroll positions and unsent input:
+
+```tsx
+function CustomersPage({ view, state }: { view: CustomersPageClient; state: CustomersPageState }) {
+  const tabs = [state.list, state.reports];
+  return (
+    <>
+      <nav>
+        <button aria-pressed={state.tabs === 0} onClick={() => void view.selectTab(0)}>Customers</button>
+        <button aria-pressed={state.tabs === 1} onClick={() => void view.selectTab(1)}>Reports</button>
+      </nav>
+      <ViewOutlet content={state.tabs === null ? null : tabs[state.tabs]} registry={pages} />
+      {/* or keep every tab mounted:
+      {tabs.map((tab, index) => (
+        <section key={index} hidden={state.tabs !== index}><ViewOutlet content={tab} registry={pages} /></section>
+      ))} */}
+    </>
+  );
+}
+```
+
+Don't move the highlighted tab before the command settles: `state.tabs`
+changes only when the switch commits, so the tab bar shows the kept tab after
+a veto. The tab set is static; Runic Views presents no collection of region
+slots.
+
 ### Navigation command results
 
 A command that navigates returns the request's `NavigationOutcome`, as
@@ -2359,6 +2426,9 @@ NativeAOT symbols and what to attach to a bug report.
 | 3015 | `MenuBarPlacementChanged` | Information | On Linux, a window's menu bar moved into the desktop's global menu or back into the window, or a Flatpak cannot reach the global menu registrar (`global-menu-permission`, the placement unchanged). | `OldPlacement`, `NewPlacement`, `Reason` |
 | 3016 | `GlobalMenuFailed` | Warning | On Linux, the window's menu could not be exported or the global menu registrar refused the window (`global-menu-failed`); the bar stays in the window. Once per window. | `DiagnosticMessage` |
 | 3017 | `MenuBarPlacementHandlerFailed` | Error | A `DesktopWindow.MenuBarPlacementChanged` handler threw; later handlers and events still run. | `ErrorType` |
+| 3018 | `DesktopQuitRequested` | Information | On macOS, Quit, the Dock's Quit or logging out quits the application after `DesktopHostOptions.ConfirmQuitAsync` and the close guards agreed: `ShutdownRequested` is cancelled and the windows close. | `Reason` |
+| 3019 | `DesktopQuitConfirmationFailed` | Error | `DesktopHostOptions.ConfirmQuitAsync` threw; the application keeps running. | `ErrorType` |
+| 3020 | `DesktopReopenHandlerFailed` | Error | A `DesktopHost.ReopenRequested` handler threw; later handlers still run. | `ErrorType` |
 
 `Model` is the ViewModel type name, `Member` the command or property, and
 `Route` the Bridge route (a content presentation's route is per instance, such
@@ -2565,6 +2635,10 @@ a `failed` callback it is event 1016 at `Debug` level instead of a warning:
 | `WatchLimit` | `fs.inotify.max_user_watches` or `max_user_instances` is exhausted. | Polls; retries the watch on each poll. |
 | `Failed` | A watch could not start or stopped. | Polls; retries the watch on each poll. |
 | `NotGitRepository` | A `GitHead` directory exists but holds no repository. | Watches it for `.git` or `HEAD` to appear and reports the change; reads it only at the 30-second backstop. |
+
+`RunicPathWatchErrorKind` is open: a minor release may add a kind, so give a
+`switch` over it a default arm and treat an unknown kind as `Failed`, after
+which the watcher polls.
 
 Dispose the watcher with its ViewModel. It also stops when the model context
 closes, and no callback starts after `Dispose` returns in a model turn. Set

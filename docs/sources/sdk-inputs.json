@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "318762a9d5dcdd74303ca30b095fed355a1ab21f",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/318762a9d5dcdd74303ca30b095fed355a1ab21f.tar.gz",
+  "revision": "cb95ea2838ba61c7a24b9cda05bf5f0bd6fcc2d7",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/cb95ea2838ba61c7a24b9cda05bf5f0bd6fcc2d7.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -101,5 +101,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:0d6e7a1a27355218f8958e7d6d2e9c9109710b0faa0f8e7cfc0a0e3d97a80492"
+  "contentDigest": "sha256:cbef590d68c9a06ad88b9bf917050f784d70eb95bf4d5c84d7db3fcd607e65cf"
 }

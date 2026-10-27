@@ -65,7 +65,7 @@ runtime is smaller: in one
 application was 5.16 MiB with CS-WebUI and 10.42 MiB with Runic Desktop,
 excluding the browser.
 
-`Runic.Application.Views.CsWebUi` is a prerelease, `0.11.0-preview.1`, and
+`Runic.Application.Views.CsWebUi` is a prerelease, `0.12.0-preview.1`, and
 needs CsWebUi 2.5.0-beta.4.8 or later. Since SDK `0.11.0` it can declare a menu
 bar that the page renders (`RunicCsWebUiHostOptions.MenuBar`), and its Bridge
 works under a policy without `'unsafe-eval'`. Update any copy of

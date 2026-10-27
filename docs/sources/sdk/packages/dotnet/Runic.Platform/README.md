@@ -163,6 +163,76 @@ if (await files.SaveFileAsync(options) is PickerResult<ISaveFileLease>.Selected 
 On macOS a save panel with filters may add the first allowed extension, or with
 `ShowFilterChoice` the chosen filter's, to a name the user types without one.
 
+## Document apps
+
+An editor keeps working on the file the user chose: it reads it, saves back to it
+on Ctrl+S and autosave, and lists it in recent files. `OpenDocumentAsync` and
+`SaveDocumentAsync` (Save As) return an `IDocumentFileLease` for that. Unlike
+`OpenFileAsync`, whose lease reads the file once, a document lease reads the
+current file on each `OpenReadAsync` and writes it through `BeginWriteAsync` as
+often as the application saves. `LocalPath` shows where the document is and
+tells whether it is already open in another window. The `platform.files.openDocument`
+capability reports whether the window's dialogs return documents, and
+`platform.files.save` whether their writes can replace the file.
+
+```csharp
+if (await files.OpenDocumentAsync(new() { Filters = [notes] }) is not PickerResult<IDocumentFileLease>.Selected(var document)) return;
+if (await document.OpenReadAsync() is PlatformResult<Stream>.Success(var stream))
+    await using (stream) { text = await new StreamReader(stream).ReadToEndAsync(); }
+
+// Ctrl+S and autosave: one transaction per save.
+async Task<FileCommitResult> SaveAsync(string text)
+{
+    if (await document.BeginWriteAsync(FileWritePolicy.RequireAtomicReplace) is not PlatformResult<IFileWriteTransaction>.Success(var write))
+        return new FileCommitResult.NotCommitted(PlatformFailureCode.ResourceBusy); // A save is still running, or saving is unavailable.
+    await using (write)
+    {
+        await write.Content.WriteAsync(Encoding.UTF8.GetBytes(text));
+        return await write.CommitAsync();
+    }
+}
+```
+
+Every save lease writes repeatedly, including the one `SaveFileAsync` returns: a
+write can begin once the previous transaction's commit finished, whatever its
+outcome, or once the transaction was disposed; while one is open,
+`BeginWriteAsync` returns `Failed(ResourceBusy)`. A commit compares the file with
+the content the application last saw: the selected file, then each committed
+write, and for a document each `OpenReadAsync`. So `NotCommitted(Conflict)` means
+another program changed the file. Ask the user, then reload with `OpenReadAsync`,
+or overwrite: read first, which makes the current content the one the commit
+compares with, and write again. After `CommitUnknown` the next commit accepts
+either the previous content or the staged bytes. `OpenReadAsync` during an open
+transaction reads the committed file, never the staged bytes, and the pending
+commit then compares with what it read. A file that disappeared reads as
+`Failed(NotFound)`, and a write after that creates it again.
+
+For recent files, store the bytes of `CreateBookmarkAsync` after open or the first
+save of Save As, and again each time the document is reopened. Reopen with
+`IDesktopFileBookmarks.OpenDocumentAsync`; that lease belongs to no window and
+keeps the bookmark's access until it is disposed, while a dialog's lease is
+released when its window closes. A path from a launch or a drop becomes a
+document through `CreateAsync(path)` and then `OpenDocumentAsync(bookmark)`.
+On macOS, Runic Desktop also lists the document in Open Recent and the Dock,
+and marks the window's represented file and unsaved changes
+([Document apps on macOS](../Runic.Desktop/README.md#document-apps-on-macos)).
+In the App Sandbox those lists give no access: keep each bookmark with the
+document's `LocalPath`, note that path for the lists, and when Open Recent or the
+Dock delivers the path as an open request, reopen the document from the stored
+bookmark with `OpenDocumentAsync(bookmark)`.
+
+```csharp
+if (await document.CreateBookmarkAsync() is PlatformResult<ImmutableArray<byte>>.Success(var bookmark)) recent.Add(bookmark);
+// Next launch:
+if (await bookmarks.OpenDocumentAsync(recent[0]) is PlatformResult<IDocumentFileLease>.Success(var reopened)) { /* read, save, dispose */ }
+```
+
+| | Windows | Linux (GTK, xdg-desktop-portal, Flatpak) | macOS |
+| --- | --- | --- | --- |
+| Write | Sibling staging file and `ReplaceFile`, which keeps the file's ACL and attributes | Sibling staging file and `rename`; in a document portal view (Flatpak, Snap) through the portal's private temporary file | Sibling staging file and `rename` outside the App Sandbox. Inside it the user's selection grants the file alone: the write stages in the volume's item replacement directory (`NSItemReplacementDirectory`), and `NSFileManager.replaceItemAtURL` replaces the file, keeping its metadata, as `NSDocument` saves; a new file is renamed into place with `renamex_np(RENAME_EXCL)`. The lease keeps the selection's security-scoped access started |
+| Bookmark | The path | The path; in a Flatpak the document portal's path, which the permission store keeps valid | An `NSURL` bookmark, which follows a moved or renamed file; inside the App Sandbox a security-scoped read-write bookmark, created while the lease's access is started. A document from `IDesktopFileBookmarks.OpenDocumentAsync` keeps the bookmark's security-scoped access until it is disposed. The sandboxed bundle needs `com.apple.security.files.bookmarks.app-scope` |
+| Not possible | Follow a moved or renamed file; replace a file another program holds open without delete sharing (`NotCommitted(ResourceBusy)`) | Follow a moved file; create sibling files, such as lock files, in a document portal view; keep extended attributes and ACLs | Inside the App Sandbox: create sibling files, such as lock files or a backup beside the document, which need related-item declarations (`NSIsRelatedItemType`) and an `NSFilePresenter` |
+
 ## Window services
 
 `IWindowPlatformServices` groups the file dialogs, clipboard and file
@@ -242,6 +312,8 @@ window opens and on hosts without a native owner, `OwnerClosed` after it closed
 activate Common Controls 6 or GTK 4 is older than 4.10.
 `DesktopMessageBoxes.Unavailable(reason)` stands in where there are none, and an
 implementation that does not override the member reports `OwnerUnavailable`.
+A message box has no "Don't ask again" check box: keep that choice in the
+application's settings and skip the box when it is set.
 
 ### Clipboard
 
@@ -466,6 +538,35 @@ The application composes `IDesktopPrivilegedActions` itself, because it needs
 declared actions and a provider package, and claims `ApplicationInstance` before
 it starts a host.
 
+### Events and watches as observables
+
+The services raise ordinary .NET events and return `IAsyncEnumerable<T>` from
+`WatchAsync`, so they need no adapter package. With System.Reactive,
+`Observable.FromEventPattern` turns an event into an observable, and
+`Observable.Create` turns a watch into one that cancels the watch when the
+subscription is disposed:
+
+```csharp
+using System.Reactive.Linq;
+
+IObservable<DesktopGlobalShortcutActivation> activations = Observable
+    .FromEventPattern<DesktopGlobalShortcutActivation>(
+        handler => shortcuts.Activated += handler,
+        handler => shortcuts.Activated -= handler)
+    .Select(pattern => pattern.EventArgs);
+
+IObservable<PlatformResult<DesktopNetworkState>> networkStates = Observable.Create<PlatformResult<DesktopNetworkState>>(
+    async (observer, cancellationToken) =>
+    {
+        await foreach (var result in network.WatchAsync(cancellationToken)) observer.OnNext(result);
+        observer.OnCompleted();
+    });
+```
+
+Each service's section says on which thread its events arrive (global shortcuts
+on a worker thread), and a watch continues on the thread pool, so observe on the
+ViewModel's scheduler before changing its state.
+
 ## Menus
 
 Status icon menus (`DesktopStatusIconState.Menu`), context menus
@@ -594,7 +695,10 @@ and the result is still `Success`. `ListAsync` returns the current bindings, and
 The Linux portal needs the application's ID: outside Flatpak and Snap, pass the
 installed desktop ID (`AddRunicPlatformServices("org.example.App")` or
 `new PortalApplication("org.example.App")`); without one it reports
-`Failed(PermissionDenied)`. Runic does not grab keys on X11 itself.
+`Failed(PermissionDenied)`. Runic does not grab keys on X11 itself: without a
+GlobalShortcuts portal there are no global shortcuts on Linux.
+`DesktopShortcutModifiers` has no Super or Windows-key modifier, because the
+desktops keep most of those combinations for themselves.
 
 On Windows and macOS the application owns the binding: record the user's choice
 in a settings page with `shortcutFromEvent` from `@runic-artifex/views`, keep its
@@ -685,7 +789,8 @@ var result = await DesktopPlatformServices.CreateOpenRegistration("org.example.N
 access to a file across launches, as a recent-files list needs: on macOS a
 security-scoped bookmark inside the App Sandbox, elsewhere the path. Store the
 bytes `CreateAsync` returns, and dispose the access `ResolveAsync` returns when
-done with the file; when it `IsStale`, create and store a new bookmark.
+done with the file; when it `IsStale`, create and store a new bookmark. To read and save a bookmarked file, open it as a document instead
+([Document apps](#document-apps)).
 
 ## Secret storage
 
@@ -1111,6 +1216,27 @@ a type no thumbnailer handles or one whose thumbnailing failed, is
 Hosts without a provider register `DesktopThumbnails.Unavailable(reason)`. The
 [thumbnails design](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/platform/thumbnails.md)
 has the per-platform behaviour and its verification.
+
+## Screenshots and colour picking
+
+Runic has no screenshot or screen colour-picking API: both let the user choose
+what to capture, and each desktop has its own tool for that. Use the page, the
+clipboard or the desktop portal instead:
+
+- **A colour.** `<input type="color">` opens the web engine's colour chooser:
+  the macOS colour panel in WKWebView, the GTK colour chooser in WebKitGTK and
+  Chromium's in WebView2. Engines with the EyeDropper API (Chromium-based ones;
+  check `"EyeDropper" in window`) also pick a colour anywhere on the screen after
+  the user's click with `new EyeDropper().open()`.
+- **A screenshot.** The user takes it with the system's tool, to the clipboard
+  (Windows+Shift+S on Windows, Control+Shift+Command+4 on macOS, the desktop's
+  screenshot tool on Linux), and the application pastes it with
+  `IDesktopClipboard.ReadImageAsync` (see [Clipboard](#clipboard)), or the user
+  saves it to a file and opens or drops that.
+- **Linux portal.** `org.freedesktop.portal.Screenshot` has `Screenshot` and
+  `PickColor`, which ask the user and also work inside Flatpak. Call them with
+  `DBusProxy` from Runic.Platform.Linux.DBus and wait for the request's
+  `Response` signal, as the portal documentation describes.
 
 ## Privileged actions
 

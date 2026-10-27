@@ -59,14 +59,14 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
 `WhenNavigatedTo`, the result commands, `ReactiveLeaveConfirmation` and
-`GuardClose` are new in SDK `0.7.0-preview.7`. This guide follows `0.11.0`.
+`GuardClose` are new in SDK `0.7.0-preview.7`. This guide follows `0.12.0`.
 
 ### Coming from ReactiveUI navigation
 
@@ -112,7 +112,7 @@ since SDK `0.11.0`, a project whose references contain both gets build warning
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -131,7 +131,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -536,7 +536,7 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   taking `IRunicWindowContext` in its constructor and calling its
   `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
   it is new in SDK `0.7.0-preview.8`; see
-  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -569,6 +569,93 @@ to keep (`true`) or rebuild (`false`) one entry's view while the entry is
 retained; the entry reports it as `NavigationEntry.RetainView`. It never
 changes the entry's lifetime. The WPF `NavigationHost` reads it in place of its
 `RetainViews`. Runic Views pages ignore it, because the frontend owns the DOM.
+
+### Tabs that keep their own pages
+
+Tabs, a navigation rail or a bottom navigation often keep one stack per
+section, so a tab's pages and drafts stay while another tab is shown. Since
+SDK `0.12.0`, make each tab a region owned by the page, and let a
+`NavigationSelection` choose which one is presented:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+public sealed class CustomersPage
+{
+    public CustomersPage(RunicNavigator navigator)
+    {
+        List = navigator.CreateRegion<IPage>(this, NavigationTarget.Create<CustomerListViewModel>());
+        Reports = navigator.CreateRegion<IPage>(this, NavigationTarget.Create<ReportsViewModel>());
+        Tabs = navigator.CreateSelection(this, [List, Reports]);
+    }
+
+    public NavigationRegion<IPage> List { get; }
+    public NavigationRegion<IPage> Reports { get; }
+    public NavigationSelection Tabs { get; }
+}
+
+var result = await page.Tabs.SelectAsync(page.Reports); // a guarded switch
+```
+
+- `SelectAsync` is a transition with `NavigationOperation.Select`. It asks the
+  current page of the tab left, and of the regions below it, as `Retain`, so
+  an editor can ask "Save, discard or cancel?" before another tab is shown. A
+  veto, failure, cancellation or supersession keeps the selection.
+  `LeaveConfirmation` and `ReactiveLeaveConfirmation` ask on a tab switch only
+  with `askOnRetain: true`.
+- A committed switch changes no stack: the tab left keeps its pages, and
+  coming back presents the same entry without running its arrival hooks again.
+- `Add(region)` adds a tab, such as a document tab, and `RemoveAsync(region)`
+  closes one, asking its pages as `Retire`. Retiring the page asks every page
+  of every tab, whichever is selected, so own the regions and the selection by
+  a page entry, not by the Window's ViewModel: then a guarded Window close asks
+  every tab.
+- A request whose `Requester` is a page in a tab that isn't selected is
+  rejected as `NotCurrent`, so a late operation in a hidden tab doesn't
+  navigate the page the user is looking at.
+- The selection has its own `IsTransitioning`, `IsBusy` and `WhenIdleAsync`.
+  A later `SelectAsync` supersedes an earlier one, so the last tab chosen
+  wins, unless `NavigationSelectionOptions.Admission` is `RejectWhileBusy`.
+
+With ReactiveUI, `ReactiveNavigationSelectionExtensions` observes the
+selection and creates its command:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation.ReactiveUI/README.md
+SelectTab = Tabs.CreateSelectCommand(); // ReactiveCommand<int, NavigationOutcome>
+
+Tabs.WhenSelectedIndexChanged()    // int, -1 without regions, on the commit turn
+    .Subscribe(index => SelectedTab = index);
+```
+
+`WhenSelectedChanged()`, `WhenIsTransitioningChanged()` and
+`WhenIsBusyChanged()` complete the set. The command's output is the
+`NavigationOutcome`: a veto of the tab left is `Rejected` (`Guard`).
+
+In Runic Views, a get-only `NavigationSelection` property is state, not a
+content slot: the frontend receives its `SelectedIndex`, typed
+`number | null`, and each tab's region stays a content slot. A selection with a
+public setter is `RUNICBRIDGE008`. The frontend selects through the command and
+shows the slot at the selected index:
+
+<!-- prettier-ignore -->
+```tsx docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+function CustomersPage({ view, state }: { view: CustomersPageClient; state: CustomersPageState }) {
+  const tabs = [state.list, state.reports];
+  return (
+    <>
+      <nav>
+        <button aria-pressed={state.tabs === 0} onClick={() => void view.selectTab(0)}>Customers</button>
+        <button aria-pressed={state.tabs === 1} onClick={() => void view.selectTab(1)}>Reports</button>
+      </nav>
+      <ViewOutlet content={state.tabs === null ? null : tabs[state.tabs]} registry={pages} />
+```
+
+Don't move the highlighted tab before the command settles: `state.tabs`
+changes only when the switch commits, so the tab bar shows the kept tab after
+a veto. The tab set is static in a web View. In WPF,
+`NavigationSelector.Selection` binds a `TabControl` to the selection; see
+[incremental WPF adoption](../migrations/wpf-incremental.md#2-share-navigation-retain-native-mvvm).
+The
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
+lists every rule.
 
 ## With CommunityToolkit.Mvvm
 
@@ -604,7 +691,8 @@ moved on, is rejected instead of opening a second page.
 request is made for, such as a page whose operation completes and then opens a
 page in a parent region. The request is rejected as `NotCurrent` unless that
 entry, and every entry whose content owns its region up to a root region, is
-current at admission and at commit.
+current at admission and at commit. Since SDK `0.12.0`, an entry in a tab that
+isn't selected is not current either.
 
 CommunityToolkit.Mvvm has no interaction type, so the leave guard asks in the
 dialog region with `LeaveConfirmation.InDialog`. The confirm dialog takes its
@@ -629,10 +717,10 @@ private async Task CloseEditorAsync()
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.
 - Since SDK `0.11.0`, `RunicTestNavigationEntry.CreateAsync` in
-  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Application.Testing/README.md)
+  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Testing/README.md)
   unit-tests a page that takes its `NavigationEntryContext`, such as a confirm
   dialog, without a Window.

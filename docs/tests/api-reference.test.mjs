@@ -85,10 +85,9 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  // 2.375 MiB since 0.11.0 added the menu, clipboard, monitor, shortcut,
-  // message box and other platform services (about 460 KB); 0.11.0 needs
-  // about 2.34 MiB.
-  assert.ok(inputs <= 2.375 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  // 2.5 MiB since 0.12.0 added navigation selections, document leases and
+  // the macOS quit, window and document APIs; 0.12.0 needs about 2.42 MiB.
+  assert.ok(inputs <= 2.5 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
   // __data.json payloads that client-side navigation loads. 192 KiB per page
   // since 0.11.0, whose @runic-artifex/views page needs about 186 KiB.
