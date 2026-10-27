@@ -1,8 +1,8 @@
 <script lang="ts">
-  import Mark from '$lib/brand/Mark.svelte';
-  import CreateCommand from '$lib/components/CreateCommand.svelte';
-  import Seam from '$lib/components/Seam.svelte';
-  import { productGroups } from '$lib/products';
+  import Mark from '#lib/brand/Mark.svelte';
+  import CreateCommand from '#lib/components/CreateCommand.svelte';
+  import Seam from '#lib/components/Seam.svelte';
+  import { productGroups } from '#lib/products.js';
 
   const docs = 'https://docs.runic-artifex.eu';
   const title =

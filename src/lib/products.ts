@@ -1,4 +1,4 @@
-import type { MarkName } from '$lib/brand/Mark.svelte';
+import type { MarkName } from '#lib/brand/Mark.svelte';
 
 export type Product = {
   slug: string;
