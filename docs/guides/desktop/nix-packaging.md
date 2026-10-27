@@ -3,7 +3,7 @@
 Since SDK `0.8.0-preview.1`, the Runic SDK's flake exports a builder for Runic
 applications, a development shell, and NixOS and Home Manager modules that
 install them. This guide follows `0.12.0` and summarizes the SDK's
-[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/nix/README.md),
+[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/nix/README.md),
 which has every argument and option.
 
 `buildRunicApplication` wraps nixpkgs' `buildDotnetModule`. It restores NuGet
@@ -38,7 +38,7 @@ the .NET 10 SDK, Node, pnpm and Bun from nixpkgs; its arguments follow `--`, as
 they do for `dnx Runic.Create`:
 
 ```sh docs-test=skip:release-tag-pin
-nix run github:Runic-Artifex/runic-sdk/v0.12.0#create -- MyApp --frontend react --nix
+nix run github:Runic-Artifex/runic-sdk/v0.12.1#create -- MyApp --frontend react --nix
 cd MyApp
 git init && git add -A
 nix develop              # the .NET SDK, Node and the package manager, from the new flake
@@ -71,7 +71,7 @@ SDK input to the release your packages use:
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   runic-sdk = {
-    url = "github:Runic-Artifex/runic-sdk/v0.12.0";
+    url = "github:Runic-Artifex/runic-sdk/v0.12.1";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 };
@@ -196,12 +196,18 @@ the program behind it finds no WebKitGTK, and Runic Desktop then reports
 `RUNIC_APPLICATION_EXECUTABLE`, so login startup writes the wrapper into the
 autostart entry.
 
+Since SDK `0.12.1`, the wrapper of a self-contained or NativeAOT application
+also puts OpenSSL on the library path. Built with nixpkgs' binary .NET SDK,
+such as `dotnetCorePackages.sdk_10_0-bin`, such an application aborted at
+start with "No usable version of libssl was found"; with nixpkgs' source-built
+SDK nothing changes.
+
 `withSpeechSynthesis = false` loads a WebKitGTK without the Web Speech API's
 speech synthesis, 72.6 MiB smaller; screen readers still work, but it
 compiles from source for hours, so build it on your own cache.
 
 The policy of the application's
-[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 is installed in `$out/share/polkit-1/actions`. The build exports
 `RunicApplicationInstallPrefix` as `$out`, so an action can name the installed
 program, and fails when a policy names a program outside the package:

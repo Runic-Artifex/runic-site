@@ -10,16 +10,16 @@ something fails without one.
 
 | Prefix                                      | Reported by                                                                                           | Reference                                                                                                                               |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `RUNICBRIDGE`                               | The bridge code generator and the Views build targets, during `dotnet build`                          | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#bridge-code-generator)                    |
-| `RAPPCLI`, `RAPPDEV`, `RAPPSIZE`, `RAPPPKG` | `dotnet runic` commands, such as `dev`, `doctor`, `size` and `package`                                | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#dotnet-runic)                             |
-| `RAS`                                       | The asset packer and the Runic.Assets build targets                                                   | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#asset-packer)                             |
-| `RUNICDESK`                                 | The Runic Desktop build targets                                                                       | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#runic-desktop-build)                      |
-| `RCREATE`                                   | `dnx Runic.Create`                                                                                    | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#runiccreate)                              |
-| `RUNICPA`, `RUNICEL`                        | The privileged-action build targets of Runic.Platform and its platform packages                       | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#privileged-actions)                       |
-| `RUNICNAV`                                  | The Runic.Navigation ReactiveUI build targets                                                         | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#navigation-reactiveui-build)              |
-| `RUNICDBUS`                                 | The D-Bus source generator                                                                            | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#d-bus-source-generator)                   |
-| `RUNICP`                                    | `@runic-artifex/vite-plugin-runic`                                                                    | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#vite-plugin)                              |
-| `RUNICDESK1xx`, `RUNICASSETS`               | Retired experimental-API IDs; since SDK `0.10.0` no API is experimental, so remove their suppressions | [Experimental APIs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/experimental.md)                                       |
+| `RUNICBRIDGE`                               | The bridge code generator and the Views build targets, during `dotnet build`                          | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#bridge-code-generator)                    |
+| `RAPPCLI`, `RAPPDEV`, `RAPPSIZE`, `RAPPPKG` | `dotnet runic` commands, such as `dev`, `doctor`, `size` and `package`                                | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#dotnet-runic)                             |
+| `RAS`                                       | The asset packer and the Runic.Assets build targets                                                   | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#asset-packer)                             |
+| `RUNICDESK`                                 | The Runic Desktop build targets                                                                       | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#runic-desktop-build)                      |
+| `RCREATE`                                   | `dnx Runic.Create`                                                                                    | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#runiccreate)                              |
+| `RUNICPA`, `RUNICEL`                        | The privileged-action build targets of Runic.Platform and its platform packages                       | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#privileged-actions)                       |
+| `RUNICNAV`                                  | The Runic.Navigation ReactiveUI build targets                                                         | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#navigation-reactiveui-build)              |
+| `RUNICDBUS`                                 | The D-Bus source generator                                                                            | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#d-bus-source-generator)                   |
+| `RUNICP`                                    | `@runic-artifex/vite-plugin-runic`                                                                    | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#vite-plugin)                              |
+| `RUNICDESK1xx`, `RUNICASSETS`               | Retired experimental-API IDs; since SDK `0.10.0` no API is experimental, so remove their suppressions | [Experimental APIs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/experimental.md)                                       |
 | `RCLI`                                      | Runic Command Line and any tool built on it, including `dotnet runic`                                 | [Command Line diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.9.1/docs/guides/command-line/diagnostics.md)          |
 | `RTR`                                       | The Translations compiler, in the build, the tool and the editors, and `runic-translations support`   | [Translations diagnostics](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.8.0/docs/guides/translations/diagnostics.md) |
 
@@ -95,7 +95,7 @@ diagnostics list them.
   release of `dotnet runic`; an Angular frontend that declares the plugin
   needs `runicDevSessionProxy()` in its `proxyConfig`, and a SvelteKit
   frontend uses `runicDevSession()`. See
-  [`RAPPDEV1007`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/docs/diagnostics.md#rappdev1007).
+  [`RAPPDEV1007`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/docs/diagnostics.md#rappdev1007).
 - **A page fails in the published application but works in `dev`.** Since SDK
   `0.11.0`, new projects send a Content-Security-Policy without
   `'unsafe-eval'` outside `Development`
@@ -143,7 +143,9 @@ machine with only a newer .NET SDK builds the application.
 - Guides with their own troubleshooting sections:
   [embed and serve assets](assets/README.md#troubleshooting) and the
   [Translations .NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.8.0/docs/guides/translations/quickstart-dotnet.md#troubleshooting).
-- [Release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/eng/release/notes/0.12.0.md#upgrading)
-  list the steps for upgrading from an earlier release.
+- The [0.12.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/eng/release/notes/0.12.0.md#upgrading)
+  list the steps for upgrading from an earlier release, and the
+  [0.12.1 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/eng/release/notes/0.12.1.md#what-to-update)
+  the .NET, Node and Bun versions of the security patch.
 - [Support](https://docs.runic-artifex.eu/support/) explains how to report a
   problem.

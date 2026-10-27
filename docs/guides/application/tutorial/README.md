@@ -216,13 +216,13 @@ const error = increment.error ?? setStep.error ?? connection;
 
 A rejected write or command rejects with the `BridgeError` from
 `@runic-artifex/views`, which `useCommand` keeps as its `error`. The
-[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/examples/first-window)
+[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.1/examples/first-window)
 uses the same client without a framework.
 
 ## 7. Test the Window and the frontend
 
 Both halves can be tested without a browser or a native window. The
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/examples/notes-view-first)
+[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.1/examples/notes-view-first)
 nests a sidebar, a document and an editor, and tests each side. Its .NET tests
 drive the real ViewModels and generated Bridges through `RunicWindowTestHost`
 from `Runic.Application.Testing`, with a fake clock:
@@ -263,11 +263,11 @@ test("a rejected field write stops the save that follows it", async () => {
   const client = await connectEditor();
 ```
 
-The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Testing/README.md)
-and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/packages/web/views#testing)
+The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Testing/README.md)
+and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.1/packages/web/views#testing)
 cover the test host and the generated mocks. To test the real page against the
 real ViewModels in a browser, its
-[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
+[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
 starts the built application in serve-only mode for any browser driver.
 
 ## Where next
@@ -276,11 +276,11 @@ starts the built application in serve-only mode for any browser driver.
   pages with Back history and guards.
 - [ViewModel state and threads](../guides/model-context.md) explains why
   commands can set state after `await`.
-- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/examples/notes-reactive-views)
+- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.1/examples/notes-reactive-views)
   uses ReactiveUI routing and several Views over one model.
-- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/examples/dynamicdata)
+- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.1/examples/dynamicdata)
   presents a large keyed collection through viewports.
-- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views/README.md)
+- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views/README.md)
   lists the build properties, generator diagnostics, checked writes and
   operations.
 - [Typed domain failures](../guides/typed-failures.md) returns expected

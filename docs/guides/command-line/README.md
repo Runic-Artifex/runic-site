@@ -297,7 +297,7 @@ internal static class WindowCommands
 ```
 
 Capture values such as `settings`, not the command's scoped services.
-See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
+See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
 and
 [start a UI host on the main thread](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.9.1/packages/dotnet/Runic.CommandLine/README.md#start-a-ui-host-on-the-main-thread).
 
