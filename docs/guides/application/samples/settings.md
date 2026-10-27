@@ -27,7 +27,7 @@ without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
 This store, from the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.11.0/examples/multi-window),
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.12.0/examples/multi-window),
 loads the settings on demand and saves them by writing a temporary file and
 moving it over the old one, so a crash never leaves a half-written file. It
 uses System.Text.Json's source generator, so it works with NativeAOT:
@@ -103,6 +103,14 @@ an `AccentColor`, `HighContrast` and `ReducedMotion`, and since SDK `0.11.0`
 the platform doesn't report is `null`, not `false`. Every read returns a
 `PlatformResult<DesktopAppearance>`, so an unavailable or failed read is a
 value that you handle, not an exception.
+
+Since SDK `0.12.0`, an application that offers its own light or dark setting
+passes it to the window as `DesktopWindowOptions.ColorScheme` (or
+`DesktopWindowHostOptions.ColorScheme`): Runic Desktop windows on macOS and
+Windows, and the WPF `RunicWebView`, then show that scheme, and the page's
+`prefers-color-scheme` follows. `NoPreference`, the default, follows the
+desktop; GTK windows ignore it. See
+[windows on macOS](../../desktop-services.md#windows-on-macos).
 
 Unlike the file dialogs, `IDesktopSettings` belongs to the application, not to
 a Window. Since SDK `0.7.0-preview.7`, `AddRunicPlatformServices()` registers

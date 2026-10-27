@@ -48,6 +48,11 @@ file does not exist stops `dev` with `RAPPDEV1009: Window entry not found:
 The Window runs with `DOTNET_ENVIRONMENT=Development` unless you set
 `DOTNET_ENVIRONMENT` or `ASPNETCORE_ENVIRONMENT` yourself, so failed Bridge
 calls carry the exception type, message and stack to the browser.
+On macOS the Window runs from its ad-hoc signed development bundle in `obj/`,
+which `dotnet run` starts, so notifications, login startup and open
+registration work in `dev` too
+([development bundle](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform.MacOS/README.md#development-bundle);
+`RunicMacDevelopmentBundle=false` turns it off).
 Ctrl+C or SIGTERM stops `dev` the way closing the last window stops the
 application: the Window gets SIGTERM on Linux and macOS, or Ctrl+C on Windows,
 and up to 5 seconds to close its windows and finish its work before `dev` kills
@@ -604,7 +609,9 @@ default), `--runtime` (`--rid`, `-r`; the host's architecture by default) and
 `--output-directory` (`-o`; `artifacts/package/<target>` beside the project by
 default). The output directory is not `--output`, which stays the hidden alias
 of `--format`. A target of another operating system, or a runtime identifier of
-another operating system, is refused with `RAPPPKG1004` before anything is built.
+another operating system, several runtime identifiers, or a runtime identifier
+that Runic does not support (`osx-x64`), is refused with `RAPPPKG1004` before
+anything is built.
 
 The package's identity comes from the project file:
 
@@ -619,6 +626,8 @@ The package's identity comes from the project file:
 | `RunicPackageIcon` | The 512 px PNG icon; `icons/icon.png` by default. An `icon.svg` beside it is the scalable icon on Linux |
 | `RunicPackageName` | The deb and rpm package name; the lower-cased assembly name by default, with characters a package name cannot have replaced by `-` |
 | `PackageLicenseExpression` | The rpm `License`; `LicenseRef-proprietary` by default |
+| `RunicMacSandbox` | `true` signs the macOS bundle for the App Sandbox, as `--sandbox` does; off by default |
+| `RunicMacApplicationCategory` | The macOS `LSApplicationCategoryType`, a `public.app-category.*` identifier, which the Mac App Store requires; none by default (`RAPPPKG1001` for another value) |
 | `RunicPackagingDirectory` | The manifest overrides; `packaging/` by default |
 
 The tool embeds the manifests it fills: `windows/AppxManifest.xml`,
@@ -640,16 +649,29 @@ them with your own credentials to ship them. Runic signs nothing for you.
   `--thumbprint <sha1>` with a certificate from the store; `--timestamp-url`
   adds an RFC 3161 timestamp. `makeappx` and `signtool` are found on `PATH` or
   in the newest Windows SDK folder.
-- **`macos`** builds `<ApplicationTitle>.app` (the executable in
-  `Contents/MacOS`, the frontend in `Contents/Resources/www`, none when the
-  application embeds it, and an `.icns` made with `sips` and `iconutil`), signs
-  it with the hardened runtime and `macos/entitlements.plist`, verifies it with
-  `codesign --verify --strict` and writes `<ApplicationTitle>-<version>.dmg`.
+- **`macos`** builds `<ApplicationTitle>.app` (the executable and other Mach-O
+  files in `Contents/MacOS`, the frontend in `Contents/Resources/www`, none when
+  the application embeds it, other published files in `Contents/Resources` with
+  a link in `Contents/MacOS`, and an `.icns` made with `sips` and `iconutil`),
+  signs each nested library and executable, then the bundle with the hardened
+  runtime and `macos/entitlements.plist`, verifies it with
+  `codesign --verify --deep --strict` and writes `<ApplicationTitle>-<version>.dmg`.
   Without `--sign` the bundle is ad-hoc signed. `--sign "Developer ID
   Application: …"` signs the bundle and the disk image with your identity, and
   `--notary-profile <name>` then notarizes and staples the disk image with a
-  `notarytool store-credentials` profile. `--runtime osx-arm64,osx-x64` makes a
-  universal binary with `lipo`.
+  `notarytool store-credentials` profile. It publishes for `osx-arm64`; Runic
+  does not target Intel Macs, so `--runtime osx-x64` and universal bundles
+  are refused with `RAPPPKG1004`. `--sandbox` (or `RunicMacSandbox`) signs it
+  for the App Sandbox: `app-sandbox`, `network.server` and `network.client`
+  for the loopback page server and bridge, `files.user-selected.read-write`
+  and `files.bookmarks.app-scope`, filled into the `{{Entitlements}}` field of
+  `macos/entitlements.plist`. `--provisioning-profile <file>` (with `--sign`)
+  embeds the profile as `Contents/embedded.provisionprofile` and signs with its
+  application and team identifiers. `--pkg` also writes
+  `<ApplicationTitle>-<version>.pkg` with `productbuild`, which installs the
+  bundle in `/Applications`, and `--installer-sign <identity>` signs it with an
+  installer certificate; with `--notary-profile` a signed `.pkg` is notarized
+  too. The command uploads nothing to App Store Connect.
 - **`flatpak`** publishes into `flatpak-source/`, writes `<ApplicationId>.yml`
   from `linux/flatpak.yml` on the GNOME runtime (which provides GTK 4 and
   WebKitGTK 6, so the project uses `Runic.Desktop.Gtk4`), validates the desktop
@@ -725,7 +747,7 @@ CI) or `identity` (your certificate or Developer ID):
         "required": ["path", "format", "signing"],
         "properties": {
           "path": { "type": "string", "description": "Absolute path of the package file or directory." },
-          "format": { "type": "string", "description": "msix, app, dmg, flatpak, appimage, deb, rpm or flathub-manifest." },
+          "format": { "type": "string", "description": "msix, app, dmg, pkg, flatpak, appimage, deb, rpm or flathub-manifest." },
           "signing": { "enum": ["none", "adhoc", "test", "identity"] }
         }
       }

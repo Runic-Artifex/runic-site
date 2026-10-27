@@ -27,7 +27,7 @@
     ['win-arm64', 'Supported', 'Unsupported', 'Supported'],
     ['linux-musl-x64', 'Supported', 'Unsupported', 'n/a'],
     ['linux-musl-arm64', 'Supported', 'Unsupported', 'n/a'],
-    ['osx-x64', 'Best effort', 'Best effort', 'n/a'],
+    ['osx-x64', 'Unsupported', 'Unsupported', 'n/a'],
   ];
 </script>
 
@@ -64,8 +64,8 @@
           >0.9.1</code
         >) only fixes or adds, and only the latest minor gets fixes. Releases
         from 0.9.0 on carry no <code>-preview.N</code>
-        suffix; GitHub still marks them as prereleases. 0.11.0 is the last release
-        that adds API before 1.0: the release candidates
+        suffix; GitHub still marks them as prereleases. 0.12.0 is the last release
+        that adds API or breaks before 1.0: the release candidates
         <code>1.0.0-rc.N</code> take only fixes, stabilization and
         documentation.
         <code>Runic.Application.Views.CsWebUi</code> keeps a prerelease version of
@@ -86,7 +86,9 @@
           or
           <code>x.y.0-rc.N</code>) remain possible. They go to the npm
           <code>preview</code> dist-tag, and <code>latest</code> moves only to
-          stable versions; until 1.0 it moves to every <code>0.y.z</code> release.
+          stable versions; until 1.0 it moves to every <code>0.y.z</code>
+          release, and from <code>1.0.0-rc.1</code> it stays on 0.12.0 until 1.0.0
+          is published.
         </li>
         <li>
           Experimental APIs and the preview package are outside these rules.
@@ -198,6 +200,9 @@
         </table>
       </div>
       <p>
+        Intel Macs (<code>osx-x64</code>) are not a Runic target since 0.12.0:
+        CI runs only the latest macOS on Apple silicon, and
+        <code>dotnet runic package macos</code> builds no universal bundle.
         <code>Runic.Platform.Administration.Windows</code> supports Windows x64
         only, by policy; no arm64 or x86 support is planned. On Windows on Arm,
         publish it for <code>win-x64</code>. Managed packages and Command Line
@@ -231,7 +236,7 @@
           page. An npm package exports experimental APIs only from its
           <code>./experimental</code> subpath. No .NET or npm API is
           experimental since 0.10.0, which removed every
-          <code>./experimental</code> entry; 0.11.0 adds none.
+          <code>./experimental</code> entry; 0.11.0 and 0.12.0 add none.
         </li>
         <li>
           <strong>Preview:</strong>

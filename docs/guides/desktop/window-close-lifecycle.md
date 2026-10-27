@@ -67,6 +67,13 @@ completes `WaitForCloseAsync` and surface disposal.
 - This intercepts ordinary user close requests. It does not promise interception of
   OS session termination, process killing, crashes, or power loss. Durable drafts
   require a separate persistence policy.
+- Since SDK `0.12.0`, quitting on macOS asks too: Command and Q, Quit in the Dock,
+  a script's quit event and logging out ask `DesktopHostOptions.ConfirmQuitAsync`,
+  then each window's callback in turn, before `ShutdownRequested` is cancelled and
+  the remaining windows close without asking. A refusal keeps the application
+  running and cancels the logout. Before, Command and Q only asked each window, and
+  the Dock, scripts and logout skipped the callbacks. See
+  [quitting on macOS](../desktop-services.md#quitting-reopening-and-the-dock-menu-on-macos).
 
 ## Platform and custom-host support
 
@@ -88,7 +95,7 @@ Rejecting unsupported configuration avoids silently dropping a data-loss guard.
 `DesktopWindowCapabilities.CloseConfirmation` reflects the actual embedded host.
 
 Custom window hosts (stable since SDK `0.10.0`; see
-[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
+[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
 remain source compatible:
 `IDesktopWindowHost.SupportsCloseConfirmation` defaults to false. To opt in, return true and honor `DesktopWindowHostOptions.CloseRequested`:
 when it is set, suppress the native user close event and invoke the callback instead.
@@ -112,7 +119,7 @@ thread. It checks bridge responsiveness during the pending decision, veto, retry
 approved destruction. Root CI runs this smoke on Linux x64, Windows x64 and macOS Apple Silicon. Local execution evidence is retained with the native smoke outputs;
 adding CI coverage is not evidence that a remote platform run has passed.
 
-The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
+The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
 also exercises close veto/retry on its own dispatcher. Select the native backend
 you ship when verifying your application's close and cleanup behavior.
 

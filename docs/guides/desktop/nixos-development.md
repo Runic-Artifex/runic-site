@@ -25,7 +25,10 @@ session and portal backend; the development shell intentionally does not start o
 reconfigure the host's desktop services.
 
 To build and install an application, rather than the SDK, with Nix, see
-[Package a Runic application with Nix](nix-packaging.md).
+[Package a Runic application with Nix](nix-packaging.md). Since SDK `0.12.0`,
+the SDK flake's `create` app also creates an application project on a machine
+without a .NET SDK
+(`nix run github:Runic-Artifex/runic-sdk/v0.12.0#create -- MyApp --nix`).
 
 ## September 7, 2026 crash investigation
 

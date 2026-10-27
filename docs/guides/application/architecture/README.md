@@ -18,12 +18,12 @@ Since SDK `0.11.0`, a call's reply reaches the page after the state frames the
 call produced on every View of the window, and every Bridge input is bounded by
 the window's `MaximumInputBytes`, 1 MiB by default.
 
-See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/first-window/README.md) for the smallest
-composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/examples/notes-view-first/README.md) for
+See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/examples/first-window/README.md) for the smallest
+composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/examples/notes-view-first/README.md) for
 nested content, routing, and multiple Views over a ViewModel.
 
 Navigation and model execution ownership are supplied by
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.11.0/packages/dotnet/Runic.Navigation/README.md),
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.0/packages/dotnet/Runic.Navigation/README.md),
 which can also serve native WPF Views without a web runtime. The model context
 and registry types use the `Runic.Navigation` namespace. A native and web
 presentation of the same model must share its context; presentation disposal
