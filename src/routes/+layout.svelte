@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import Lockup from '$lib/brand/Lockup.svelte';
+  import Lockup from '#lib/brand/Lockup.svelte';
   import '@fontsource-variable/schibsted-grotesk';
   import '@fontsource-variable/spline-sans-mono';
   import type { Snippet } from 'svelte';

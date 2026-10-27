@@ -6,7 +6,7 @@
     viewModels,
     type Member,
     type Snippet,
-  } from '$lib/seam';
+  } from '#lib/seam.js';
 
   type Flow = { member: Member; direction: 'to-frontend' | 'to-dotnet' };
 
