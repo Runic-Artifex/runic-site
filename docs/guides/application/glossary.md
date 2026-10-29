@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
@@ -14,8 +14,9 @@ clients and these guides. The first seven follow the glossary of the
 - **View**: a logical .NET presentation object for one ViewModel, a partial
   `RunicView<TViewModel>` (`ReactiveRunicView<TViewModel>` with ReactiveUI)
   with a typed `DataContext`. It owns no DOM: the frontend renders a component
-  for it. The browser acknowledges each mount, so a fresh View is created when
-  a component mounts and released when it unmounts, while the ViewModel stays.
+  for it. The browser opens and closes a presentation of each View it shows,
+  so a fresh View is created when a component mounts and released when it
+  unmounts, while the ViewModel stays.
 - **ViewModel content**: a ViewModel-typed property, such as the template's
   `Main`, whose value the frontend receives as a reference (for example a
   `CounterPageReference`) rather than as state. Changing the property changes
@@ -30,8 +31,8 @@ clients and these guides. The first seven follow the glossary of the
   `CounterState` and `CounterClient`. It is regenerated on every build and not
   committed.
 - **Bridge**: the code generated per ViewModel, C# and its TypeScript client,
-  that carries snapshots, property writes, commands and operations between the
-  ViewModel and its View over the wire protocol. `Bridge*` types and the
+  that carries state, property writes, commands and operations between the
+  ViewModel and its View over Views protocol 4 (since SDK `0.13.0`). `Bridge*` types and the
   `RUNICBRIDGE` diagnostics belong to this generated layer.
 
 ## Hosts and windows

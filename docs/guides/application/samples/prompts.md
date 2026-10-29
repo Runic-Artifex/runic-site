@@ -205,7 +205,7 @@ for the dialog region in the same way.
   WPF windows show a native message box since SDK `0.11.0`:
   `IWindowPlatformServices.MessageBoxes` (`IDesktopMessageBoxes`). Keep
   ordinary prompts in the page; see the
-  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Platform/README.md#message-boxes).
+  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Platform/README.md#message-boxes).
 
 ## Next steps
 

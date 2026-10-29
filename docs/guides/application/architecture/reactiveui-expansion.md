@@ -41,7 +41,11 @@ The codec is canonical: 64-bit and arbitrary integers are decimal strings,
 decimals are exact strings, floats must be finite, and dictionaries are written
 in ordinal key order. This canonical value is also the input digest for
 idempotent operations, so JSON property order cannot turn a retry into a
-different request.
+different request. Since SDK `0.13.0` the canonical form is RFC 8785 (JCS):
+numbers are read as IEEE 754 doubles, as the page reads them, and written as
+ECMAScript writes them, so `0.1` and `0.10000000000000000001` are one value.
+Typed `long` and `decimal` members are unaffected because they travel as
+strings.
 
 ## Command operations
 
@@ -150,7 +154,11 @@ Snapshots are captured in the model turn and then delivered through an ordered
 outbound queue. This avoids re-entering model mutation while a native transport
 is synchronously publishing JavaScript. Full snapshots can coalesce at the
 delivery boundary; operation terminals and interaction requests do not use the
-broadcast channel.
+broadcast channel. Since SDK `0.13.0` a notification requests a publication unit
+that runs in a later model turn, so a burst of notifications publishes one
+frame, and the frame carries a `set` only for the members whose encoding
+changed. A route publishes nothing before a client read its state with `open`
+or `snapshot`.
 
 Since SDK `0.11.0`, replies read their own writes: the reply to a command,
 setter or checked write is sent after the state frames that the call produced
@@ -248,8 +256,8 @@ The exact generated codec/command path is covered by a ReactiveUI Native AOT
 fixture with no warnings. That verifies the bridge contract under AOT; it does
 not represent every native host or frontend combination.
 
-The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
-[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
-[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
-[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
-and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
+The nearest source references are the [type graph](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/tools/Runic.Application.Views.Codegen/BridgeTypeGraph.cs),
+[operation runtime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/BridgeOperationRegistry.cs),
+[interaction router](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/BridgeInteractionRouter.cs),
+[model context](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Navigation/RunicModelContext.cs),
+and [default adapter](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views.ReactiveUI/ReactiveInteractionDescriptor.cs).
