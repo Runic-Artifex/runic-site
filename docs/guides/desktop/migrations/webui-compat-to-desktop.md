@@ -3,7 +3,7 @@
 Runic Desktop has no public `WebUi*` identity. It models the actual ownership
 graph instead of making one “window” own content, a listener, sessions, and a
 platform presentation at once. Calls between the page and .NET go through
-[Runic Windows and Views](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+[Runic Windows and Views](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
 (`Runic.Application.Views.Desktop`): ViewModel commands and operations over
 the generated Bridge. This page follows SDK `0.11.0`; SDK `0.10.0` made the
 low-level presentation transport of `DesktopSurface` internal.
@@ -36,7 +36,7 @@ without a window: since SDK `0.7.0-preview.8`, the host honours
 `RUNIC_APPLICATION_SERVE_ONLY=1` as the CS-WebUI host does. It opens no window,
 writes `RUNIC_APPLICATION_URL=<url>` and serves until a line is read from
 standard input, as in the
-[First Window on Runic Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/examples/first-window-desktop/README.md)
+[First Window on Runic Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/first-window-desktop/README.md)
 browser test.
 
 `Content` takes one `DesktopContent` case: `Directory(root, entry?)` for local
@@ -44,7 +44,7 @@ files, `Html(document)`, `ExternalUrl(url)` or `Handler(contentHandler)`. Only
 directory content serves local files. This form is new in Runic SDK
 0.7.0-preview.1; 0.6.0-preview.1 sets `RootFolder` and a `Content`
 string, or `ContentHandler`. The
-[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/eng/release/notes/0.7.0-preview.1.md#upgrading)
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/eng/release/notes/0.7.0-preview.1.md#upgrading)
 map each 0.6 form to its case.
 
 ## Calls between the page and .NET
@@ -78,7 +78,7 @@ await window.WaitForCloseAsync();
 ```
 
 From SDK 0.9 code, the
-[0.10.0 upgrade table](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/eng/release/notes/0.10.0.md#runic-desktop-and-gtk-4)
+[0.10.0 upgrade table](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/eng/release/notes/0.10.0.md#runic-desktop-and-gtk-4)
 maps the removed surface members:
 
 | SDK 0.9                                                                            | SDK 0.10.0                                                                                             |
@@ -106,7 +106,7 @@ bootstrap scripts and open the Bridge. Embedded windows open links to other
 sites in the default browser, never open a second WebView for `window.open`,
 cancel downloads and enable developer tools only in Development, unless
 `DesktopWindowOptions.WebContent` says otherwise; see
-[links, new windows, downloads and developer tools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/packages/dotnet/Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools).
+[links, new windows, downloads and developer tools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools).
 
 Since SDK `0.11.0`, surface responses send `Content-Security-Policy:
 frame-ancestors 'self'` (plus `AdditionalOrigins`) and

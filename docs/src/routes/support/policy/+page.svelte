@@ -64,10 +64,10 @@
           >0.9.1</code
         >) only fixes or adds, and only the latest minor gets fixes. Releases
         from 0.9.0 on carry no <code>-preview.N</code>
-        suffix; GitHub still marks them as prereleases. 0.12.0 is the last release
-        that adds API or breaks before 1.0: the release candidates
-        <code>1.0.0-rc.N</code> take only fixes, stabilization and
-        documentation.
+        suffix; GitHub still marks them as prereleases. 0.13.0 is the last minor release
+        before 1.0, and its Views protocol 4 is the protocol that 1.0 keeps: the release
+        candidates <code>1.0.0-rc.N</code> come next and take only fixes,
+        stabilization and documentation.
         <code>Runic.Application.Views.CsWebUi</code> keeps a prerelease version of
         its own while the CS-WebUI release it depends on is a prerelease.
       </p>
@@ -87,7 +87,7 @@
           <code>x.y.0-rc.N</code>) remain possible. They go to the npm
           <code>preview</code> dist-tag, and <code>latest</code> moves only to
           stable versions; until 1.0 it moves to every <code>0.y.z</code>
-          release, and from <code>1.0.0-rc.1</code> it stays on 0.12.0 until 1.0.0
+          release, and from <code>1.0.0-rc.1</code> it stays on 0.13.0 until 1.0.0
           is published.
         </li>
         <li>
@@ -236,7 +236,7 @@
           page. An npm package exports experimental APIs only from its
           <code>./experimental</code> subpath. No .NET or npm API is
           experimental since 0.10.0, which removed every
-          <code>./experimental</code> entry; 0.11.0 and 0.12.0 add none.
+          <code>./experimental</code> entry; 0.11.0, 0.12.0 and 0.13.0 add none.
         </li>
         <li>
           <strong>Preview:</strong>

@@ -1,16 +1,20 @@
 # DynamicData collections
 
-Use [Runic.DynamicData](https://github.com/Runic-Artifex/DynamicData) for the
-Primitives flavor, or `Runic.DynamicData.Reactive` for the System.Reactive
-flavor. Both target .NET 10; the namespaces remain `DynamicData` and
-`DynamicData.Reactive`. Obtain the NuGet assets from the fork's GitHub releases
-and add their directory as a local NuGet source. Select one flavor and remove
-the equivalent upstream package. Current Runic uses ReactiveUI 26.0.1 and
+Use the [Runic Artifex fork of DynamicData](https://github.com/Runic-Artifex/DynamicData)
+from nuget.org: [`RunicArtifex.DynamicData`](https://www.nuget.org/packages/RunicArtifex.DynamicData)
+for the Primitives flavor, or
+[`RunicArtifex.DynamicData.Reactive`](https://www.nuget.org/packages/RunicArtifex.DynamicData.Reactive)
+for the System.Reactive flavor. Both target .NET 10. The Primitives flavor keeps
+the `DynamicData` namespaces; the System.Reactive flavor uses the
+`DynamicData.Reactive.*` namespaces, such as `DynamicData.Reactive.Binding`.
+Earlier previews, published only as GitHub release assets, used the IDs
+`Runic.DynamicData` and `Runic.DynamicData.Reactive`. Select one flavor and
+remove the equivalent upstream package. Current Runic uses ReactiveUI 26.0.1 and
 Primitives 9.0.0; the fork also tests Primitives 8.4.0 used by ReactiveUI 25.
 
 DynamicData's cache, filtering, grouping, transforms and disposal stay in .NET.
 Runic exports the resulting collection through a generated, reflection-free
-bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.12.1/examples/dynamicdata/README.md)
+bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/dynamicdata/README.md)
 has a 100,000-row source cache, keyed browser rendering and an independent
 viewport for each presentation.
 
@@ -57,13 +61,21 @@ operations. Immutable replacements and direct `INotifyPropertyChanged` row
 notifications serialize only changed rows. Unchanged browser rows keep their
 object identity, so render with the generated key rather than the array index.
 
-Resets, mixed scalar/collection changes, nested row notifications and shared
-DTO paths use an atomic full snapshot. Models exporting validation use full
-snapshots to keep validation and state together. A changeset above 4,096
-operations also falls back to a snapshot. Slow host delivery retains at most
-64 pending frames or 1 MiB of encoded characters, then replaces pending work
-with a recovery snapshot. Clients re-read a snapshot after a gap or malformed
-delta; duplicates never apply twice.
+Since SDK `0.13.0` (Views protocol 4), a frame carries the collection's
+indexed changes beside a `set` for each other member whose encoding changed, so
+scalar changes and derived members travel in the same frame without a full
+state. A model that exports validation still publishes each collection as a
+`set` of the whole field, beside its `validation` member in the same frame. A
+`Reset`, a notification without a starting index, a row reached through more
+than one path and a change of an object nested inside a row are a `set` of the
+whole field. When a frame would exceed 4,096 changes, the collections with the
+most changes become one `set` each until it fits. Slow host delivery retains at
+most 64 pending entries or 1 MiB per route, then replaces pending work with a
+recovery state. Clients re-read a snapshot after a gap or malformed frame;
+repeated and stale frames have no effect. See
+[state changes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/specs/application/state-changes.md)
+and the .NET
+[language mappings](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/specs/application/language-mappings.md#publication-units-and-change-detection).
 
 ## Bound the presented collection
 
