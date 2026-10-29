@@ -63,8 +63,9 @@ object identity, so render with the generated key rather than the array index.
 
 Since SDK `0.13.0` (Views protocol 4), a frame carries the collection's
 indexed changes beside a `set` for each other member whose encoding changed, so
-scalar changes, derived members and validation travel in the same frame without
-a full state; a frame is one publication unit, so validation stays atomic. A
+scalar changes and derived members travel in the same frame without a full
+state. A model that exports validation still publishes each collection as a
+`set` of the whole field, beside its `validation` member in the same frame. A
 `Reset`, a notification without a starting index, a row reached through more
 than one path and a change of an object nested inside a row are a `set` of the
 whole field. When a frame would exceed 4,096 changes, the collections with the
