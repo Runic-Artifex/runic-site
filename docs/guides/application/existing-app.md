@@ -6,7 +6,7 @@ nothing, [create a project](getting-started/README.md) instead; the steps below
 reproduce what the template sets up. Replace `<VERSION>` with the current
 release from the [package catalog](https://docs.runic-artifex.eu/packages/) and
 keep Application SDK packages on that version;
-`Runic.Application.Views.CsWebUi` is still a prerelease, `0.13.0-preview.1`,
+`Runic.Application.Views.CsWebUi` is still a prerelease, `0.14.0-preview.1`,
 and needs CsWebUi 2.5.0-beta.4.8 or later.
 Runic Translations and Runic Command Line have independent release versions.
 
@@ -159,10 +159,15 @@ prerenders the pages, next to `@runic-artifex/svelte`. Add
 `@runic-artifex/vite-plugin-runic` as a development dependency for Runic
 diagnostics and for `dotnet runic dev`'s session check, which confirms that the
 development server on its port is the one it started. Since SDK `0.11.0`,
-`runic()` in a Vite configuration needs the plugin from the same release, a
-SvelteKit configuration adds `runicDevSession()` next to `sveltekit()`, and an
-Angular project puts `runicDevSessionProxy()` in the serve target's
-`proxyConfig`. Without them, an older project is not checked.
+`runic()` in a Vite configuration needs the plugin from the same release, and
+an Angular project puts `runicDevSessionProxy()` in the serve target's
+`proxyConfig`. Without them, an older project is not checked. Since SDK
+`0.14.0`, a SvelteKit configuration adds `runic({ html: false })` next to
+`sveltekit()` and imports `@runic-artifex/vite-plugin-runic/client` from
+`src/hooks.client.ts`, which also brings the development timeline and the
+`stale-input` warning; `runicDevSession()`, which SDK `0.11.0` used there, is
+deprecated. An Angular project loads the same client from `main.ts` behind
+`ngDevMode`.
 
 The page loads the host's scripts before your module. The template loads a
 host-neutral Views client:
@@ -199,7 +204,7 @@ value warns with `RUNICBRIDGE029`.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
 in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the

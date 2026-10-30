@@ -43,6 +43,8 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'application/guides/dynamicdata.md',
       'application/guides/operations-and-cancellation.md',
       'application/guides/typed-failures.md',
+      'application/guides/forms-and-validation.md',
+      'application/guides/frontend-testing.md',
       'application/reference/README.md',
       'application/reference/reactiveui.md',
       'application/glossary.md',

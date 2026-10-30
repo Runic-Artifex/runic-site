@@ -348,12 +348,31 @@ public sealed partial class ProjectViewModel(IRunicWindowService windows) : Obse
   returned Window to wait for it or to close it; disposing it earlier is safe.
   A release failure is logged as event 1051.
 - Runic has no owned or modal Windows, so there is no owner parameter. The new
-  Window's ViewModel is resolved from DI like the first one's; to give it
-  input, let it read a singleton service, as the
+  Window's ViewModel is resolved from DI like the first one's. To give it input
+  of its own, pass a parameter (since 0.14): `OpenWindowAsync<TWindow, TParameter>(parameter, options)`
+  hands it to the new Window's scope, where the ViewModel, or a scoped service
+  it uses, takes `IRunicWindowParameter<TParameter>`. Each Window gets its own,
+  also when several open at once. State that every Window shares stays in a
+  singleton service, as the
   [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
   does with its shared project.
-- The interface has one method, so a test registers a fake that records the
-  requested Window types after the application's services.
+
+  ```csharp
+  await windows.OpenWindowAsync<PartWindow, PartRequest>(new PartRequest(world, WindowedPart.Atlas));
+
+  public sealed class PartViewModel(IRunicWindowParameter<PartRequest> request) : ReactiveObject
+  {
+      public WorldViewModel World { get; } = request.Value.World;
+  }
+  ```
+
+  The host has the same overload, `host.OpenWindowAsync<TWindow, TParameter>(parameter)`.
+  A test that builds such a ViewModel by hand passes
+  `new RunicWindowParameter<PartRequest>(request)`.
+- A test registers a fake that records the requested Window types after the
+  application's services. The parameter overload has a default implementation
+  that throws `NotSupportedException`, so a fake overrides it only when the
+  application uses it.
 
 #### Windows from another service provider
 
@@ -1266,8 +1285,8 @@ generator, such as a CommunityToolkit `[ObservableProperty]`, points at its
 a link to its entry in the [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 for the release you use.
 
-`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029` and `030` are warnings; the generator's
-(`013`, `020` and `028`) repeat on builds that reuse the cached generation. Every other
+`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032` and `033` are warnings; the generator's
+(`013`, `020`, `028`, `031` and `032`) repeat on builds that reuse the cached generation. Every other
 code fails the build. The
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 lists every code with its severity, what reports it, its cause and its fix.
@@ -1876,6 +1895,30 @@ and [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/tree/mai
 `Bytes` is a `double` because a `long` would be a `bigint` in TypeScript; see
 [Wire types](#wire-types).
 
+## Large lists and frequent changes
+
+A route publishes each change of its state as a frame. What a frame costs
+depends on the member:
+
+- A `[RunicCollection(nameof(Row.Id))]` list publishes only the rows that were
+  added, removed, moved or replaced, and a row's own property change replaces
+  that row. Use it for any list that can grow beyond a few dozen rows or
+  changes often.
+- Every other member is compared: a publication unit encodes it and sends it
+  whole when the encoding differs from what the page has. The generator reports
+  an observable collection of DTO rows that is not a `[RunicCollection]` as
+  `RUNICBRIDGE032`.
+
+A notification requests a publication unit, and a route starts its units at
+least 8 ms apart: the first change after a pause is published at once, and the
+changes of the next 8 ms follow together in one frame once the interval has
+passed, so the last change is always published. A model that raises thousands
+of notifications a second, such as progress or a live counter, therefore sends
+at most about 125 frames a second per route. A setter, command or checked write
+is not delayed: it publishes its change, with any change that waits for the
+interval, before it replies. Wrap a bulk change in a `BridgeSnapshotBatch`
+(below) to publish it as one frame when the batch ends.
+
 ## Batch synchronous model updates
 
 ```csharp
@@ -1893,6 +1936,18 @@ when changes are published; it does not make mutations atomic
 or own the model scheduler. Enter the model's execution context as usual and
 keep the batch around synchronous changes, after awaiting I/O. The translations
 editor uses this during bulk document reconciliation and command result updates.
+
+## Long text members
+
+Every `string` state property without `[RunicCodec]` is a text member. When the page's client and the host both
+implement the `text-splice/1` feature, a setter of a long text member sends only the characters that changed, and the
+Bridge publishes a change of a long text member as one splice (the characters removed at a position and the text
+inserted there), or, for a value that dropped its start and grew at its end, as two. The generated Bridge rebuilds the
+page's value from the splice and calls the property's setter with the whole string, so setters, validation and
+normalization see what they always saw. A keystroke in a 100,000-character property costs about 130 bytes up, 160 bytes
+down and 200 KB of allocation (the new string) instead of 100 KB each way and 300 KB
+(`tests/benchmarks`, `TextSpliceBenchmarks`). Short values (a splice that keeps fewer than 64 characters), changes from
+or to `null`, and windows with a page that does not list the feature use whole values. Nothing needs to be declared.
 
 ## Live logs and other growing text
 
@@ -1940,8 +1995,12 @@ an empty path. Aliases are preserved, so a postal-code error might have the path
 `["profile", "postal-code"]`.
 
 Return a `RunicValidationMessage` from `GetErrors` to supply a stable `Code`,
-`Severity`, or relative CLR `MemberPaths`. Ordinary strings and
-`ValidationResult` remain supported. Generated metadata resolves paths without
+`Severity`, or relative CLR `MemberPaths`. A member path names CLR properties
+separated by dots and may index lists and dictionaries: `Items[0].Name`,
+`Lookup[primary].Name` or `Groups[0][1]`; a path that names no Bridge member
+or element reports at the object. Ordinary strings and
+`ValidationResult` remain supported. An empty message is reported as
+`Invalid value.`, in `validation` and in the `…Errors` arrays. Generated metadata resolves paths without
 runtime reflection. Traversal and messages are bounded; `truncated` reports when
 validation details are incomplete. Nested `ErrorsChanged` notifications publish new validation
 state, and removed objects lose their subscriptions. This projection works
@@ -1968,6 +2027,31 @@ needed. A Bridge member's messages still come from `GetErrors(member)` and keep
 the ViewModel's formatter, as in the per-property `…Errors` arrays; the other
 messages are the validation text on one line, separated by spaces. `ReactiveValidationObject.GetErrors(null)`
 itself is unchanged.
+
+A ViewModel or DTO that implements `IValidatableViewModel` without
+`INotifyDataErrorInfo`, such as a `ReactiveObject` with its own
+`ValidationContext`, is supported the same way: the ViewModel has the
+`validation` member, property rules report at their properties' paths and the
+other rules at the object's path, and checked writes report the property's
+rules. Its messages are the validation text on one line, and it has no
+`…Errors` arrays, which come from `INotifyDataErrorInfo`. The
+`ValidationContext` property is not part of the contract. A type that
+implements another interface named `IValidatableViewModel` is reported as
+warning `RUNICBRIDGE031`.
+
+The Bridge also observes each `ValidationContext`'s `ValidationStatusChange`,
+of the ViewModel and of every object in its state graph. A
+`ReactiveValidationObject` raises `ErrorsChanged` only for the properties its
+rules named before, so a rule that names no property would otherwise change
+the page only when `HasErrors` changes. `hasErrors` of an object read through
+its `ValidationContext` follows the messages, so a disposed
+`ReactiveValidationObject`, whose `HasErrors` keeps its last value, reports no
+errors. A nested DTO that derives from `ReactiveValidationObject` keeps
+`HasErrors` and `ValidationContext` out of its contract.
+
+A checked write's receipt (`write{Property}`) carries the property's messages
+after the write as `applied.validation`, one per line, when the write left the
+property invalid.
 
 Use `[RunicIgnore]` on validation-only DTO properties such as a computed
 `HasErrors`; their values are represented by the validation projection.
@@ -2402,11 +2486,13 @@ NativeAOT symbols and what to attach to a bug report.
 | 1016 | `PathWatchPolling` | Debug | A `RunicPathWatcher` started without a `failed` callback polls for a directory that does not exist yet, such as a state directory created on the first start. Not written to `Trace`. | `Problem` |
 | 1017 | `BridgeOperationRetired` | Debug | The navigation entry whose page started an operation declared `RunicOperationRetirement.Cancel` or `Drain` retires: a `Cancel` operation is asked to cancel, and the page is disposed after the operation ends. | `Member`, `Policy`, `Route` |
 | 1018 | `BridgeProtocolMismatch` | Warning | A page's `hello` names another Views protocol than 4, so the page is refused; use the Runic packages of one release and rebuild the frontend. Once per connection. | `ClientProtocol`, `HostProtocol`, `Connection` |
-| 1019 | `BridgeRequestBeforeHello` | Debug | A request arrives on a connection before its `hello` and is rejected (`no-hello`). Once per connection. | `Kind`, `Connection` |
+| 1019 | `BridgeRequestBeforeHello` | Debug | A request is answered `no-hello`: a `receive` before the connection's `hello`, or a request that waited for a `hello` that failed, closed or did not come within 5 seconds. Once per connection. | `Kind`, `Connection` |
 | 1020 | `ViewMountFailed` | Error | A .NET View fails to mount. | `Route`, `ErrorType` |
 | 1021 | `ViewRemountFailed` | Error | A View fails to mount again after a reconnect. | `Route`, `ErrorType` |
 | 1022 | `BridgeRequestFailed` | Error | Handling a request outside a command, setter or operation, sending a targeted push, or reporting a closed connection or an operation's status throws. A failed request is answered `failed`. | `ErrorType` |
 | 1023 | `BridgeMailboxOverflowed` | Warning | The mailbox of a connection whose transport cannot push to one connection (CS-WebUI) exceeds 1,024 pushes or 4 MiB, so its oldest pushes are dropped. Once per connection. | `Connection`, `Dropped` |
+| 1024 | `BridgeReplyWaitExceeded` | Warning | A setter, checked write, command or operation start waited 5 s for the pushes its window had to deliver before the reply, and replied without them: the page did not take pushes, or code blocked a route's delivery. Once per window. | `Route`, `LimitSeconds`, `Pending` |
+| 1025 | `BridgeCollectionChangedOutsideModelTurn` | Warning | A collection that a Bridge observes changed outside its window's model turn, such as a DynamicData `Bind` without `ObserveOn` the window's scheduler: the change waited for a turn and can race the window. Once per Bridge and field. | `Model`, `Field`, `Route` |
 | 1033 | `ModelContextReleaseFailed` | Error | A window session's own model context fails to shut down in the background. | `ErrorType` |
 | 1040, 1041 | Retired | | Reported by `ReactiveRoutedRegion<T>`, removed in 0.9; not reused. | |
 | 1042 | `ReactiveCommandFailed` | Error | A bridged ReactiveUI command reports on `ThrownExceptions` an exception that no Bridge call received, while a generated Bridge presents it, or a command or object observed with `ObserveBridgeExceptions(logger)` reports one; declared `RunicFailureException`s and cancellations are not logged. An exception raised in a Bridge call's flow, such as by a plain `Execute` in a wrapper command, is held until the outermost Bridge call in that flow ends, and not logged if a call received it or an exception wrapping it. Still logged when hand-written code receives and handles it from a plain `Execute`; never when it ran the command with `RunAsync`. A streamed operation holds nothing. Also logged after the Bridge detached, with its logger, for an execution that a Bridge call or `RunAsync` stopped awaiting when it was cancelled, such as an operation that a retiring navigation entry cancels. | `Source` (`Model.Command` for the Bridge; the command expression or `sourceName` for `ObserveBridgeExceptions`), `ErrorType` |
@@ -2457,13 +2543,14 @@ NativeAOT symbols and what to attach to a bug report.
 | 3018 | `DesktopQuitRequested` | Information | On macOS, Quit, the Dock's Quit or logging out quits the application after `DesktopHostOptions.ConfirmQuitAsync` and the close guards agreed: `ShutdownRequested` is cancelled and the windows close. | `Reason` |
 | 3019 | `DesktopQuitConfirmationFailed` | Error | `DesktopHostOptions.ConfirmQuitAsync` threw; the application keeps running. | `ErrorType` |
 | 3020 | `DesktopReopenHandlerFailed` | Error | A `DesktopHost.ReopenRequested` handler threw; later handlers still run. | `ErrorType` |
+| 3021 | `EmbeddedConnectionDeadlineExtended` | Warning | An embedded WebView had requested nothing after `ConnectionTimeout` but was still loading the page, so Runic Desktop kept waiting, up to four times the timeout. Once per presentation, also when the page then connects. | `TimeoutSeconds`, `Progress` (what the WebView was doing), `LimitSeconds` |
 
 `Model` is the ViewModel type name, `Member` the command or property, and
 `Route` the Bridge route (a content presentation's route is per instance, such
 as `content12`). A declared failure is an expected outcome, so it is logged at
 Debug, still with its exception; `FailureType` is the failure value's type.
 
-Events 1000-1012, 1018-1023, 1050-1053 and 1100-1102 use the category `Runic.Application.Views`
+Events 1000-1012, 1018-1025, 1050-1053 and 1100-1102 use the category `Runic.Application.Views`
 (`RunicViewsTelemetry.LogCategory`); the Hot Reload events 1100-1102 use the
 logger of the window session that owns the Bridge. Events 1110-1114 use
 `Runic.Application.Views.Wpf` and the factory of the host's `Services`. Event 1033 here is a window session's

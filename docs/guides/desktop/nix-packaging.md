@@ -3,7 +3,7 @@
 Since SDK `0.8.0-preview.1`, the Runic SDK's flake exports a builder for Runic
 applications, a development shell, and NixOS and Home Manager modules that
 install them. This guide follows `0.12.0` and summarizes the SDK's
-[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/nix/README.md),
+[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/nix/README.md),
 which has every argument and option.
 
 `buildRunicApplication` wraps nixpkgs' `buildDotnetModule`. It restores NuGet
@@ -38,7 +38,7 @@ the .NET 10 SDK, Node, pnpm and Bun from nixpkgs; its arguments follow `--`, as
 they do for `dnx Runic.Create`:
 
 ```sh docs-test=skip:release-tag-pin
-nix run github:Runic-Artifex/runic-sdk/v0.13.0#create -- MyApp --frontend react --nix
+nix run github:Runic-Artifex/runic-sdk/v0.14.0#create -- MyApp --frontend react --nix
 cd MyApp
 git init && git add -A
 nix develop              # the .NET SDK, Node and the package manager, from the new flake
@@ -71,7 +71,7 @@ SDK input to the release your packages use:
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   runic-sdk = {
-    url = "github:Runic-Artifex/runic-sdk/v0.13.0";
+    url = "github:Runic-Artifex/runic-sdk/v0.14.0";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 };
@@ -137,6 +137,22 @@ application for its file types. A file type or scheme that the package command
 rejects (`RAPPPKG1001`) fails the build. A project with neither builds as
 before.
 
+A definition by extension cannot say that a type is a ZIP file
+(`sub-class-of`) or how to recognise its content (`magic`). Since SDK
+`0.14.0`, a package that installs its own definition in `postInstall`, at the
+same path, keeps it; the build only adds its types to the desktop entry, and
+fails, naming the type, when the definition lacks a type of
+`RunicApplicationFileTypes`. Before, the build replaced it, so an application
+that installed its definition in `postFixup` to come after the builder moves
+it to `postInstall`:
+
+```nix docs-test=readme:nix/README.md
+postInstall = ''
+  install -Dm644 ${./packaging/linux/org.example.Notes.xml} \
+    $out/share/mime/packages/org.example.Notes.xml
+'';
+```
+
 ## NuGet and frontend packages
 
 `nugetLockFiles` reads the committed `packages.lock.json` files at evaluation
@@ -172,9 +188,23 @@ them to the Runic MSBuild targets with
 `RunicApplicationFrontendNodeModulesDirectory`, so the frontend builds without
 installing.
 
-A stale Bun hash fails with `frontend.hash is out of date`, and in
-`0.8.0-preview.4` every Bun hash changes once: set it to `lib.fakeHash` and
-copy the reported hash. `hash` can also take one per system:
+Since SDK `0.14.0`, every package has `fixedOutputHashes`, a program that
+prints the hashes of `frontend.hash`, for each system it names, and of
+`dotnetTools.hashes` in one run, ready to paste, instead of one failed build
+per out-of-date hash:
+
+```console docs-test=readme:nix/README.md
+$ nix run .#default.fixedOutputHashes
+```
+
+When `src` is a path or a filtered path, the frontend's download is now named
+after a digest of its lock files, so a lock file that changes under the
+previous hash is downloaded again and `nix build` reports its new hash; the
+first build after the update downloads the frontend's packages once more. Under
+any other `src`, a stale Bun hash still fails with `frontend.hash is out of
+date`. In `0.8.0-preview.4` every Bun hash changed once: set it to
+`lib.fakeHash` and copy the reported hash. See
+[fixed-output hashes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/nix/README.md#fixed-output-hashes). `hash` can also take one per system:
 
 ```nix docs-test=readme:nix/README.md
 frontend = {
@@ -207,7 +237,7 @@ speech synthesis, 72.6 MiB smaller; screen readers still work, but it
 compiles from source for hours, so build it on your own cache.
 
 The policy of the application's
-[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 is installed in `$out/share/polkit-1/actions`. The build exports
 `RunicApplicationInstallPrefix` as `$out`, so an action can name the installed
 program, and fails when a policy names a program outside the package:

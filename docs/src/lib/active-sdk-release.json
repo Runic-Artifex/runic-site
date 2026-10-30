@@ -1,6 +1,6 @@
 {
-  "version": "0.13.0",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.13.0",
+  "version": "0.14.0",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.14.0",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -82,7 +82,7 @@
     },
     {
       "identity": "Runic.Application.Views.CsWebUi",
-      "version": "0.13.0-preview.1",
+      "version": "0.14.0-preview.1",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"

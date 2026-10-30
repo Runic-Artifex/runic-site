@@ -65,7 +65,7 @@ runtime is smaller: in one
 application was 5.16 MiB with CS-WebUI and 10.42 MiB with Runic Desktop,
 excluding the browser.
 
-`Runic.Application.Views.CsWebUi` is a prerelease, `0.13.0-preview.1`, and
+`Runic.Application.Views.CsWebUi` is a prerelease, `0.14.0-preview.1`, and
 needs CsWebUi 2.5.0-beta.4.8 or later. Since SDK `0.11.0` it can declare a menu
 bar that the page renders (`RunicCsWebUiHostOptions.MenuBar`), and its Bridge
 works under a policy without `'unsafe-eval'`. Update any copy of
@@ -130,8 +130,8 @@ and needs no change. Generate a project with the other `--host` in the
 ReactiveUI is Runic's primary MVVM path and the template default. Runic targets
 ReactiveUI 26 with its `ReactiveUI.Primitives` flavour, chosen for NativeAOT,
 through `Runic.Application.Views.ReactiveUI`. Commands are ordinary
-`ReactiveCommand`s; the template's Counter page is one read-only property, one
-settable property and one command:
+`ReactiveCommand`s; the template's Counter page is one read-only property, two
+settable properties and one command:
 
 ```csharp docs-test=template:WorkspaceViewModel.cs
 public int Count
@@ -144,6 +144,13 @@ public int Step
 {
     get => _step;
     set => this.RaiseAndSetIfChanged(ref _step, value);
+}
+
+// A text form field: the page edits it with the same field binding as Step.
+public string Label
+{
+    get => _label;
+    set => this.RaiseAndSetIfChanged(ref _label, value);
 }
 
 public ReactiveCommand<RxVoid, RxVoid> IncrementCommand { get; }
@@ -178,6 +185,10 @@ public partial int Count { get; private set; }
 
 [ObservableProperty]
 public partial int Step { get; set; }
+
+// A text form field: the page edits it with the same field binding as Step.
+[ObservableProperty]
+public partial string Label { get; set; }
 
 [RelayCommand]
 private void Increment() => Count += Step;

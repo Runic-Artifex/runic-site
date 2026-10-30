@@ -33,18 +33,32 @@ and the page shows the latest pending value until its revision arrives.
 Operations outlive their route, so a page that left can still watch, cancel or
 stream one the window still knows. The canonical form is RFC 8785 (JCS), and
 `TimeSpan` values are ISO 8601 durations. The
-[protocol specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/specs/application/README.md)
+[protocol specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/specs/application/README.md)
 is language-neutral, and its
-[conformance corpus](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/specs/application/conformance)
+[conformance corpus](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/specs/application/conformance)
 lets another implementation check itself. A page and a host of different
 protocol versions do not connect; the page reports a `protocol` diagnostic.
 
-See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/first-window/README.md) for the smallest
-composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/notes-view-first/README.md) for
+Since SDK `0.14.0`, `hello` and its reply list the features each side
+implements (`features`, named `{name}/{version}`); a feature is in use when
+both list it, so a `0.13` page and a `0.14` host still connect with whole
+values. The first feature, `text-splice/1`, sends a long `string` member's
+setters, checked writes and frame changes as splices of the changed
+characters: a keystroke in a 100,000-character member sends about 130 bytes
+instead of about 100 KB, and .NET still calls the setter with the whole value.
+A page also sends its first requests, such as `open`, with its `hello` instead
+of waiting for the reply; the host holds requests that arrive before the
+`hello` succeeded, up to 5 seconds and 64 per connection. On the page, the
+client applies each frame when it arrives and notifies subscribers once per
+animation frame with the newest state; on the host, notification frames of a
+route are at least 8 ms apart, and the last change is always published.
+
+See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/first-window/README.md) for the smallest
+composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/notes-view-first/README.md) for
 nested content, routing, and multiple Views over a ViewModel.
 
 Navigation and model execution ownership are supplied by
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Navigation/README.md),
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md),
 which can also serve native WPF Views without a web runtime. The model context
 and registry types use the `Runic.Navigation` namespace. A native and web
 presentation of the same model must share its context; presentation disposal

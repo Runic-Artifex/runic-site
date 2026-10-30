@@ -34,8 +34,8 @@ rebuild and restart the app.
 
 `WorkspaceViewModel.cs` contains ordinary ReactiveUI ViewModels. Runic reads
 their public properties as state and their commands as calls the frontend may
-make. The Counter page is a read-only count, a step the frontend may set, and a
-command:
+make. The Counter page is a read-only count, a step and a label the frontend
+may set, and a command:
 
 ```csharp docs-test=template:WorkspaceViewModel.cs
 public CounterViewModel() =>
@@ -54,6 +54,13 @@ public int Step
 {
     get => _step;
     set => this.RaiseAndSetIfChanged(ref _step, value);
+}
+
+// A text form field: the page edits it with the same field binding as Step.
+public string Label
+{
+    get => _label;
+    set => this.RaiseAndSetIfChanged(ref _label, value);
 }
 
 public ReactiveCommand<RxVoid, RxVoid> IncrementCommand { get; }
@@ -162,9 +169,12 @@ references:
 const workspace = { connect: connectWorkspace };
 const pages = { counter: CounterPage, welcome: WelcomePage } satisfies ViewRegistry<WorkspaceState["main"]>;
 
+// ...
 export default function App() {
-  const { state, client, error: connection } = useView(workspace);
+  const { state, client, error: connectError } = useView(workspace);
+  const connection = useBridgeConnection().state;
   const navigate = useCommand((name: "showWelcome" | "showCounter") => client?.[name]());
+  const error = navigate.error ?? connectError;
 ```
 
 The registry is checked against the generated union of page kinds, so adding a
@@ -175,7 +185,9 @@ it. Each page connects the reference it receives:
 <!-- prettier-ignore -->
 ```tsx docs-test=template:frontends/react/src/pages/CounterPage.tsx
 export function CounterPage({ page }: { page: CounterPageReference }) {
-  const { state, client, error: connection } = useView(page);
+  const counter = useView(page);
+  const { state, client, error: connection } = counter;
+  // ...
   const increment = useCommand(() => client?.increment());
 ```
 
@@ -187,6 +199,7 @@ connection follows reactive state:
 <!-- prettier-ignore -->
 ```svelte docs-test=template:frontends/svelte/src/App.svelte frontend=svelte
   const workspace = useView(() => ({ connect: connectWorkspace }));
+  const connection = useBridgeConnection();
   const navigate = useCommand((name: "showWelcome" | "showCounter") => workspace.client?.[name]());
 ```
 
@@ -196,43 +209,73 @@ Angular has `injectView()`, `injectCommand()` and `ViewOutlet` from
 release.
 
 Since SDK `0.11.0`, `useBridgeConnection()` (React, Vue, Svelte) and
-`injectBridgeConnection()` (Angular) follow the page's connection to .NET
-(`connecting`, `connected`, `reconnecting` or `lost`), for example to show a
-banner when the application stops responding.
+`injectBridgeConnection()` (Angular) follow the page's connection to .NET:
+`connecting`, `connected`, `reconnecting` or `lost`. While the Bridge
+reconnects, the clients keep the last state the Window sent. Since SDK
+`0.14.0` the template's App says so in a banner, and its status line shows an
+error with `describeBridgeError` from `@runic-artifex/views`, which turns any
+error a binding reports into one English sentence:
+
+<!-- prettier-ignore -->
+```tsx docs-test=template:frontends/react/src/App.tsx
+{connection === "reconnecting" && <p role="status">Reconnecting to the .NET Window…</p>}
+{connection === "lost" && <p role="alert">The connection to the .NET Window was lost. The page reconnects when the application is back.</p>}
+// ...
+<p role="status">{error !== undefined ? describeBridgeError(error) : statusText[connection]}</p>
+```
 
 ## 6. Write state from the frontend
 
-`Step` has a public setter, so the generated client gains `setStep`, which
-sends the value to .NET. `Count` has a private setter, so the frontend can only
-read it. The Counter page binds the step to a select:
+`Step` and `Label` have public setters, so the generated client gains
+`setStep` and `setLabel`, which send the value to .NET. `Count` has a private
+setter, so the frontend can only read it. Since SDK `0.14.0` the generated
+module also exports `CounterFields`, one descriptor per settable member, and
+the Counter page binds both fields with `useField`:
 
 <!-- prettier-ignore -->
 ```tsx docs-test=template:frontends/react/src/pages/CounterPage.tsx
-// Step has a public C# setter, so the client has setStep for a two-way
-// binding. Count's setter is private: the page only reads it.
-const setStep = useCommand((step: number) => client?.setStep(step));
-const error = increment.error ?? setStep.error ?? connection;
+// Step and Label have public C# setters, so the generated CounterFields has a
+// field for each; useField writes them and keeps what the user typed while the
+// writes are on their way. Count's setter is private: the page only reads it.
+const step = useField(counter, CounterFields.step);
+const label = useField(counter, CounterFields.label);
+const increment = useCommand(() => client?.increment());
+const error = increment.error ?? step.error ?? label.error ?? connection;
 ```
 
-A rejected write or command rejects with the `BridgeError` from
-`@runic-artifex/views`, which `useCommand` keeps as its `error`. The
-[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/first-window)
-uses the same client without a framework.
+The descriptor knows the member's kind, so the same call binds the number
+select and the text input. `inputProps` holds the element's value and
+handlers:
 
-Since SDK `0.13.0`, `state` shows a setter's value at once, until the state
-that includes it arrives from .NET, so a field bound to state no longer loses
-keys when replies arrive late. The setter's promise is still the confirmation:
-await it where the page needs to know that .NET accepted the value. A failed
-setter rejects and the member returns to .NET's value. For a text input, prefer
-`useTextField` (React, Vue, Svelte) or `injectTextField` (Angular), which keep
-at most one write in flight, keep the draft after an error and show the View's
-normalized value once the last write settled; see
-[text inputs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/views/README.md#text-inputs).
+<!-- prettier-ignore -->
+```tsx docs-test=template:frontends/react/src/pages/CounterPage.tsx
+<select {...step.inputProps} disabled={!client}>
+  {steps.map(value => <option key={value} value={value}>{value}</option>)}
+</select>
+// ...
+<input {...label.inputProps} disabled={!client} />
+// ...
+{/* Increment waits until the Step it adds has been written. */}
+<button disabled={!client || increment.pending || step.editing} onClick={() => void increment.run()}>Increment</button>
+```
+
+While its writes are on their way, a field shows what the user typed, keeps at
+most one write in flight and writes nothing during IME composition; once the
+last write settled it shows the View's value, with any normalization the
+ViewModel applied. `editing` is true while such a draft exists. A failed write
+keeps the draft and sets the field's `error`, a `BridgeError` from
+`@runic-artifex/views`; a failed command is `useCommand`'s `error`. Vue and
+Svelte have their own `useField` (`v-model`, `{@attach field.attach}`), and
+Angular has `injectField` with the `[runicField]` directive.
+[Forms and validation](../guides/forms-and-validation.md) covers the field
+API, writes after a pause, checked writes and validation messages. The
+[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/first-window)
+uses the generated client without a framework.
 
 ## 7. Test the Window and the frontend
 
 Both halves can be tested without a browser or a native window. The
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/notes-view-first)
+[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-view-first)
 nests a sidebar, a document and an editor, and tests each side. Its .NET tests
 drive the real ViewModels and generated Bridges through `RunicWindowTestHost`
 from `Runic.Application.Testing`, with a fake clock:
@@ -258,31 +301,52 @@ await Assert.That(save.Admission).IsEqualTo(RunicOperationAdmissionKind.Accepted
 
 The frontend tests run the generated clients against generated typed mocks and
 the mock Bridge from `@runic-artifex/views/mock`. Renaming a ViewModel member
-breaks them at compile time:
+breaks them at compile time. This one drives the editor's title field the way
+its Save button does:
 
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-view-first/Frontend/test/notes.test.ts
 beforeEach(() => { bridge = installMockBridge(createMockBridge()); });
 
-test("a rejected field write stops the save that follows it", async () => {
+test("Save follows the field's write, and a rejected write stops it", async () => {
   const editor = mockEditor(bridge, {
     state: draft,
     setters: { setTitle: (_state, title) => ({ isDirty: title !== "Untitled" }) },
     commands: { save: state => ({ isDirty: false, savedMessage: `Saved ${state.title}` }) },
   });
   const client = await connectEditor();
+  const title = createFieldController(EditorFields.title, { commit: "pause" });
+  const follow = client.subscribe(state => title.setSource({ state, client }));
+  // As the editor's Save button does.
+  const save = async () => { await commitFields(title); return client.save(); };
 ```
 
-The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Testing/README.md)
-and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/packages/web/views#testing)
+Since SDK `0.14.0` every template frontend has such a test of its own, run
+with `<package manager> run test` (for example `npm run test`): Vitest renders
+the page with happy-dom against the generated typed mocks, without .NET. The
+generated mocks come from the build, so run `dotnet build` once first:
+
+<!-- prettier-ignore -->
+```tsx docs-test=template:frontends/react/src/App.test.tsx
+const counter = mockCounter(bridge, {
+  id: "2",
+  state: { count: 0, step: 1, label: "Clicks" },
+  commands: { increment: state => ({ count: state.count + state.step }) },
+});
+```
+
+[Frontend testing](../guides/frontend-testing.md) explains these tests.
+
+The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Testing/README.md)
+and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/packages/web/views#testing)
 cover the test host and the generated mocks. Since SDK `0.13.0`,
 `createMockBridge({ latency: "slow", reorderRequests: true })` delays every
 request, reply and push and admits requests out of order, so a test can type
 into a field key by key as a user would; see
-[typing in tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/views/README.md#typing-in-tests).
+[typing in tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md#typing-in-tests).
 To test the real page against the
 real ViewModels in a browser, its
-[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
+[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
 starts the built application in serve-only mode for any browser driver.
 
 ## Where next
@@ -291,13 +355,15 @@ starts the built application in serve-only mode for any browser driver.
   pages with Back history and guards.
 - [ViewModel state and threads](../guides/model-context.md) explains why
   commands can set state after `await`.
-- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/notes-reactive-views)
+- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-reactive-views)
   uses ReactiveUI routing and several Views over one model.
-- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/dynamicdata)
+- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/dynamicdata)
   presents a large keyed collection through viewports.
-- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/README.md)
+- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md)
   lists the build properties, generator diagnostics, checked writes and
   operations.
+- [Forms and validation](../guides/forms-and-validation.md) binds inputs to
+  settable members and shows .NET validation messages.
 - [Typed domain failures](../guides/typed-failures.md) returns expected
   command failures, such as a missing title, as typed values.
 - [Add Runic to an existing app](../existing-app.md) applies the same pieces to

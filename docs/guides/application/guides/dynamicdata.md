@@ -4,7 +4,9 @@ Use the [Runic Artifex fork of DynamicData](https://github.com/Runic-Artifex/Dyn
 from nuget.org: [`RunicArtifex.DynamicData`](https://www.nuget.org/packages/RunicArtifex.DynamicData)
 for the Primitives flavor, or
 [`RunicArtifex.DynamicData.Reactive`](https://www.nuget.org/packages/RunicArtifex.DynamicData.Reactive)
-for the System.Reactive flavor. Both target .NET 10. The Primitives flavor keeps
+for the System.Reactive flavor, both `10.0.0`, the fork's first stable release
+(SDK `0.13.0` used `10.0.0-runic.118`; drop `--prerelease` when you move to it).
+Both target .NET 10. The Primitives flavor keeps
 the `DynamicData` namespaces; the System.Reactive flavor uses the
 `DynamicData.Reactive.*` namespaces, such as `DynamicData.Reactive.Binding`.
 Earlier previews, published only as GitHub release assets, used the IDs
@@ -14,7 +16,7 @@ Primitives 9.0.0; the fork also tests Primitives 8.4.0 used by ReactiveUI 25.
 
 DynamicData's cache, filtering, grouping, transforms and disposal stay in .NET.
 Runic exports the resulting collection through a generated, reflection-free
-bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/dynamicdata/README.md)
+bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/dynamicdata/README.md)
 has a 100,000-row source cache, keyed browser rendering and an independent
 viewport for each presentation.
 
@@ -64,18 +66,26 @@ object identity, so render with the generated key rather than the array index.
 Since SDK `0.13.0` (Views protocol 4), a frame carries the collection's
 indexed changes beside a `set` for each other member whose encoding changed, so
 scalar changes and derived members travel in the same frame without a full
-state. A model that exports validation still publishes each collection as a
-`set` of the whole field, beside its `validation` member in the same frame. A
+state. Since SDK `0.14.0` this includes a model that exports validation: the
+frame carries the collection's indexed changes together with the `validation`
+they cause, where `0.13.0` still sent a `set` of the whole field. A
 `Reset`, a notification without a starting index, a row reached through more
 than one path and a change of an object nested inside a row are a `set` of the
 whole field. When a frame would exceed 4,096 changes, the collections with the
 most changes become one `set` each until it fits. Slow host delivery retains at
 most 64 pending entries or 1 MiB per route, then replaces pending work with a
 recovery state. Clients re-read a snapshot after a gap or malformed frame;
-repeated and stale frames have no effect. See
-[state changes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/specs/application/state-changes.md)
+repeated and stale frames have no effect.
+
+Since SDK `0.14.0`, the Window logs event 1025
+`BridgeCollectionChangedOutsideModelTurn` (a warning, once per Bridge and field)
+when an observed collection changes outside the window's model turn, such as a
+`Bind` without `ObserveOn` the window's scheduler. A change notification that
+arrives after the window's model context closed no longer throws
+`ObjectDisposedException` into the binding, which ended it. See
+[state changes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/specs/application/state-changes.md)
 and the .NET
-[language mappings](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/specs/application/language-mappings.md#publication-units-and-change-detection).
+[language mappings](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/specs/application/language-mappings.md#publication-units-and-change-detection).
 
 ## Bound the presented collection
 

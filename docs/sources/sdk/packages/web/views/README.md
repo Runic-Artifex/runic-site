@@ -55,6 +55,18 @@ with a `BridgeError` whose `kind` is `rejected`, `cancelled`, `failed`,
 `disconnected`, `released`, `timeout` or `unavailable`; see
 [Errors and diagnostics](#errors-and-diagnostics).
 
+### Notifications
+
+The client applies each frame as soon as it arrives, but delivers the resulting
+state to subscribers once per animation frame, so a burst of frames renders once
+with the newest state. While the page is hidden, when the browser runs no
+animation frames, a short timer delivers it instead. `snapshot` is always the
+state subscribers last received. Nothing that a caller awaits waits for a frame:
+a setter shows its value at once (so a controlled input keeps its caret), and a
+call that resolves, such as `await counter.increment()` or a checked write,
+first delivers every state that arrived before its reply. The mock Bridge
+delivers each push at once (see [Testing](#testing)).
+
 ### Cancellation and `using`
 
 `connect<Name>({ signal })`, `waitForBridge({ signal })` and an operation's
@@ -228,15 +240,17 @@ bindings; a binding for another framework can use the controllers directly.
 Each controller has a `current` value, replaced by a new object on every
 change, and `subscribe(listener)`, which returns an unsubscribe function.
 
-- `createViewController<TClient>({ release? })` follows a `ViewSource`: a
+- `createViewController<TClient>({ release?, keepAlive? })` follows a `ViewSource`: a
   connector (`{ connect() }`, such as a generated page reference) that it
   connects and releases, or a connected client that it only observes.
   `setSource(source)` ignores a source with the same client or `connect`
   function and does not notify; read `current` after calling it. `current` has
   `source`, `client`, `state`, `error` and `pending`. `retry()` connects
-  again and `dispose()` releases the client. `isViewClient` and
-  `viewSourceIdentity` from `@runic-artifex/views/bindings` tell clients from
-  connectors and compare sources.
+  again, `release()` lets go of the client but keeps `current` (a binding's
+  unmount or hidden phase), and `dispose()` lets go of it for good. `isViewClient`,
+  `viewSourceIdentity` and `viewSourcePreview` from `@runic-artifex/views/bindings`
+  tell clients from connectors, compare sources and read what a source shows
+  before a controller follows it (see [Client lifetime](#client-lifetime)).
 - `createCommandController(command)` has `run(...args)`, which never rejects
   and resolves to `undefined` after a failure, and `current` with `pending`,
   `error` and `failure`. For a command that resolves a `BridgeOutcome`,
@@ -259,6 +273,39 @@ change, and `subscribe(listener)`, which returns an unsubscribe function.
   intent. React, Vue and Svelte `useLatestOperation` and Angular `injectLatestOperation`
   wrap it. See [Operation feedback and latest selection](#operation-feedback-and-latest-selection).
 
+## Client lifetime
+
+A connected client is a presentation of its route in .NET: connecting opens the route, and disposing the last
+client of a route closes it. Components unmount and mount again more often than a user navigates: StrictMode's
+simulated unmount, Fast Refresh and HMR, React's `<Activity>`, an `{#if}` or `v-if` that toggles, and A→B→A
+navigation. So a binding does not dispose its client at once: the view controller keeps it connected for a grace
+period, `keepAlive` (2000 ms by default), keyed by the connector's `connect` function, and the next binding that
+follows the same connector takes it over with its state. The component shows its View again at once, without
+"Connecting…", and the route is not opened again. A client that nothing takes over is disposed when the period ends.
+
+- Kept clients are handed over, not shared: two components that show the same reference at the same time still
+  have a client each.
+- `keepAlive: 0` (`useView(page, { keepAlive: 0 })`, `injectView(page, { keepAlive: 0 })`) disposes at once, as
+  before 0.14, for a test that checks that a route closes on unmount, or a View whose presentation must end with
+  its component.
+- While the same source connects again (after `retry()`, or once its grace period ended while a component was
+  hidden), `state` stays the last state the controller showed, with `pending: true`; a different source shows
+  nothing of the previous one.
+- An observed client (`useView(client)`) is never kept or disposed by a binding; its owner disposes it.
+
+`preloadView(source, { keepAlive? })` connects ahead of the component, as in a router's `load` function: it resolves
+with `source` once the client connected (and rejects with the failure, so the router shows its error page), and the
+first binding that follows `source` takes the client over:
+
+```ts
+// SvelteKit, src/routes/editor/+page.ts
+import { preloadView } from "@runic-artifex/views";
+import { connectEditor } from "$lib/generated/editor.js";
+
+export const ssr = false;
+export const load = async () => ({ editor: await preloadView({ connect: connectEditor }) });
+```
+
 ## Text inputs
 
 A text input that writes on every key sends many requests while the user types,
@@ -279,34 +326,109 @@ How a field stays correct depends on what it calls:
   bound to state loses keys typed meanwhile. Bind text to a setter, or use the
   text field binding below with the command as `write`.
 
-### The text field binding
+### Fields
 
-`createTextFieldController({ read, write, coalesce?, keepDraftOnError? })` binds a text
-input to one View member, so typing key by key never loses characters: while its
-writes are in flight it shows the user's draft, at most one write is in flight (text
-typed meanwhile is written next), nothing is written during IME composition, and once
-the last write settled it shows the View's value with any normalization. Angular
-`injectTextField` and React, Vue and Svelte `useTextField` wrap it; prefer those
-([Angular](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/angular#text-inputs),
-[React](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/react#text-inputs-usetextfieldview-read-write-options),
-[Vue](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/vue#text-inputs-usetextfieldview-read-write-options),
-[Svelte](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/svelte#text-inputs-usetextfieldview-read-write-options)).
+The generator emits a descriptor for each settable member of a View, `{View}Fields`:
 
 ```ts
-const name = createTextFieldController({ read: (state: Person) => state.name, write: (client: PersonClient, value) => client.setName(value) });
-const stopState = client.subscribe(state => { name.setSource({ state, client }); render(name.current); });
-const stopField = name.subscribe(() => render(name.current));
-input.addEventListener("input", () => name.input(input.value));
-input.addEventListener("compositionstart", () => name.compositionStart());
-input.addEventListener("compositionend", () => name.compositionEnd(input.value));
+import { EditorFields } from "./generated/editor.js";
+EditorFields.title; // { name: "title", kind: "text", read, write, checked, baseline, errors? }
+EditorFields.step;  // { name: "step", kind: "number", integer: true, … }
 ```
 
-`current` has `value`, `editing` and `error`. Call `setSource` with each new state; it
-does not notify. `write` may be a setter, a command or a checked write
-(`write<Property>`); with a setter the binding adds coalescing and keeps the draft
-after an error. `coalesce: false` writes every value. A failed write keeps the draft
-and sets `error` until `reset()` or the next input (`keepDraftOnError: false` shows
-the View's value instead). `editing` is true while a draft exists.
+`kind` is `text` (any TypeScript `string`: strings, `Guid`, dates, decimals), `number` (`integer` for integer
+types), `bigint`, `boolean`, `choice` (an enum; `choices` lists its names) or `value` (objects, lists, unions), and
+`nullable` marks nullable members. `read` and `write` are the member and its setter; `checked` and `baseline` its
+checked write and `fieldBaseline`. A View with validation adds `errors(state)`: the member's messages from
+`{name}Errors`, or from `validation` at the member's path, followed by the messages below it, such as those of an
+object's members.
+
+`createFieldController(field, options)` binds one input to a member, for any kind. Angular `injectField` and React,
+Vue and Svelte `useField` wrap it with each framework's wiring; prefer those. Typing key by key never loses
+characters: while its writes are in flight the field shows the user's draft, at most one write is in flight (text
+typed meanwhile is written next), nothing is written during IME composition, and once the last write settled it
+shows the View's value with any normalization.
+
+```ts
+const title = createFieldController(EditorFields.title, { commit: "pause" });
+const stopState = editor.subscribe(state => { title.setSource({ state, client: editor }); render(title.current); });
+const stopField = title.subscribe(() => render(title.current));
+input.addEventListener("input", () => title.inputText(input.value));
+input.addEventListener("compositionstart", () => title.compositionStart());
+input.addEventListener("compositionend", () => title.compositionEnd(input.value));
+input.addEventListener("blur", () => title.commit());
+```
+
+Without a framework, `bindField(element, client, field, options?)` does that wiring for an `<input>`, `<textarea>` or
+`<select>` (a checkbox for a boolean field): it creates the controller, follows the client's state, writes on `input`
+(`change` for a `<select>` or checkbox), nothing during IME composition, commits on blur and sets `aria-invalid`. It
+returns the controller; `dispose()` unwires it. `attachField(element, controller)` wires an element to a controller
+that the page feeds itself, and `commitFields(...fields)` commits fields and rejects with the first failed field's
+error, so Save can follow:
+
+```ts
+const title = bindField(document.querySelector("#title")!, editor, EditorFields.title, { commit: "pause" });
+const body = bindField(document.querySelector("#body")!, editor, EditorFields.body, { commit: "pause" });
+save.onclick = async () => { await commitFields(title, body); await editor.save(); };
+```
+
+`current` has:
+
+- `value`: the draft while one exists, otherwise the member's value in the View's state;
+- `text`: what a text input shows: the text typed while it does not parse or still means `value` (`1.` while typing
+  `1.5` into a number field), otherwise `value` formatted;
+- `editing`: a draft exists. Keep the input enabled while it is true;
+- `error`: why the latest write or text failed: a `BridgeError`, or a `FieldError` (below);
+- `errors`: the member's validation messages (`[]` when valid);
+- `conflict`: the producer's `{value, version}` while a checked write's conflict keeps the draft.
+
+`input(value)` takes a value, `inputText(text)` the text of an input, parsed for the field's kind: `-` or `1e` in a
+number field stay the draft with a `FieldError` of kind `invalid-text`, and nothing is written until the text parses.
+An empty text is `null` for a nullable number, choice or boolean.
+
+Options:
+
+- `commit: "input"` (the default) writes each input, coalesced (`coalesce: false` writes every one, in order by
+  their edit numbers). `commit: "pause"` writes the draft after `delay` milliseconds without input (700 by default)
+  and at once on `commit()`, which the framework bindings call when the element loses focus; text that was not
+  written yet is written when the field is disposed. Use it where each write is an undo step or starts work in .NET.
+  `commit()` resolves with the field's state once its writes settled, so a command that depends on the field can
+  follow them and skip a failed write: `if ((await title.commit()).error === undefined) await editor.save()`.
+- `checked: true` writes with the member's checked write instead of its setter. The write is checked against the
+  value and version the field showed when the draft started and then against each receipt, so a change by another
+  writer meanwhile is a conflict instead of being overwritten. Checked writes are one at a time.
+- `keepDraftOnError: false` shows the View's value after a failed, rejected or conflicting write instead of the
+  draft.
+
+Receipts of checked writes, also when `write` of a text field calls one:
+
+| Receipt | Field |
+| --- | --- |
+| `applied` | Success. The receipt's `validation`, if any, is `errors` when the descriptor has no `errors`. |
+| `rejected` | The draft stays; `error` is a `FieldError` `rejected` with the setter's message. The next input writes again. |
+| `conflict` | The draft stays; `conflict` and `error.current` are the producer's field, `error` is a `FieldError` `conflict`. Nothing is written until `retry()` writes the draft over the producer's value or `reset()` takes it. A conflict whose incoming value is the value sent is a success. |
+| `committed-with-error` | The value was committed and the draft is dropped; `error` is a `FieldError` `committed-with-error`. |
+
+`createTextFieldController({ read, write, … })` is the string case for a hand-written `read` and `write`, such as a
+command; `injectTextField` and `useTextField` wrap it.
+
+### Long text: splices
+
+A setter of a `string` member does not send the whole value on every key when the value is long. With the
+`text-splice/1` feature, which `@runic-artifex/views` and `Runic.Application.Views` negotiate in `hello`, it sends
+only what changed: the position, the number of characters it removed and the text it inserted, against the value the
+page showed (the previous edit while it is on its way, or the View's state). .NET rebuilds the value and calls the C#
+setter with it, exactly as if the page had sent the whole value. Frames change long `string` members the same way. A
+keystroke in a 100,000-character editor sends about 130 bytes and receives about 160, instead of about 100 KB each
+way.
+
+Nothing changes in code: setters, checked writes, the field controllers and the framework field bindings send splices on
+their own, and `snapshot` holds whole strings. A splice that keeps fewer than 64 characters of the old value, a change
+from or to `null`, and any value when the host lists no features cross whole. When .NET no longer has the value a
+splice was based on, such as after a reconnect or when another window changed the member, the setter sends the value
+again in full; the call settles once. Positions count UTF-16 code units, as JavaScript strings do, and never split a
+surrogate pair. A checked write (`write`) of a long text member sends a splice of `expectedValue` the same way, and
+sends the write in full with the same `requestId` when .NET answers that the splice does not fit.
 
 ### Normalizing and busy state
 
@@ -649,7 +771,11 @@ open presentation's handler, or `unhandled` when none is registered.
 `createMockBridge({ scheduling: "manual" })` queues every reply and pushed
 frame until the test calls `flush()`, `flushUntil(promise)` or `advance(ms)`,
 so the test decides when the client observes each one. `sleep(ms)` resolves in
-virtual time, which only `advance` moves, in both scheduling modes.
+virtual time, which only `advance` moves, in both scheduling modes. Unlike a
+real host, whose frames reach subscribers once per animation frame
+([Notifications](#notifications)), the mock delivers the state of each push to
+subscribers at once, and `flush()` delivers the rest, so a test reads the
+result of a push right after it.
 `bridge.failNext({ route, kind, member? }, { kind: "transport" })` rejects the
 request itself, like a dropped connection, and `disconnect()`/`reconnect()` exercise the reconnect
 path. `failNext` takes no `disconnected` kind, because .NET never sends it: use
@@ -781,6 +907,17 @@ tests, a mock handler throws `mockFailure(failure)`, and a generated mock's
 take the method's typed failure.
 
 ## Errors and diagnostics
+
+`describeBridgeError(error)` turns anything a binding reports as `error` into one English sentence for a status line
+or an alert, instead of `String(error)` ("BridgeError: …"): a `rejected` or `failed` error shows the producer's
+message, such as a setter's validation text; `disconnected`, `released`, `timeout` and `unavailable` name the
+condition; a `FieldError` shows its message. Development `detail` is never included. `isBridgeError(error, kind?)`
+tells a `BridgeError`, of one kind or a list of kinds, and narrows `error.kind`:
+
+```tsx
+{error !== undefined && <p role="alert">{describeBridgeError(error)}</p>}
+if (isBridgeError(error, "released")) return <p>This note was closed.</p>;
+```
 
 A `BridgeError` names what failed and why:
 

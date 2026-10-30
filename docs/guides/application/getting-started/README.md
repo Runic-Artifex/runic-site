@@ -65,9 +65,11 @@ packer, `dotnet runic` and `Runic.Create`) roll forward to a newer major .NET,
 so a machine with only a newer .NET SDK, such as .NET 11, builds the app; .NET
 10 remains the tested runtime.
 
-SDK `0.13.0` is built with .NET SDK 10.0.403 (runtime 10.0.14) for
+SDK `0.14.0` is built with .NET SDK 10.0.403 (runtime 10.0.14) for
 CVE-2026-111497 in the bundled Brotli decoder. Use .NET SDK 10.0.403 or later,
 Node.js 24.22.1 or 26.12.1, and Bun 1.4.4 or later, the template's default.
+Since SDK `0.14.0`, the build warns with `RUNICBRIDGE033` when the .NET SDK or
+Bun is older.
 
 `dotnet runic dev` restores the .NET and frontend packages, builds the app,
 starts the frontend development server, and opens the app. Since SDK `0.11.0`
@@ -120,7 +122,7 @@ operation lifetime.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see
-  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/first-window/README.md).
+  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/first-window/README.md).
 
 The code blocks in these guides are checked against a pinned copy of the SDK
 template and examples by

@@ -111,7 +111,7 @@ const queries = {
   IRunicWindowService: [
     '/api/Runic.Application.Views/Runic.Application.Views.IRunicWindowService/',
     '/guides/application/samples/cross-window/',
-    '/api/Runic.Application.Views/Runic.Application.Views.RunicWindowServiceCollectionExtensions/',
+    '/api/Runic.Application.Views/Runic.Application.Views.IRunicWindowParameter-1/',
   ],
   DynamicData: ['/guides/application/guides/dynamicdata/'],
   MessageFormat: [
@@ -138,8 +138,10 @@ const queries = {
 // gzipped with the 0.11.0 API types and guides, from 132 KiB gzipped with
 // the 0.12.0 API types and guides, and from 496 KiB raw and 136 KiB gzipped
 // with the 0.13.0 API types and guides (Views protocol 4, spell checking),
-// which need about 510 KiB raw and 137 KiB gzipped.
-const budget = { raw: 528 * 1024, gzip: 144 * 1024 };
+// and from 528 KiB raw and 144 KiB gzipped with the 0.14.0 API types and
+// guides (fields, forms and frontend testing), which need about 547 KiB raw
+// and 146 KiB gzipped.
+const budget = { raw: 576 * 1024, gzip: 152 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {
