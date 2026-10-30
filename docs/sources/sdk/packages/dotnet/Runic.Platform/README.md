@@ -95,12 +95,15 @@ if ((await files.OpenFileAsync(new())).TryGetValue(out var lease))
 
 `OpenFileOptions` and `SaveFileOptions` take `Filters` and `InitialDirectory`,
 `OpenDirectoryOptions` takes `InitialDirectory`, and `SaveFileOptions` keeps its
-`SuggestedName`. `OpenFilesAsync` selects several files at once:
+`SuggestedName`. Each takes a `Title` that tells the user what the file is for,
+such as "Import backup"; `null` keeps the platform's own ("Open", "Save As").
+`OpenFilesAsync` selects several files at once:
 
 ```csharp
 var images = new FileDialogFilter("Images", ["png", "jpg"]);
 var options = new OpenFileOptions
 {
+    Title = "Add pictures",
     Filters = [images, new FileDialogFilter("All files", ["*"])],
     InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
 };
@@ -159,6 +162,7 @@ if (await files.SaveFileAsync(options) is PickerResult<ISaveFileLease>.Selected 
 | Multiple directories | `FOS_PICKFOLDERS` with `FOS_ALLOWMULTISELECT` | `canChooseDirectories` with `allowsMultipleSelection`, security scope per URL | FileChooser `directory` with `multiple` (version 3 and later) | `SELECT_FOLDER` with `select-multiple` |
 | Initial folder | `SetFolder`, which overrides the folder Windows remembers | `directoryURL` | FileChooser `current_folder`; ignored when opening by portals before FileChooser version 4 | `current-folder` |
 | Suggested name | `SetFileName` | `nameFieldStringValue` | FileChooser `current_name` | `current-name` |
+| Title | `SetTitle`, the title bar | `message`, shown above the files: panels have no visible title | The `title` argument of `OpenFile` and `SaveFile` | The chooser's title |
 
 On macOS a save panel with filters may add the first allowed extension, or with
 `ShowFilterChoice` the chosen filter's, to a name the user types without one.
@@ -315,6 +319,27 @@ implementation that does not override the member reports `OwnerUnavailable`.
 A message box has no "Don't ask again" check box: keep that choice in the
 application's settings and skip the box when it is set.
 
+A box without a window, such as for a fatal error before the first window
+opens, comes from `IApplicationPlatformServices.MessageBoxes`. It asks for
+`OwnerPolicy.PreferOwner`; with the default `RequireOwner` it reports
+`OwnerUnavailable`, as the application has no window to own it. Runic Desktop
+shows a task dialog on an STA thread of the application's own on Windows
+(captioned with the executable's name when `Title` is `null`), an
+application-modal alert on macOS, which needs the main thread (the Desktop
+event loop, or a call on the main thread), and on Linux a dialog of the GTK
+toolkit the process runs once its loop runs: from the start of the GTK 4 event
+loop, with GTK 3 once a window opened. Without a running toolkit Linux reports
+`BackendUnavailable` rather than waiting. A window shown in an installed
+browser after a fallback shows the same unowned boxes for `PreferOwner`.
+
+```csharp
+var platform = DesktopPlatformServices.ForApplication();   // or IApplicationPlatformServices from the container
+await platform.MessageBoxes.ShowAsync(new DesktopMessageBox("The settings cannot be read.")
+{
+    Detail = error.Message, Kind = DesktopMessageBoxKind.Error, OwnerPolicy = OwnerPolicy.PreferOwner,
+});
+```
+
 ### Clipboard
 
 `Clipboard` reads and writes bounded Unicode text (`ITextClipboard`). The
@@ -438,6 +463,21 @@ files from untrusted sources, such as downloads or names a page supplies: use
 
 Success means the desktop accepted the URI, not that an application showed it.
 
+The launcher of a window is `IWindowPlatformServices.FileLauncher`. Code without a
+window, such as a help link handler, a menu command several windows share or a
+background download, takes `IApplicationPlatformServices` instead: its
+`FileLauncher` has the same rules and results and needs no window, also before
+the first window opens. Runic Desktop registers it (`DesktopPlatformServices.ForApplication()`);
+CS-WebUI registers one that reports `ProviderNotConfigured`.
+
+```csharp
+public sealed class Downloads(IApplicationPlatformServices platform)
+{
+    public ValueTask<PlatformResult<PlatformUnit>> ShowAsync(string file) =>
+        platform.FileLauncher.LaunchAsync(file, DesktopFileOperation.Reveal);
+}
+```
+
 `ms-settings:` URIs, such as `ms-settings:display` or `ms-settings:defaultapps`,
 open the Windows Settings app through the same shell call. The URI must be
 exactly `ms-settings:<page>`, where the page is 1 to 64 letters, digits or
@@ -513,7 +553,7 @@ either.
 
 | Service | Desktop window with a native owner | Desktop window without one, or outside a window scope | CS-WebUI |
 | --- | --- | --- | --- |
-| `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, `IDesktopClipboard`, `IDesktopFileLauncher` | Native provider; `OwnerClosed` after the window closes | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
+| `IWindowPlatformServices`, `IFileDialogs`, `ITextClipboard`, `IDesktopClipboard`, `IDesktopFileLauncher` | Native provider; `OwnerClosed` after the window closes | `Unavailable(OwnerUnavailable)`; an installed browser after a fallback shows unowned file dialogs for `OwnerPolicy.PreferOwner` (below) | `Unavailable(OwnerUnavailable)` |
 | Badges and progress, `IWindowPlatformServices.SetBadgeAsync` and `SetProgressAsync` | The taskbar button (Windows, also a WPF window's), the Dock tile (macOS) or the Unity launcher entry (GTK 3 and GTK 4, with an application ID) | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
 | `IDesktopMessageBoxes`, `IWindowPlatformServices.MessageBoxes` | Task dialogs (Windows, also a WPF window's), sheets (macOS), GTK 3 message dialogs and GTK 4 alert dialogs | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
 | `IDesktopMonitors`, `IWindowPlatformServices.Monitors` | The host's monitors (Windows, macOS, GTK 3 and GTK 4; a WPF window's on Windows) | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
@@ -524,6 +564,25 @@ either.
 | Menu bar commands, `IRunicMenuCommandSource` | The native menu bar (macOS; the GTK 3 and GTK 4 windows' own bar), while the window is key, and `DesktopWindow.TryExecuteMenuItemAsync` | None | None |
 | Context menus, `IWindowPlatformServices.ShowContextMenuAsync` | The window's native menu where it has `DesktopWindowCapabilities.ContextMenu` (macOS, GTK 3, GTK 4); `BackendUnavailable` elsewhere | `Unavailable(OwnerUnavailable)` | `Unavailable(OwnerUnavailable)` |
 | `IDesktopSettings`, `IDesktopNotifications`, `IDesktopStatusIcon`, `IDesktopLoginStartup`, `IDesktopInhibition`, `IDesktopSecretStore`, `IDesktopTrash`, `IDesktopFileTransfers`, `IDesktopVolumes`, `IDesktopNetworkStatus`, `IDesktopApplications`, `IDesktopThumbnails` | Operating system provider | Operating system provider, the same instance | `Unavailable(ProviderNotConfigured)` |
+
+A window shown in an installed browser after an embedded-window fallback still
+runs on the user's desktop, so its file dialogs can work without an owner. Ask for
+them with `OwnerPolicy.PreferOwner`: an owned window shows its owned dialog as
+before, and the browser presentation shows an unowned one (Windows on a thread of
+the application's own, the xdg-desktop-portal without a parent window, macOS a
+panel of its own), until the window closes. `OwnerPolicy.RequireOwner`, the
+default, still reports `OwnerUnavailable` there. The capabilities tell the two
+apart: `platform.dialogs.owned` is available for owned dialogs and
+`platform.dialogs.unowned` while `PreferOwner` shows unowned ones, and the other
+file capabilities then describe the unowned dialogs. An unowned dialog is not
+modal: disable what must wait for it. A Window served under serve-only mode or on
+CS-WebUI has no unowned dialogs, as its browser may run on another computer.
+
+```csharp
+var options = new OpenFileOptions(OwnerPolicy.PreferOwner) { Title = "Import backup", Filters = [backups] };
+if (await files.OpenFileAsync(options) is PickerResult<IReadFileLease>.Selected(var backup))
+    await using (backup) { /* restore */ }
+```
 
 On Runic Desktop the application services behave the same with or without a
 native owner. The macOS settings, notifications and status icon need the AppKit
@@ -576,7 +635,7 @@ Status icon menus (`DesktopStatusIconState.Menu`), context menus
 | Type | Is |
 | --- | --- |
 | `DesktopMenuEntry` | The base of every entry. The set is open: a minor release may add entry kinds, so give a `switch` over entries a default arm. Code that walks a menu skips entries it does not know. |
-| `DesktopMenuItem(Title, CommandId)` | An item that runs a command, with `IsEnabled`, `IsChecked` (`null` for a plain item), `Shortcut`, `CommandParameter`, `AccessKey` and `RadioGroup` |
+| `DesktopMenuItem(Title, CommandId)` | An item that runs a command, with `IsEnabled`, `IsChecked` (`null` for a plain item), `Shortcut`, `CommandParameter`, `AccessKey` and `RadioGroup`. Both are strings: name them, `new DesktopMenuItem(Title: "Open window", CommandId: "open")`; the `RUNICPLAT001` analyzer warns about likely swapped arguments |
 | `DesktopMenuSeparator` | A line between groups of entries |
 | `DesktopMenu(Title, Items)` | A submenu, or a menu of the menu bar, with `IsEnabled`, `AccessKey` and the menu bar's `Role` |
 | `DesktopContextMenuOptions` | Where a context menu opens: `X` and `Y` in CSS pixels of the page's viewport, or at the pointer |

@@ -59,9 +59,9 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
@@ -112,7 +112,7 @@ since SDK `0.11.0`, a project whose references contain both gets build warning
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -131,7 +131,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -423,17 +423,27 @@ SDK `0.11.0`, `ReactiveNavigationRegionGuard.WithInteraction(interaction,
 prompt, hasUnsavedChanges, discard)` creates one that asks through an
 `Interaction`, with the same fail-closed rules.
 
-Guards, factories and initialize hooks run outside the model context's turns.
-An initialize hook may set state directly on a page that was created for its
-entry, with `PushAsync<TPage>()`, `NavigationTarget.Create` or a new instance
-handed over with `Own`. Nothing presents that page before its entry commits,
-and the commit turn runs after the awaited hook. That is why the WPF note
-page's `InitializeAsync` above sets `Title` directly. Commit everything else
-with `IRunicModelContext.InvokeAsync`: state that is already presented or
-shared, such as a borrowed page, a service or another page, and any state
-that a guard or `ResumeAsync` sets. Don't schedule work on ReactiveUI's
-main-thread scheduler from a hook, for example with a command's
-`Execute().Subscribe()`; outside a turn it falls back (Views event 1043).
+Since SDK `0.14.0`, `RunicModelContext` schedules navigator hooks, as WPF's
+`DispatcherModelContext` already did: both implement
+`IRunicModelHookScheduler`. Factories, departure guards, initialize, resume and
+arrival hooks, and the disposal of owned content, each run in the model
+context as an operation of their own: a hook starts in a turn of its own,
+never inline in the caller or inside a commit turn, and its awaits resume in
+later turns. No turn is held across a hook's awaits, so commits and Bridge
+replies run between them. A hook therefore sets its page's state directly,
+before and after `await`, like a command body; that is why the WPF note page's
+`InitializeAsync` above sets `Title` directly. Don't block in a hook with
+`Wait()`, `Thread.Sleep` or synchronous I/O, because that blocks the model
+context; await instead. Under SDK `0.13.0` these hooks ran on the thread pool
+with `RunicModelContext`, so a Desktop, served or CS-WebUI application without
+WPF had to commit their writes with `IRunicModelContext.InvokeAsync`, which
+still works and runs inline; a wrapper that implemented
+`IRunicModelHookScheduler` to post hooks as turns can be removed. A decorator
+that wraps a scheduling context must implement and forward the interface, or
+hooks run outside turns again; see
+[threading](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md#threading).
+Content that a factory returned for a target the navigator rejected is
+disposed asynchronously, after `WhenIdleAsync`.
 
 ### Return a result
 
@@ -536,7 +546,7 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   taking `IRunicWindowContext` in its constructor and calling its
   `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
   it is new in SDK `0.7.0-preview.8`; see
-  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -654,7 +664,7 @@ a veto. The tab set is static in a web View. In WPF,
 `NavigationSelector.Selection` binds a `TabControl` to the selection; see
 [incremental WPF adoption](../migrations/wpf-incremental.md#2-share-navigation-retain-native-mvvm).
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
 lists every rule.
 
 ## With CommunityToolkit.Mvvm
@@ -717,10 +727,10 @@ private async Task CloseEditorAsync()
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.
 - Since SDK `0.11.0`, `RunicTestNavigationEntry.CreateAsync` in
-  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Testing/README.md)
+  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Testing/README.md)
   unit-tests a page that takes its `NavigationEntryContext`, such as a confirm
   dialog, without a Window.

@@ -67,7 +67,19 @@ The same Window and `async host => ...` body run on CS-WebUI with
   to `RunicDesktopHost.Run(provider, desktopOptions, hostOptions, async host => ...)`,
   or to `new RunicDesktopHost(provider, desktop, hostOptions)` for a host on a
   `DesktopHost` you started yourself. `RunicDesktopHost.DefaultWindowOptions` opens
-  the embedded WebView and falls back to an installed browser. A build with
+  the embedded WebView and falls back to an installed browser; change one option
+  of every Window with `with`, such as the native spell checker, which an
+  application that brings its own turns off
+  ([Spell checking](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md#spell-checking)):
+
+  ```csharp
+  var hostOptions = new RunicDesktopHostOptions
+  {
+      WindowOptions = RunicDesktopHost.DefaultWindowOptions with { SpellChecking = false },
+  };
+  ```
+
+  A build with
   `RunicApplicationFrontendDelivery=Embedded` embeds the frontend in the
   assembly, and the host serves that archive in place of `www/`; see
   [Ship the frontend inside the executable](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#ship-the-frontend-inside-the-executable).
@@ -103,7 +115,8 @@ The same Window and `async host => ...` body run on CS-WebUI with
   };
   ```
 - `host.OpenWindowAsync<TWindow>(options, activation, cancellationToken)` on
-  `RunicDesktopHost` opens a Window for a launch or a click: it opens the Window
+  `RunicDesktopHost`, and since 0.14 on any `IRunicWindowHost` (CS-WebUI opens the
+  Window and ignores the context), opens a Window for a launch or a click: it opens the Window
   as above and presents it with the desktop's activation token or startup ID,
   such as `ApplicationLaunch.PlatformContext` of a launch the running instance
   received. Wayland compositors such as KWin give a new window focus only with
@@ -239,7 +252,9 @@ The same Window and `async host => ...` body run on CS-WebUI with
   Until the window opens, every operation returns
   `Unavailable(OwnerUnavailable)`. It returns the same result when the window
   has no native owner, for example an installed browser after an
-  embedded-window fallback. After the window closes, every operation returns
+  embedded-window fallback, except for file dialogs and message boxes that ask
+  for `OwnerPolicy.PreferOwner`, which show without an owner, and the file
+  launcher, which is the application's. After the window closes, every operation returns
   `Unavailable(OwnerClosed)`. A Linux process without a GTK backend returns
   `Unavailable(ProviderNotConfigured)`. `GetSnapshot()` reports the same states
   per capability. The package references every provider package, but loads
@@ -448,6 +463,25 @@ The same Window and `async host => ...` body run on CS-WebUI with
   boxes: task dialogs on Windows, also for a WPF window, sheets on macOS and GTK
   message or alert dialogs on Linux; see
   [Message boxes](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Platform/README.md#message-boxes).
+- `AddRunicPlatformServices()` also registers `IApplicationPlatformServices`, the
+  one instance of `DesktopPlatformServices.ForApplication()`: the application's
+  `FileLauncher` opens URIs and files and reveals files without a window, also
+  before the first window opens, behind a status icon and for Windows served
+  under serve-only mode, and its `MessageBoxes` show boxes that ask for
+  `OwnerPolicy.PreferOwner` without a window, such as a fatal start-up error. Windows hands them to the shell on an STA thread of the
+  application's own, Linux asks the desktop portal without a parent window
+  (either toolkit or none) and macOS asks NSWorkspace on the main thread. A
+  window shown in an installed browser after a fallback uses it as its own
+  `FileLauncher`, until the window closes. Code that runs before the container
+  exists calls `ForApplication()` directly.
+
+  ```csharp
+  public sealed class HelpLinks(IApplicationPlatformServices platform)
+  {
+      public ValueTask<PlatformResult<PlatformUnit>> OpenLogFolderAsync(string log) =>
+          platform.FileLauncher.LaunchAsync(log, DesktopFileOperation.Reveal);
+  }
+  ```
 - The secret store and the application database are registered without an
   application ID, also by `AddRunicPlatformServices(applicationId)`.
   `DesktopPlatformServices.CreateSecretStore(applicationId)` and
@@ -648,6 +682,27 @@ such as `linux-embedded-backend-not-selected`, are skipped too and no browser
 is needed. It still reports configuration errors, such as `window-option-invalid`,
 `browser-unsupported` or `gtk4-provider-missing`, which fail every launch that
 presents a window.
+
+An application that serves its Windows on purpose, such as a `--browser`
+command, sets `RunicDesktopHostOptions.ServeOnly = true` instead (since 0.14):
+the same mode, without an environment variable that the application's child
+processes would inherit. `RunicDesktopHost.ServeOnly` tells which mode a host
+is in. With either switch, `RunicDesktopHost.Run` starts no window toolkit loop,
+so `WithGtk4()` on a machine without a display reports no
+`gtk4-display-unavailable`. Open the served page in the user's default browser
+with the application's launcher, `DesktopPlatformServices.ForApplication()`,
+which needs no window:
+
+```csharp
+return RunicDesktopHost.Run(provider, new DesktopHostOptions().WithGtk4(),
+    new RunicDesktopHostOptions { ServeOnly = true }, async host =>
+{
+    await using var window = await host.OpenWindowAsync<MainWindow>();
+    await DesktopPlatformServices.ForApplication().FileLauncher.LaunchUriAsync(RunicDesktopHost.GetSurface(window)!.Url);
+    await window.WaitForCloseAsync();
+    return 0;
+});
+```
 
 A served Window can end with its last browser tab, as a `--browser` command
 that opens the URL in the default browser would. The Window's surface counts

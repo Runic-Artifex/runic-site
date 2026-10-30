@@ -373,6 +373,14 @@ page never connects: that fails with `presentation-connection-timeout`, and the 
 the server, and from that request once it has: a browser or WebView that starts
 slowly and requests its page just before the deadline still gets the whole timeout
 to finish the Bridge handshake, so one launch waits at most twice the timeout.
+An embedded WebView that has requested nothing yet but is still loading the page
+extends the timeout: it does not run out while the WebView's first navigation is in
+progress, nor within a whole timeout of the last startup step the WebView reported,
+up to four times `ConnectionTimeout` (60 seconds with the default). A fresh WebView2
+profile can take many seconds to start while Windows services the disk, and the
+Windows WebView2 windows report this progress; the other embedded windows and
+browsers keep the plain timeout. Each extension logs event 3021, and a timeout at the
+limit says how long the WebView was still loading.
 A browser that is still running but has requested nothing after `ConnectionTimeout`
 is stopped and launched again, with a fresh profile unless the window sets one.
 Each relaunch reports `browser-launch-stalled` as a warning and logs event 3004.
@@ -1394,7 +1402,20 @@ its checker off for one window, so every document in the window starts with
 `spellcheck="false"` on `<html>`, which the fields inherit. An element with its
 own `spellcheck="true"` is still checked, so leave the attribute off the
 editor. A custom window host applies the option by running
-`DesktopWindowHostOptions.DocumentStartScript`.
+`DesktopWindowHostOptions.DocumentStartScript`. With `RunicDesktopHost`
+(`Runic.Application.Views.Desktop`), set it for every Window:
+
+```csharp
+var hostOptions = new RunicDesktopHostOptions
+{
+    WindowOptions = RunicDesktopHost.DefaultWindowOptions with { SpellChecking = false },
+};
+```
+
+An application that brings its own checker turns the native one off, so that
+the two do not both mark words, and checks the text itself in every field it
+wants checked: the native checker then checks no field without its own
+`spellcheck="true"`.
 
 A language without a dictionary is not checked; the window reports
 `spell-checking-dictionary-missing` to `DesktopHostOptions.DiagnosticSink` and

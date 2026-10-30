@@ -11,15 +11,15 @@ construction, typed commands, property writes, and operation lifetimes. The
 browser opens and closes a presentation of each View it shows, so a content
 session can create and release its logical View as frontend routes change. Generated clients are framework-neutral;
 React, Vue, Svelte, Angular, and plain TypeScript use the same contract. They
-share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/views/README.md),
+share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md),
 which also provides a mock Bridge for development without .NET. The
-[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/react/README.md) and
-[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/vue/README.md) packages, `useView` in
-[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/svelte/README.md) and
-`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/angular/README.md)
+[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/react/README.md) and
+[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/vue/README.md) packages, `useView` in
+[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/svelte/README.md) and
+`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/angular/README.md)
 connect and dispose clients with component lifetimes. Since SDK `0.11.0`, a
 SvelteKit frontend uses `@runic-artifex/svelte` with
-[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/sveltekit/README.md),
+[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/sveltekit/README.md),
 which prerenders its pages for the Window.
 
 Start with [getting started](getting-started/README.md), follow
@@ -27,11 +27,11 @@ Start with [getting started](getting-started/README.md), follow
 [add Runic to an existing app](existing-app.md). Existing WPF applications can
 [adopt Runic incrementally](migrations/wpf-incremental.md), keeping their shell
 and models while adding native navigation and optional embedded web Views. The
-[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/first-window/README.md) is the smallest example; then read the
-[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/notes-view-first/README.md) and
-[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/examples/notes-reactive-views/README.md) examples. The
+[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/first-window/README.md) is the smallest example; then read the
+[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/notes-view-first/README.md) and
+[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/README.md).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md).
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.
@@ -39,7 +39,7 @@ types are in the `Runic.Application.Views` namespace; the
 ## Navigation and model context packages
 
 Since 0.7.0-preview.4, navigation and model contexts live in
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Navigation/README.md).
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md).
 It can be used independently of Views; `Runic.Application.Views` references it
 transitively. Add `using Runic.Navigation;` for `RunicNavigator`, regions,
 `IRunicModelContext`, `RunicModelContext` and `RunicModelContextRegistry`, then
@@ -52,7 +52,7 @@ scheduling helpers, `AddRunicReactiveModelContext()` and
 `using Runic.Application.Views.ReactiveUI;` for them.
 [Pages and navigation](guides/pages-and-navigation.md) and
 [ViewModel state and threads](guides/model-context.md) show both in use. The
-[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/eng/release/notes/0.7.0-preview.4.md)
+[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.7.0-preview.4.md)
 list the moved types.
 
 ## Upgrading generated clients
@@ -95,13 +95,88 @@ together, and add `@runic-artifex/views` to the frontend's dependencies.
   kept outside the web content with the `0.13` copies.
 - Since SDK `0.13.0`, `snapshot` and `subscribe` show a setter's value at once,
   until the state that includes it arrives. Await the setter's promise where
-  the page needs .NET's confirmation, such as a "Saved" indicator. For text
-  inputs, prefer `injectTextField` (Angular) or `useTextField` (React, Vue,
-  Svelte); see
-  [text inputs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/views/README.md#text-inputs).
+  the page needs .NET's confirmation, such as a "Saved" indicator. For inputs,
+  prefer the field bindings of SDK `0.14.0` (`useField`, `injectField`); see
+  [forms and validation](guides/forms-and-validation.md).
 
 The
-[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/eng/release/notes/0.13.0.md#upgrading)
+[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.13.0.md#upgrading)
 list everything to check when upgrading, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/docs/migration-1.0.md#from-012-to-013)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/docs/migration-1.0.md#from-012-to-013)
 has before and after tables.
+
+## Upgrading from 0.13 to 0.14
+
+Update every Runic NuGet and npm package to `0.14.0` together
+(`Runic.Application.Views.CsWebUi` to `0.14.0-preview.1`) and rebuild, so the
+generated clients, bridges and mocks regenerate. Views protocol 4 does not
+change: the new features are negotiated in `hello`, so a `0.13` page and a
+`0.14` host still connect and use whole values. Check these if they apply:
+
+- **Operations started before the upgrade.** Every contract fingerprint
+  changes (`runic-bridge-contract-v6`), so an operation that a `0.13` page
+  started and recovers after the upgrade is `unknown`.
+- **Notifications once per animation frame.** `subscribe` listeners get the
+  newest state once per animation frame instead of once per frame, and
+  `snapshot` can be up to one frame behind. A setter's value and the result of
+  an awaited call are still delivered at once; the mock Bridge still delivers
+  each push at once. See [testing frontends](guides/frontend-testing.md).
+- **Clients stay connected after unmount.** `useView`, `injectView` and
+  `createViewController` keep a client for `keepAlive` milliseconds (2000 by
+  default), and the next binding of the same connector takes it over. Tests
+  that check that a route closes at unmount pass `{ keepAlive: 0 }`.
+- **Requests before `hello`** wait up to 5 seconds for the `hello` instead of
+  answering `no-hello` at once, in `InMemoryBridgeTransport` and the mock
+  Bridge too.
+- **Text fields read checked-write receipts.** `useTextField`,
+  `injectTextField` and `createTextFieldController` keep the draft on a
+  `rejected` or `conflict` receipt and report it in `error`, instead of
+  dropping it; their state adds `text`, `errors` and `conflict`. The new field
+  API covers every member type; see [forms and validation](guides/forms-and-validation.md).
+- **Validation messages.** An empty or blank message crosses as
+  `Invalid value.` instead of `""`. The Runic Artifex forks are stable:
+  `RunicArtifex.ReactiveUI.Validation` `9.0.0` and `RunicArtifex.DynamicData`
+  `10.0.0`, so an application that references them moves to these versions and
+  drops `--prerelease`.
+- **`runicDevSession()` is deprecated.** A SvelteKit frontend uses
+  `runic({ html: false })` in `vite.config.ts` and imports
+  `@runic-artifex/vite-plugin-runic/client` from `src/hooks.client.ts`; the
+  deprecated function still works in `0.14`. An Angular frontend keeps
+  `runicDevSessionProxy()` and loads the development client from `main.ts`
+  behind `ngDevMode`; its `/__runic/state` now answers 200 with the state JSON
+  instead of 204.
+- **Platform services without a window.** `IApplicationPlatformServices`,
+  registered by `AddRunicPlatformServices()` and returned by
+  `DesktopPlatformServices.ForApplication()`, opens URIs and files and shows
+  message boxes without a window. It replaces the
+  `DesktopPlatformServices.OpenUriAsync(uri)` of 0.14 development builds,
+  which 0.14.0 does not ship; see
+  [without a window](../desktop-services.md#without-a-window).
+- **Navigation hooks under `RunicModelContext`** run in the model context, each
+  in a turn of its own, as with WPF's `DispatcherModelContext`. Set page state
+  in `InitializeAsync` or `OnArrivedAsync` directly, don't block in a hook, and
+  remove a wrapper that scheduled hooks itself; see
+  [ViewModel state and threads](guides/model-context.md).
+- **SDK tool exit codes.** `dotnet runic`, `Runic.Create` and the asset packer
+  are built with Runic Command Line `0.11.0`. A failure on what a command found,
+  such as a missing project (`RAPPDEV1002`), an invalid Views Window project
+  (`RAPPDEV1005`), an existing `size --report` file (`RAPPSIZE1003`), a missing
+  packer source directory (`RAS1001`) or a non-empty `runic-create`
+  destination (`RCREATE003`), now exits 1 instead of 2; exit code 2 means that
+  the command line itself is wrong. Human output writes the message without its
+  leading code. Scripts test 1 or read `fault.code` from `--format json`.
+- **CS-WebUI shows no "Connection with the backend is lost" banner**, because
+  `runic-cswebui.js` installs a WebUI event callback. Show the connection state
+  yourself, for example from `useBridgeConnection()` as the template does.
+- **Removed types fail with `CS0619`.** Code that still names a type removed in
+  0.9 or 0.13, such as `IAsyncBridgeTransport` or `BridgeTestArguments`, gets
+  an error that names its replacement, for this release.
+- **Toolchain floor.** The build warns with `RUNICBRIDGE033` for a .NET SDK
+  older than 10.0.403 or a Bun older than 1.4.4.
+
+The
+[0.14.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.14.0.md#upgrading)
+list everything to check, and the
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/docs/migration-1.0.md#from-013-to-014)
+has before and after tables for each area, including tests, Windows, Nix and
+the CLI tools.

@@ -21,7 +21,7 @@ services.AddSingleton<RowStore>();
 services.AddScoped<RowsViewModel>();
 ```
 
-The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/multi-window)
+The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/multi-window)
 opens its first Window from the host callback. The application ends when that
 Window closes:
 
@@ -41,7 +41,7 @@ The host is passed only to that callback; it isn't registered in the
 container. To open Windows from a command or a service, register
 `IRunicWindowService` with `AddRunicWindowService()`. It is new in SDK
 `0.7.0-preview.7`, as is the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/multi-window).
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/multi-window).
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
 // IRunicWindowService, which ProjectViewModel uses to open more Windows.
@@ -69,12 +69,37 @@ NewWindowCommand = ReactiveCommand.CreateFromTask(async token =>
   Window closes, so the command doesn't keep it. Keep the returned Window only
   to wait for it or to close it with `RequestCloseAsync()`.
 - Runic has no owned or modal Windows, so there is no owner parameter. The new
-  Window's ViewModel is resolved from DI like the first one's; to give it
-  input, let it read a singleton service, as this example does with the shared
-  project.
+  Window's ViewModel is resolved from DI like the first one's. State that every
+  Window shares stays in a singleton service, as this example does with the
+  shared project.
+- Since SDK `0.14.0`, a Window can get input of its own:
+  `OpenWindowAsync<TWindow, TParameter>(parameter, options)`, on the service
+  and on the host, hands the value to the new Window's scope, where its
+  ViewModel takes `IRunicWindowParameter<TParameter>` in its constructor. Each
+  Window gets its own, also when several open at once, which replaces a
+  hand-off through a shared service guarded by a semaphore.
+  `AddRunicWindowService()` registers it; without it the open fails with
+  `window-parameter-not-registered`. A test that builds such a ViewModel passes
+  `new RunicWindowParameter<TParameter>(value)`:
+
+  ```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+  await windows.OpenWindowAsync<PartWindow, PartRequest>(new PartRequest(world, WindowedPart.Atlas));
+
+  public sealed class PartViewModel(IRunicWindowParameter<PartRequest> request) : ReactiveObject
+  {
+      public WorldViewModel World { get; } = request.Value.World;
+  }
+  ```
+
+- Since SDK `0.14.0`, code that holds only the host-neutral `IRunicWindowHost`
+  opens a Window for a launch with its activation context,
+  `host.OpenWindowAsync<TWindow>(options, activation)`, instead of casting to
+  `RunicDesktopHost`; hosts other than Runic Desktop ignore the context.
 
 In a test, register a fake after the application's services. The example's
-fake records the requested Window types and opens nothing:
+fake records the requested Window types and opens nothing; the parameter
+overload has a default implementation that throws `NotSupportedException`, so
+a fake overrides it only when the application uses it:
 
 ```csharp docs-test=source:examples/multi-window/Tests/ProjectWindowTests.cs
 // The window service's test double: it records the requested Window and opens nothing.

@@ -85,25 +85,27 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  // 2.5 MiB since 0.12.0 added navigation selections, document leases and
-  // the macOS quit, window and document APIs; 0.12.0 needs about 2.42 MiB.
-  assert.ok(inputs <= 2.5 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  // 2.75 MiB since 0.14.0 added the field API, application platform services,
+  // window parameters and asynchronous test drivers, which need about
+  // 2.64 MiB; 2.5 MiB since 0.12.0.
+  assert.ok(inputs <= 2.75 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads. 224 KiB per page
-  // since 0.13.0, whose @runic-artifex/views page needs about 209 KiB with the
-  // protocol 4 client, text field and progress APIs.
+  // __data.json payloads that client-side navigation loads. 272 KiB per page
+  // since 0.14.0, whose @runic-artifex/views page needs about 253 KiB with the
+  // field API; 224 KiB since 0.13.0.
   let compressed = 0;
   for (const file of files(buildApi)) {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 224 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 272 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 5.5 MiB since 0.13.0 (Views protocol 4, spell checking), which needs
-  // about 5.38 MiB; 5.25 MiB since the platform services of 0.11.0.
+  // 5.75 MiB since 0.14.0 (fields, application platform services, test
+  // drivers), which needs about 5.62 MiB; 5.5 MiB since 0.13.0 and 5.25 MiB
+  // since the platform services of 0.11.0.
   assert.ok(
-    compressed <= 5.5 * 1024 * 1024,
+    compressed <= 5.75 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });

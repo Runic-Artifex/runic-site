@@ -90,7 +90,7 @@ the GTK window, its header bar with GTK 4, and Runic's menu bar and context
 menus. macOS and installed browsers ignore it, and `Validate` reports each
 option a presentation ignores. Choose it with the application's language, as
 in the
-[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Desktop/README.md#right-to-left-languages):
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Desktop/README.md#right-to-left-languages):
 
 ```csharp docs-test=skip:illustrative-fragment
 var culture = CultureInfo.CurrentUICulture;

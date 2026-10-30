@@ -102,9 +102,27 @@ internal sealed class PlatformServicesChecks
             "A window without native dispatch selected a provider.");
         Require(await services.FileDialogs.OpenFileAsync(new()) is PickerResult<IReadFileLease>.Unavailable(PlatformUnavailableReason.OwnerUnavailable)
             && await services.FileDialogs.OpenDocumentAsync(new()) is PickerResult<IDocumentFileLease>.Unavailable(PlatformUnavailableReason.OwnerUnavailable)
-            && await services.FileDialogs.SaveDocumentAsync(new("notes.txt")) is PickerResult<IDocumentFileLease>.Unavailable(PlatformUnavailableReason.OwnerUnavailable)
-            && await services.FileLauncher.LaunchAsync(Path.Combine(Path.GetTempPath(), "notes.txt")) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            && await services.FileDialogs.SaveDocumentAsync(new("notes.txt")) is PickerResult<IDocumentFileLease>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
             "A window without native dispatch did not report the owner unavailable.");
+        // #712: it still runs on the user's desktop, so OwnerPolicy.PreferOwner shows unowned file dialogs; the capabilities
+        // tell them from owned ones, and every other service still reports the missing owner.
+        var statuses = services.GetSnapshot().Statuses;
+        Require(statuses[PlatformCapabilityIds.DialogsUnowned] is CapabilityStatus.Available
+            && statuses[PlatformCapabilityIds.DialogsOwned] is CapabilityStatus.Unavailable(PlatformUnavailableReason.OwnerUnavailable)
+            && statuses[PlatformCapabilityIds.FilesOpen] is CapabilityStatus.Available
+            && statuses[PlatformCapabilityIds.ClipboardReadText] is CapabilityStatus.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            $"A window without native dispatch did not report unowned file dialogs: {string.Join(", ", statuses)}.");
+        // #724: its message boxes are the application's for PreferOwner; RequireOwner still reports the missing owner.
+        Require(await services.MessageBoxes.ShowAsync(new DesktopMessageBox("Saved.")) is PlatformResult<DesktopMessageBoxButton?>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            "A RequireOwner box of a window without native dispatch did not report the owner unavailable.");
+        // #723: its launcher is the application's, which needs no owner.
+        Require(statuses[PlatformCapabilityIds.FilesLaunch] is CapabilityStatus.Available && statuses[PlatformCapabilityIds.UrisLaunch] is CapabilityStatus.Available,
+            $"A window without native dispatch did not launch through the application: {string.Join(", ", statuses)}.");
+        await window.DisposeAsync();
+        Require(await services.FileDialogs.OpenFileAsync(new(OwnerPolicy.PreferOwner)) is PickerResult<IReadFileLease>.Unavailable(PlatformUnavailableReason.OwnerClosed)
+            && await services.FileLauncher.LaunchUriAsync(new Uri("https://example.org/")) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.OwnerClosed)
+            && services.GetSnapshot().Statuses[PlatformCapabilityIds.DialogsUnowned] is CapabilityStatus.Unavailable(PlatformUnavailableReason.OwnerClosed),
+            "The unowned dialogs and launcher of a closed window did not report the owner closed.");
     }
 
     [Test, NotInParallel(Order = 16)]
@@ -341,6 +359,48 @@ internal sealed class PlatformServicesChecks
             "The drag of stopped services did not report the owner closed.");
     }
 
+    // #723: the application's launcher needs no window and is one instance, also from the container; it applies the
+    // launcher's policy before anything native runs, so a path or a program never reaches the desktop.
+    [Test]
+    public async Task ApplicationServicesNeedNoWindow()
+    {
+        var application = DesktopPlatformServices.ForApplication();
+        await using (var provider = CreateProvider())
+            Require(ReferenceEquals(provider.GetRequiredService<IApplicationPlatformServices>(), application)
+                    && ReferenceEquals(DesktopPlatformServices.ForApplication(), application),
+                "AddRunicPlatformServices did not register the application's services.");
+        var statuses = application.GetSnapshot().Statuses;
+        Require(statuses.Keys.Order(StringComparer.Ordinal).SequenceEqual(ApplicationPlatformServices.CapabilityIds.Order(StringComparer.Ordinal))
+            && statuses[PlatformCapabilityIds.UrisLaunch] is CapabilityStatus.Available && statuses[PlatformCapabilityIds.FilesLaunch] is CapabilityStatus.Available,
+            $"The application's launcher is not available: {string.Join(", ", statuses)}.");
+        foreach (var uri in new[] { new Uri("file:///etc/passwd"), new Uri("javascript:alert(1)"), new Uri("relative/path", UriKind.Relative) })
+        {
+            var rejected = false;
+            try { _ = await application.FileLauncher.LaunchUriAsync(uri); }
+            catch (ArgumentException) { rejected = true; }
+            Require(rejected, $"The application's launcher accepted {uri}.");
+        }
+        var relative = false;
+        try { _ = await application.FileLauncher.LaunchAsync("relative.txt", DesktopFileOperation.Reveal); }
+        catch (ArgumentException) { relative = true; }
+        Require(relative, "The application's launcher accepted a relative path.");
+        // #724: the application's message boxes show unowned boxes for PreferOwner only. Without a running GTK loop, as
+        // in this test, Linux reports the backend unavailable instead of waiting for one.
+        Require(await application.MessageBoxes.ShowAsync(new DesktopMessageBox("Started.")) is PlatformResult<DesktopMessageBoxButton?>.Unavailable(PlatformUnavailableReason.OwnerUnavailable),
+            "A RequireOwner box of the application did not report the owner unavailable.");
+        if (OperatingSystem.IsLinux())
+            Require(await application.MessageBoxes.ShowAsync(new DesktopMessageBox("Started.") { OwnerPolicy = OwnerPolicy.PreferOwner })
+                    is PlatformResult<DesktopMessageBoxButton?>.Unavailable(PlatformUnavailableReason.BackendUnavailable)
+                && application.GetSnapshot().Statuses[PlatformCapabilityIds.MessageBoxes] is CapabilityStatus.Unavailable(PlatformUnavailableReason.BackendUnavailable),
+                "The application's box without a GTK loop did not report the backend unavailable.");
+        var unavailable = ApplicationPlatformServices.Unavailable(PlatformUnavailableReason.ProviderNotConfigured);
+        Require(await unavailable.FileLauncher.LaunchUriAsync(new Uri("https://example.org/")) is PlatformResult<PlatformUnit>.Unavailable(PlatformUnavailableReason.ProviderNotConfigured)
+            && await unavailable.MessageBoxes.ShowAsync(new DesktopMessageBox("Started.") { OwnerPolicy = OwnerPolicy.PreferOwner })
+                is PlatformResult<DesktopMessageBoxButton?>.Unavailable(PlatformUnavailableReason.ProviderNotConfigured)
+            && unavailable.GetSnapshot().Statuses.Values.All(static status => status is CapabilityStatus.Unavailable(PlatformUnavailableReason.ProviderNotConfigured)),
+            "Unavailable application services did not report their reason.");
+    }
+
     // #313: a Window opened for a forwarded launch is presented with the launch's activation context as soon as it is
     // shown, so that the compositor gives it focus. Without a context, for a hidden window and for a window without
     // native dispatch nothing is presented, and a presentation that fails does not fail the open.
@@ -377,6 +437,12 @@ internal sealed class PlatformServicesChecks
             await using (await Windows(host).OpenWindowAsync<FileWindow>(options: null, activation: null)) { }
             await using (await Windows(host, hidden: true).OpenWindowAsync<FileWindow>(null, activation)) { }
             Require(presented.Count == 1, "A window without a context, or a hidden one, was presented.");
+            // Code that holds only the host-neutral IRunicWindowHost reaches the same open (0.14).
+            IRunicWindowHost neutral = Windows(host);
+            await using (await neutral.OpenWindowAsync<FileWindow>(null, activation)) { }
+            Require(presented.Count == 2 && ReferenceEquals(presented[1].Context, activation),
+                "IRunicWindowHost.OpenWindowAsync did not present the new window with the activation context.");
+            presented.RemoveAt(1);
 
             fail = true;
             await using (var refused = await Windows(host).OpenWindowAsync<FileWindow>(null, activation))

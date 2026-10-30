@@ -8,7 +8,7 @@ still rejects with `BridgeError`.
 
 > Declared failures are new in Runic SDK 0.7.0-preview.1 and are not in
 > 0.6.0-preview.1. Every code block is an excerpt of the
-> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.13.0/examples/notes-view-first),
+> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-view-first),
 > which the SDK's CI builds and tests, or of a package README.
 
 ## Before you add a declaration
@@ -36,7 +36,7 @@ TypeScript does not flag the old code: an ignored
 `Promise<BridgeOutcome<...>>` compiles like an ignored `Promise<State>`.
 Callers that already read the result, or use a framework command helper, only
 need to show the new `failure`. The
-[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/eng/release/notes/0.7.0-preview.1.md#upgrading)
+[0.7 upgrade notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.7.0-preview.1.md#upgrading)
 list this with the other breaking changes.
 
 ## Shape the failure
@@ -112,7 +112,7 @@ outcome `domain_failed`. A misplaced, repeated or unsupported declaration is
 the build error `RUNICBRIDGE012`. A synchronous plain `ICommand` reports only a
 failure thrown before `Execute` returns; use an asynchronous command for
 failures that happen after an `await`. The
-[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#declared-failures)
 has the full rules.
 
 ## Handle the outcome in TypeScript
@@ -158,14 +158,18 @@ export function describeSaveFailure(failure: SaveFailure): string {
 }
 ```
 
-The plain TypeScript editor checks `ok` and shows the description. A rejection
-still means something unexpected went wrong and goes to its `catch`:
+The plain TypeScript editor first commits its title and body fields, then
+checks `ok` and shows the description. A rejection, including a field write
+that failed, still means something unexpected went wrong and goes to its
+`catch`, which shows `describeBridgeError(cause)`:
 
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-view-first/Frontend/src/editor.ts
 const saveClicked = () => {
   void run(async () => {
-    const outcome = await writes.run(() => editor.save());
+    // Save follows the fields' writes; a write that failed stops it.
+    await commitFields(title, body);
+    const outcome = await editor.save();
     return outcome.ok ? undefined : describeSaveFailure(outcome.failure);
   });
 };
@@ -184,7 +188,7 @@ like `wait()` and resolves the same `BridgeOutcome` as the command; it rejects
 with `BridgeError` when the operation failed unexpectedly, was cancelled or
 timed out, and with `BridgeOperationUncertainError` when its outcome is
 unknown. A stream keeps the values it published before the failure. The
-[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/web/views/README.md#declared-failures)
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md#declared-failures)
 maps every terminal status to `outcome()`.
 
 ## Framework command helpers
@@ -195,14 +199,22 @@ the latest run and is typed from the command's `BridgeOutcome`; `error` holds
 only unexpected failures. A new run and `reset()` clear both, and a run
 superseded by a later one or by `reset()` sets neither.
 
-React state:
+In each Notes editor, Save first commits the title and body fields (see
+[Forms and validation](forms-and-validation.md)) and runs `save` only when
+their writes succeeded; a failed write shows as the field's `error`. The
+command function returns the outcome, so the helper can read its failure.
+
+React state. `commit()` resolves with the field's state, because the handle
+of the current render is older than the writes:
 
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-view-first/React/src/editor.ts
-// A declared failure is save.failure; save.error holds unexpected ones.
-const save = useCommand(() => writes.run(() => editor.save()));
+const save = useCommand(async () => {
+  const fields = await Promise.all([title.commit(), body.commit()]);
+  return fields.every(field => field.error === undefined) ? editor.save() : undefined;
+});
 // ...
-const issue = save.error ?? writeError;
+const issue = save.error ?? title.error ?? body.error;
 const alert = save.failure !== undefined ? describeSaveFailure(save.failure) : issue !== undefined ? String(issue) : undefined;
 ```
 
@@ -210,28 +222,32 @@ Vue shallow refs, read with `.value` in script:
 
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-view-first/Vue/src/editor.ts
+// Save waits for the fields' writes, and does not start after one that failed.
 // A declared failure is save.failure; save.error holds unexpected ones.
-const save = useCommand(() => writes.run(() => props.editor.save()));
+const save = useCommand(async () => {
+  await Promise.all([title.commit(), body.commit()]);
+  return title.error === undefined && body.error === undefined ? props.editor.save() : undefined;
+});
 // ...
-const issue = save.error.value ?? writeError.value;
+const issue = save.error.value ?? title.error ?? body.error;
 const alert = save.failure.value !== undefined ? describeSaveFailure(save.failure.value) : issue !== undefined ? String(issue) : undefined;
 ```
 
-A Svelte rune. The command function returns the outcome, so the helper can
-read its failure:
+A Svelte rune:
 
 <!-- prettier-ignore -->
 ```svelte docs-test=source:examples/notes-view-first/Svelte/src/Editor.svelte
-// Save waits for the form's queued writes. save.failure is its declared
-// failure; the latest run wins, and the button is disabled while it runs.
+// Save waits for the fields' writes, and does not start after one that failed.
+// save.failure is its declared failure; the latest run wins, and the button
+// is disabled while it runs.
 const save = useCommand(async () => {
-  let outcome: Awaited<ReturnType<EditorClient["save"]>> | undefined;
-  await form.run(async view => { outcome = await view.save(); });
-  return outcome;
+  await Promise.all([title.commit(), body.commit()]);
+  if (title.error !== undefined || body.error !== undefined) return undefined;
+  return editor.client?.save();
 });
 <!-- ... -->
 {#if save.failure}<p role="alert">{describeSaveFailure(save.failure)}</p>
-{:else if error ?? editor.error}<p role="alert">{String(error ?? editor.error)}</p>{/if}
+{:else if save.error ?? title.error ?? body.error ?? editor.error}<p role="alert">{String(save.error ?? title.error ?? body.error ?? editor.error)}</p>{/if}
 ```
 
 An Angular signal:
@@ -239,7 +255,7 @@ An Angular signal:
 <!-- prettier-ignore -->
 ```ts docs-test=source:examples/notes-view-first/Angular/src/app/bound-editor.ts
 @if (save.failure(); as failure) { <p role="alert">{{ describeSaveFailure(failure) }}</p> }
-@else if (save.error() ?? binding.error() ?? editor.error(); as issue) { <p role="alert">{{ issue }}</p> }
+@else if (save.error() ?? title.error() ?? body.error() ?? editor.error(); as issue) { <p role="alert">{{ issue }}</p> }
 ```
 
 The helpers come from `@runic-artifex/react`, `@runic-artifex/vue`,
@@ -322,7 +338,7 @@ longer ends the process when it reports the cancellation on
 `ThrownExceptions`. The
 [ReactiveUI reference](../reference/reactiveui.md) and the Views.ReactiveUI
 README's
-[Which call to use](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#which-call-to-use)
+[Which call to use](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#which-call-to-use)
 compare the calls.
 
 ## Test declared failures

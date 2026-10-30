@@ -116,7 +116,10 @@ finally
   outside any turn. The command still finishes, but nothing presents its later
   writes.
 - Navigation hooks, such as departure guards and initialize hooks, are not
-  commands: they run outside turns. `INavigationAware` and `WhenNavigatedTo`
+  commands. Since SDK `0.14.0`, `RunicModelContext` runs each in the model
+  context, starting in a turn of its own, as WPF's `DispatcherModelContext`
+  does; before, they ran on the thread pool outside turns. A hook sets state
+  directly and must not block. `INavigationAware` and `WhenNavigatedTo`
   callbacks run in the turn that commits the navigation. See
   [pages and navigation](pages-and-navigation.md).
 
@@ -234,7 +237,7 @@ service provider and register the instance.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands, progress and cancellation.
 - The
-  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
+  [threading rule](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#threading-state-after-await)
   and
-  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
+  [model-context scheduling](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#model-context-scheduling)
   in the SDK guides cover the details, including WPF's dispatcher context.

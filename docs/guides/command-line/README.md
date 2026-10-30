@@ -4,8 +4,8 @@ Runic Command Line turns typed C# methods into commands with help, validation
 and human or JSON output. This page takes you from an empty folder to a
 working command.
 
-It covers release `0.10.0`. Every link to the
-[Command Line repository](https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.10.0)
+It covers release `0.11.0`. Every link to the
+[Command Line repository](https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.11.0)
 points at that release, so the code matches the packages you install.
 
 ## What it is
@@ -40,11 +40,11 @@ Create a console project and add the core package:
 ```sh docs-test=skip:cli-repository
 dotnet new console --framework net10.0 --name HelloCli
 cd HelloCli
-dotnet add package Runic.CommandLine --version 0.10.0
+dotnet add package Runic.CommandLine --version 0.11.0
 ```
 
 Replace `Program.cs` with this program. It is the maintained
-[`hello-world/Program.cs`](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/examples/command-line/hello-world/Program.cs)
+[`hello-world/Program.cs`](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/examples/command-line/hello-world/Program.cs)
 example:
 
 ```csharp docs-test=skip:cli-repository
@@ -115,7 +115,7 @@ Input is checked in two places:
   `[Command]` method it cannot use, for example a parameter without
   `[Argument]`, `[Option]` or `[FromServices]`. The command is skipped until you
   fix the error. Each ID is explained in
-  [source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/docs/guides/command-line/diagnostics.md).
+  [source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/docs/guides/command-line/diagnostics.md).
 - **At run time.** Unknown options, missing required values, values outside
   `Minimum`/`Maximum`, `Choices`, `MustExist` paths and `Requires` or
   `ConflictsWith` rules fail before the method runs. The error names the
@@ -131,6 +131,14 @@ Usage: storyline bind <world> <binding> [options]
 Run "storyline bind --help" for more information.
 ```
 
+Since `0.11.0`, human output keeps the line breaks of a fault or diagnostic
+message, so a message such as `2 problems in saltmarch:\n  codex/a.md: bad`
+prints on two lines instead of one; JSON output still keeps each message on one
+line. An old script's `--output json` is still the usage error `RCLI1001`, but
+its message suggests the selector: `Did you mean '--format'?`. An application
+whose commands have their own `--format` option moves the selector with
+`[assembly: OutputSelector("--output-format")]`.
+
 Positional arguments bind left to right, so `RCLI1005` `missing-argument` names
 the first argument the given tokens do not reach. JSON output keeps every code,
 kind, message key and argument and never contains the usage lines; compare it,
@@ -142,7 +150,7 @@ English text.
 An option can fall back to an environment variable. An explicit argument wins
 over the environment, which wins over the C# default. This command comes from
 the release's
-[command tree example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/examples/command-line/Program.cs):
+[command tree example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/examples/command-line/Program.cs):
 
 ```csharp docs-test=skip:cli-repository
 [Command("config show", Description = "Show the chosen environment.")]
@@ -179,7 +187,7 @@ stands for a literal leading `@`. In PowerShell, quote the argument
 itself). Help lists `@<file>`, and the generated completions complete a file
 name after `@`. `CommandLineHostingAdapter.Classify` expands the files too.
 See
-[read arguments from response files](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/packages/dotnet/Runic.CommandLine/README.md#read-arguments-from-response-files).
+[read arguments from response files](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/packages/dotnet/Runic.CommandLine/README.md#read-arguments-from-response-files).
 
 ## Output for people and for scripts
 
@@ -196,7 +204,7 @@ Give that context camelCase property names, for example with
 `[JsonSourceGenerationOptions(JsonSerializerDefaults.Web)]`; otherwise the
 generator warns with `RCLI9044`, because the payload would keep the C#
 property names inside the camelCase envelope. The
-[protocol specification](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/specs/command-line/protocol/README.md)
+[protocol specification](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/specs/command-line/protocol/README.md)
 describes every field.
 
 `builder.Present<T>(path, …)` changes the human output of a command's result.
@@ -228,9 +236,18 @@ that type and the protocol specification:
 | 1         | `CommandFailure` | The command reported an expected failure.      |
 | 1         | `Unavailable`    | A required resource or service was missing.    |
 | 2         | `Usage`          | The arguments could not be parsed.             |
-| 2         | `Validation`     | A value failed validation.                     |
+| 2         | `Validation`     | The input has the wrong shape.                 |
 | 3         | `HostFailure`    | The host or framework failed unexpectedly.     |
 | 130       | `Cancelled`      | The command was cancelled, for example Ctrl+C. |
+
+`Validation` is for input a handler rejects because of its shape, whatever the
+state the command works on, such as two options that exclude each other or
+`--since` later than `--until`. A domain failure on well-formed input (a
+business rule refused the operation, a check found problems) is
+`CommandFailure`, and a missing resource `Unavailable`; both exit 1. Since
+`0.11.0` the documentation states this mapping, so scripts can tell "fix the
+command line" (2) from "the operation failed" (1). The codes themselves did not
+change.
 
 These are the exit codes of every Runic tool. Categories that share a code are
 still distinct in `CommandExitCategory`, the JSON fault and observers.
@@ -245,7 +262,7 @@ categories to other nonzero codes.
 Command Line 0.8.0 changed these codes and renamed the output selector from
 `--output` to `--format`; a catalog keeps the old spelling as a hidden alias
 with `OutputSelector("--format", "--output")`. See the
-[0.8.0 upgrade table](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/eng/release/notes/0.8.0.md#upgrading).
+[0.8.0 upgrade table](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/eng/release/notes/0.8.0.md#upgrading).
 
 ## Styled output with Spectre
 
@@ -274,9 +291,9 @@ the UI, and `decision.SuggestedCommand` names the command. Call
 `adapter.WriteSuggestionAsync(decision)` before opening the UI to write the
 standalone "Did you mean 'list'?" line to standard error. This is new in
 `0.6.0-preview.5`. The
-[hosted example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/examples/command-line/HostedExample.cs)
+[hosted example](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/examples/command-line/HostedExample.cs)
 shows the full flow, and
-[adding a CLI to a WPF application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/docs/guides/command-line/wpf.md)
+[adding a CLI to a WPF application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/docs/guides/command-line/wpf.md)
 applies it to a desktop app.
 
 A Runic Desktop host must start on the main thread before any `await`, so a
@@ -313,9 +330,9 @@ internal static class WindowCommands
 ```
 
 Capture values such as `settings`, not the command's scoped services.
-See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.13.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
+See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
 and
-[start a UI host on the main thread](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/packages/dotnet/Runic.CommandLine/README.md#start-a-ui-host-on-the-main-thread).
+[start a UI host on the main thread](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/packages/dotnet/Runic.CommandLine/README.md#start-a-ui-host-on-the-main-thread).
 
 ## Translate a CLI
 
@@ -412,7 +429,7 @@ command names, option spellings, codes and `messageKey` values never change.
   Pass the manager to follow locale switches, or an `ITranslationSnapshot` for
   one fixed locale. A message name is the key with each hyphen removed and the
   next letter capitalized: `help.show-help` is `help.showHelp`. The
-  [framework text keys](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/docs/guides/command-line/text-keys.md)
+  [framework text keys](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/docs/guides/command-line/text-keys.md)
   list every key and its arguments.
 - **`CommandScopes`.** `CommandScopes.FromServices` makes application-owned
   objects available to `[FromServices]` parameters without a
@@ -437,18 +454,20 @@ describes the resolver in full.
 
 ## Next steps
 
-- [From one command to an application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/examples/command-line/README.md)
+- [From one command to an application](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/examples/command-line/README.md)
   grows the example step by step: command trees, file input, services,
   progress, tests, child processes and localized help.
 - The
-  [`Runic.CommandLine` package README](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/packages/dotnet/Runic.CommandLine/README.md)
+  [`Runic.CommandLine` package README](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/packages/dotnet/Runic.CommandLine/README.md)
   lists every supported parameter type and attribute property.
 - The
-  [grammar](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/specs/command-line/grammar.md)
+  [grammar](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/specs/command-line/grammar.md)
   and
-  [protocol](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/specs/command-line/protocol/README.md)
+  [protocol](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/specs/command-line/protocol/README.md)
   specifications define parsing and the JSON response.
-- [Source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/docs/guides/command-line/diagnostics.md)
+- [Source generator diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/docs/guides/command-line/diagnostics.md)
   explains each `RCLI9xxx` error.
-- [Release notes for 0.10.0](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.10.0/eng/release/notes/0.10.0.md)
-  list what changed in this release.
+- [Release notes for 0.11.0](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/eng/release/notes/0.11.0.md)
+  list what changed in this release, and those for
+  [0.10.0](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/eng/release/notes/0.10.0.md)
+  what changed before it.

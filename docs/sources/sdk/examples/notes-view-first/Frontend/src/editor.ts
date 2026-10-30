@@ -1,11 +1,11 @@
-import type { EditorClient } from "./generated/editor.js";
-import { EditorWrites } from "./editor-writes.js";
+import { bindField, commitFields, describeBridgeError } from "@runic-artifex/views";
+import { EditorFields, type EditorClient } from "./generated/editor.js";
 import { describeSaveFailure } from "./save-failure.js";
 
 export function mountEditor(host: HTMLElement, editor: EditorClient): () => void {
   host.innerHTML = `<h2>Editor</h2><label>Title <input></label><label>Body <textarea></textarea></label><button data-save>Save</button><p data-message role="status"></p><p data-error role="alert" hidden></p>`;
-  const title = host.querySelector("input")!;
-  const body = host.querySelector("textarea")!;
+  const titleInput = host.querySelector("input")!;
+  const bodyInput = host.querySelector("textarea")!;
   const save = host.querySelector<HTMLButtonElement>("[data-save]")!;
   const message = host.querySelector<HTMLElement>("[data-message]")!;
   const error = host.querySelector<HTMLElement>("[data-error]")!;
@@ -16,37 +16,46 @@ export function mountEditor(host: HTMLElement, editor: EditorClient): () => void
       const failure = await action();
       if (active) { error.textContent = failure ?? ""; error.hidden = failure === undefined; }
     } catch (cause) {
-      if (active) { error.textContent = String(cause); error.hidden = false; }
+      if (active) { error.textContent = describeBridgeError(cause); error.hidden = false; }
     }
   };
-  const writes = new EditorWrites(cause => {
-    if (!active) return;
-    error.textContent = cause === undefined ? "" : String(cause);
+  // A field is written after a pause in typing or when it loses focus, not on every keystroke. bindField wires the
+  // input: the View's state, what the user types, IME composition and commit on blur.
+  const title = bindField(titleInput, editor, EditorFields.title, { commit: "pause" });
+  const body = bindField(bodyInput, editor, EditorFields.body, { commit: "pause" });
+  // A field's failed write shows until the field's next successful write.
+  let writeError: unknown;
+  const showWriteError = () => {
+    const cause = title.current.error ?? body.current.error;
+    if (!active || Object.is(cause, writeError)) return;
+    writeError = cause;
+    error.textContent = describeBridgeError(cause);
     error.hidden = cause === undefined;
-  });
+  };
+  const stopTitle = title.subscribe(showWriteError);
+  const stopBody = body.subscribe(showWriteError);
   const unsubscribe = editor.subscribe(state => {
-    if (document.activeElement !== title) title.value = state.title;
-    if (document.activeElement !== body) body.value = state.body;
     save.disabled = !state.canSave;
     message.textContent = `${state.isDirty ? "Unsaved changes. " : ""}${state.savedMessage}`;
   });
-  const titleChanged = () => { const value = title.value; writes.enqueue(() => editor.setTitle(value)); };
-  const bodyChanged = () => { const value = body.value; writes.enqueue(() => editor.setBody(value)); };
   const saveClicked = () => {
     void run(async () => {
-      const outcome = await writes.run(() => editor.save());
+      // Save follows the fields' writes; a write that failed stops it.
+      await commitFields(title, body);
+      const outcome = await editor.save();
       return outcome.ok ? undefined : describeSaveFailure(outcome.failure);
     });
   };
-  title.addEventListener("change", titleChanged);
-  body.addEventListener("change", bodyChanged);
   save.addEventListener("click", saveClicked);
   return () => {
     active = false;
-    title.removeEventListener("change", titleChanged);
-    body.removeEventListener("change", bodyChanged);
     save.removeEventListener("click", saveClicked);
     unsubscribe();
+    stopTitle();
+    stopBody();
+    // Unwires the inputs; text that waits for its pause is written before the editor is released.
+    title.dispose();
+    body.dispose();
     editor.dispose();
     host.replaceChildren();
   };
