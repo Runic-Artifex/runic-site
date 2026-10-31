@@ -459,12 +459,12 @@ test('the snippet checker rejects edited and reordered excerpts', () => {
   assert.ok(commands.has('dnx Runic.Create@<VERSION>'));
   assert.ok(
     commands.has(
-      'dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 3 --view-models reactiveui',
+      'dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui',
     ),
   );
   assert.ok(
     !commands.has(
-      'dotnet new runic-app --name MyApp --host desktop --linux-gtk 3 --frontend svelte --package-manager bun --view-models reactiveui',
+      'dotnet new runic-app --name MyApp --host desktop --linux-gtk 3 --desktop-server native --frontend svelte --package-manager bun --view-models reactiveui',
     ),
   );
   assert.ok(

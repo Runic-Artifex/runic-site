@@ -9,8 +9,8 @@ shows.
 
 > Since SDK `0.14.0`, every `runic-app` frontend has such a test. Every code
 > block is an excerpt of the `runic-app` template, of the
-> [Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-view-first)
-> or of a package README, at SDK `0.14.0`.
+> [Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/notes-view-first)
+> or of a package README, at SDK `0.15.0`.
 
 ## The template's test
 
@@ -34,11 +34,12 @@ the project once first. It renders the page in a simulated DOM with Vitest
 ```
 
 The test connects the page, opens the Counter, increments it and checks the
-connection banner while the Bridge reconnects. This is the React version:
+connection banner while the Bridge reconnects and after the application closes
+the Window. This is the React version:
 
 <!-- prettier-ignore -->
 ```tsx docs-test=template:frontends/react/src/App.test.tsx
-test("the page connects, increments the Counter and reports a reconnect", async () => {
+test("the page connects, increments the Counter and reports a reconnect and a close", async () => {
   // Each test installs a new Bridge; generated clients then start from a new page runtime.
   const bridge = installMockBridge(createMockBridge());
   const welcome = mockWelcome(bridge, { id: "1", state: { greeting: "Your first Runic View is ready." } });
@@ -70,22 +71,29 @@ test("the page connects, increments the Counter and reports a reconnect", async 
   bridge.reconnect();
   await vi.waitFor(() => expect(text()).toContain("Connected to the .NET Window."));
   expect(text()).not.toContain("Reconnecting");
+
+  // The application closes the Window: the page says so, also after the connection drops.
+  expect(await bridge.closeWindow(1_000)).toBe(true);
+  await vi.waitFor(() => expect(text()).toContain("The application closed this window."));
+  bridge.disconnect();
+  await vi.waitFor(() => expect(text()).toContain("The application closed this window."));
+  expect(text()).not.toContain("Reconnecting");
 });
 ```
 
 The other frontends run the same steps:
 
-- Vue: [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.test.ts).
+- Vue: [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.test.ts).
 - Svelte and SvelteKit:
-  [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.test.ts)
+  [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.test.ts)
   and
-  [`src/routes/page.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/routes/page.test.ts).
+  [`src/routes/page.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/routes/page.test.ts).
   Their
-  [`vitest.config.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/vitest.config.ts)
+  [`vitest.config.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/vitest.config.ts)
   merges the Vite configuration and resolves the `browser` condition, so
   Svelte's browser build provides `mount()`.
 - Angular:
-  [`src/app/app.spec.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/tools/Runic.Application.Templates/content/runic-app/frontends/angular/src/app/app.spec.ts).
+  [`src/app/app.spec.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/tools/Runic.Application.Templates/content/runic-app/frontends/angular/src/app/app.spec.ts).
   `run test` runs `ng test`, whose `test` target in `angular.json` uses the
   `@angular/build:unit-test` builder with Vitest. The test creates the
   component with `TestBed` and waits for Angular to render:
@@ -169,10 +177,30 @@ request itself, like a dropped connection.
 
 `bridge.disconnect()` rejects further requests and reports the loss to the
 page's connection listeners, so `useBridgeConnection()` and
-`injectBridgeConnection()` report `reconnecting`. `bridge.reconnect()` reports
+`injectBridgeConnection()` report `reconnecting`, or stay `closed` after
+`bridge.closeWindow()`. `bridge.reconnect()` reports
 a new connection; the clients send a new `hello` and open their Views again,
 as the template's test checks. `failNext` takes no `disconnected` kind,
 because .NET never sends it.
+
+## Presentations and closes
+
+Since SDK `0.15.0`, the mock Bridge has test counterparts of
+[scoped commands and presented states](pages-and-navigation.md#commands-scoped-to-their-page):
+
+- `mock.renew()` renews the mock's route as `RunicPresentation.Renew` does: the
+  next publication is a full state with a new epoch, and a scoped command that
+  the page sent for the earlier epoch is answered `superseded` and resolves
+  without running. `mock.raw.epoch` is the current epoch.
+- `mock.waitPresented(timeout?)` asks the page to report that it painted the
+  route, as `RunicPresentation.WaitForPresentedAsync` does, and resolves `true`
+  once it did, or `false` after `timeout` milliseconds (5000 by default, in
+  virtual time with `scheduling: "manual"`).
+- `bridge.closeWindow(timeout?)` closes the window as the application does:
+  the page acknowledges and its connection state becomes `closed`. It resolves
+  with whether the page acknowledged in time and keeps the connection open, so
+  a following `bridge.disconnect()` keeps the state `closed`, as the template's
+  test checks.
 
 ## Virtual time
 
@@ -209,7 +237,13 @@ and push until the test calls `flush()`, `flushUntil(promise)` or
 `flushUntil(promise)` flushes until the promise settles and returns its
 result, and fails when it cannot settle without time passing.
 
-## Behaviour that 0.14 tests meet
+## Behaviour that 0.14 and 0.15 tests meet
+
+**Content presented again.** Since SDK `0.15.0`, when a slot shows other
+content and then the earlier content again before the page saw the change,
+.NET pushes that content's state, so a kept client shows the current state and
+epoch without reading it again. A test that expected no push after
+`Main = b; Main = a` sees a `state` push of the resumed route.
 
 **Notifications.** Since SDK `0.14.0`, a client delivers new state to its
 subscribers once per animation frame, so a burst of frames renders once.
@@ -226,7 +260,7 @@ default), and the next binding of the same connector takes it over. A test
 that checks that a route closes on unmount passes `keepAlive: 0`, as
 `useView(page, { keepAlive: 0 })` or `injectView(page, { keepAlive: 0 })`, or
 waits for the period. See
-[Client lifetime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md#client-lifetime).
+[Client lifetime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/views/README.md#client-lifetime).
 
 **Requests before `hello`.** Since SDK `0.14.0`, a request that reaches the
 mock before the connection's `hello` is held up to 5 seconds and admitted
@@ -282,14 +316,14 @@ var editor = await document.ViewAsync<EditorViewModel>(vm => vm.CurrentPane);
 ```
 
 The
-[`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Testing/README.md)
+[`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Testing/README.md)
 covers hosts, deterministic time, navigation and interactions. For
 operations, see [Operations and cancellation](operations-and-cancellation.md).
 
 ## Further reading
 
-- [Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md#testing)
+- [Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/views/README.md#testing)
   in the `@runic-artifex/views` README: every mock option.
-- [The Notes example's frontend tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/notes-view-first/Frontend/test/notes.test.ts),
+- [The Notes example's frontend tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/notes-view-first/Frontend/test/notes.test.ts),
   which run with `bun test`.
-- [Upgrading from 0.13 to 0.14](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/docs/migration-1.0.md#from-013-to-014).
+- [Upgrading from 0.13 to 0.14](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/docs/migration-1.0.md#from-013-to-014).

@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
@@ -51,6 +51,15 @@ clients and these guides. The first seven follow the glossary of the
   embedded WebView or an installed browser window, such as
   `DesktopBridgeWindow.Window` (a `DesktopWindow`). A presentation closes
   and reopens without changing the ViewModel.
+- **Presentation epoch**: since SDK `0.15.0`, a number for what a route's
+  page shows. A new epoch begins with the route's first state and with each
+  `RunicPresentation.Renew`; a `[RunicPresentationScoped]` command sent for an
+  earlier epoch does not run. See
+  [commands scoped to their page](guides/pages-and-navigation.md#commands-scoped-to-their-page).
+- **Presentation server**: the loopback server that serves a Runic Desktop
+  Window's page: the native server (`Runic.Desktop.NativeServer`) or ASP.NET
+  Core Kestrel (`Runic.Desktop.Kestrel`), since SDK `0.15.0` a package of its
+  own. See [the presentation server](../desktop/host-selection.md#presentation-server).
 - **Surface**: Runic Desktop's `DesktopSurface`, which serves a Window's web
   content, capabilities and browser sessions, and opens presentations of it.
   `DesktopBridgeWindow.Surface` is the Window's surface.

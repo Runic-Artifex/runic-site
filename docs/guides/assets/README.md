@@ -13,9 +13,10 @@ they copy the built frontend to a `www` folder next to the executable. Since
 SDK `0.11.0` such a Views project embeds its frontend with one build property
 instead, `<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`:
 the Views build packs what it would copy to `www/` with Runic Assets, and Runic
-Desktop and WPF hosts serve it without application code. Do not also set
-`RunicAssetsDist` in such a project; `RunicDesktopHostOptions.Assets` serves an
-archive from elsewhere.
+Desktop and WPF hosts, and since SDK `0.15.0` CS-WebUI, serve it without
+application code. Do not also set `RunicAssetsDist` in such a project;
+`RunicDesktopHostOptions.Assets` and, since SDK `0.15.0`,
+`RunicCsWebUiHostOptions.Assets` serve an archive from elsewhere.
 
 > This guide follows Runic SDK 0.11.0. The few differences in
 > 0.6.0-preview.1 are marked where they occur.
@@ -65,6 +66,17 @@ using Runic.Assets;
 AssetArchiveSource assets = AssetArchive.ReadEmbedded(
     Assembly.GetExecutingAssembly());
 ```
+
+Since SDK `0.15.0`, `ReadEmbedded` reads the archive's manifest and ZIP
+directory and inflates each asset when it is first requested, so a large
+frontend no longer delays startup: for a 6 MiB frontend the load takes 0.4
+instead of 15.9 ms. It no longer checks the SHA-256 digests at run time,
+because the archive is part of the assembly that holds the application's code
+and the build checked it when it packed it. An asset that inflates to another
+length, or whose ZIP entry is damaged, fails when it is opened;
+`ValidateAsync()` checks every digest on demand. `AssetArchive.Read` and
+`ReadAsync`, for an archive file loaded at run time, still check every asset
+before they return.
 
 | Property                          | Use                                                                                                                                                              |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -122,7 +134,7 @@ its origins). A minimal-API handler can return
 `RunicAssetResults.Asset(assets, path)`, and `RunicAssetFileProvider` exposes a
 source as an `IFileProvider` for `UseStaticFiles` and other file provider
 consumers; the
-[ASP.NET Core adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Assets.AspNetCore/README.md#content-security-policy)
+[ASP.NET Core adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Assets.AspNetCore/README.md#content-security-policy)
 shows both.
 
 In 0.6.0-preview.1 `MapRunicAssetSource` serves exact manifest paths only, so
@@ -151,6 +163,25 @@ and takes `DesktopAssetOptions? options`; in 0.7 and 0.8 it extends
 `IAssetSnapshotSource`, and since 0.9.0 the single source interface
 `IAssetSource`, with `AssetRoutingOptions? routing`.
 
+### Serve one folder of an archive
+
+Since SDK `0.15.0`, `Subdirectory` presents one folder of a source as a
+frontend of its own, for an archive that holds several frontends, each built
+into its own folder with its own `index.html`, such as a main window's and a
+settings window's:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Assets/README.md
+AssetArchiveSource archive = AssetArchive.ReadEmbedded(typeof(Program).Assembly, "Frontends.runic-assets");
+IAssetSource main = archive.Subdirectory("main");
+IAssetSource settings = archive.Subdirectory("settings");
+```
+
+Its paths are relative to the folder, and its entry point is the folder's
+`index.html` or the `entryPoint` argument. Creating the view throws
+`DirectoryNotFoundException` for a folder without assets and
+`FileNotFoundException` for one without its entry point. Pass it to the
+`Assets` option of any Runic Views host, or to `ToDesktopContentHandler`.
+
 ## 5. Pack in a separate step
 
 Most applications let `dotnet build` pack the folder. Run the packer yourself
@@ -173,12 +204,15 @@ dotnet "$packer" Client.Web/dist artifacts/app.runic-assets --trusted-generated-
 ```
 
 Embed the result with `RunicAssetsEmbeddedArchive`, or open the file at run time
-with `AssetArchive.Read` or, since 0.11.0, `AssetArchive.ReadAsync`. Both
+with `AssetArchive.Read` or, since 0.11.0, `AssetArchive.ReadAsync`. Since SDK
+`0.15.0`, the packer reads back every archive it writes and checks each asset
+against its digest, and the build checks a `RunicAssetsEmbeddedArchive` with
+`Runic.Assets.Packer verify <archive>` before it embeds it. Both
 packers leave out `.git` and `.env*` unless you pass `--no-default-excludes`.
 From .NET code, `AssetArchive.WriteTrustedDirectoryAsync` packs your own build
 output on Linux, Windows and macOS, with `AssetArchiveDirectoryOptions` for the
 entry point and exclusions. The
-[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/tools/Runic.Assets.Packer/README.md)
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/tools/Runic.Assets.Packer/README.md)
 lists its options, JSON output and exit codes.
 
 ### Trusted generated output
@@ -207,16 +241,20 @@ directory.
 - **`Directory archive compilation requires Linux handle-pinned traversal.`**
   (`RAS1004`, packer exit code `1`) Without `--trusted-generated-output` the packer runs
   only on Linux. Pass the option for your own build output on Windows and macOS.
+- **`RAS2006`: the archive that `RunicAssetsEmbeddedArchive` names failed the
+  packer's check.** Since SDK `0.15.0` the build verifies the archive before
+  embedding it; the packer's `RAS1007` error above it in the build output has
+  the reason. Pack the archive again from its source, or correct the path.
 - **A request for `/` or a client route returns `404` on 0.6.0-preview.1.**
   0.6 serves exact paths only; request `/index.html` or upgrade.
 
 ## Reference
 
-- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Assets/README.md):
+- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Assets/README.md):
   explicit embedded resources, the development directory source,
   validation and inspection.
-- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Assets.AspNetCore/README.md)
-  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Assets.Desktop/README.md):
+- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Assets.AspNetCore/README.md)
+  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Assets.Desktop/README.md):
   HTTP behavior and routing.
-- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/specs/assets/archive-v1.md)
+- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/specs/assets/archive-v1.md)
   and the [framework-neutral asset boundary](adr/0013-framework-neutral-asset-boundary.md).

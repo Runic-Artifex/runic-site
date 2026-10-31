@@ -22,7 +22,7 @@ commands so you can recreate the project without questions:
 
 ```sh docs-test=commands
 dotnet new install Runic.Application.Templates@<VERSION>
-dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 3 --view-models reactiveui
+dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui
 ```
 
 | Option              | Choices                                          | Default      |
@@ -31,6 +31,7 @@ dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host
 | `--package-manager` | `npm`, `pnpm`, `bun`                             | `npm`        |
 | `--host`            | `desktop`, `cswebui`                             | `desktop`    |
 | `--linux-gtk`       | `3`, `4` (Linux GTK version for `desktop`)       | `3`          |
+| `--desktop-server`  | `native`, `kestrel` (server for `desktop`)       | `native`     |
 | `--view-models`     | `reactiveui`, `toolkit` (CommunityToolkit.Mvvm)  | `reactiveui` |
 
 The switches `--tests` (a TUnit test project), `--nix` (a Nix flake),
@@ -50,6 +51,13 @@ projects write `packages.lock.json` on their first restore, which pins every
 NuGet package; commit it with the frontend's lock file. Outside `Development`
 they send a Content-Security-Policy without `'unsafe-eval'`.
 
+Since SDK `0.15.0`, a Runic Desktop project serves its page from the native
+server, `Runic.Desktop.NativeServer`, so it needs only the .NET runtime, not
+ASP.NET Core, and its NativeAOT executable is about a quarter smaller.
+`--desktop-server kestrel` references `Runic.Desktop.Kestrel` instead, for an
+application that uses ASP.NET Core itself; see
+[host selection](../../desktop/host-selection.md#presentation-server).
+
 Runic Desktop, the default host, opens a native window with the embedded
 WebView and native file dialogs. CS-WebUI opens a browser window and is
 supported on a best-effort basis. ReactiveUI is the primary ViewModel library;
@@ -65,8 +73,8 @@ packer, `dotnet runic` and `Runic.Create`) roll forward to a newer major .NET,
 so a machine with only a newer .NET SDK, such as .NET 11, builds the app; .NET
 10 remains the tested runtime.
 
-SDK `0.14.0` is built with .NET SDK 10.0.403 (runtime 10.0.14) for
-CVE-2026-111497 in the bundled Brotli decoder. Use .NET SDK 10.0.403 or later,
+Since SDK `0.14.0`, Runic is built with .NET SDK 10.0.403 (runtime 10.0.14)
+for CVE-2026-111497 in the bundled Brotli decoder. Use .NET SDK 10.0.403 or later,
 Node.js 24.22.1 or 26.12.1, and Bun 1.4.4 or later, the template's default.
 Since SDK `0.14.0`, the build warns with `RUNICBRIDGE033` when the .NET SDK or
 Bun is older.
@@ -122,7 +130,7 @@ operation lifetime.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see
-  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/first-window/README.md).
+  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/first-window/README.md).
 
 The code blocks in these guides are checked against a pinned copy of the SDK
 template and examples by

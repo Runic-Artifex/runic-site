@@ -1,6 +1,6 @@
 {
-  "version": "0.14.0",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.14.0",
+  "version": "0.15.0",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.15.0",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -82,7 +82,7 @@
     },
     {
       "identity": "Runic.Application.Views.CsWebUi",
-      "version": "0.14.0-preview.1",
+      "version": "0.15.0-preview.1",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"
@@ -149,6 +149,60 @@
     },
     {
       "identity": "Runic.Desktop.Gtk4",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.Kestrel",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer.Static.linux-x64",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer.Static.linux-arm64",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer.Static.linux-musl-x64",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer.Static.linux-musl-arm64",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer.Static.win-x64",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer.Static.win-arm64",
+      "ecosystem": "nuget",
+      "product": "desktop",
+      "installKind": "nuget-package"
+    },
+    {
+      "identity": "Runic.Desktop.NativeServer.Static.osx-arm64",
       "ecosystem": "nuget",
       "product": "desktop",
       "installKind": "nuget-package"

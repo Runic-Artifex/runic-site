@@ -86,12 +86,16 @@ internal static partial class Program
             .Select(parts => parts[1])
             .Distinct()
             .ToList();
-        var framework = SelectFramework(frameworks)
-            ?? throw new InvalidOperationException($"{nupkg} has no lib/net* or lib/netstandard* assemblies");
+        // A package without a managed library, such as one that carries only native libraries and build targets,
+        // has no API: its model has no framework and no types.
+        var framework = SelectFramework(frameworks);
+        if (framework is null && frameworks.Count > 0)
+            throw new InvalidOperationException($"{nupkg} has no lib/net* or lib/netstandard* assemblies");
 
         var types = new JsonArray();
         var assemblies = new JsonArray();
         foreach (var dll in zip.Entries
+                     .Where(entry => framework is not null)
                      .Where(entry => entry.FullName.StartsWith($"lib/{framework}/", StringComparison.Ordinal)
                                      && entry.FullName.Count(c => c == '/') == 2
                                      && entry.FullName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))

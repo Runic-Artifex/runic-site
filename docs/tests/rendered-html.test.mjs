@@ -164,7 +164,7 @@ test('getting started offers the creator and the equivalent template commands', 
   assert.match(html, /cd MyApp dotnet tool restore dotnet runic dev/);
   assert.ok(
     html.includes(
-      `dotnet new install Runic.Application.Templates@${version} dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui`,
+      `dotnet new install Runic.Application.Templates@${version} dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui`,
     ),
   );
   assert.match(html, /dotnet runic doctor/);
@@ -178,7 +178,7 @@ test('create page prerenders the default project and every template choice', asy
   const version = activeSdkRelease.version;
   assert.ok(
     html.includes(
-      `dnx Runic.Create@${version} -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui`,
+      `dnx Runic.Create@${version} -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui`,
     ),
   );
   for (const [name, values] of [

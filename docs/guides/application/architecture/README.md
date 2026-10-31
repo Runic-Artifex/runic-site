@@ -33,9 +33,9 @@ and the page shows the latest pending value until its revision arrives.
 Operations outlive their route, so a page that left can still watch, cancel or
 stream one the window still knows. The canonical form is RFC 8785 (JCS), and
 `TimeSpan` values are ISO 8601 durations. The
-[protocol specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/specs/application/README.md)
+[protocol specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/specs/application/README.md)
 is language-neutral, and its
-[conformance corpus](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/specs/application/conformance)
+[conformance corpus](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/specs/application/conformance)
 lets another implementation check itself. A page and a host of different
 protocol versions do not connect; the page reports a `protocol` diagnostic.
 
@@ -53,12 +53,28 @@ client applies each frame when it arrives and notifies subscribers once per
 animation frame with the newest state; on the host, notification frames of a
 route are at least 8 ms apart, and the last change is always published.
 
-See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/first-window/README.md) for the smallest
-composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/notes-view-first/README.md) for
+Since SDK `0.15.0`, two more features are negotiated the same way.
+`presentation-epoch/1` numbers each presentation of a route: `open` and
+`snapshot` replies and `state` pushes carry its `epoch`, a command marked
+`[RunicPresentationScoped]` carries the epoch of the state the page showed,
+and .NET answers a command from an earlier epoch `superseded` without running
+it. `presented/1` adds a `present` push, which asks the page to report once it
+painted a state, and a `closing` push, which tells the page that the
+application closes its window; the page then reports its connection as
+`closed`. A `0.14` page and a `0.15` host still connect and behave as in
+`0.14`. See
+[commands scoped to their page](../guides/pages-and-navigation.md#commands-scoped-to-their-page)
+and the specification's
+[presentation epochs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/specs/application/README.md#presentation-epochs)
+and
+[presented states and window close](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/specs/application/README.md#presented-states-and-window-close).
+
+See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/first-window/README.md) for the smallest
+composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/notes-view-first/README.md) for
 nested content, routing, and multiple Views over a ViewModel.
 
 Navigation and model execution ownership are supplied by
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md),
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md),
 which can also serve native WPF Views without a web runtime. The model context
 and registry types use the `Runic.Navigation` namespace. A native and web
 presentation of the same model must share its context; presentation disposal

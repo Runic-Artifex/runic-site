@@ -47,6 +47,11 @@ shows natively in Windows and GTK windows, and can move into the Linux global
 menu; `MenuBarPresentation = Page` or `None` keeps it out of the window.
 `RunicApplicationFrontendDelivery=Embedded` packs the frontend into the
 application assembly, so a single-file or NativeAOT executable carries it.
+Since SDK `0.15.0`, new projects serve the page from the native server,
+`Runic.Desktop.NativeServer`, so the application needs no ASP.NET Core;
+`--desktop-server kestrel` keeps ASP.NET Core Kestrel for an application that
+uses ASP.NET Core itself (see
+[the presentation server](../desktop/host-selection.md#presentation-server)).
 [Ship a Desktop application](../desktop/shipping.md) covers publishing, signing
 and packaging for each platform.
 
@@ -65,10 +70,12 @@ runtime is smaller: in one
 application was 5.16 MiB with CS-WebUI and 10.42 MiB with Runic Desktop,
 excluding the browser.
 
-`Runic.Application.Views.CsWebUi` is a prerelease, `0.14.0-preview.1`, and
+`Runic.Application.Views.CsWebUi` is a prerelease, `0.15.0-preview.1`, and
 needs CsWebUi 2.5.0-beta.4.8 or later. Since SDK `0.11.0` it can declare a menu
 bar that the page renders (`RunicCsWebUiHostOptions.MenuBar`), and its Bridge
-works under a policy without `'unsafe-eval'`. Update any copy of
+works under a policy without `'unsafe-eval'`. Since SDK `0.15.0` it serves
+an embedded frontend (`RunicApplicationFrontendDelivery=Embedded`) from the
+assembly, as Runic Desktop does. Update any copy of
 `runic-cswebui.js` that you keep outside `www/`; an older script receives no
 state.
 
@@ -78,7 +85,7 @@ state.
 | File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                           | Report `OwnerUnavailable`                                     |
 | Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                 | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1          |
 | Menu bar                               | Native, in the Linux global menu, or rendered by the page              | Rendered by the page                                          |
-| Frontend                               | `www` folder, or in the assembly (`Embedded`)                          | `www` folder                                                  |
+| Frontend                               | `www` folder, or in the assembly (`Embedded`)                          | `www` folder, or in the assembly (`Embedded`, since 0.15.0)   |
 | .NET package                           | `Runic.Application.Views.Desktop`                                      | `Runic.Application.Views.CsWebUi`                             |
 | Host script in `index.html`            | `runic-views.js` (before 0.7.0-preview.9: `runic-desktop-views.js`)    | `runic-views.js` (before 0.7.0-preview.9: `runic-cswebui.js`) |
 | Support                                | First-class                                                            | Best effort                                                   |
@@ -218,9 +225,13 @@ The template references what each choice needs. For the defaults:
 ```xml docs-test=template:RunicWindowApp.csproj
 <PackageReference Include="Runic.Application.Views.ReactiveUI" Version="<VERSION>" />
 <PackageReference Include="Runic.Application.Views.Desktop" Version="<VERSION>" />
+<!-- The server Runic Desktop serves the page from: the native server, without ASP.NET Core. Runic.Desktop.Kestrel
+     replaces it for an application that uses ASP.NET Core itself. -->
+<PackageReference Include="Runic.Desktop.NativeServer" Version="<VERSION>" />
 ```
 
-`--linux-gtk 4` adds `Runic.Desktop.Gtk4`, `--host cswebui` references
+`--desktop-server kestrel` references `Runic.Desktop.Kestrel` instead of
+`Runic.Desktop.NativeServer`, `--linux-gtk 4` adds `Runic.Desktop.Gtk4`, `--host cswebui` references
 `Runic.Application.Views.CsWebUi` instead, and `--view-models toolkit`
 references `CommunityToolkit.Mvvm` instead of the ReactiveUI adapter. Each host
 package brings `Runic.Application.Views` and its build targets. The frontend

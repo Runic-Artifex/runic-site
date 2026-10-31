@@ -59,9 +59,9 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
@@ -112,7 +112,7 @@ since SDK `0.11.0`, a project whose references contain both gets build warning
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -131,7 +131,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -441,7 +441,7 @@ still works and runs inline; a wrapper that implemented
 `IRunicModelHookScheduler` to post hooks as turns can be removed. A decorator
 that wraps a scheduling context must implement and forward the interface, or
 hooks run outside turns again; see
-[threading](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md#threading).
+[threading](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md#threading).
 Content that a factory returned for a target the navigator rejected is
 disposed asynchronously, after `WhenIdleAsync`.
 
@@ -514,6 +514,49 @@ if (answer is NavigationCompletion<bool>.Completed { Value: true }) // [S2]
 on every other path, including a closing Window. Await it directly; it needs
 no conversion and no scheduler.
 
+Since SDK `0.15.0`, a result entry whose request already ended, because its
+caller's token was cancelled or it called `DismissAsync` while another entry
+covered it, no longer comes back: the Back of the entry above it retires it
+too and resumes the entry below. Before, the answered dialog was shown again
+until its `CompleteAsync` went back.
+
+### Queue dialogs
+
+A region admits a new request by superseding the earlier ones that have not
+started committing, unless its `Admission` is `RejectWhileBusy`, which refuses
+the new one. Neither suits a dialog region whose prompts are raised
+independently, such as an error from a background operation while a
+confirmation is open. Since SDK `0.15.0`, `NavigationAdmission.Queue` stacks
+them instead:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+Dialog = navigator.CreateRegion<IDialogViewModel>(this,
+    options: new NavigationRegionOptions { Admission = NavigationAdmission.Queue });
+
+var confirm = Dialog.PushForResult<bool>(NavigationTarget.Create<IDialogViewModel>(...));
+// Meanwhile, elsewhere: waits for the confirmation's push, then stacks above it.
+var error = Dialog.PushForResult<bool>(NavigationTarget.Create<IDialogViewModel>(...), cancellationToken: token);
+```
+
+- A queued request waits until the region's earlier requests have ended, in
+  admission order, and supersedes none of them. It waits for their
+  transitions (guards, preparation, commit), never for a dialog's answer, so
+  the second prompt is pushed above the first, and completing it resumes the
+  first.
+- `ExpectedCurrent` and the history a Back needs are checked when the request
+  starts. The request's token cancels it while it waits: it ends
+  `Rejected(Cancelled)` and a `PushForResult`'s `Completion` ends `Dismissed`.
+- A request admitted with `Supersede`, such as a Window close's clear, still
+  supersedes queued requests. `NavigationSelectionOptions.Admission` and
+  `NavigationRequestOptions.Admission` take `Queue` too, the latter for one
+  request in a region that otherwise supersedes.
+- In WPF, `NavigationDialogHost` dismisses a closed dialog with the region's
+  `Queue` policy, so closing a dialog doesn't supersede one pushed meanwhile.
+
+See
+[queueing requests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md#queueing-requests)
+for every rule.
+
 ### Guard the Window close
 
 Disposing a navigator retires its entries without asking their guards, so by
@@ -546,7 +589,7 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   taking `IRunicWindowContext` in its constructor and calling its
   `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
   it is new in SDK `0.7.0-preview.8`; see
-  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -559,7 +602,10 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   keep their window open: the Window opens unguarded and logs warning 1053
   `WindowCloseGuardUnavailable`, and a user close doesn't ask. Save drafts as
   the user edits where that matters. `RequestCloseAsync` still asks there.
-- `CloseAsync`, disposal and a host shutdown don't ask.
+- `CloseAsync`, disposal and a host shutdown don't ask. Since SDK `0.15.0`
+  they tell the page, which then reports its connection as `closed`, and
+  `CloseAsync(timeout)` waits for the page's acknowledgement; see
+  [wait until the page shows a state](#wait-until-the-page-shows-a-state).
 - In WPF, set `GuardWindowClose="True"` on the `NavigationHost` instead. It
   also guards a host on an unselected tab. Since SDK `0.11.0`,
   `WindowCloseConfirmation.Create` and `WindowCloseConfirmation.OncePerClose`
@@ -623,7 +669,42 @@ var result = await page.Tabs.SelectAsync(page.Reports); // a guarded switch
   navigate the page the user is looking at.
 - The selection has its own `IsTransitioning`, `IsBusy` and `WhenIdleAsync`.
   A later `SelectAsync` supersedes an earlier one, so the last tab chosen
-  wins, unless `NavigationSelectionOptions.Admission` is `RejectWhileBusy`.
+  wins, unless `NavigationSelectionOptions.Admission` is `RejectWhileBusy` or,
+  since SDK `0.15.0`, `Queue`.
+
+A push that covers the page asks only the page, and its tabs keep their pages
+without being asked. Since SDK `0.15.0`, when the shown tab's page should be
+asked too, for example because it holds unsaved work or a lock, set
+`AskOnParentRetain` on the tab regions:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+var options = new NavigationRegionOptions { AskOnParentRetain = true };
+Customers = navigator.CreateRegion<IPage>(this, NavigationTarget.Create<CustomerListViewModel>(), options);
+Orders = navigator.CreateRegion<IPage>(this, NavigationTarget.Create<OrderListViewModel>(), options);
+Tabs = navigator.CreateSelection(this, [Customers, Orders]);
+```
+
+A push over the page then asks the current entry of the selected tab, and of
+the regions below it, as `Retain`, before the page's own guard. Work that ends
+what a page shows without navigating, such as switching the signed-in account,
+asks the page's guards with `ConfirmDepartureAsync` and does the work in the
+same model turn:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+var result = await page.Customers.ConfirmDepartureAsync(NavigationDepartureKind.Retire,
+    onConfirmed: () => session.SwitchAccount(account));
+if (result.Outcome.Kind != NavigationOutcomeKind.Committed) return; // a guard said no, or the page changed meanwhile
+```
+
+It asks what that departure of the region's current entry would ask, as a
+transition of the region with `NavigationOperation.Confirm`, and changes
+nothing. When every guard agrees, its commit turn runs the guards'
+`OnCommitted` actions, such as a discard, and then `onConfirmed`. Do the
+agreed work there, not after the `await`, because by then another entry may be
+current. Guards that switch on `NavigationOperation` handle `Confirm` in their
+default arm. Both replace a `CanLeaveTabAsync()` of your own beside the
+pages' guards; see
+[asking without navigating](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md#asking-without-navigating).
 
 With ReactiveUI, `ReactiveNavigationSelectionExtensions` observes the
 selection and creates its command:
@@ -664,7 +745,7 @@ a veto. The tab set is static in a web View. In WPF,
 `NavigationSelector.Selection` binds a `TabControl` to the selection; see
 [incremental WPF adoption](../migrations/wpf-incremental.md#2-share-navigation-retain-native-mvvm).
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
 lists every rule.
 
 ## With CommunityToolkit.Mvvm
@@ -721,16 +802,100 @@ private async Task CloseEditorAsync()
 }
 ```
 
+## Commands scoped to their page
+
+A wizard's Next, clicked twice before the second page arrived, must not skip a
+page. Since SDK `0.15.0`, mark such a command `[RunicPresentationScoped]`, on
+the command property or on its CommunityToolkit `[RelayCommand]` method, and
+renew the presentation where the command changes the page:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public sealed partial class SetupViewModel : ObservableObject
+{
+    [ObservableProperty]
+    public partial int Step { get; private set; } = 1;
+
+    [RelayCommand]
+    [RunicPresentationScoped]
+    private void Next()
+    {
+        Step++;
+        RunicPresentation.Renew(this);
+    }
+}
+```
+
+The page sends a scoped command with the epoch of the state it showed when the
+user clicked, and the Bridge runs it only while that epoch is current. The
+second Next was clicked on the first page, whose epoch `Renew` ended, so it
+doesn't run; the call resolves with the current state and no error, so
+`useCommand` and the other command bindings show nothing. In development, the
+DevTools dock lists such calls on its **Superseded commands** card.
+
+- An epoch also begins with a route's first state, so a new page in a
+  navigation region, or content presented again, needs no `Renew`. Call
+  `RunicPresentation.Renew(viewModel)` where the page changes without a new
+  presentation, such as Next and Back, or after a cancelled dialog returned to
+  its page. It renews every route that presents the ViewModel, in every
+  window, and publishes a full state, also when nothing changed.
+- The generated client lists the commands in `scopedCommands`, and adding or
+  removing the attribute changes the View's contract fingerprint. On any other
+  member the attribute is warning `RUNICBRIDGE034`. Setters, checked writes
+  and operation starts are not scoped.
+- The feature is `presentation-epoch/1`, negotiated in `hello`: with a page or
+  host of SDK `0.14`, scoped commands run as plain commands. It replaces a
+  presentation number kept in state and compared in each command.
+
+In page tests, `mock.renew()` renews a mock's route as `Renew` does; see
+[testing frontends](frontend-testing.md#presentations-and-closes).
+
+## Wait until the page shows a state
+
+Since SDK `0.15.0`, `RunicPresentation.WaitForPresentedAsync(viewModel,
+timeout)` completes with `true` once a page rendered the ViewModel's state
+including every change made before the call, for example before a result page
+is captured or a Window closes after showing a summary:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+Page = result;
+if (!await RunicPresentation.WaitForPresentedAsync(result, TimeSpan.FromSeconds(2)))
+    logger.LogDebug("No page showed the result in time.");
+```
+
+It returns `false` at the timeout, also when no page uses the `presented/1`
+feature, such as a page of SDK `0.14`. Only a wait asks the page to report, so
+an idle or typing page sends nothing extra.
+
+Every close that the application starts (`CloseAsync`, `RequestCloseAsync`
+once it decided, disposal and a host shutdown) tells the Window's pages: the
+page renders its last state and reports the connection state `closed` instead
+of `reconnecting` or `lost`. A CS-WebUI tab left open after the application
+exited therefore says that the application closed it. `CloseAsync(timeout)`
+also waits, within its timeout and at most 5 seconds, until each page
+acknowledged the close:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+var closed = await window.CloseAsync(TimeSpan.FromSeconds(10));
+if (!closed.PagesAcknowledged) logger.LogInformation("A page did not confirm the close.");
+```
+
+`PagesAcknowledged` is `true` when every page acknowledged, also when no page
+uses the feature. A close that ends before every page replied is logged at
+Debug as event 1026 (`WindowCloseUnacknowledged`). These replace a
+`UiRendered` command that a page called after an animation frame, and a close
+token with an acknowledgement command of your own. See
+[waiting until the page shows a state](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md#waiting-until-the-page-shows-a-state).
+
 ## Next steps
 
 - [ViewModel state and threads](model-context.md) covers the model context
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.
 - Since SDK `0.11.0`, `RunicTestNavigationEntry.CreateAsync` in
-  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Testing/README.md)
+  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Testing/README.md)
   unit-tests a page that takes its `NavigationEntryContext`, such as a confirm
   dialog, without a Window.

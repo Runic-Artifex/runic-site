@@ -8,9 +8,9 @@
 > 0.10.0 the source is stable and works on Linux, Windows and macOS. Linux and
 > macOS pin the root with a no-follow directory handle; Windows checks every
 > path component for a reparse point but does not pin the root. See the
-> [Runic.Assets README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Assets/README.md)
+> [Runic.Assets README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Assets/README.md)
 > and the
-> [0.10.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.10.0.md).
+> [0.10.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/eng/release/notes/0.10.0.md).
 > The rest of this decision stands as recorded.
 
 ## Context

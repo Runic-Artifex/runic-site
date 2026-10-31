@@ -78,6 +78,8 @@ export type ApiManifest = {
   release: string;
   extractors: Record<string, string>;
   packages: ApiPin[];
+  /** Catalog packages without a managed library, which have no reference. */
+  withoutLibrary?: string[];
   contentDigest: string;
 };
 

@@ -14,7 +14,7 @@ the template or of an SDK example that the SDK's CI builds and runs.
 
 ```sh docs-test=commands
 dotnet new install Runic.Application.Templates@<VERSION>
-dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui
+dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui
 cd MyApp
 dotnet tool restore
 dotnet runic dev
@@ -210,7 +210,8 @@ release.
 
 Since SDK `0.11.0`, `useBridgeConnection()` (React, Vue, Svelte) and
 `injectBridgeConnection()` (Angular) follow the page's connection to .NET:
-`connecting`, `connected`, `reconnecting` or `lost`. While the Bridge
+`connecting`, `connected`, `reconnecting` or `lost`, and since SDK `0.15.0`
+`closed`, when the application closed the Window. While the Bridge
 reconnects, the clients keep the last state the Window sent. Since SDK
 `0.14.0` the template's App says so in a banner, and its status line shows an
 error with `describeBridgeError` from `@runic-artifex/views`, which turns any
@@ -218,6 +219,12 @@ error a binding reports into one English sentence:
 
 <!-- prettier-ignore -->
 ```tsx docs-test=template:frontends/react/src/App.tsx
+const statusText: Record<BridgeConnectionState, string> = {
+  // ...
+  // The application closed the Window; a connection drop that follows is not an error.
+  closed: "The application closed this window.",
+};
+// ...
 {connection === "reconnecting" && <p role="status">Reconnecting to the .NET Window…</p>}
 {connection === "lost" && <p role="alert">The connection to the .NET Window was lost. The page reconnects when the application is back.</p>}
 // ...
@@ -269,13 +276,13 @@ Svelte have their own `useField` (`v-model`, `{@attach field.attach}`), and
 Angular has `injectField` with the `[runicField]` directive.
 [Forms and validation](../guides/forms-and-validation.md) covers the field
 API, writes after a pause, checked writes and validation messages. The
-[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/first-window)
+[First Window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/first-window)
 uses the generated client without a framework.
 
 ## 7. Test the Window and the frontend
 
 Both halves can be tested without a browser or a native window. The
-[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-view-first)
+[CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/notes-view-first)
 nests a sidebar, a document and an editor, and tests each side. Its .NET tests
 drive the real ViewModels and generated Bridges through `RunicWindowTestHost`
 from `Runic.Application.Testing`, with a fake clock:
@@ -337,16 +344,16 @@ const counter = mockCounter(bridge, {
 
 [Frontend testing](../guides/frontend-testing.md) explains these tests.
 
-The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Testing/README.md)
-and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/packages/web/views#testing)
+The [`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Testing/README.md)
+and the [Views testing section](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/packages/web/views#testing)
 cover the test host and the generated mocks. Since SDK `0.13.0`,
 `createMockBridge({ latency: "slow", reorderRequests: true })` delays every
 request, reply and push and admits requests out of order, so a test can type
 into a field key by key as a user would; see
-[typing in tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md#typing-in-tests).
+[typing in tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/views/README.md#typing-in-tests).
 To test the real page against the
 real ViewModels in a browser, its
-[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
+[`RunicServeOnlyApplication`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser)
 starts the built application in serve-only mode for any browser driver.
 
 ## Where next
@@ -355,11 +362,11 @@ starts the built application in serve-only mode for any browser driver.
   pages with Back history and guards.
 - [ViewModel state and threads](../guides/model-context.md) explains why
   commands can set state after `await`.
-- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-reactive-views)
+- [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/notes-reactive-views)
   uses ReactiveUI routing and several Views over one model.
-- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/dynamicdata)
+- [DynamicData](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/dynamicdata)
   presents a large keyed collection through viewports.
-- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md)
+- The [`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md)
   lists the build properties, generator diagnostics, checked writes and
   operations.
 - [Forms and validation](../guides/forms-and-validation.md) binds inputs to

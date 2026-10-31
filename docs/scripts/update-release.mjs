@@ -42,10 +42,16 @@ const packages = ['nuget', 'npm'].flatMap((ecosystem) =>
   workspace[ecosystem].map((entry) => {
     const path =
       entry.path ?? entry.project.slice(0, entry.project.lastIndexOf('/'));
+    // A package below a component path, such as the per-RID projects in
+    // packages/dotnet/Runic.Desktop.NativeServer.Static/<rid>, belongs to it.
     const product =
       Object.entries(workspace.components).find(
         ([id, component]) =>
-          id !== 'examples' && component.paths.includes(path),
+          id !== 'examples' &&
+          component.paths.some(
+            (componentPath) =>
+              path === componentPath || path.startsWith(`${componentPath}/`),
+          ),
       )?.[0] ?? 'application';
     return {
       identity: entry.name,
