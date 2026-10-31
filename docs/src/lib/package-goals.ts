@@ -49,7 +49,11 @@ export const packageGoals: readonly PackageGoal[] = [
       },
       {
         name: 'Runic.Application.Views.Desktop',
-        note: 'Host adapter for Runic Desktop native windows.',
+        note: 'Host adapter for Runic Desktop native windows, with:',
+      },
+      {
+        name: 'Runic.Desktop.NativeServer',
+        note: 'Serves Runic Desktop pages without ASP.NET Core; Runic.Desktop.Kestrel instead for an app that uses ASP.NET Core.',
       },
       {
         name: 'Runic.Application.Views.ReactiveUI',
@@ -136,6 +140,10 @@ export const packageGoals: readonly PackageGoal[] = [
       'Runic Desktop hosts embedded WebViews in native windows; the platform packages add file dialogs, notifications, appearance and inhibition.',
     packages: [
       { name: 'Runic.Desktop', note: 'Native windows and embedded WebViews.' },
+      {
+        name: 'Runic.Desktop.NativeServer',
+        note: 'Serves the pages of its windows without ASP.NET Core; or Runic.Desktop.Kestrel.',
+      },
       {
         name: 'Runic.Platform',
         note: 'Platform service contracts; add the Runic.Platform.* adapter for each operating system.',

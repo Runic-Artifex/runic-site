@@ -50,9 +50,23 @@ computed later by publish targets. Each command stream is bounded to 4 Mi
 characters and explicitly marked if truncated. The report is local and includes
 paths and command arguments: review it before sharing.
 
+## The native server
+
+Since SDK `0.15.0`, the largest saving for a Runic Desktop application is its
+server: `Runic.Desktop.NativeServer`, which new projects use, replaces ASP.NET
+Core Kestrel (`Runic.Desktop.Kestrel`). For the SDK's first-window example on
+linux-x64, its NativeAOT executable is 9.97 instead of 12.96 MiB and serves its
+first page after about 13 instead of 21 ms, and a framework-dependent build
+needs no ASP.NET Core runtime. The
+[native server's README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Desktop.NativeServer/README.md#what-you-get)
+has the measurements for each publish mode, and
+[the presentation server](host-selection.md#presentation-server) explains the
+choice. The measurements below predate it and use Kestrel.
+
 ## Minimal Desktop hosting
 
-Enable the opt-in profile for ordinary publishing with:
+The minimal profile applies to `Runic.Desktop.Kestrel`; the native server
+has no ASP.NET Core host to trim. Enable it for ordinary publishing with:
 
 ```xml docs-test=skip:illustrative-project-setting
 <PropertyGroup>
@@ -82,6 +96,12 @@ This property has no role in CS-WebUI, which has no ASP.NET Core dependency.
   trimming and AOT warnings visible and test the published executable.
 - `InvariantGlobalization=true` changes culture behavior. Only choose it when
   the application's formatting, parsing and translations support that decision.
+  Since SDK `0.15.0` the host itself loads no ICU before its first page, so the
+  setting only saves what the application's own culture-aware code would load.
+- For framework-dependent and self-contained publishes, ReadyToRun
+  (`PublishReadyToRun`) shortens startup at the cost of a larger publish, and
+  works since SDK `0.15.0`; see
+  [choose the publish mode](shipping.md#choose-the-publish-mode).
 - Stack traces and diagnostics have support value. Do not disable them globally
   to improve a headline number. Check evaluated switches before varying them;
   NativeAOT already disables some features.

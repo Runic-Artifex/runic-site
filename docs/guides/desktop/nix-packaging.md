@@ -3,7 +3,7 @@
 Since SDK `0.8.0-preview.1`, the Runic SDK's flake exports a builder for Runic
 applications, a development shell, and NixOS and Home Manager modules that
 install them. This guide follows `0.12.0` and summarizes the SDK's
-[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/nix/README.md),
+[Nix packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/nix/README.md),
 which has every argument and option.
 
 `buildRunicApplication` wraps nixpkgs' `buildDotnetModule`. It restores NuGet
@@ -38,7 +38,7 @@ the .NET 10 SDK, Node, pnpm and Bun from nixpkgs; its arguments follow `--`, as
 they do for `dnx Runic.Create`:
 
 ```sh docs-test=skip:release-tag-pin
-nix run github:Runic-Artifex/runic-sdk/v0.14.0#create -- MyApp --frontend react --nix
+nix run github:Runic-Artifex/runic-sdk/v0.15.0#create -- MyApp --frontend react --nix
 cd MyApp
 git init && git add -A
 nix develop              # the .NET SDK, Node and the package manager, from the new flake
@@ -71,7 +71,7 @@ SDK input to the release your packages use:
 inputs = {
   nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   runic-sdk = {
-    url = "github:Runic-Artifex/runic-sdk/v0.14.0";
+    url = "github:Runic-Artifex/runic-sdk/v0.15.0";
     inputs.nixpkgs.follows = "nixpkgs";
   };
 };
@@ -95,6 +95,19 @@ The SDK guide's full example also installs a desktop entry and an icon.
 `callPackage` loads. Arguments of `buildDotnetModule` pass through; the Runic
 ones choose the host's run-time libraries (`host`: `desktop`, `desktop-gtk4`
 or `cswebui`), NativeAOT, desktop items and icons.
+
+Since SDK `0.15.0`, an application whose lock files list
+`Runic.Desktop.NativeServer`, as the template's do, gets the native server's
+library built from source (`nix/runic-server.nix`, with the crates that the
+SDK's `native/Cargo.lock` pins) instead of the package's prebuilt one, with no
+argument to set: NativeAOT links its static library, and a JIT build copies
+its shared library. A framework-dependent build then runs on the .NET runtime
+without ASP.NET Core (`dotnet-runtime`); with `Runic.Desktop.Kestrel` it keeps
+the SDK's ASP.NET Core runtime. A project that references the SDK's projects
+instead of packages sets `nativeServer = true` with
+`-p:RunicDesktopServer=Native` in `dotnetFlags`. `runicServer` replaces the
+library, such as with a patched build; it must be built from the same release
+as `Runic.Desktop`, or the first window fails with `native-server-unavailable`.
 
 Tests that reject VSTest options, such as TUnit's, run with `testRunner`:
 
@@ -204,7 +217,7 @@ first build after the update downloads the frontend's packages once more. Under
 any other `src`, a stale Bun hash still fails with `frontend.hash is out of
 date`. In `0.8.0-preview.4` every Bun hash changed once: set it to
 `lib.fakeHash` and copy the reported hash. See
-[fixed-output hashes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/nix/README.md#fixed-output-hashes). `hash` can also take one per system:
+[fixed-output hashes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/nix/README.md#fixed-output-hashes). `hash` can also take one per system:
 
 ```nix docs-test=readme:nix/README.md
 frontend = {
@@ -237,7 +250,7 @@ speech synthesis, 72.6 MiB smaller; screen readers still work, but it
 compiles from source for hours, so build it on your own cache.
 
 The policy of the application's
-[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[privileged actions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 is installed in `$out/share/polkit-1/actions`. The build exports
 `RunicApplicationInstallPrefix` as `$out`, so an action can name the installed
 program, and fails when a policy names a program outside the package:

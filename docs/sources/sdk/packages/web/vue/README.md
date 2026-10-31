@@ -181,8 +181,9 @@ is written. A string set on `value` of a field that is not text is taken as its 
 
 - `commit: "pause"` writes the draft after `delay` milliseconds without input (700 by default) and at once on
   `commit()`, which blur calls; use it where each write is an undo step or starts work in .NET. The default,
-  `commit: "input"`, writes each input. `commit()` resolves once the field's writes settled, so a command that
-  depends on the field can follow them: `await title.commit(); await editor.save()`.
+  `commit: "input"`, writes each input. `commit()` resolves with the field's state once its writes settled, so a
+  command that depends on the field can follow them and skip a failed write:
+  `if ((await title.commit()).error === undefined) await editor.save()`.
 - `checked: true` writes with the member's checked write, so a change by another writer while the user edits is a
   conflict instead of being overwritten. A `rejected` receipt keeps the draft and sets `error` to a `FieldError` with
   the setter's message; a `conflict` keeps the draft, sets `conflict` to the producer's `{ value, version }` and
@@ -367,8 +368,8 @@ accepted work.
 Follows the page's connection to its .NET host. It wraps `onBridgeConnection`
 from `@runic-artifex/views` (re-exported here since 0.11, with the
 `BridgeConnectionState` and `BridgeConnectionOptions` types) and returns `{ state }`, a shallow ref holding a
-`BridgeConnectionState`: `connecting`, `connected`, `reconnecting` or `lost` (a
-closed set, see
+`BridgeConnectionState`: `connecting`, `connected`, `reconnecting`, `lost` or `closed` (the
+application closed the window, since 0.15; a closed set, see
 [Connection state](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#connection-state)):
 
 ```vue

@@ -20,7 +20,7 @@ that a native WPF View can bind to, so the user can switch between the two
 without losing a draft.
 
 The
-[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/wpf-hybrid-editor)
+[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/wpf-hybrid-editor)
 is the complete application this guide quotes. Its notes list and dialogs are
 WPF; its editor page can switch between WPF controls and a web View.
 
@@ -50,10 +50,13 @@ builds the frontend:
 </ItemGroup>
 ```
 
-The WPF application references `Runic.Application.Views.Wpf` and the model
-project. It needs no Runic properties: the package's build targets copy the
-model project's built frontend, `Frontend/dist`, to the application's `www/`
-folder:
+The WPF application references `Runic.Application.Views.Wpf`, the model
+project and, since SDK `0.15.0`, the server that serves the WebView's page:
+`Runic.Desktop.NativeServer`, which needs no ASP.NET Core, or
+`Runic.Desktop.Kestrel`, as this fixture does. Without either the build fails
+with `RUNICDESK004`. It needs no Runic properties: the package's build targets
+copy the model project's built frontend, `Frontend/dist`, to the application's
+`www/` folder:
 
 ```xml docs-test=source:tests/fixtures/application/wpf-bridge-consumer/Split/App/SplitApp.csproj
 <PropertyGroup>
@@ -65,6 +68,8 @@ folder:
 <ItemGroup>
   <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(RunicContainerVersion)" />
   <PackageReference Include="Runic.Application.Views.Wpf" Version="$(RunicPackageVersion)" />
+  <!-- The presentation server (since 0.15). -->
+  <PackageReference Include="Runic.Desktop.Kestrel" Version="$(RunicPackageVersion)" />
   <ProjectReference Include="../Model/SplitModel.csproj" />
 </ItemGroup>
 ```
@@ -80,7 +85,8 @@ by accident.
 
 ### Single: one WPF project
 
-A single `UseWPF` project can reference only `Runic.Application.Views.Wpf`.
+A single `UseWPF` project can reference only `Runic.Application.Views.Wpf`
+and, since SDK `0.15.0`, a server package.
 The adapter turns generation on, and the default `Frontend` folder next to the
 project receives the generated client:
 
@@ -94,6 +100,8 @@ project receives the generated client:
 <ItemGroup>
   <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(RunicContainerVersion)" />
   <PackageReference Include="Runic.Application.Views.Wpf" Version="$(RunicPackageVersion)" />
+  <!-- The presentation server (since 0.15). -->
+  <PackageReference Include="Runic.Desktop.Kestrel" Version="$(RunicPackageVersion)" />
 </ItemGroup>
 ```
 
@@ -173,7 +181,7 @@ application copies the model project's `dist` to its own `www/`.
 `<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`
 packs the frontend into the application assembly instead of `www/`, and a host
 without `ContentRoot` serves it from there. The
-[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md)
+[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md)
 change the frontend folder, the package manager and the build command.
 
 ## Place a `RunicViewHost`
@@ -246,7 +254,7 @@ window. Since SDK `0.11.0` they also announce messages to the screen reader
 through UI Automation, show context menus and message boxes, drag files out,
 read and write clipboard formats beyond text, and set a badge and progress on
 the taskbar button. The
-[Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views.Wpf/README.md#platform-services-for-a-wpf-window)
+[Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views.Wpf/README.md#platform-services-for-a-wpf-window)
 describes each.
 
 ## Guard the window's close
@@ -279,7 +287,7 @@ changes in this window?", register a guard from
 `WindowCloseConfirmation.OncePerClose`; both are new in SDK `0.11.0`. A close
 then asks it once, however many regions it clears. See the Runic.Navigation.Wpf
 README,
-["Asking once per window close"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation.Wpf/README.md#asking-once-per-window-close).
+["Asking once per window close"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation.Wpf/README.md#asking-once-per-window-close).
 
 The guard belongs to the window, not to the loaded host. A host on an
 unselected tab is unloaded and its View discarded, but the window keeps
@@ -302,9 +310,9 @@ selects among them with a `NavigationSelection` bound through
 `NavigationSelector.Selection`, closing the window retires the page and asks
 every page of every tab, whichever is selected. See the Runic.Navigation.Wpf
 README,
-["Tabs with their own stacks"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-with-their-own-stacks)
+["Tabs with their own stacks"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-with-their-own-stacks)
 and
-["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
+["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
 
 ## Start windows in code, not with `StartupUri`
 
@@ -349,7 +357,7 @@ Translations `0.6.0-preview.7` and later have `CreateManager`.
 `ServiceProvider.Dispose()` in `OnExit` starts the navigator's shutdown but
 doesn't wait for it. When owned cleanup must finish, dispose the provider
 asynchronously after `app.Run()` returns in a custom `Main`, as the
-[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
+[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
 shows. Never block the dispatcher on `DisposeAsync` while it runs.
 
 ## Limits
@@ -374,5 +382,5 @@ shows. Never block the dispatcher on `DisposeAsync` while it runs.
 - [Pages and navigation](../guides/pages-and-navigation.md) explains regions,
   guards and dialog results.
 - The
-  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views.Wpf/README.md)
+  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views.Wpf/README.md)
   lists every `RunicViewHost` property and the lower-level API.

@@ -216,9 +216,10 @@ The options are those of the controller and `injector`:
 
 - `commit: "pause"` writes the draft after `delay` milliseconds without input (700
   by default) and at once on `commit()`, which blur calls; use it where each write is
-  an undo step or starts work in .NET. `commit()` resolves once the field's writes
-  settled, so a command that depends on the field can follow it:
-  `await this.title.commit(); await this.editor.client()?.save();`.
+  an undo step or starts work in .NET. `commit()` resolves with the field's state
+  once its writes settled, so a command that depends on the field can follow it
+  and skip a failed write:
+  `if ((await this.title.commit()).error === undefined) await this.editor.client()?.save();`.
 - `checked: true` writes with the member's checked write: a change by another writer
   since the draft started is a conflict instead of being overwritten.
 - `coalesce` and `keepDraftOnError`, as for `injectTextField`.
@@ -455,8 +456,8 @@ cancelling accepted work. Pass `injector` outside an injection context.
 host for the lifetime of the injection context. It wraps `onBridgeConnection`
 from `@runic-artifex/views` (re-exported here since 0.11, with the
 `BridgeConnectionState` and `BridgeConnectionOptions` types) and returns `{ state }`, a signal of a
-`BridgeConnectionState`: `connecting`, `connected`, `reconnecting` or `lost` (a
-closed set, see
+`BridgeConnectionState`: `connecting`, `connected`, `reconnecting`, `lost` or `closed` (the
+application closed the window, since 0.15; a closed set, see
 [Connection state](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#connection-state)):
 
 ```ts

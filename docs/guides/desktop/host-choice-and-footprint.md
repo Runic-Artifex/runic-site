@@ -16,13 +16,15 @@ script.
 
 ## Historical Linux footprint measurement
 
-The [September 3 Linux measurement](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/tests/fixtures/application/experiments/native-aot-size/results/linux-x64-2026-09-03.md)
+The [September 3 Linux measurement](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/tests/fixtures/application/experiments/native-aot-size/results/linux-x64-2026-09-03.md)
 reported runtime payloads of **1.79 MiB for CS-WebUI** and **8.25 MiB for Desktop**,
 with the installed browser excluded from both. A separate slim ASP.NET Core
 Minimal API diagnostic was **7.46 MiB**. These are historical measurements for
 one RID and one source configuration, not fresh results or a guaranteed minimum
 size. The diagnostic is a different program, so subtraction is only an
-attribution hint.
+attribution hint. Desktop then served its pages with ASP.NET Core Kestrel;
+since SDK `0.15.0`, new Desktop projects use the native server, which needs no
+ASP.NET Core (see [the native server](size-and-tuning.md#the-native-server)).
 
 The comparison enabled NativeAOT, full trimming, size optimization, invariant
 globalization and stripped symbols. The old result also found 1.23 MiB of XML

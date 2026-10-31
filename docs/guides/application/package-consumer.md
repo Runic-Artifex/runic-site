@@ -12,7 +12,7 @@ and Translations have independent versions on their product pages.
 For a Svelte/Bun/ReactiveUI application with GTK 4 on Linux:
 
 ```sh docs-test=commands
-dnx Runic.Create@<VERSION> -- MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 4 --view-models reactiveui
+dnx Runic.Create@<VERSION> -- MyApp --frontend svelte --package-manager bun --host desktop --linux-gtk 4 --desktop-server native --view-models reactiveui
 cd MyApp
 dotnet tool restore
 dotnet runic dev
@@ -33,6 +33,9 @@ frontend's lock file. The
 
 `--linux-gtk 4` references `Runic.Application.Views.Desktop` and
 `Runic.Desktop.Gtk4`, which brings the GTK 4 and portal platform providers.
+`--desktop-server native`, the default since SDK `0.15.0`, references
+`Runic.Desktop.NativeServer`, which serves the pages without ASP.NET Core;
+`--desktop-server kestrel` references `Runic.Desktop.Kestrel` instead.
 Linux needs GTK 4.12 or newer and WebKitGTK 6.0. `--linux-gtk 3`, the
 default, selects GTK 3/WebKitGTK 4.1 on Linux. Both use WebView2 on Windows and
 WKWebView on macOS;
@@ -153,8 +156,8 @@ dotnet publish -c Release -r linux-x64
 
 Distribute the whole publish directory, including `www`; the frontend needs no
 Node.js or package manager at runtime. A framework-dependent publish still
-needs the matching .NET runtime, and embedded hosting still needs the native
-libraries. With `RunicApplicationFrontendDelivery=Embedded` (since SDK
+needs the matching .NET runtime, and the ASP.NET Core runtime with
+`Runic.Desktop.Kestrel`; embedded hosting still needs the native libraries. With `RunicApplicationFrontendDelivery=Embedded` (since SDK
 `0.11.0`) the frontend is in the application assembly and there is no `www`.
 Since SDK `0.11.0`, `dotnet runic package` publishes with NativeAOT and builds
 an MSIX, a macOS `.app` and disk image, a Flatpak, an AppImage, a deb or an

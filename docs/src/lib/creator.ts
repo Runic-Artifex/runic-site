@@ -170,16 +170,21 @@ export function isEnabled(
   return value === undefined ? toggle.defaultValue : value === 'true';
 }
 
+/** Options that only Runic Desktop uses: its GTK version and its server. */
+const desktopOptions = new Set(['linuxGtk', 'desktopServer']);
+
 /**
  * Whether an option applies to the selection. Like Runic.Create, the creator
- * neither shows nor passes `--linux-gtk` unless the host is Runic Desktop.
+ * neither shows nor passes `--linux-gtk` or `--desktop-server` unless the host
+ * is Runic Desktop.
  */
 export function optionApplies(
   option: CreatorOption,
   selection: CreatorSelection,
 ): boolean {
   return (
-    option.symbol !== 'linuxGtk' || (selection.host ?? 'desktop') === 'desktop'
+    !desktopOptions.has(option.symbol) ||
+    (selection.host ?? 'desktop') === 'desktop'
   );
 }
 

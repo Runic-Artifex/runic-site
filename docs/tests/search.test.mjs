@@ -96,7 +96,7 @@ function fullTextSearch(query) {
 const queries = {
   'host selection': [
     '/guides/desktop/host-selection/',
-    '/guides/desktop/host-choice-and-footprint/',
+    '/guides/desktop/host-selection/#presentation-server',
   ],
   'getting started': ['/guides/application/getting-started/'],
   RunicNavigator: [
@@ -138,10 +138,11 @@ const queries = {
 // gzipped with the 0.11.0 API types and guides, from 132 KiB gzipped with
 // the 0.12.0 API types and guides, and from 496 KiB raw and 136 KiB gzipped
 // with the 0.13.0 API types and guides (Views protocol 4, spell checking),
-// and from 528 KiB raw and 144 KiB gzipped with the 0.14.0 API types and
-// guides (fields, forms and frontend testing), which need about 547 KiB raw
-// and 146 KiB gzipped.
-const budget = { raw: 576 * 1024, gzip: 152 * 1024 };
+// from 528 KiB raw and 144 KiB gzipped with the 0.14.0 API types and guides
+// (fields, forms and frontend testing), and from 152 KiB gzipped with the
+// 0.15.0 API types and guides (presentation server, scoped commands, queued
+// navigation), which need about 575 KiB raw and 155 KiB gzipped.
+const budget = { raw: 576 * 1024, gzip: 160 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {

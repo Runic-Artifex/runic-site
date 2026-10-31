@@ -6,7 +6,7 @@ nothing, [create a project](getting-started/README.md) instead; the steps below
 reproduce what the template sets up. Replace `<VERSION>` with the current
 release from the [package catalog](https://docs.runic-artifex.eu/packages/) and
 keep Application SDK packages on that version;
-`Runic.Application.Views.CsWebUi` is still a prerelease, `0.14.0-preview.1`,
+`Runic.Application.Views.CsWebUi` is still a prerelease, `0.15.0-preview.1`,
 and needs CsWebUi 2.5.0-beta.4.8 or later.
 Runic Translations and Runic Command Line have independent release versions.
 
@@ -25,9 +25,17 @@ window and is supported on a best-effort basis
 
 ```sh docs-test=commands
 dotnet add package Runic.Application.Views.Desktop --version <VERSION>
+dotnet add package Runic.Desktop.NativeServer --version <VERSION>
 # or, for a browser window:
 dotnet add package Runic.Application.Views.CsWebUi --version <VERSION>
 ```
+
+Since SDK `0.15.0`, a Runic Desktop application also references the server
+that serves its pages: `Runic.Desktop.NativeServer`, which needs no ASP.NET
+Core and which the template uses, or `Runic.Desktop.Kestrel` for an
+application that uses ASP.NET Core itself. Without either the build fails with
+`RUNICDESK004`; see
+[the presentation server](../desktop/host-selection.md#presentation-server).
 
 Add the ReactiveUI adapter, which brings ReactiveUI 26, and the dependency
 injection container at the version the template uses:
@@ -166,8 +174,14 @@ an Angular project puts `runicDevSessionProxy()` in the serve target's
 `sveltekit()` and imports `@runic-artifex/vite-plugin-runic/client` from
 `src/hooks.client.ts`, which also brings the development timeline and the
 `stale-input` warning; `runicDevSession()`, which SDK `0.11.0` used there, is
-deprecated. An Angular project loads the same client from `main.ts` behind
-`ngDevMode`.
+removed in SDK `0.15.0`, and a configuration that still imports it fails to
+load. An Angular project loads the same client from `main.ts` behind
+`ngDevMode`. Since SDK `0.15.0`, the client also reports each open View's
+state, which the Vite DevTools dock shows on a **Views** card with the route,
+revision and presentation epoch, and lists commands that .NET answered
+`superseded` on a **Superseded commands** card. Both are in `/__runic/state`
+too (`views` and the timeline), for the Angular CLI. The production build
+replaces the client with an empty module.
 
 The page loads the host's scripts before your module. The template loads a
 host-neutral Views client:
@@ -198,13 +212,15 @@ move. The [tutorial](tutorial/README.md#5-render-the-views) shows how the
 generated clients are used from components. Since SDK `0.11.0`,
 `<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`
 packs the frontend into the application assembly instead of `www`, for Runic
-Desktop and WPF hosts; CS-WebUI keeps `www` and warns with `RUNICBRIDGE030`.
+Desktop and WPF hosts, and since SDK `0.15.0` for CS-WebUI, which serves it
+from the assembly without extracting it; before, CS-WebUI kept `www` and
+warned with `RUNICBRIDGE030`.
 `RunicApplicationFrontendPackageManager` takes `npm`, `pnpm` or `bun`; another
 value warns with `RUNICBRIDGE029`.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
 in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the

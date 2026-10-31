@@ -95,7 +95,7 @@
             {/if}
             <pre class="code-block"><code>{packageInstallCommand(row)}</code
               ></pre>
-            {#if hasApiReference(row.installKind)}
+            {#if hasApiReference(row.installKind, row.name)}
               <a
                 class="package-rows__api"
                 href={resolve('/api/[package]', {

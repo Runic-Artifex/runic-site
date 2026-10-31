@@ -6,10 +6,10 @@ the member's type, keeps what the user typed while writes are on their way,
 reads checked-write receipts and shows the validation messages that .NET
 reports for the member.
 
-> This guide follows Runic SDK 0.14.0. Code blocks are excerpts of the
-> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.14.0/examples/notes-view-first),
+> This guide follows Runic SDK 0.15.0. Code blocks are excerpts of the
+> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.0/examples/notes-view-first),
 > which the SDK's CI builds and tests, or of the package READMEs. The
-> [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md#fields)
+> [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/views/README.md#fields)
 > is the reference for the field controller.
 
 ## Field descriptors
@@ -163,9 +163,10 @@ The default, `commit: "input"`, writes each input, coalesced. `commit:
 default), at once on `commit()`, and on blur; use it where each write is an
 undo step or starts work in .NET.
 
-`commit()` resolves with the field's state once its writes settled. A command
-that depends on the field, such as Save, awaits it and skips the command when
-a write failed. In React, read the error from the resolved state, because the
+`commit()` resolves with the field's state once its writes settled; in Vue
+since SDK `0.15.0`, which resolved with nothing before. A command that depends
+on the field, such as Save, awaits it and skips the command when a write
+failed. In React, read the error from the resolved state, because the
 handle belongs to an older render:
 
 <!-- prettier-ignore -->
@@ -220,7 +221,7 @@ Long text does not cross whole on every key. Under the `text-splice/1`
 feature, which the page and .NET negotiate on their own, setters and checked
 writes of a `string` member send only the changed range, and .NET rebuilds the
 value before it calls the setter. Nothing changes in application code; see
-[long text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md#long-text-splices).
+[long text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/views/README.md#long-text-splices).
 
 ## Validation from .NET
 
@@ -268,9 +269,9 @@ against the first stable releases of the ReactiveUI.Validation fork:
 (namespaces `ReactiveUI.Validation.Reactive.*`). The application references
 the one that matches its ReactiveUI flavour; the generated Bridge needs no
 further package. The
-[Views package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md#structured-validation)
+[Views package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md#structured-validation)
 and the
-[validation wire format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/specs/application/README.md#validation)
+[validation wire format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/specs/application/README.md#validation)
 describe paths, order and limits.
 
 ## Upgrading from 0.13
@@ -296,7 +297,7 @@ For generated members, move to the field API:
 - `{name}Errors` or `validation.errors` shown next to an input by hand become
   the field's `errors`.
 
-The [migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/docs/migration-1.0.md#fields)
+The [migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/docs/migration-1.0.md#fields)
 lists these changes, and
 [Typed domain failures](typed-failures.md) shows how Save reports its declared
 failures after the fields' writes.

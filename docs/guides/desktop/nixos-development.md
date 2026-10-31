@@ -28,7 +28,7 @@ To build and install an application, rather than the SDK, with Nix, see
 [Package a Runic application with Nix](nix-packaging.md). Since SDK `0.12.0`,
 the SDK flake's `create` app also creates an application project on a machine
 without a .NET SDK
-(`nix run github:Runic-Artifex/runic-sdk/v0.14.0#create -- MyApp --nix`).
+(`nix run github:Runic-Artifex/runic-sdk/v0.15.0#create -- MyApp --nix`).
 
 ## September 7, 2026 crash investigation
 

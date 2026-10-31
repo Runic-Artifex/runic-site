@@ -521,8 +521,17 @@ try {
   const npm = await syncNpm(
     packages.filter((entry) => entry.ecosystem === 'npm'),
   );
+  // A package without a managed library, such as Runic.Desktop.NativeServer
+  // and its static libraries, has no API and no reference page; the manifest
+  // lists it.
+  const withoutLibrary = nuget
+    .filter((item) => item.api.framework === null)
+    .map((item) => item.pin.package)
+    .sort();
   const all = [
-    ...nuget.map((item) => ({ ...item, ecosystem: 'dotnet' })),
+    ...nuget
+      .filter((item) => item.api.framework !== null)
+      .map((item) => ({ ...item, ecosystem: 'dotnet' })),
     ...npm.map((item) => ({ ...item, ecosystem: 'npm' })),
   ];
   finishApiPackages(all.map((item) => item.api));
@@ -545,6 +554,7 @@ try {
       npm: `TypeScript ${ts.version} compiler API`,
     },
     packages: pins,
+    withoutLibrary,
     contentDigest: await digestInputs(
       outputRoot,
       pins.map((pin) => pin.file),

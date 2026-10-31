@@ -34,11 +34,23 @@ const reference = new ApiReference(manifest, models);
 
 test('API inputs cover exactly the library packages of the active release', async () => {
   assert.equal(manifest.release, activeSdkRelease.version);
+  // NuGet packages without a managed library, such as the native server's,
+  // are listed instead of pinned.
+  const withoutLibrary = new Set(manifest.withoutLibrary ?? []);
+  for (const id of withoutLibrary)
+    assert.ok(
+      activeSdkRelease.packages.some(
+        (entry) =>
+          entry.identity === id && entry.installKind === 'nuget-package',
+      ),
+      `${id} is not a NuGet package of the active release`,
+    );
   const expected = activeSdkRelease.packages
     .filter((entry) =>
       ['nuget-package', 'npm-package'].includes(entry.installKind),
     )
     .map((entry) => entry.identity)
+    .filter((identity) => !withoutLibrary.has(identity))
     .sort();
   assert.deepEqual(
     manifest.packages.map((pin) => pin.package).sort(),
@@ -101,11 +113,12 @@ test('API inputs and rendered pages stay within their size budgets', () => {
       assert.ok(bytes.length <= 272 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 5.75 MiB since 0.14.0 (fields, application platform services, test
-  // drivers), which needs about 5.62 MiB; 5.5 MiB since 0.13.0 and 5.25 MiB
-  // since the platform services of 0.11.0.
+  // 6 MiB since 0.15.0 (presentation epochs, navigation admission, fallback
+  // presentations, Windows administration clients), which needs about
+  // 5.78 MiB; 5.75 MiB since 0.14.0, 5.5 MiB since 0.13.0 and 5.25 MiB since
+  // the platform services of 0.11.0.
   assert.ok(
-    compressed <= 5.75 * 1024 * 1024,
+    compressed <= 6 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });

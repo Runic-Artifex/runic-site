@@ -11,15 +11,15 @@ construction, typed commands, property writes, and operation lifetimes. The
 browser opens and closes a presentation of each View it shows, so a content
 session can create and release its logical View as frontend routes change. Generated clients are framework-neutral;
 React, Vue, Svelte, Angular, and plain TypeScript use the same contract. They
-share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/views/README.md),
+share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/views/README.md),
 which also provides a mock Bridge for development without .NET. The
-[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/react/README.md) and
-[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/vue/README.md) packages, `useView` in
-[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/svelte/README.md) and
-`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/angular/README.md)
+[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/react/README.md) and
+[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/vue/README.md) packages, `useView` in
+[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/svelte/README.md) and
+`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/angular/README.md)
 connect and dispose clients with component lifetimes. Since SDK `0.11.0`, a
 SvelteKit frontend uses `@runic-artifex/svelte` with
-[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/web/sveltekit/README.md),
+[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/web/sveltekit/README.md),
 which prerenders its pages for the Window.
 
 Start with [getting started](getting-started/README.md), follow
@@ -27,11 +27,11 @@ Start with [getting started](getting-started/README.md), follow
 [add Runic to an existing app](existing-app.md). Existing WPF applications can
 [adopt Runic incrementally](migrations/wpf-incremental.md), keeping their shell
 and models while adding native navigation and optional embedded web Views. The
-[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/first-window/README.md) is the smallest example; then read the
-[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/notes-view-first/README.md) and
-[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/examples/notes-reactive-views/README.md) examples. The
+[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/first-window/README.md) is the smallest example; then read the
+[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/notes-view-first/README.md) and
+[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Application.Views/README.md).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Application.Views/README.md).
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.
@@ -39,7 +39,7 @@ types are in the `Runic.Application.Views` namespace; the
 ## Navigation and model context packages
 
 Since 0.7.0-preview.4, navigation and model contexts live in
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/packages/dotnet/Runic.Navigation/README.md).
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/packages/dotnet/Runic.Navigation/README.md).
 It can be used independently of Views; `Runic.Application.Views` references it
 transitively. Add `using Runic.Navigation;` for `RunicNavigator`, regions,
 `IRunicModelContext`, `RunicModelContext` and `RunicModelContextRegistry`, then
@@ -52,7 +52,7 @@ scheduling helpers, `AddRunicReactiveModelContext()` and
 `using Runic.Application.Views.ReactiveUI;` for them.
 [Pages and navigation](guides/pages-and-navigation.md) and
 [ViewModel state and threads](guides/model-context.md) show both in use. The
-[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.7.0-preview.4.md)
+[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/eng/release/notes/0.7.0-preview.4.md)
 list the moved types.
 
 ## Upgrading generated clients
@@ -100,9 +100,9 @@ together, and add `@runic-artifex/views` to the frontend's dependencies.
   [forms and validation](guides/forms-and-validation.md).
 
 The
-[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.13.0.md#upgrading)
+[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/eng/release/notes/0.13.0.md#upgrading)
 list everything to check when upgrading, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/docs/migration-1.0.md#from-012-to-013)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/docs/migration-1.0.md#from-012-to-013)
 has before and after tables.
 
 ## Upgrading from 0.13 to 0.14
@@ -175,8 +175,105 @@ change: the new features are negotiated in `hello`, so a `0.13` page and a
   older than 10.0.403 or a Bun older than 1.4.4.
 
 The
-[0.14.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/eng/release/notes/0.14.0.md#upgrading)
+[0.14.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/eng/release/notes/0.14.0.md#upgrading)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.14.0/docs/migration-1.0.md#from-013-to-014)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/docs/migration-1.0.md#from-013-to-014)
 has before and after tables for each area, including tests, Windows, Nix and
 the CLI tools.
+
+## Upgrading from 0.14 to 0.15
+
+Update every Runic NuGet and npm package to `0.15.0` together
+(`Runic.Application.Views.CsWebUi` to `0.15.0-preview.1`) and rebuild, so the
+generated clients, bridges and mocks regenerate. Views protocol 4 does not
+change: the new features `presentation-epoch/1` and `presented/1` are
+negotiated in `hello`, so a `0.14` page and a `0.15` host still connect and
+behave as in `0.14`. Check these if they apply:
+
+- **A Runic Desktop executable references its server.** `Runic.Desktop` no
+  longer references ASP.NET Core. Add `Runic.Desktop.NativeServer`, which
+  needs no ASP.NET Core and which new projects use, or `Runic.Desktop.Kestrel`
+  to keep ASP.NET Core Kestrel, to the executable that references
+  `Runic.Application.Views.Desktop`, `Runic.Application.Views.Wpf` or
+  `Runic.Desktop`; without either the build fails with `RUNICDESK004`. A
+  library changes nothing. Keep Kestrel when the application uses ASP.NET Core
+  itself, such as `IConfiguration` or `IHostEnvironment` from
+  `DesktopHostOptions.ConfigureServices`: on the native server that callback
+  receives a plain service collection with logging. An executable that opens
+  no window sets `<RunicDesktopServer>None</RunicDesktopServer>`. See
+  [the presentation server](../desktop/host-selection.md#presentation-server).
+- **`BridgeConnectionState` has a fifth value, `"closed"`.** The application
+  closed the window, and the state stays `closed` when the connection then
+  drops. A `switch` or `Record<BridgeConnectionState, …>` that handles every
+  value no longer compiles until it handles `"closed"`; the template shows
+  "The application closed this window."
+- **Late commands of an earlier page.** Replace a presentation number kept in
+  state and compared in each command with `[RunicPresentationScoped]` on the
+  command and `RunicPresentation.Renew(this)` where the page changes; replace
+  a `UiRendered` command that the page called after a frame with
+  `RunicPresentation.WaitForPresentedAsync`, and a close-acknowledged command
+  with `CloseAsync(timeout)` and `RunicWindowCloseResult.PagesAcknowledged`.
+  See [commands scoped to their page](guides/pages-and-navigation.md#commands-scoped-to-their-page).
+- **Content presented again pushes its state.** When a slot shows other
+  content and then the earlier content again, the Bridge pushes that content's
+  state, so a test that expected no push after `Main = b; Main = a` now sees a
+  `state` push of the resumed route.
+- **Answered dialogs no longer come back.** A retained result entry whose
+  caller cancelled, or that called `DismissAsync` while another entry covered
+  it, is retired by the Back of the entry above it, which resumes the entry
+  below. Code that waited for the dialog to reappear to leave it can drop that
+  step. A prompt stack of your own beside a dialog region becomes
+  `NavigationAdmission.Queue`, and a `CanLeaveTabAsync()` of your own becomes
+  `AskOnParentRetain` or `ConfirmDepartureAsync`; see
+  [queue dialogs](guides/pages-and-navigation.md#queue-dialogs).
+- **`runicDevSession()` is removed.** A SvelteKit `vite.config.ts` that still
+  imports it fails to load: use `runic({ html: false })` and import
+  `@runic-artifex/vite-plugin-runic/client` from `src/hooks.client.ts`.
+- **CS-WebUI embeds its frontend.** A CS-WebUI project with
+  `RunicApplicationFrontendDelivery=Embedded`, which built as `Files` with
+  `RUNICBRIDGE030`, now serves the frontend from the assembly, and its output
+  has no `www/`; remove the property to keep `www/`. Code that extracted an
+  embedded frontend to a folder for `SetRootFolder` becomes
+  `RunicCsWebUiHostOptions.Assets`, and a wrapper that filtered an archive by
+  folder becomes `archive.Subdirectory("folder")`. See
+  [embed and serve assets](../assets/README.md#serve-one-folder-of-an-archive).
+- **Embedded archives are checked at build time.** `AssetArchive.ReadEmbedded`
+  checks the manifest and ZIP directory at load and inflates each asset when it
+  is first requested; the build checks every archive it packs, and a
+  `RunicAssetsEmbeddedArchive` that is not a valid archive fails with
+  `RAS2006`. Call `ValidateAsync()` to check every digest at run time.
+  `AssetArchive.Read` and `ReadAsync` still check every asset.
+- **ReadyToRun publishes.** A publish with `-p:PublishReadyToRun=true` no
+  longer fails with `NETSDK1191`; remove a workaround that passed the property
+  to the application project only. See
+  [choose the publish mode](../desktop/shipping.md#choose-the-publish-mode).
+- **A slow WebView2 start shows the window early.** On Windows, a window whose
+  WebView2 is not ready within 1.5 seconds appears titled `Loading…` with a
+  loading surface. UI automation that looks for the page waits for the page's
+  document or title, not only the window. A user who closes the window then
+  closes it: `OpenWindowAsync` returns it closed and no fallback opens. See
+  [the early first window](../desktop/host-selection.md#the-early-first-window-on-windows).
+- **A failed browser fallback throws `DesktopPresentationException`.** When
+  the `EmbeddedThenBrowser` fallback browser fails too, the exception keeps
+  its `Code` and `Category`, and its `InnerException` is the browser's
+  `DesktopException`. `catch (DesktopException)` still matches; a check for
+  the exact type does not.
+- **macOS serve-only starts no AppKit.** With `RUNIC_APPLICATION_SERVE_ONLY=1`
+  the process has no Dock icon and gets no open-document or open-URL events;
+  stop it with Ctrl+C, SIGTERM or a line on standard input.
+- **Windows administration error categories.** A component that is not
+  installed or registered, such as the Group Policy Management Console or a
+  WMI provider, is `AdministrationErrorCategory.NotInstalled` instead of
+  `Unavailable`, and several native errors moved from `NativeFailure` to
+  `NotFound`, `InvalidData`, `Unavailable` or `Conflict`; see
+  [Windows administration](../desktop-services.md#windows-administration).
+- **Vue's `commit()` resolves with the field's state**, as in React, Svelte
+  and Angular, so `if ((await title.commit()).error === undefined) …` works.
+  Code that awaited it and then read `title.error` still works.
+
+The
+[0.15.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/eng/release/notes/0.15.0.md#upgrading)
+list everything to check, and the
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.0/docs/migration-1.0.md#from-014-to-015)
+has before and after tables for each area, including the native server's
+library version and Nix.

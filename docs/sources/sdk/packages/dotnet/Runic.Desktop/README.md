@@ -270,6 +270,32 @@ differential evidence; no public `WebUi*` identity is exported.
 WebView; installed browsers are an explicit choice or an explicit
 `EmbeddedThenBrowser` fallback.
 
+Since 0.15, `DesktopWindowOptions.Fallbacks` lists the presentations a window
+tries, in order, when the first one cannot open: for example the embedded WebView,
+then an installed Chromium-based browser, then Firefox:
+
+```csharp
+var window = await surface.OpenWindowAsync(new DesktopWindowOptions
+{
+    Browser = BrowserKind.Embedded,
+    Fallbacks = [BrowserKind.ChromiumBased, BrowserKind.Firefox],
+});
+```
+
+`EmbeddedThenBrowser` is the shorthand for `Browser = BrowserKind.Embedded` with
+the selected browser as the one fallback; a non-empty `Fallbacks` replaces that
+browser (`Browser` must then be `Embedded`). Each failed presentation is reported
+as a warning (`embedded-presentation-fallback`, or `presentation-fallback` for a
+browser) and the next one is tried. When none opens, `OpenWindowAsync` throws a
+`DesktopPresentationException`: its `Attempts` list each presentation with the
+`DesktopException` it failed with, and its `Code` is the last attempt's. A
+presentation that opened but whose page never connected ends the chain with
+`presentation-connection-timeout`. An installed browser after the first
+presentation opens without `AllowedPermissions` and `ConfirmCloseAsync`, as the
+`EmbeddedThenBrowser` fallback does. `window.IsFallback` and `window.Browser`
+tell which presentation opened, and `GetPresentationPreflight(...).Fallbacks`
+reports the availability of each fallback without opening anything.
+
 Call `DesktopHost.Validate(windowOptions)` at startup to check a window request
 before anything opens. It evaluates the requested host and only the explicit
 fallback policy without creating a browser or WebView, and returns one
@@ -316,12 +342,12 @@ as unavailable.
 | --- | --- | --- |
 | `linux-embedded-backend-not-selected`, `gtk4-provider-missing`, `gtk4-runtime-missing`, `webkitgtk6-runtime-missing`, `webkitgtk-runtime-missing`, `webview2-runtime-missing`, `browser-not-found`, … | Error | The presentation or a native prerequisite is unavailable (`DesktopPlatform.GetAvailability(options)` lists them). |
 | `browser-unsupported` | Error | `Browser` is Safari or Opera. These values are detection-only: Runic Desktop neither discovers nor launches them. |
-| `window-option-invalid` | Error | An option has an undefined value, or a size that is not a positive number of pixels. |
-| `close-confirmation-unavailable` | Error or Warning | `ConfirmCloseAsync` is set for an explicitly selected browser (Error; opening throws a `DesktopException` with this code), or an `EmbeddedThenBrowser` fallback opens without close confirmation (Warning). |
+| `window-option-invalid` | Error | An option has an undefined value, a size that is not a positive number of pixels, or `Fallbacks` repeats a presentation. |
+| `close-confirmation-unavailable` | Error or Warning | `ConfirmCloseAsync` is set for an explicitly selected browser (Error; opening throws a `DesktopException` with this code), or a browser fallback (`EmbeddedThenBrowser`, `Fallbacks`) opens without close confirmation (Warning). |
 | `window-option-unsupported` | Error or Warning | The window host rejects an option (Error, such as GTK4 placement) or the presentation ignores it (Warning, such as `Frameless` in a browser). |
 | `window-option-incomplete` | Warning | Only one of `X`/`Y` or `MinimumWidth`/`MinimumHeight` is set. |
 | `permission-grant-unsupported` | Warning | An installed browser does not apply `MediaCapture` and asks the user instead (Firefox and, since 0.11.0, Chromium-based browsers). |
-| `permission-grant-withheld` | Warning | An `EmbeddedThenBrowser` fallback opens without the grant. |
+| `permission-grant-withheld` | Warning | A browser fallback (`EmbeddedThenBrowser`, `Fallbacks`) opens without the grant. |
 
 Sensitive permissions remain denied unless the window opts into a typed grant.
 WebView2, WKWebView, WebKitGTK and GTK4 windows grant `MediaCapture` only to the
@@ -373,6 +399,10 @@ page never connects: that fails with `presentation-connection-timeout`, and the 
 the server, and from that request once it has: a browser or WebView that starts
 slowly and requests its page just before the deadline still gets the whole timeout
 to finish the Bridge handshake, so one launch waits at most twice the timeout.
+Only the page's requests count: those with the window's client cookie, which the
+page's first response sets, or with the launch code of the browser the window
+started. A development tool or security scanner that probes the listener gets its
+usual answer but neither moves the deadline nor prevents a stalled browser's relaunch.
 An embedded WebView that has requested nothing yet but is still loading the page
 extends the timeout: it does not run out while the WebView's first navigation is in
 progress, nor within a whole timeout of the last startup step the WebView reported,
@@ -381,6 +411,21 @@ profile can take many seconds to start while Windows services the disk, and the
 Windows WebView2 windows report this progress; the other embedded windows and
 browsers keep the plain timeout. Each extension logs event 3021, and a timeout at the
 limit says how long the WebView was still loading.
+For an embedded WebView the launch is its first navigation. Creating the WebView2
+environment and controller comes before it, under no deadline. The first WebView2
+start after a runtime or Windows update can spend tens of seconds there with a cold
+disk: 13 to 78 seconds on new `windows-2025` runners with WebView2 156, where later
+starts with fresh profiles took under a second and the page connected within 2
+seconds of the window appearing. So the window does not wait for WebView2 longer than
+1.5 seconds: it then appears with a loading surface, which has the window's
+placement, size, maximized or full-screen state, title (`Loading…`, until the page
+sets one) and icon, the background of its `ColorScheme` (or of the Windows app
+theme, or the high-contrast colors) and an indeterminate progress bar, and the
+WebView takes its place once it exists. A start within 1.5 seconds shows the window
+once WebView2 is ready, as before; a `Hidden` window stays hidden, and a
+`Transparent` one waits for WebView2 as before. Closing the window during loading
+closes it without asking `ConfirmCloseAsync`, as nothing has loaded:
+`OpenWindowAsync` returns it closed, and no fallback presentation opens.
 A browser that is still running but has requested nothing after `ConnectionTimeout`
 is stopped and launched again, with a fresh profile unless the window sets one.
 Each relaunch reports `browser-launch-stalled` as a warning and logs event 3004.
@@ -1682,7 +1727,8 @@ describes the window owner the platform services receive for a window.
 
 | Property | Default | Effect |
 | --- | --- | --- |
-| `RunicDesktopMinimalHost` | `false` | `true` builds each surface's listener from an empty ASP.NET Core builder with Kestrel core and sockets only, and NativeAOT trims the default builder path; see the [size and tuning guide](https://docs.runic-artifex.eu/guides/desktop/size-and-tuning/). Any value other than `true` or `false` fails the build with [`RUNICDESK001`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk001). |
+| `RunicDesktopMinimalHost` | `false` | With `Runic.Desktop.Kestrel`, `true` builds each surface's listener from an empty ASP.NET Core builder with Kestrel core and sockets only, and NativeAOT trims the default builder path; see the [size and tuning guide](https://docs.runic-artifex.eu/guides/desktop/size-and-tuning/). Any value other than `true` or `false` fails the build with [`RUNICDESK001`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk001). |
+| `RunicDesktopServer` | the referenced server | The presentation server: `Kestrel` (`Runic.Desktop.Kestrel`), `Native` (`Runic.Desktop.NativeServer`, the default when both are referenced) or `None` for an executable that opens no window. An executable without a server package fails with [`RUNICDESK004`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk004); another value fails with [`RUNICDESK003`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk003). |
 
 ## Experimental APIs
 

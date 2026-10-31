@@ -30,6 +30,7 @@ test('picker options are the template choice parameters in order', () => {
       ['--package-manager', 'npm'],
       ['--host', 'desktop'],
       ['--linux-gtk', '3'],
+      ['--desktop-server', 'native'],
       ['--view-models', 'reactiveui'],
     ],
   );
@@ -73,7 +74,7 @@ test('a given application ID follows the toggles and replaces the default', () =
   const commands = creatorCommands('1.2.3', 'MyApp', selection);
   assert.equal(
     commands.creator,
-    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui --restore --application-id org.example.Notes',
+    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui --restore --application-id org.example.Notes',
   );
   assert.match(
     commands.create,
@@ -145,11 +146,11 @@ test('the tests toggle adds its flag and the test command', () => {
   });
   assert.equal(
     commands.creator,
-    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui --tests',
+    'dnx Runic.Create@1.2.3 -- MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui --tests',
   );
   assert.equal(
     commands.create,
-    'dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --view-models reactiveui --tests',
+    'dotnet new runic-app --name MyApp --frontend react --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui --tests',
   );
   assert.deepEqual(commands.nextSteps, [
     'cd MyApp',
@@ -202,12 +203,14 @@ test('the nix toggle adds its flag and a flake for the chosen host', () => {
 });
 
 test('commands match the creator and the template', () => {
-  // Like Runic.Create, a CS-WebUI project leaves out --linux-gtk.
+  // Like Runic.Create, a CS-WebUI project leaves out --linux-gtk and
+  // --desktop-server.
   const commands = creatorCommands('1.2.3', 'MyApp', {
     ...defaultSelection(),
     frontend: 'svelte',
     host: 'cswebui',
     linuxGtk: '4',
+    desktopServer: 'kestrel',
   });
   assert.equal(commands.interactive, 'dnx Runic.Create@1.2.3');
   assert.equal(
@@ -286,18 +289,35 @@ test('conditions support the template engine operators', () => {
 });
 
 test('computed template symbols follow the host choice', () => {
-  const computed = (host, linuxGtk = '3') => {
-    const { desktopHost, gtk4, nixHost } = templateSymbols({
+  const computed = (host, linuxGtk = '3', desktopServer = 'native') => {
+    const { desktopHost, gtk4, nativeServer, nixHost } = templateSymbols({
       ...defaultSelection(),
       host,
       linuxGtk,
+      desktopServer,
     });
-    return [desktopHost, gtk4, nixHost];
+    return [desktopHost, gtk4, nativeServer, nixHost];
   };
-  assert.deepEqual(computed('cswebui'), ['false', 'false', 'cswebui']);
-  assert.deepEqual(computed('cswebui', '4'), ['false', 'false', 'cswebui']);
-  assert.deepEqual(computed('desktop'), ['true', 'false', 'desktop']);
-  assert.deepEqual(computed('desktop', '4'), ['true', 'true', 'desktop-gtk4']);
+  assert.deepEqual(computed('cswebui'), ['false', 'false', 'false', 'cswebui']);
+  assert.deepEqual(computed('cswebui', '4'), [
+    'false',
+    'false',
+    'false',
+    'cswebui',
+  ]);
+  assert.deepEqual(computed('desktop'), ['true', 'false', 'true', 'desktop']);
+  assert.deepEqual(computed('desktop', '3', 'kestrel'), [
+    'true',
+    'false',
+    'false',
+    'desktop',
+  ]);
+  assert.deepEqual(computed('desktop', '4'), [
+    'true',
+    'true',
+    'true',
+    'desktop-gtk4',
+  ]);
 });
 
 test('every template file renders cleanly for every host and ViewModel choice', () => {
@@ -312,10 +332,11 @@ test('every template file renders cleanly for every host and ViewModel choice', 
     'frontends/angular/src/index.html',
   ];
   for (const frontend of ['react', 'vue', 'svelte', 'sveltekit', 'angular'])
-    for (const [host, linuxGtk] of [
-      ['cswebui', '3'],
-      ['desktop', '3'],
-      ['desktop', '4'],
+    for (const [host, linuxGtk, desktopServer] of [
+      ['cswebui', '3', 'native'],
+      ['desktop', '3', 'native'],
+      ['desktop', '4', 'native'],
+      ['desktop', '3', 'kestrel'],
     ])
       for (const viewModels of ['toolkit', 'reactiveui']) {
         const symbols = templateSymbols({
@@ -323,10 +344,12 @@ test('every template file renders cleanly for every host and ViewModel choice', 
           packageManager: 'npm',
           host,
           linuxGtk,
+          desktopServer,
           viewModels,
         });
         const desktop = host !== 'cswebui';
         const gtk4 = desktop && linuxGtk === '4';
+        const native = desktop && desktopServer === 'native';
         const files = Object.fromEntries(
           sources.map((path) => [path, renderTemplate(read(path), symbols)]),
         );
@@ -334,7 +357,7 @@ test('every template file renders cleanly for every host and ViewModel choice', 
           assert.doesNotMatch(
             content,
             /^\s*(#|<!--#)(if|elif|else|endif)\b/m,
-            `${path} ${host} ${linuxGtk} ${viewModels}`,
+            `${path} ${host} ${linuxGtk} ${desktopServer} ${viewModels}`,
           );
         assert.equal(
           files['Program.cs'].includes('return RunicDesktopHost.Run('),
@@ -351,6 +374,19 @@ test('every template file renders cleanly for every host and ViewModel choice', 
         assert.equal(
           files['RunicWindowApp.csproj'].includes('Runic.Desktop.Gtk4'),
           gtk4,
+        );
+        // Runic Desktop references the server it serves the page from.
+        assert.equal(
+          files['RunicWindowApp.csproj'].includes(
+            'Include="Runic.Desktop.NativeServer"',
+          ),
+          native,
+        );
+        assert.equal(
+          files['RunicWindowApp.csproj'].includes(
+            'Include="Runic.Desktop.Kestrel"',
+          ),
+          desktop && !native,
         );
         // Every host loads the host-neutral Views client.
         for (const index of [
