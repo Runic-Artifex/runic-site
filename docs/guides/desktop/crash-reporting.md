@@ -13,7 +13,7 @@ and have not been run for Runic.
 
 | Where it is thrown                                                                                               | What happens                                                                                                                                                                                                                                         |
 | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A Bridge command, setter, checked write or operation                                                             | The page gets a bounded failure and the exception is logged ([events 1000 to 1008](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)). The application keeps running. |
+| A Bridge command, setter, checked write or operation                                                             | The page gets a bounded failure and the exception is logged ([events 1000 to 1008](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)). The application keeps running. |
 | A close guard, a `DesktopWindow.StateChanged` or `FilesDropped` handler                                          | Logged (1052, 3011, 3012). The application keeps running.                                                                                                                                                                                            |
 | Since SDK `0.11.0`: a `DesktopWindow.Closed` handler, a menu command target, a `MenuBarPlacementChanged` handler | Logged (3013, 3014, 3017). The application keeps running.                                                                                                                                                                                            |
 | A status icon's `Activated` handler                                                                              | Rethrown on the thread pool: the process ends as for any thread-pool exception.                                                                                                                                                                      |
@@ -29,14 +29,14 @@ no visible standard error, so log it yourself.
 On Linux, WebKitGTK renders the page in a separate web process. When that
 process crashes, the window reloads its page and Runic reports
 `web-process-terminated` (event 3010); the application keeps running. See
-[Web process crashes on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#web-process-crashes-on-linux);
+[Web process crashes on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#web-process-crashes-on-linux);
 the crash of `WebKitWebProcess` itself is in the system journal
 (`coredumpctl`).
 
 ## Log the exception that ends the process
 
 Register logging as the
-[Views guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
+[Views guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
 describes, then log from `AppDomain.UnhandledException`. It is raised for the
 application body and for every other thread, before the process ends:
 
@@ -64,6 +64,45 @@ return RunicDesktopHost.Run(provider, options, RunAsync);
   after the next start.
 - Exception messages can contain user data. Show the user what a report
   contains before they send it.
+
+## Page errors in .NET logs
+
+An error in the page, such as a `TypeError` in a click handler or a promise
+nothing awaited, stays in the web view's console unless the page reports it.
+Since SDK `0.16.0`, call `installErrorReporting()` from `@runic-artifex/views`
+once when the page starts, before the first View connects:
+
+<!-- prettier-ignore -->
+```ts docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+import { installErrorReporting } from "@runic-artifex/views";
+
+installErrorReporting({
+  // Optional: remove application data from messages before they leave the page.
+  redact: report => ({ ...report, message: report.message.replace(/\d{12,19}/g, "[number]") }),
+});
+```
+
+The page then reports uncaught errors, unhandled promise rejections and the
+errors the Views runtime catches to the .NET host, which logs each as event
+1150 `PageError` in the category `Runic.Application.Views.Page`
+(`RunicViewsTelemetry.PageLogCategory`), with the stack last. A crash reporter
+or log forwarder that reads `ILogger` picks them up beside the host's own
+errors; filter or route the category on its own.
+
+- Reports are bounded and redacted in the page: every URL loses its query and
+  fragment, and `redact` can change or drop a report.
+- The host treats a report as untrusted input: it cuts and cleans its texts
+  and marks every stack line, so a page's text cannot pass for a line the host
+  wrote. Read the text as the page's claim.
+- The host logs at most 10 reports per page connection and 30 per window a
+  minute, and logs event 1151 `PageErrorsSuppressed` or 1152
+  `WindowPageErrorsSuppressed` once when it starts counting.
+- Reporting is the Views protocol 4 feature `client-errors/1`: a page and host
+  of 0.16 or later use it, and with an earlier host the page drops its
+  reports.
+
+See
+[page errors](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#page-errors).
 
 ## Capture a crash dump
 
@@ -132,6 +171,7 @@ For a report to the application's developer:
 - the application version and the operating system version;
 - the logged exception, or the standard error output when the application was
   started from a terminal;
+- page errors (event 1150), when the page installed error reporting;
 - `diagnostics.log`, when the application keeps one;
 - a dump, only if the developer asks and the user agrees.
 

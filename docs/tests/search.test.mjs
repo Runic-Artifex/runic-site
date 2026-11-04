@@ -141,8 +141,12 @@ const queries = {
 // from 528 KiB raw and 144 KiB gzipped with the 0.14.0 API types and guides
 // (fields, forms and frontend testing), and from 152 KiB gzipped with the
 // 0.15.0 API types and guides (presentation server, scoped commands, queued
-// navigation), which need about 575 KiB raw and 155 KiB gzipped.
-const budget = { raw: 576 * 1024, gzip: 160 * 1024 };
+// navigation), which need about 575 KiB raw and 155 KiB gzipped, and from
+// 576 KiB raw and 160 KiB gzipped with the 0.16.0 API types and guides
+// (about 400 new types: view requests, windows, forms, query collections,
+// blobs, document tabs and navigation paths), which need about 684 KiB raw
+// and 177 KiB gzipped.
+const budget = { raw: 720 * 1024, gzip: 184 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {

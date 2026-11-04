@@ -11,15 +11,15 @@ construction, typed commands, property writes, and operation lifetimes. The
 browser opens and closes a presentation of each View it shows, so a content
 session can create and release its logical View as frontend routes change. Generated clients are framework-neutral;
 React, Vue, Svelte, Angular, and plain TypeScript use the same contract. They
-share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/web/views/README.md),
+share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/views/README.md),
 which also provides a mock Bridge for development without .NET. The
-[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/web/react/README.md) and
-[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/web/vue/README.md) packages, `useView` in
-[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/web/svelte/README.md) and
-`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/web/angular/README.md)
+[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/react/README.md) and
+[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/vue/README.md) packages, `useView` in
+[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/svelte/README.md) and
+`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/angular/README.md)
 connect and dispose clients with component lifetimes. Since SDK `0.11.0`, a
 SvelteKit frontend uses `@runic-artifex/svelte` with
-[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/web/sveltekit/README.md),
+[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/sveltekit/README.md),
 which prerenders its pages for the Window.
 
 Start with [getting started](getting-started/README.md), follow
@@ -27,11 +27,11 @@ Start with [getting started](getting-started/README.md), follow
 [add Runic to an existing app](existing-app.md). Existing WPF applications can
 [adopt Runic incrementally](migrations/wpf-incremental.md), keeping their shell
 and models while adding native navigation and optional embedded web Views. The
-[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/first-window/README.md) is the smallest example; then read the
-[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/notes-view-first/README.md) and
-[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/notes-reactive-views/README.md) examples. The
+[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/first-window/README.md) is the smallest example; then read the
+[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/notes-view-first/README.md) and
+[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md).
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.
@@ -39,7 +39,7 @@ types are in the `Runic.Application.Views` namespace; the
 ## Navigation and model context packages
 
 Since 0.7.0-preview.4, navigation and model contexts live in
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md).
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md).
 It can be used independently of Views; `Runic.Application.Views` references it
 transitively. Add `using Runic.Navigation;` for `RunicNavigator`, regions,
 `IRunicModelContext`, `RunicModelContext` and `RunicModelContextRegistry`, then
@@ -52,7 +52,7 @@ scheduling helpers, `AddRunicReactiveModelContext()` and
 `using Runic.Application.Views.ReactiveUI;` for them.
 [Pages and navigation](guides/pages-and-navigation.md) and
 [ViewModel state and threads](guides/model-context.md) show both in use. The
-[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/eng/release/notes/0.7.0-preview.4.md)
+[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.7.0-preview.4.md)
 list the moved types.
 
 ## Upgrading generated clients
@@ -100,9 +100,9 @@ together, and add `@runic-artifex/views` to the frontend's dependencies.
   [forms and validation](guides/forms-and-validation.md).
 
 The
-[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/eng/release/notes/0.13.0.md#upgrading)
+[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.13.0.md#upgrading)
 list everything to check when upgrading, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/docs/migration-1.0.md#from-012-to-013)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#from-012-to-013)
 has before and after tables.
 
 ## Upgrading from 0.13 to 0.14
@@ -175,9 +175,9 @@ change: the new features are negotiated in `hello`, so a `0.13` page and a
   older than 10.0.403 or a Bun older than 1.4.4.
 
 The
-[0.14.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/eng/release/notes/0.14.0.md#upgrading)
+[0.14.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.14.0.md#upgrading)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/docs/migration-1.0.md#from-013-to-014)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#from-013-to-014)
 has before and after tables for each area, including tests, Windows, Nix and
 the CLI tools.
 
@@ -186,7 +186,7 @@ the CLI tools.
 Update every Runic NuGet and npm package to `0.15.1` together
 (`Runic.Application.Views.CsWebUi` to `0.15.1-preview.1`) and rebuild, so the
 generated clients, bridges and mocks regenerate. `0.15.1` is `0.15.0` with
-[one fix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/eng/release/notes/0.15.1.md):
+[one fix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.15.1.md):
 a Svelte `$effect` that reads only `client`, `error` or `pending` from
 `useView` no longer runs again with every state. Views protocol 4 does not
 change: the new features `presentation-epoch/1` and `presented/1` are
@@ -275,8 +275,110 @@ behave as in `0.14`. Check these if they apply:
   Code that awaited it and then read `title.error` still works.
 
 The
-[0.15.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/eng/release/notes/0.15.0.md#upgrading)
+[0.15.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.15.0.md#upgrading)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/docs/migration-1.0.md#from-014-to-015)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#from-014-to-015)
 has before and after tables for each area, including the native server's
 library version and Nix.
+
+## Upgrading from 0.15 to 0.16
+
+Update every Runic NuGet and npm package to `0.16.0` together
+(`Runic.Application.Views.CsWebUi` to `0.16.0-preview.1`) and rebuild, so the
+generated clients, bridges and mocks regenerate. `0.16.0` only adds APIs. Views
+protocol 4 does not change: the new wire members are features negotiated in
+`hello`, such as `view-requests/1`, `field-paths/1` and `navigation-path/1`,
+so a `0.15` page and a `0.16` host, or the reverse, still connect and behave
+as in `0.15`. Check these if they apply:
+
+- **CS-WebUI needs the `0.16` page and host for its security fix.** A page
+  that reloaded, or another browser that connected right after a page left,
+  could receive the pushes and questions of the page that had just closed.
+  With `request-session/1` each request names its page's session, and each
+  connection gets a key that no later connection reuses. Replace any copy of
+  `runic-cswebui.js` that the application keeps outside `www/`; a `0.15` page
+  on a `0.16` host is only partly protected. A hand-written Views client lists
+  `request-session/1` in its `hello` and sends its session with each request.
+  See [who is connected](samples/cross-window.md#who-is-connected).
+- **`ConnectionKey` is the window's key.** On CS-WebUI and the in-memory test
+  transport, `RunicInteractionInvocation.ConnectionKey` is now `connection-1#1`
+  or `0:1#2` instead of the transport's key. Compare it with
+  `RunicViewDriver.Connection` or `IRunicConnections`, and use
+  `IRunicConnections.Caller` instead of telling `MultiClient` pages apart
+  through a command argument.
+- **A page answers questions that used to fall back to .NET.** A ReactiveUI
+  interaction asked by a command on another route of the window, or by a
+  menu-bar command, now reaches a page that has a handler mounted, also a
+  `0.15` page on a `0.16` host. Keep the .NET handler only for when no page is
+  mounted. See [ask the page and await its answer](samples/prompts.md#ask-the-page-and-await-its-answer).
+- **A page's command identity ends with the command.** A timer, `Task.Run` or
+  background loop that a page's command started no longer asks that page;
+  `RunicInteractionInvocation.Current` is `null` there. Enter
+  `RunicInteractionInvocation.EnterWindow(viewModel)` for long-lived work that
+  should ask the window's page. An async ReactiveCommand run by an in-page menu
+  click asks its page before its first `await`.
+- **Field kinds and text.** `decimal`, `DateOnly`, `TimeOnly`, `DateTime` and
+  `DateTimeOffset` members have the kinds `decimal`, `date`, `time` and
+  `datetime` instead of `text`; treat an unknown kind like `value`. Empty text
+  in a nullable one is `null`, and in a non-nullable one an `invalid-text`
+  error. `time` text is `10:30`, a `datetime` field shows the page's local
+  time, and number text no longer accepts `0x10` or `0b1`. Once the
+  application sets the window's language with `IRunicWindowLocale`, number,
+  date and time fields without their own `locale` follow it: give a field bound
+  to `<input type="number">` or `type="date"` `locale: null` (`bindField` does
+  that itself). See [upgrading from 0.15](guides/forms-and-validation.md#upgrading-from-015)
+  in forms and validation.
+- **Departure guards see the last keystrokes.** With a `0.16` page and host,
+  the window's pages write their drafts before a departure guard runs
+  (`field-flush/1`), so a guard can run up to 1 second later. In tests, set
+  `InMemoryBridgeTransport.FieldFlush`.
+- **Recent documents on Windows and Linux.**
+  `DesktopHost.NoteRecentDocumentAsync` and `ClearRecentDocumentsAsync`, which
+  did nothing outside macOS, now add to and clear Explorer's Recent items and
+  Jump List and `recently-used.xbel`. Guard a call you don't want there. See
+  [recent documents](../desktop-services.md#recent-documents).
+- **`DesktopWindow.FocusAsync` restores a minimized window on Windows**, as on
+  macOS and GTK; an extra restore before it can go.
+- **Your own `IRunicWindowService`** still compiles: the new members, such as
+  `FindOrOpenAsync` and `OpenForResultAsync`, throw `NotSupportedException`
+  until it implements them.
+- **CS-WebUI serves blobs and uploads from a loopback endpoint** of each
+  window, on another origin than the page. A page `Content-Security-Policy`
+  allows `http://localhost:*` for `img-src`, `media-src` and `connect-src` to
+  use them. See [blobs and uploads](samples/files.md#blobs-and-uploads).
+- **A native server library of your own** (`RunicDesktopNativeServerLibraryDirectory`,
+  Nix `runicServer`) is built from `0.16`: its C ABI is version 3, and an older
+  library fails at startup with `native-server-unavailable`. Applications that
+  reference `Runic.Desktop.NativeServer` get the matching library.
+- **Serve-only test harnesses** accept a
+  `RUNIC_APPLICATION_WINDOW=<url> <Window type>` line after each
+  `RUNIC_APPLICATION_URL=` line, and tests that compare the in-memory
+  transport's messages exactly expect a `session` and the new features in its
+  `hello`. See [behaviour that 0.16 tests meet](guides/frontend-testing.md#behaviour-that-016-tests-meet).
+
+Code of your own can often become a 0.16 API: a state flag the page watched to
+focus a field becomes a [`ViewRequest<T>`](samples/prompts.md#ask-the-page-to-act);
+a dictionary of open windows becomes
+[`FindOrOpenAsync`](samples/cross-window.md#find-or-open-a-window); a saved
+baseline for `IsDirty` becomes
+[`RunicEditSession<T>`](guides/forms-and-validation.md#forms-and-edit-sessions);
+a command per cell becomes a
+[row editor](guides/forms-and-validation.md#editable-rows-and-nested-fields); a
+rebuilt menu bar for a check mark becomes
+[`IRunicMenuCheckedSource`](../desktop-services.md#check-marks); a theme switch
+that reloaded the page becomes
+[`SetColorSchemeAsync`](samples/settings.md#light-and-dark-at-run-time); and a
+fake file dialog of your own becomes
+[`AddRunicTestPlatform()`](guides/frontend-testing.md#platform-fakes). New in
+`0.16.0` as well: [document tabs](guides/pages-and-navigation.md#document-tabs),
+[saved navigation and deep links](guides/pages-and-navigation.md#save-and-restore-navigation),
+[Back and the URL](guides/pages-and-navigation.md#back-and-the-url),
+[query collections](guides/dynamicdata.md#query-collections),
+[power and session events](../desktop-services.md#power-and-session-events)
+and [page errors in .NET logs](../desktop/crash-reporting.md#page-errors-in-net-logs).
+
+The
+[0.16.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.16.0.md#upgrading)
+list everything to check, and the
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#from-015-to-016)
+has before and after tables for each area, including tests.

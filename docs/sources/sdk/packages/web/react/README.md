@@ -202,6 +202,34 @@ or text failed (a `BridgeError` or a `FieldError`, whose `kind` is `rejected`, `
 [field controller](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#fields) for the receipts
 and text forms.
 
+#### Row cells and nested members
+
+Since 0.16, `InvoiceFields.address.street` and `InvoiceFields.lines.at(line.id).quantity` are fields too
+(`field-paths/1`): a member of an object member, and a cell of a row that .NET edits with `[RunicRowEditor]`. Bind
+each cell in the row's component; `at(key)` returns the same descriptor for the same key, so the field survives
+re-renders and moves:
+
+```tsx
+function LineRow({ invoice, line }: { invoice: InvoiceView; line: InvoiceLine }) {
+  const quantity = useField(invoice, InvoiceFields.lines.at(line.id).quantity, { commit: "pause" });
+  return <td><input {...quantity.inputProps} />{quantity.conflict && <button onClick={quantity.retry}>Keep mine</button>}</td>;
+}
+```
+
+Such a field always writes checked, conflicts only when another writer changed the same cell, and shows the messages
+.NET reports at the cell's validation path. See [Fields below a member and row cells](../views/README.md#fields-below-a-member-and-row-cells).
+
+### Forms: `useForm(fields, options?)`
+
+One state over a component's field handles, and a `submit` that writes every field before its command
+(`createFormController` in `@runic-artifex/views`). `dirty` counts drafts not written yet and the `dirty` option, such
+as the View's `isDirty`; `pending` is true while a draft, a check (`validating`) or a submit runs.
+
+```tsx
+const form = useForm({ title, step }, { dirty: editor.state?.isDirty });
+<button disabled={!form.valid || form.submitting} onClick={() => form.submit(() => editor.client!.save())}>Save</button>
+```
+
 ### Text inputs: `useTextField(view, read, write, options?)`
 
 Binds a controlled text input to a member through the framework-neutral
@@ -295,6 +323,69 @@ reference whose kind has no component, and its markup (including any `role`) is 
 <ViewOutlet content={state?.main} registry={pages}
   missing={page => <p role="alert">{t("missingView", { kind: page.kind })}</p>} />
 ```
+
+### Region collections
+
+A .NET `[RunicRegionCollection]` member, such as `state.documents`, lists
+regions that each keep their own back stack. `<RegionOutlets>` renders a
+`ViewOutlet` for each region, keyed by the region's key, inside a
+`<div data-region-key>`. The default `mode="keep-mounted"` keeps every region mounted
+and sets `hidden` and an inline `display: none` on all but the selected one, so
+a tab keeps its component, scroll position and unsent input. Author CSS cannot
+show a hidden panel without `!important`. `mode="selected"` renders only the
+selected region. `fallback` renders while there is no region, and `missing` is
+passed to each outlet. A region with `content: null` renders nothing.
+
+The package has no tab bar. Build one with `regionEntries` and the generated
+`selectDocuments(key)` and `closeDocuments(key)`. `panelProps(entry)` returns attributes for each region's wrapper, such as `id`,
+`role="tabpanel"` and `aria-labelledby`, so each tab can name its panel in
+`aria-controls`. `hidden` and `data-region-key` stay controlled by the outlet,
+and a returned `style` is merged with its `display: none`.
+
+```tsx
+const tabId = (key: string) => `document-tab-${key}`;
+const panelId = (key: string) => `document-panel-${key}`;
+const [refocus, setRefocus] = useState(false);
+useEffect(() => {
+  if (!refocus) return;
+  const key = selectedRegion(state?.documents)?.key;
+  if (key) document.getElementById(tabId(key))?.focus();
+  setRefocus(false);
+}, [refocus, state?.documents]);
+async function close(key: string) {
+  if ((await client?.closeDocuments(key))?.kind === "Committed") setRefocus(true);
+}
+
+<div role="tablist">
+  {regionEntries(state?.documents).map(tab => (
+    <span key={tab.key}>
+      <button id={tabId(tab.key)} role="tab" aria-selected={tab.selected} aria-controls={panelId(tab.key)}
+        onClick={() => void client?.selectDocuments(tab.key)}>
+        {tab.content?.kind ?? "Empty"}
+      </button>
+      <button aria-label="Close" onClick={() => void close(tab.key)}>×</button>
+    </span>
+  ))}
+</div>
+<RegionOutlets collection={state?.documents} registry={documentPages} fallback={<p>No open documents</p>}
+  panelProps={tab => ({ id: panelId(tab.key), role: "tabpanel", "aria-labelledby": tabId(tab.key) })} />
+```
+
+`selected` changes only when a switch or close commits. A departure guard can
+keep the current tab, so highlight `selected` and do not move the highlight
+before the request settles. `select…` and `close…` resolve to the .NET
+`NavigationOutcome`, such as `{ kind: "Rejected", rejection: "Guard" }`.
+
+Closing the selected tab removes its button, and the next tab becomes selected
+when the close commits. After `closeDocuments` resolves with `kind: "Committed"`,
+move focus to the button of the new selected tab, as `close` above does.
+
+In both modes the region collection keeps presenting every region's content,
+so the pages of hidden tabs stay live and still receive state. `"selected"`
+mode only unmounts the components of the regions that are not selected.
+
+`regionEntries`, `selectedRegion` and the region types are re-exported from
+`@runic-artifex/views`.
 
 ## `useCommand(command)`
 
@@ -490,6 +581,23 @@ With Radix (`@radix-ui/react-menubar`) the open menu is the root's controlled
 Check items are `Menubar.CheckboxItem checked`, radio groups
 `Menubar.RadioGroup value` with `Menubar.RadioItem`.
 
+## `useText(value, fallback?)`
+
+Shows a text reference that a ViewModel produced, such as a status line or a
+validation error's `text`, in the window's language, and renders again when the
+language changes. A string shows as it is; `null` and `undefined` show
+`fallback`. Connect the page's Translations runtime once with
+`configureTranslatedText` ([Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#translated-text)).
+`useWindowLocale()` reads the window's locale.
+
+```tsx
+const status = useText(view.state?.status);
+<p>{status}</p>
+function ErrorLine({ error }: { error: BridgeValidationMessage }) {
+  return <li>{useText(error.text, error.message)}</li>;
+}
+```
+
 ## Errors
 
 The `error` of `useView` and of a command or operation handle is typed
@@ -555,6 +663,35 @@ the generated mock's `interactions.<name>.request(input)` resolves with the
 registered handler's answer; see the
 [Testing guide](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#testing).
 
+## View requests
+
+A `ViewRequest<T>` property of the ViewModel asks the View for a one-way
+presentation action, such as focusing a field or showing a toast, and is
+`client.requests.<name>` on the generated client. Register the page's
+handler in an effect: `handle((input, { signal }) => …)` returns the function
+that removes it, so React removes the handler when the page unmounts or its
+client changes:
+
+```tsx
+export function EditPage({ page }: { page: EditPageReference }) {
+  const { client } = useView(page);
+  const name = useRef<HTMLInputElement>(null);
+  useEffect(() => client?.requests.focus.handle(({ member }) => {
+    if (member === "name") name.current?.focus();
+  }), [client]);
+  return <input ref={name} />;
+}
+```
+
+`input` is typed from the request's `ViewRequest<T>`. The handler runs once
+the page painted the state the request was raised with, so the field of that
+state is rendered; `signal` aborts when the handler is replaced or removed, the
+client is disposed or the connection is lost. A request is never replayed: one
+raised before the effect ran, or while the page is disconnected, is not
+delivered later. See [View requests](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#view-requests) for the rules, and in a frontend
+test raise one with the generated mock's `requests.<name>.raise(input)` (the
+[Testing guide](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#testing)).
+
 ## `useCollectionViewport(options)`
 
 Follows a fixed-row-height scroll container and returns `{ viewport, ref }`.
@@ -574,3 +711,31 @@ return <div ref={ref} style={{ height: 480, overflow: "auto" }}>
   </div>
 </div>;
 ```
+
+## `useQueryCollection(collection, options)`
+
+Follows a scroll container for a [query collection](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#query-collections) (`client.queries.{name}`), whose rows stay in .NET: it
+loads the rows the container shows, with placeholders until they arrive, and lays them out with variable heights
+(`estimateSize` for rows not measured yet). It returns the `QueryViewport` (`items` with `top` and `size`, `totalSize`,
+`total`, `query`, `loading`, `error`), `ref` for the container, `measure(index)` for each row, and `scrollToKey`,
+`scrollToIndex`, `setQuery` and `retry`:
+
+```tsx
+const list = useQueryCollection(client.queries.rows, { estimateSize: 32 });
+return <div ref={list.ref} style={{ height: 480, overflow: "auto" }}>
+  <div style={{ height: list.totalSize, position: "relative" }}>
+    {list.items.map(item => <div key={item.key ?? `p${item.index}`} ref={list.measure(item.index)} style={{ position: "absolute", top: item.top, width: "100%" }}>
+      {item.row?.label ?? "…"}
+    </div>)}
+  </div>
+</div>;
+```
+
+## Back and the URL
+
+The package re-exports `installBackNavigation`, `installNavigationPath`,
+`navigateBack`, `openNavigationPath` and `onNavigationPath` from
+`@runic-artifex/views` (since 0.16). Call the installs once where the page
+starts, before or after mounting: the mouse's Back button and Alt+Left then go
+back in the .NET window, and `#/customers/42` follows its path region. See
+[Back and the URL](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#back-and-the-url).

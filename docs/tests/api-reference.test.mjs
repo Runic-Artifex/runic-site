@@ -97,28 +97,29 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  // 2.75 MiB since 0.14.0 added the field API, application platform services,
-  // window parameters and asynchronous test drivers, which need about
-  // 2.64 MiB; 2.5 MiB since 0.12.0.
-  assert.ok(inputs <= 2.75 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  // 3.75 MiB since 0.16.0 added view requests, window management, forms,
+  // query collections, blobs, region collections, navigation paths and the
+  // platform test fakes, about 400 public types that need about 3.53 MiB;
+  // 2.75 MiB since 0.14.0 and 2.5 MiB since 0.12.0.
+  assert.ok(inputs <= 3.75 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads. 272 KiB per page
-  // since 0.14.0, whose @runic-artifex/views page needs about 253 KiB with the
-  // field API; 224 KiB since 0.13.0.
+  // __data.json payloads that client-side navigation loads. 416 KiB per page
+  // since 0.16.0, whose @runic-artifex/views page needs about 392 KiB with
+  // forms, query collections, blobs and navigation paths; 272 KiB since
+  // 0.14.0 and 224 KiB since 0.13.0.
   let compressed = 0;
   for (const file of files(buildApi)) {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 272 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 416 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 6 MiB since 0.15.0 (presentation epochs, navigation admission, fallback
-  // presentations, Windows administration clients), which needs about
-  // 5.78 MiB; 5.75 MiB since 0.14.0, 5.5 MiB since 0.13.0 and 5.25 MiB since
-  // the platform services of 0.11.0.
+  // 7.5 MiB since 0.16.0, which needs about 7.14 MiB; 6 MiB since 0.15.0,
+  // 5.75 MiB since 0.14.0, 5.5 MiB since 0.13.0 and 5.25 MiB since the
+  // platform services of 0.11.0.
   assert.ok(
-    compressed <= 6 * 1024 * 1024,
+    compressed <= 7.5 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });
@@ -424,6 +425,54 @@ test('links inheritdoc from framework types to Microsoft Learn', () => {
       'E:System.ComponentModel.INotifyPropertyChanged.PropertyChanged',
       'M:System.Object.ToString',
       undefined,
+    ],
+  );
+});
+
+test('hides interfaces internal to another documented assembly', () => {
+  const declaration = (...interfaces) => [
+    'public sealed class Transport : ',
+    ...interfaces.flatMap((id, index) => [
+      ...(index ? [', '] : []),
+      [id.split('.').at(-1), id],
+    ]),
+  ];
+  const library = {
+    package: 'Demo',
+    framework: 'net10.0',
+    types: [{ id: 'T:Demo.IPublic', namespace: 'Demo', signature: [] }],
+  };
+  const host = {
+    package: 'Demo.Host',
+    framework: 'net10.0',
+    types: [
+      ['T:Demo.IPublic', 'T:Demo.IInternal', 'T:System.IDisposable'],
+      ['T:Demo.IInternal', 'T:System.IDisposable'],
+      ['T:System.IDisposable', 'T:Demo.IInternal'],
+      ['T:Demo.IInternal'],
+    ].map((interfaces, index) => ({
+      id: `T:Demo.Host.Transport${index}`,
+      namespace: 'Demo.Host',
+      interfaces,
+      signature: declaration(...interfaces),
+    })),
+  };
+  finishApiPackages([library, host]);
+  assert.deepEqual(
+    host.types.map((type) => [
+      type.interfaces,
+      type.signature
+        .map((part) => (Array.isArray(part) ? part[0] : part))
+        .join(''),
+    ]),
+    [
+      [
+        ['T:Demo.IPublic', 'T:System.IDisposable'],
+        'public sealed class Transport : IPublic, IDisposable',
+      ],
+      [['T:System.IDisposable'], 'public sealed class Transport : IDisposable'],
+      [['T:System.IDisposable'], 'public sealed class Transport : IDisposable'],
+      [undefined, 'public sealed class Transport'],
     ],
   );
 });

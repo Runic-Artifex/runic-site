@@ -2,7 +2,7 @@
 
 Each of these words names one concept across the Runic packages, the generated
 clients and these guides. The first seven follow the glossary of the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md#glossary).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#glossary).
 
 ## Windows and Views
 
@@ -34,6 +34,14 @@ clients and these guides. The first seven follow the glossary of the
   that carries state, property writes, commands and operations between the
   ViewModel and its View over Views protocol 4 (since SDK `0.13.0`). `Bridge*` types and the
   `RUNICBRIDGE` diagnostics belong to this generated layer.
+- **View request**: since SDK `0.16.0`, a get-only `ViewRequest<T>` that a
+  ViewModel raises to ask its page for a presentation action, such as focusing
+  a field, without an answer. See
+  [ask the page to act](samples/prompts.md#ask-the-page-to-act).
+- **View question**: since SDK `0.16.0`, a `ViewQuestion<TInput, TOutput>`
+  that any ViewModel asks its page with `AskAsync` and whose answer it awaits,
+  with an optional .NET fallback. See
+  [ask the page and await its answer](samples/prompts.md#ask-the-page-and-await-its-answer).
 
 ## Hosts and windows
 
@@ -47,6 +55,15 @@ clients and these guides. The first seven follow the glossary of the
   `AddRunicWindowService()`, opens another Window from a ViewModel or service,
   in its own DI scope on the host that runs the application; see
   [opening a Window from a ViewModel](samples/cross-window.md#open-a-window-from-a-viewmodel).
+- **Owned Window**: since SDK `0.16.0`, a Window opened with
+  `RunicWindowOptions.Owner`; it hides and shows with its owner, and with
+  `Modality = RunicWindowModality.Window` it blocks the owner until it closes.
+  See [owned and window-modal Windows](samples/cross-window.md#owned-and-window-modal-windows).
+- **Connection**: one page connected to a Window. Since SDK `0.16.0` each has
+  a key that no later connection of the Window reuses, and
+  `IRunicConnections` lists them and names the `Caller` of the running
+  command. Keys tell pages apart; they are not user identity. See
+  [who is connected](samples/cross-window.md#who-is-connected).
 - **Presentation**: what shows a Window's or View's web content on screen: an
   embedded WebView or an installed browser window, such as
   `DesktopBridgeWindow.Window` (a `DesktopWindow`). A presentation closes
@@ -85,6 +102,16 @@ clients and these guides. The first seven follow the glossary of the
   `await` in a command resumes in a later turn of the same context, so setting
   state after `await` is correct; see
   [ViewModel state and threads](guides/model-context.md).
+- **Query collection**: since SDK `0.16.0`, a `RunicQueryCollection<TRow, TKey>`
+  whose rows stay in .NET, such as a database table; each page loads only the
+  range it shows. See [query collections](guides/dynamicdata.md#query-collections).
+- **Blob and upload**: since SDK `0.16.0`, `RunicBlob` sends binary content
+  to the page as a URL of its Window, and `RunicUpload` is a file the page
+  streamed to the Window's host. See
+  [blobs and uploads](samples/files.md#blobs-and-uploads).
+- **Edit session**: since SDK `0.16.0`, a `RunicEditSession<T>` that keeps a
+  form's saved baseline and reports `IsDirty`. See
+  [forms and edit sessions](guides/forms-and-validation.md#forms-and-edit-sessions).
 
 ## Navigation
 
@@ -98,6 +125,13 @@ clients and these guides. The first seven follow the glossary of the
   their own stack. Switching is a guarded transition that asks the tab left;
   in Runic Views its `SelectedIndex` is state, not a content slot. See
   [tabs that keep their own pages](guides/pages-and-navigation.md#tabs-that-keep-their-own-pages).
+- **Region collection**: since SDK `0.16.0`, a `NavigationSelection` marked
+  `[RunicRegionCollection]` whose regions open and close at run time, such as
+  document tabs. See [document tabs](guides/pages-and-navigation.md#document-tabs).
+- **Route and navigation path**: since SDK `0.16.0`, a route maps a path such
+  as `customers/42` to a navigation target, and a `NavigationPath` saves a
+  Window's navigation to rebuild it later or show it in the URL. See
+  [save and restore navigation](guides/pages-and-navigation.md#save-and-restore-navigation).
 - **Entry**: one visit in a region's history. A borrowed entry presents a
   ViewModel that someone else owns, such as the Window's scope; an owned
   entry's ViewModel belongs to the entry, usually created for the visit, and is

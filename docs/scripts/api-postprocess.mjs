@@ -1,6 +1,9 @@
+import assert from 'node:assert/strict';
+
 // Completes extracted API models across packages before they are checked in:
-// resolves <inheritdoc/> from base types, interfaces or an explicit cref, and
-// documents positional record properties from their <param> docs.
+// drops interfaces that are internal to another documented assembly, resolves
+// <inheritdoc/> from base types, interfaces or an explicit cref, and documents
+// positional record properties from their <param> docs.
 
 const kindOf = (id) => id.slice(0, id.indexOf(':'));
 
@@ -10,8 +13,64 @@ function memberSuffix(type, member) {
   return body.startsWith(prefix) ? body.slice(prefix.length) : null;
 }
 
+// The extractor drops internal interfaces of the assembly it reads, but sees
+// another assembly's internal interface, reachable through
+// InternalsVisibleTo, only as a reference. An interface in the namespace of a
+// documented .NET type that no package documents is such an interface: drop
+// it from `interfaces` and from the declaration.
+function hideInternalInterfaces(packages) {
+  const documented = packages.filter((api) => api.framework);
+  const known = new Set(
+    documented.flatMap((api) => api.types.map((t) => t.id)),
+  );
+  const namespaces = new Set(
+    documented.flatMap((api) => api.types.map((type) => type.namespace)),
+  );
+  const internal = (id) =>
+    namespaces.has(id.slice(2).split('.').slice(0, -1).join('.')) &&
+    !known.has(id);
+  for (const type of documented.flatMap((api) => api.types)) {
+    const hidden = (type.interfaces ?? []).filter(internal);
+    if (!hidden.length) continue;
+    type.interfaces = type.interfaces.filter((id) => !internal(id));
+    if (!type.interfaces.length) delete type.interfaces;
+    const signature = type.signature;
+    for (const id of hidden) {
+      const at = signature.findIndex(
+        (part) => Array.isArray(part) && part[1] === id,
+      );
+      const before = signature[at - 1];
+      const after = signature[at + 1];
+      // A generic interface continues with its type arguments.
+      assert.ok(
+        typeof before === 'string' &&
+          (after === undefined ||
+            (typeof after === 'string' && !after.startsWith('<'))),
+        `${type.id}: cannot hide ${id}`,
+      );
+      signature.splice(at, 1);
+      if (before.endsWith(', ')) signature[at - 1] = before.slice(0, -2);
+      else if (after?.startsWith(', ')) signature[at] = after.slice(2);
+      else if (before.endsWith(' : ')) {
+        signature[at - 1] = before.slice(0, -3);
+        if (after?.startsWith(' ')) signature[at] = after.trimStart();
+      }
+      // Join neighbouring text so the declaration reads as one segment.
+      for (let i = signature.length - 1; i > 0; i--)
+        if (
+          typeof signature[i] === 'string' &&
+          typeof signature[i - 1] === 'string'
+        )
+          signature.splice(i - 1, 2, signature[i - 1] + signature[i]);
+      const empty = signature.indexOf('');
+      if (empty >= 0) signature.splice(empty, 1);
+    }
+  }
+}
+
 /** Mutates the package models in place. */
 export function finishApiPackages(packages) {
+  hideInternalInterfaces(packages);
   const types = new Map();
   const entries = new Map();
   for (const api of packages)

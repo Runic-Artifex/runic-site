@@ -70,14 +70,19 @@ runtime is smaller: in one
 application was 5.16 MiB with CS-WebUI and 10.42 MiB with Runic Desktop,
 excluding the browser.
 
-`Runic.Application.Views.CsWebUi` is a prerelease, `0.15.1-preview.1`, and
+`Runic.Application.Views.CsWebUi` is a prerelease, `0.16.0-preview.1`, and
 needs CsWebUi 2.5.0-beta.4.8 or later. Since SDK `0.11.0` it can declare a menu
 bar that the page renders (`RunicCsWebUiHostOptions.MenuBar`), and its Bridge
 works under a policy without `'unsafe-eval'`. Since SDK `0.15.0` it serves
 an embedded frontend (`RunicApplicationFrontendDelivery=Embedded`) from the
-assembly, as Runic Desktop does. Update any copy of
-`runic-cswebui.js` that you keep outside `www/`; an older script receives no
-state.
+assembly, as Runic Desktop does. Since SDK `0.16.0` a CS-WebUI window
+shared with WebUI's `MultiClient` reports its pages through
+`IRunicConnections`, files reach .NET as [uploads](samples/files.md#blobs-and-uploads),
+which each window serves from a loopback endpoint of its own, and `0.16`
+pages and hosts carry a session in each request, so a page never acts for
+one that just left. Update any copy of `runic-cswebui.js` that you keep
+outside `www/`: an older script receives no state, and one before `0.16` is
+only partly protected.
 
 |                                        | Runic Desktop                                                          | CS-WebUI                                                      |
 | -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |

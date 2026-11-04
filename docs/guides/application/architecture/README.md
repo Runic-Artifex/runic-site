@@ -33,9 +33,9 @@ and the page shows the latest pending value until its revision arrives.
 Operations outlive their route, so a page that left can still watch, cancel or
 stream one the window still knows. The canonical form is RFC 8785 (JCS), and
 `TimeSpan` values are ISO 8601 durations. The
-[protocol specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/specs/application/README.md)
+[protocol specification](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/README.md)
 is language-neutral, and its
-[conformance corpus](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.1/specs/application/conformance)
+[conformance corpus](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/specs/application/conformance)
 lets another implementation check itself. A page and a host of different
 protocol versions do not connect; the page reports a `protocol` diagnostic.
 
@@ -65,16 +65,52 @@ application closes its window; the page then reports its connection as
 `0.14`. See
 [commands scoped to their page](../guides/pages-and-navigation.md#commands-scoped-to-their-page)
 and the specification's
-[presentation epochs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/specs/application/README.md#presentation-epochs)
+[presentation epochs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/README.md#presentation-epochs)
 and
-[presented states and window close](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/specs/application/README.md#presented-states-and-window-close).
+[presented states and window close](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/README.md#presented-states-and-window-close).
 
-See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/first-window/README.md) for the smallest
-composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/notes-view-first/README.md) for
+Since SDK `0.16.0`, eleven more features are negotiated in `hello`; a page and
+a host of different releases use only what both list, so a `0.15` page and a
+`0.16` host still behave as in `0.15`:
+
+- `request-session/1`: every request names its page's random session, so a
+  page never acts for another connection of the window. Each connection also
+  gets a window key that no later connection reuses. See
+  [request sessions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/README.md#request-sessions).
+- `view-requests/1`: the page registers handlers and receives `view-request`
+  pushes; see [ask the page to act](../samples/prompts.md#ask-the-page-to-act).
+- `validation-pending/1`: `validation.pending` lists the paths whose
+  validation is still running.
+- `field-flush/1`: the window asks its pages to write their drafts before a
+  departure guard runs.
+- `field-paths/1`: a write names a path below a member, such as a row's cell
+  or a nested object's member; see
+  [editable rows](../guides/forms-and-validation.md#editable-rows-and-nested-fields).
+- `translation-text/1`: the window's `locale` push and the `text` of
+  validation errors.
+- `query-collections/1`: `query-rows`, `query-set` and `query-index`, and the
+  `busy` rejection; see
+  [query collections](../guides/dynamicdata.md#query-collections).
+- `blobs/1`: the upload grant in the `hello` reply; blob and upload content
+  travels over HTTP, not the Bridge. See
+  [blobs and uploads](../samples/files.md#blobs-and-uploads).
+- `region-collections/1`: `region` select and close requests; see
+  [document tabs](../guides/pages-and-navigation.md#document-tabs).
+- `navigation-path/1`: `navigation` requests, `navigation-path` pushes and the
+  path in the `hello` reply; see
+  [Back and the URL](../guides/pages-and-navigation.md#back-and-the-url).
+- `client-errors/1`: the page reports its errors for the .NET log; see
+  [page errors in .NET logs](../../desktop/crash-reporting.md#page-errors-in-net-logs).
+
+The specification's [features](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/README.md#features) section lists each feature
+with its conformance set.
+
+See the [first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/first-window/README.md) for the smallest
+composition and [Notes examples](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/notes-view-first/README.md) for
 nested content, routing, and multiple Views over a ViewModel.
 
 Navigation and model execution ownership are supplied by
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md),
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md),
 which can also serve native WPF Views without a web runtime. The model context
 and registry types use the `Runic.Navigation` namespace. A native and web
 presentation of the same model must share its context; presentation disposal
