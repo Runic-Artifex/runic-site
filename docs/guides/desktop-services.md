@@ -68,7 +68,7 @@ as do requests through CS-WebUI's registration. Portal diagnostics of these
 notifications are logged as event 2003. To compose the service yourself, call
 `DesktopPlatformServices.CreateNotifications(applicationId)`. Notifications through
 `AddRunicPlatformServices()` are new in SDK `0.7.0-preview.8`; see the
-[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views.Desktop/README.md).
+[Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views.Desktop/README.md).
 
 Since SDK `0.11.0`, `DesktopNotificationActivation.IsTrusted` is `true` when
 the provider matched the activation to a notification the application showed.
@@ -90,7 +90,7 @@ provider resources during disposal. Since SDK `0.11.0`, `PlatformResult<T>`
 has `Succeeded`, `TryGetValue(out T value)` and `Match`, and
 `PickerResult<T>` has `TryGetValue` and `Match`, for code that needs only the
 value; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md).
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md).
 Since SDK `0.12.0`, a save lease writes as often as the application saves, and
 document leases keep working on an opened file; see [documents](#documents).
 
@@ -100,7 +100,7 @@ window's GTK version: `Runic.Platform.Linux` serves GTK 3 windows and
 GTK 3. Windows notifications require shell registration for the chosen
 AppUserModelID. macOS notifications use the application bundle identity.
 
-The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
+The [runtime conformance suite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/tests/dotnet/Runic.Platform.Runtime.Tests/README.md)
 checks portable ownership, cancellation, leases, and file transactions. Its
 `--native-services` mode is an interactive OS smoke; portable conformance does
 not certify native UI behavior. Provider READMEs record platform dependencies
@@ -195,7 +195,7 @@ return RunicDesktopHost.Run(provider, new DesktopHostOptions().WithGtk4(),
 ```
 
 See the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md)
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md)
 for each platform's behaviour.
 
 ## Directory selection
@@ -229,7 +229,7 @@ filter the user chose as `SelectedFilter`, and `ShowFilterChoice` adds the
 filter pop-up to a macOS panel.
 
 Runic's hosts use the provider matching the presentation backend; see the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md).
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md).
 
 ## Documents
 
@@ -262,7 +262,28 @@ security-scoped in the App Sandbox. A custom `IPickerBackend` reports
 `SupportsDocumentAccess`, `false` by default. See
 [open and save files](application/samples/files.md#keep-working-on-a-document)
 and
-[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md#document-apps).
+[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#document-apps).
+
+### Recent documents
+
+Since SDK `0.16.0`, `IDesktopRecentDocuments` (Runic.Platform) lists a
+document where the desktop offers it for reopening: `AddAsync(path)` after
+open and Save As, and `ClearAsync()` for a Clear Recent command, each with its
+outcome as a `PlatformResult`. Runic Windows get it from
+`AddRunicPlatformServices()`; CS-WebUI and serve-only Runic Desktop report
+`Unavailable`.
+
+- macOS: Open Recent and the Dock.
+- Windows: Recent items and the application's Jump List
+  (`SHAddToRecentDocs`). Clearing empties only the application's Jump List.
+- Linux: `recently-used.xbel`, which GTK and KDE file choosers list. Clearing
+  removes only this application's entries, a write keeps the newest 500, and a
+  damaged file is reported as `Failed(IOError)`, never replaced.
+
+`DesktopHost.NoteRecentDocumentAsync` and `ClearRecentDocumentsAsync`, which
+did nothing outside macOS, now use the same lists on Windows and Linux and
+ignore a failure there. Remove a check that skipped them, or guard a call you
+do not want there.
 
 ## Status icon, single instance and login startup
 
@@ -271,7 +292,7 @@ and
 launch the primary instance. Since SDK `0.8.0-preview.1`, the status icon,
 login startup and `DesktopPlatformServices.PresentAsync` work on Linux, Windows and
 macOS. The
-[status icon example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/status-icon/README.md)
+[status icon example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/status-icon/README.md)
 starts without a window, shows the icon with a menu, and brings its Window
 forward when the application is launched again. Since SDK `0.10.0`, status
 icon menus and the Runic Desktop menu bar share one menu model in
@@ -293,15 +314,15 @@ application loop when `ShutdownRequested` is cancelled; without it, a signal
 that arrives while no window is open ends the process at once. Since SDK
 `0.12.0` this also applies to quitting on macOS; see
 [quitting on macOS](#quitting-reopening-and-the-dock-menu-on-macos). See
-[Runic.Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md).
+[Runic.Desktop](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md).
 The provider READMEs describe
 each platform:
-[Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.Windows/README.md#status-icon-and-window-presentation)
+[Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.Windows/README.md#status-icon-and-window-presentation)
 and
-[macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.MacOS/README.md#status-icon).
+[macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.MacOS/README.md#status-icon).
 On macOS, Runic Desktop also adds the standard application, Edit, View and
 Window menus unless the application supplies its own; see
-[keyboard and zoom in embedded windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#keyboard-and-zoom-in-embedded-windows).
+[keyboard and zoom in embedded windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#keyboard-and-zoom-in-embedded-windows).
 Since SDK `0.11.0`, `DesktopHostOptions.StandardMenuTitles`
 (`DesktopStandardMenuTitles`) translates the titles of those standard menus,
 and a status icon menu may repeat a command id with different
@@ -323,7 +344,7 @@ the messages and exit status from `ApplicationInstanceClaim.Forwarded.Reply`
 `ApplicationLaunch.Reply` (`IApplicationLaunchReply`). An instance claimed
 without the option, or by an earlier SDK, refuses such a launch, and the claim
 fails with `ResourceBusy`. See
-[single instance and replies to later launches](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.Runtime/README.md#single-instance-and-replies-to-later-launches).
+[single instance and replies to later launches](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.Runtime/README.md#single-instance-and-replies-to-later-launches).
 
 Since SDK `0.8.0-preview.4`, with `ApplicationInstanceOptions.ForwardOnly` a
 command line never becomes the instance; without one, the claim is
@@ -368,9 +389,9 @@ process from AppKit and skipped the close guards.
 
 Events 3018 to 3020 log a quit, a `ConfirmQuitAsync` that threw and a
 `ReopenRequested` handler that threw. See
-[quitting, reopening and the Dock menu on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#quitting-reopening-and-the-dock-menu-on-macos)
+[quitting, reopening and the Dock menu on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#quitting-reopening-and-the-dock-menu-on-macos)
 and
-[native work without a window on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#native-work-without-a-window-on-macos).
+[native work without a window on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#native-work-without-a-window-on-macos).
 
 ## Menus
 
@@ -395,7 +416,7 @@ same command path as the bar. On macOS the shared application menu bar keeps
 the declared menus with `Page` and `None` too (`menu-bar-page-native`). In a
 Runic Application Views app, the Window's root ViewModel runs the items through
 `IRunicMenuCommandSource`; see
-[menu bar commands](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md#menu-bar-commands).
+[menu bar commands](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#menu-bar-commands).
 
 On Linux a GTK window moves its bar into the desktop's global menu, on X11
 (KDE Plasma; Xfce, MATE and Budgie with vala-panel-appmenu) and on KDE Plasma
@@ -408,7 +429,7 @@ process on the session bus can choose an enabled item of the exported menu, as
 with status icons, so don't bind destructive actions to menu items without a
 confirmation. To keep the pre-0.11 look, set `MenuBarPresentation` to `Page`
 or `None`, or `GlobalMenu` to `false`. See
-[menu bar and keyboard shortcuts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#menu-bar-and-keyboard-shortcuts).
+[menu bar and keyboard shortcuts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#menu-bar-and-keyboard-shortcuts).
 
 `DesktopWindow.ShowContextMenuAsync(items, options)`, and
 `IWindowPlatformServices.ShowContextMenuAsync` for a ViewModel, show a native
@@ -422,7 +443,32 @@ For `Page`, and for CS-WebUI windows (`RunicCsWebUiHostOptions.MenuBar`),
 declared bar as headless state for the application's own menubar component;
 `useMenuBar` (React, Vue, Svelte) and `injectMenuBar` (Angular) wrap it. Runic
 ships no menubar component; see
-[in-page menu bar](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/web/views/README.md#in-page-menu-bar).
+[in-page menu bar](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/views/README.md#in-page-menu-bar).
+
+### Check marks
+
+Since SDK `0.16.0`, the mark of an item declared with `IsChecked` follows the
+command target, so a check or radio item no longer needs a new bar from
+`SetMenuBar`. A Window's root ViewModel implements `IRunicMenuCheckedSource`:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public bool? IsMenuItemChecked(string commandId, string? commandParameter) => commandId switch
+{
+    "view.wrap" => WordWrap,
+    "view.zoom" => commandParameter == Zoom.ToString(CultureInfo.InvariantCulture),
+    _ => null,
+};
+```
+
+The host reads it when the Window opens, after `SetMenuBar` and after the root
+ViewModel raises `PropertyChanged`. When a mark depends on a child ViewModel or
+on state outside the ViewModels, call `RunicMenu.Refresh(rootViewModel)` or
+`RunicMenu.RefreshAll()`. `null` leaves the item to the application's commands
+and then to its declaration. Without Views, a custom
+`IDesktopMenuCommandTarget` overrides `IsChecked(item)`, a default method that
+returns `null`. The key window's target answers first, so the mark follows the
+front window on macOS, Windows, GTK 3 and 4, a Linux global menu and the
+in-page menu bar.
 
 Menu problems are reported as the diagnostics `menu-radio-checked`,
 `menu-bar-page-native`, `menu-bar-failed`, `menu-title-invalid`,
@@ -456,13 +502,13 @@ kinds of activation:
   [documents](#documents).
 
 Treat every opened URL and file as untrusted input. See
-[opening files and URLs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md#opening-files-and-urls).
+[opening files and URLs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#opening-files-and-urls).
 
 ## More platform services
 
 SDK `0.11.0` adds these services. Each reports `Unavailable` where the platform
 or host has no backend; the
-[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md)
+[Platform contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md)
 has the per-platform details.
 
 - **Message boxes.** `IWindowPlatformServices.MessageBoxes`
@@ -518,6 +564,37 @@ has the per-platform details.
   portal instead of reporting `Unavailable`. Any process of the same user on the
   session bus can read every Secret Service item.
 
+## Power and session events
+
+Since SDK `0.16.0`, `IDesktopPowerEvents` (Runic.Platform) reports sleep and
+wake (`Suspending`, `Resumed`), session lock (`Locked`, `Unlocked`), and
+on-battery and low-power changes (`StateChanged`). `ReadAsync` returns the
+current `DesktopPowerState` (`IsOnBattery`, `IsLowPower`, `IsLocked`, each
+`null` when the platform does not say), and `WatchAsync` reports the changes:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Platform/README.md
+await foreach (var result in power.WatchAsync(cancellationToken))
+{
+    if (result is not PlatformResult<DesktopPowerEvent>.Success(var change)) continue;
+    if (change.Kind == DesktopPowerEventKind.Resumed) await sync.ReconnectAsync();
+    autoRefresh.Enabled = change.State is { IsOnBattery: not true, IsLowPower: not true, IsLocked: not true };
+}
+```
+
+- Sources: `WM_POWERBROADCAST` and WTS session notifications on Windows,
+  `NSWorkspace`, the screen lock notifications and IOKit on macOS, and logind,
+  UPower and the power-profiles daemon on Linux.
+- `Suspending` is a hint: the system does not wait for the application, so save
+  what must not be lost as it changes.
+- A Flatpak needs `--system-talk-name` for `org.freedesktop.login1`,
+  `org.freedesktop.UPower` and `org.freedesktop.UPower.PowerProfiles`.
+- Runic Windows get it from `AddRunicPlatformServices()`
+  (`DesktopPlatformServices.CreatePowerEvents()`); CS-WebUI and serve-only Runic
+  Desktop report `Unavailable`.
+
+See
+[power events](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#power-events).
+
 ## Spell checking
 
 Since SDK `0.13.0`, every embedded window checks spelling in the fields that the
@@ -556,8 +633,73 @@ window, for an editor that draws its own marks, and restores the behaviour of
 Linux windows before `0.13.0`. An element with its own `spellcheck="true"` is
 still checked. Editors such as ProseMirror that replace text nodes around a
 checked word can lose WebKitGTK's mark; see
-[spell checking](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#spell-checking)
+[spell checking](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#spell-checking)
 in the `Runic.Desktop` README.
+
+## Control a Window from its ViewModel
+
+Since SDK `0.16.0`, `IRunicWindowPresentation`, registered per Window by
+`AddRunicWindowService()`, lets a ViewModel bring its Window to the front,
+minimize it, hide it to a status icon and show it again, make it full-screen,
+mark its document edited (macOS) and switch it between light and dark, without
+naming the host. It reports whether the Window is active, minimized and
+visible, with `ActivityChanged` and `PropertyChanged` raised in the Window's
+model turns, so a ViewModel can poll less while the user works elsewhere:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public InboxViewModel(IRunicWindowPresentation window)
+{
+    _window = window;
+    window.ActivityChanged += (_, e) => PollInterval = e.Activity.IsActive ? TimeSpan.FromSeconds(5) : TimeSpan.FromMinutes(1);
+}
+```
+
+ReactiveUI uses `WhenAnyValue` or `ObserveActivity()`, which needs no
+System.Reactive. Code outside the scope, such as a status icon's handler, uses
+`IRunicWindow.Presentation`.
+
+- `Features` says what the host can do. A request the host cannot do returns
+  `Unavailable` instead of throwing. A host that cannot report activity counts
+  as active and visible; `Features.Activity` tells real from assumed.
+- Runic Desktop supports it with WebView2, WKWebView and WebKitGTK (GTK 3 and
+  GTK 4); WPF through `WpfPlatformServices.ForWindowPresentation(window)`, one
+  per window; CS-WebUI only `PresentAsync`, and `MinimizeAsync` with
+  `UseWebView`.
+- A throwing handler is logged as event 1130 `WindowPresentationHandlerFailed`.
+
+Without Views, `DesktopWindow.Activity` and `ActivityChanged` report the same
+for a Runic Desktop window when its `Capabilities` include
+`DesktopWindowCapabilities.Activity`; a throwing handler is logged as event
+3040 `WindowActivityHandlerFailed`. A custom window host adds them with
+`IDesktopActivityWindowHost`. Since SDK `0.16.0`, `DesktopWindow.FocusAsync`
+on Windows restores a minimized window before it activates it, as macOS and
+GTK already did, so code that restored it first can drop that step.
+
+`DesktopHost.SetColorSchemeAsync` switches the whole application between light
+and dark while it runs, and `DesktopWindow.SetColorSchemeAsync` one window;
+the page's `prefers-color-scheme` and the window's frame follow without a
+reload. Both need `DesktopWindowCapabilities.ColorScheme`, and a custom window
+host adds it with `IDesktopColorSchemeWindowHost`. A scheme can be shared,
+by every GTK window of the process and by the windows of one WebView2
+`ProfilePath`; then a window's switch changes all of them, and only a window
+with `DesktopWindowCapabilities.PerWindowColorScheme` has its own. See
+[Light and dark at run time](application/samples/settings.md#light-and-dark-at-run-time)
+for a settings page that switches it.
+
+`DesktopWindowOptions.Owner` and `Modality = DesktopWindowModality.Window`
+open a Runic Desktop window that belongs to another and blocks it until it
+closes, also over a WPF window
+(`WpfPlatformServices.ForDesktopWindowOwner(window)`). A custom window host
+receives the owner's handle when it reports
+`DesktopWindowCapabilities.Ownership`. For Runic Windows, see
+[Owned and window-modal Windows](application/samples/cross-window.md#owned-and-window-modal-windows).
+
+See
+[presenting, hiding and observing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#presenting-hiding-and-observing-a-viewmodels-own-window),
+[window activity](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#window-activity),
+[switching while the application runs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#switching-while-the-application-runs)
+and
+[owned and window-modal windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#owned-and-window-modal-windows).
 
 ## Windows on macOS
 
@@ -588,8 +730,9 @@ SDK `0.12.0` changes and adds these window features:
   `SetDocumentEditedAsync` show the title bar's proxy icon and the
   unsaved-changes dot. `DesktopHost.NoteRecentDocumentAsync`,
   `ClearRecentDocumentsAsync` and `MacOSDesktopOptions.OpenRecentMenu` keep
-  Open Recent and the Dock's recent documents. They do nothing on Windows and
-  Linux.
+  Open Recent and the Dock's recent documents. Since SDK `0.16.0` the two
+  methods also work on Windows and Linux; see
+  [recent documents](#recent-documents).
 - **Downloads.** With `DesktopWebContentPolicy.AllowDownloads`, a macOS window
   downloads to the user's Downloads folder, never replacing a file, and marks
   each download with the quarantine attribute. With downloads refused, the
@@ -598,11 +741,11 @@ SDK `0.12.0` changes and adds these window features:
   `com.apple.security.files.downloads.read-write` to its entitlements.
 
 See the Runic.Desktop README:
-[title bar and drag regions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#title-bar-and-drag-regions-on-macos),
-[light and dark windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#light-and-dark-windows),
-[coordinates](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#coordinates)
+[title bar and drag regions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#title-bar-and-drag-regions-on-macos),
+[light and dark windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#light-and-dark-windows),
+[coordinates](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#coordinates)
 and
-[document apps on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#document-apps-on-macos).
+[document apps on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#document-apps-on-macos).
 
 ## Privileged actions
 
@@ -610,13 +753,13 @@ and
 time as a `RunicPrivilegedAction` item, a fixed program with bounded arguments,
 as the administrator after the platform's authorization prompt. It is new in
 SDK `0.8.0-preview.1`. Start with the
-[contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md#privileged-actions),
+[contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#privileged-actions),
 then follow the provider for each platform:
-[Polkit on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
+[Polkit on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.Linux.Polkit/README.md)
 (`Runic.Platform.Linux.Polkit`),
-[UAC on Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.Windows.Elevation/README.md)
+[UAC on Windows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.Windows.Elevation/README.md)
 (`Runic.Platform.Windows.Elevation`) and
-[a launch daemon on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.MacOS/README.md#privileged-actions).
+[a launch daemon on macOS](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.MacOS/README.md#privileged-actions).
 Since SDK `0.8.0-preview.4`, `RunicPrivilegedCommand` items declare commands of
 one action, which share its authorization, with an argument pattern per
 position:
@@ -630,9 +773,9 @@ position:
 ```
 
 The request and the privileged program check each position; see
-[commands under one action](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md#commands-under-one-action).
+[commands under one action](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#commands-under-one-action).
 
-The [design and security review](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/specs/platform/privileged-operations.md)
+The [design and security review](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/platform/privileged-operations.md)
 records the threat model. [Nix packaging](desktop/nix-packaging.md#run-time-and-privileged-actions)
 installs the Polkit policy with the application.
 
@@ -676,9 +819,9 @@ groups are `NotFound`, a timeout is `Unavailable`, and a service with running
 dependents, or one that is not running or cannot accept the control now, is
 `Conflict`, where these were `NativeFailure`. Code that matched the old
 categories matches the new ones; the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/docs/migration-1.0.md#windows-administration-1)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#windows-administration-1)
 lists the native codes. The
-[package README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.Administration.Windows/README.md)
+[package README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.Administration.Windows/README.md)
 lists every client, its scope and the rights it needs.
 
 ## Watching files
@@ -687,9 +830,9 @@ lists every client, its scope and the rights it needs.
 directory entries and a Git checkout's `HEAD`, and calls back in a turn of the
 model context, so a ViewModel refreshes when they change. It is new in SDK
 `0.8.0-preview.1`; see
-[Watching files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md#watching-files)
+[Watching files](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#watching-files)
 and, for tests on a fake clock,
-[`RunicPathWatchTester`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Testing/README.md#file-watchers).
+[`RunicPathWatchTester`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Testing/README.md#file-watchers).
 
 Since SDK `0.8.0-preview.4`, `RunicWatchTarget.Files(path, pattern)` also
 reports writes to and replacement of each matching entry, which `Directory`
@@ -702,7 +845,7 @@ and calls `AnnounceAsync(message, priority)` to have the screen reader speak a
 status, such as "Saved", without moving focus; Orca hears no live regions in
 WebKitGTK. A browser or serve-only mode reports `OwnerUnavailable`, and WebView2
 and WKWebView also speak live regions, so send each message one way. See
-[Accessibility](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#accessibility).
+[Accessibility](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#accessibility).
 
 Since SDK `0.11.0`, `IWindowPlatformServices.AnnounceAsync(message,
 PlatformAnnouncementPriority)` (`Polite` or `Assertive`) is part of the window

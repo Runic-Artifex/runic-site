@@ -2,7 +2,10 @@
 
 A ViewModel asks a question, and the frontend shows it inside the page. With
 ReactiveUI, use an `Interaction`; with CommunityToolkit.Mvvm, push a dialog
-page into a navigation region.
+page into a navigation region. Since SDK `0.16.0`, both flavors can also
+[ask the page and await its answer](#ask-the-page-and-await-its-answer) with a
+`ViewQuestion`, or [ask the page to act](#ask-the-page-to-act) with a
+`ViewRequest`.
 
 Both keep the decision in the ViewModel and the presentation in the frontend.
 The ViewModel never opens a browser dialog itself, and the frontend never
@@ -65,7 +68,10 @@ when the View unmounts. How the question travels:
 
 - The request goes only to a mounted handler of the View that presents this
   ViewModel, in the Window whose command asked. It is never broadcast to other
-  Windows and never appears in the published state.
+  Windows and never appears in the published state. Since SDK `0.16.0` a
+  command asks its own page also on another route of the Window, and menus and
+  code outside a command can ask too; see
+  [From a menu or outside a command](#from-a-menu-or-outside-a-command).
 - The handler's `signal` aborts when the View unmounts, the connection drops,
   the command is cancelled or the Window closes. Answering `false` is an
   ordinary answer; a cancelled or failed handler is a different outcome.
@@ -87,7 +93,10 @@ ConfirmDiscard.RegisterHandler(context =>
 });
 ```
 
-A test can register its own handler to answer `true` or `false`.
+A test can register its own handler to answer `true` or `false`. Since
+`0.16.0` a page with a mounted handler answers first, also for a command on
+another route of the Window or a menu-bar command, so keep the .NET handler
+only for when no page is mounted.
 
 ## With CommunityToolkit.Mvvm: a dialog region
 
@@ -188,6 +197,122 @@ The dialog View calls the ViewModel's commands, such as `dialog.confirm()` and
 should. With React, Vue, Svelte or Angular, use the framework's View outlet
 for the dialog region in the same way.
 
+## Ask the page to act
+
+Since SDK `0.16.0`, a ViewModel can ask its page for a presentation action that
+needs no answer: focus a field, scroll a row into view, show a toast. Declare a
+get-only `ViewRequest<T>` property and call `Raise(input)`; nothing waits for
+the page. It works in both MVVM flavors. From the
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#asking-the-page-view-requests-and-questions):
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public ViewRequest<FocusTarget> Focus { get; } = new(ViewRequestDelivery.NextMounted);
+```
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+[RelayCommand]
+private void AddItem()
+{
+    var item = new Item();
+    Items.Add(item);
+    Focus.Raise(new FocusTarget($"item-{item.Id}"));
+}
+```
+
+The generated client has `client.requests.<name>` for each request. The page
+registers one handler with `handle((input, { signal }) => …)`, which returns
+the function that removes it:
+
+<!-- prettier-ignore -->
+```ts docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+const stopFocus = editor.requests.focus.handle(({ field }) => document.getElementById(field)?.focus());
+```
+
+- The handler runs once the page has rendered everything the ViewModel
+  changed before `Raise`, so a newly added row is there to focus.
+- A request is not state. It is never replayed after a reconnect or reload,
+  and never reaches another Window.
+- `ViewRequestDelivery` says where it goes. `Drop`, the default, goes to the
+  page whose command raised it, or to the Window's one presentation that
+  handles it, and is otherwise dropped (Debug event 1120). `NextMounted` keeps
+  the latest request for the next presentation that mounts a handler.
+  `Broadcast` reaches every presentation of the Window that handles it, on
+  every connection.
+- A `ViewRequest` or `ViewQuestion` member that is not a get-only property is
+  the generator error
+  [`RUNICBRIDGE035`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/diagnostics.md#runicbridge035).
+- A page of `0.15` receives no requests; it keeps working.
+
+## Ask the page and await its answer
+
+`ViewQuestion<TInput, TOutput>`, new in `0.16.0`, waits for the page's answer.
+It is the flavor-neutral counterpart of a ReactiveUI `Interaction`, so a
+CommunityToolkit.Mvvm ViewModel can ask the page without a dialog region. The
+constructor takes an optional .NET fallback, which answers when no page can:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public ViewQuestion<DiscardRequest, bool> ConfirmDiscard { get; } = new((_, _) => ValueTask.FromResult(false));
+```
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+[RelayCommand]
+private async Task DiscardAsync(CancellationToken token)
+{
+    if (await ConfirmDiscard.AskAsync(new DiscardRequest(Title), token)) Reset();
+}
+```
+
+The page answers it like an interaction, through
+`client.interactions.<name>.handle(...)`. `AskAsync` asks the page in the same
+scopes as an interaction. Without a page that answers and without a fallback,
+it throws `RunicInteractionUnhandledException`. The page's cancellation, a
+timeout (two minutes by default) and the caller's token end it as they end an
+interaction.
+
+### From a menu or outside a command
+
+Since `0.16.0`:
+
+- A menu item that the user clicks in the page's in-page menu bar runs as a
+  command of that page, so its questions and requests reach that page.
+- A native menu-bar command or a host shortcut has no page. It asks the
+  Window's page when exactly one presentation handles the question.
+- A timer, a notification's activation or other work that no page started
+  enters the Window's scope itself, with
+  `RunicInteractionInvocation.EnterWindow(viewModel)`, or `TryEnterWindow`,
+  which returns whether it entered:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+using (RunicInteractionInvocation.EnterWindow(viewModel))
+    if (await ConfirmReload.AskAsync(path)) await ReloadAsync();
+```
+
+**A page's command identity ends with the command.** Work that a command
+starts and that outlives it, such as a timer, `Task.Run` or a background loop,
+no longer acts for that page: its questions and requests follow the rules
+outside a command, and `RunicInteractionInvocation.Current` is `null` there.
+An awaited command keeps its page until its task completes, and a CommunityToolkit
+`IAsyncRelayCommand` run by an in-page menu click does too. An async
+ReactiveCommand run by an in-page menu click must ask its page before its first
+`await`.
+
+### Test questions and requests
+
+`RunicViewDriver.MountPresentation()` or `MountPresentationAsync()` acts as the
+page: `Handle(vm => vm.Question, answer)` answers questions and interactions,
+and `TakeViewRequests()` returns the requests it received:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Testing/README.md
+using var page = await host.Root.MountPresentationAsync();
+page.Handle(vm => vm.ConfirmDiscard, request => request.Title == "Draft");           // a ViewQuestion<,>
+page.Handle<DiscardNoteRequest, bool>(vm => vm.ConfirmLeave, request => true);        // a ReactiveUI Interaction<,>
+(await host.Root.ExecuteAsync(vm => vm.DiscardCommand)).ThrowIfFailed();
+```
+
+In the frontend's tests, the generated mock's `requests.<name>.raise(input)`
+calls the View's request handler; see
+[Typed mocks](../guides/frontend-testing.md#typed-mocks).
+
 ## Which one to use
 
 - ReactiveUI apps: use an `Interaction`. It needs no navigation and keeps the
@@ -195,17 +320,21 @@ for the dialog region in the same way.
   `ReactiveLeaveConfirmation.WithInteraction` asks "discard unsaved changes?"
   through one; see
   [Guard against leaving](../guides/pages-and-navigation.md#guard-against-leaving).
-- CommunityToolkit.Mvvm apps that use navigation: use a dialog region.
-- A CommunityToolkit.Mvvm app without navigation can model the question as
-  ViewModel state: a nullable property holding the question, set by the
-  command, and an answer command that the dialog calls. The SDK has no example
-  of this yet.
+- CommunityToolkit.Mvvm apps that use navigation: use a dialog region when
+  the question is a page of its own with its own ViewModel.
+- Any app, since SDK `0.16.0`: use a `ViewQuestion` for a question that the
+  View on screen answers, and a `ViewRequest` for a presentation action that
+  needs no answer, such as a focus or a scroll. They replace a state flag or
+  counter that the page watched.
+- A question can still be modelled as ViewModel state: a nullable property
+  holding the question, set by the command, and an answer command that the
+  dialog calls. The SDK has no example of this.
 - Where the page cannot answer, such as before it loaded or for a close
   confirmation that must follow the platform's button order, Runic Desktop and
   WPF windows show a native message box since SDK `0.11.0`:
   `IWindowPlatformServices.MessageBoxes` (`IDesktopMessageBoxes`). Keep
   ordinary prompts in the page; see the
-  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md#message-boxes).
+  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#message-boxes).
 
 ## Next steps
 

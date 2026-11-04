@@ -27,13 +27,14 @@ without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
 This store, from the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.1/examples/multi-window),
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/multi-window),
 loads the settings on demand and saves them by writing a temporary file and
 moving it over the old one, so a crash never leaves a half-written file. It
 uses System.Text.Json's source generator, so it works with NativeAOT:
 
 ```csharp docs-test=source:examples/multi-window/SettingsStore.cs
-public sealed record AppSettings(string Theme = "system", string? LastFolder = null);
+public sealed record AppSettings(string Theme = "system", string? LastFolder = null, string Language = "en")
+// ...
 
 [JsonSerializable(typeof(AppSettings))]
 internal sealed partial class SettingsJson : JsonSerializerContext;
@@ -54,6 +55,9 @@ public sealed class SettingsStore(string path)
                 : new();
     }
 
+    // Raised after each save, on the saving Window's thread; Program.cs applies the theme to every Window.
+    public event EventHandler<AppSettings>? Saved;
+
     public void Save(AppSettings settings)
     {
         lock (_gate)
@@ -63,6 +67,7 @@ public sealed class SettingsStore(string path)
             File.WriteAllText(temporary, JsonSerializer.Serialize(settings, SettingsJson.Default.AppSettings));
             File.Move(temporary, path, overwrite: true);
         }
+        Saved?.Invoke(this, settings);
     }
 }
 ```
@@ -110,7 +115,8 @@ passes it to the window as `DesktopWindowOptions.ColorScheme` (or
 Windows, and the WPF `RunicWebView`, then show that scheme, and the page's
 `prefers-color-scheme` follows. `NoPreference`, the default, follows the
 desktop; GTK windows ignore it. See
-[windows on macOS](../../desktop-services.md#windows-on-macos).
+[windows on macOS](../../desktop-services.md#windows-on-macos). To switch while the application runs,
+see [Light and dark at run time](#light-and-dark-at-run-time).
 
 Unlike the file dialogs, `IDesktopSettings` belongs to the application, not to
 a Window. Since SDK `0.7.0-preview.7`, `AddRunicPlatformServices()` registers
@@ -189,6 +195,85 @@ The frontend can also read `prefers-color-scheme` and
 `prefers-reduced-motion` with CSS media queries. Use `IDesktopSettings` when
 .NET code needs the value, for example to store "follow the system" or to
 choose a native resource.
+
+## Light and dark at run time
+
+Since SDK `0.16.0`, a theme setting applies while the application runs,
+without a reload. `DesktopHost.SetColorSchemeAsync` switches the whole
+application, and `DesktopWindow.SetColorSchemeAsync` one window. The page's
+`prefers-color-scheme` and the window's frame follow. A window's own
+`ColorScheme` still wins; `NoPreference` follows the application's scheme, and
+the application's `NoPreference` follows the desktop.
+
+The multi-window example's `AppSettings.ColorScheme` maps its theme setting to
+a `DesktopColorScheme`. It applies the saved scheme before the first Window
+opens, and again after each save, so the theme command above switches every
+open Window at once:
+
+```csharp docs-test=source:examples/multi-window/Program.cs
+// The theme is the application's: every Window shows it, the page's prefers-color-scheme follows, and a new choice
+// switches the open Windows at once. "system" (NoPreference) follows the desktop.
+var settings = provider.GetRequiredService<SettingsStore>();
+await host.Desktop.SetColorSchemeAsync(settings.Load().ColorScheme);
+settings.Saved += (_, saved) => _ = host.Desktop.SetColorSchemeAsync(saved.ColorScheme).AsTask();
+```
+
+- Every GTK window of the process, and the windows of one WebView2
+  `ProfilePath`, share a scheme: switching one switches all of them.
+  `Features.PerWindowColorScheme` tells which kind a window has. On Linux,
+  `NoPreference` returns GTK's settings to the desktop's.
+- A ViewModel switches its own Window through
+  `IRunicWindowPresentation.SetColorSchemeAsync`; see
+  [Control a Window from its ViewModel](../../desktop-services.md#control-a-window-from-its-viewmodel).
+  Custom window hosts implement `IDesktopColorSchemeWindowHost`.
+
+The
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#switching-while-the-application-runs)
+lists what each window host sets.
+
+## The Window's language
+
+Since SDK `0.16.0`, text that a ViewModel produces can follow the Window's
+language. Give the member, DTO member or command result the type
+`Runic.Translations.TranslationReference` (a message key, typed arguments and a
+fallback text), and the page formats it with its Runic Translations runtime.
+
+The application owns the language. `IRunicWindowLocale`, which
+`AddRunicWindowService()` registers, sets it for one Window. The multi-window
+example sets it from the settings file in the constructor, before the Window's
+pages show their first state, and switches it with a command:
+
+```csharp docs-test=source:examples/multi-window/ProjectViewModel.cs
+// The Window's pages show text references in this language from their first state on.
+_language = settings.Load().Language;
+locale.Locale = _language;
+// ...
+// Switches this Window's language and saves it, so new Windows start in it. The page asks for it; the
+// ViewModel owns it.
+ChooseLanguageCommand = ReactiveCommand.Create<string>(language =>
+{
+    settings.Save(settings.Load() with { Language = language });
+    locale.Locale = language;
+    Language = language;
+});
+```
+
+`Status`, the status line, is a `TranslationReference`. `null`, the default
+locale, leaves each page in its own language; a language switch on the page
+calls the ViewModel's command.
+
+- The page connects its generated Translations runtime once with
+  `configureTranslatedText`, then shows references with `useText` (React, Vue,
+  Svelte), `injectText` or the `runicText` pipe (Angular), `texts` (Effect) or
+  `resolveText`. A reference it cannot translate shows its fallback text.
+- Field errors are translated automatically, and number, date and time fields
+  follow the Window's locale; see
+  [Locale-aware fields](../guides/forms-and-validation.md#locale-aware-fields).
+- In tests, `RunicViewState.Read(vm => vm.Status)` reads a reference, and the
+  mock bridge's `setWindowLocale("de")` pushes a locale.
+
+[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
+in the Views README shows the page setup and each framework's helper.
 
 ## Next steps
 

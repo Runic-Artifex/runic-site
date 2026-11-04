@@ -80,6 +80,48 @@ completes `WaitForCloseAsync` and surface disposal.
   the Dock, scripts and logout skipped the callbacks. See
   [quitting on macOS](../desktop-services.md#quitting-reopening-and-the-dock-menu-on-macos).
 
+## Owned Windows
+
+Since SDK `0.16.0`, a window can belong to another. `DesktopWindowOptions.Owner`
+and `Modality = DesktopWindowModality.Window` open a window that the owner owns
+and that blocks the owner until it closes, as a dialog does. Runic Windows use
+`RunicWindowOptions.Owner` and `Modality`; see
+[Owned and window-modal Windows](../application/samples/cross-window.md#owned-and-window-modal-windows)
+and the
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#owned-and-window-modal-windows).
+
+- A close that the owner's `ConfirmCloseAsync` or `GuardClose` decides (the
+  user's, or `RequestCloseAsync`) and a quit first ask the windows it owns,
+  innermost first and the last opened first. One that refuses keeps the owner
+  open; a window-modal one that agrees closes before the owner is asked.
+- `CloseAsync`, `DisposeAsync` and the close of an owner without a
+  confirmation close the owned windows without asking. A pending
+  `OpenForResultAsync` then returns no result.
+- Owned windows hide and show with their owner (`SetVisibleAsync`).
+- A blocked owner ignores the user's and the window manager's close on every
+  platform, so its own confirmation never shows behind its modal window.
+- On macOS a window-modal window is a sheet, which has no title-bar close
+  button and which Esc does not close: its page needs a Cancel button.
+
+To test a Window's close decision, open it headless with
+`RunicWindowTestHost.CreateWindowAsync<TWindow>(services)`.
+`RequestUserCloseAsync()` closes it as the user does and returns whether its
+guard let it close:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Testing/README.md
+await using var shell = await RunicWindowTestHost.CreateWindowAsync<ShellWindow>(services);
+
+// A guarded editor keeps unsaved changes.
+(await shell.Root<ShellViewModel>().ExecuteAsync(vm => vm.OpenDocumentCommand, "\"notes.md\"")).ThrowIfFailed();
+var editor = shell.OpenedWindows.Single();
+Assert.Equal("notes.md", editor.Key);
+Assert.False(await editor.RequestUserCloseAsync());
+```
+
+On a blocked Window `RequestUserCloseAsync()` throws
+`InvalidOperationException`, as the desktop ignores that close; see
+[Real Windows in tests](../application/guides/frontend-testing.md#real-windows-in-tests).
+
 ## Platform and custom-host support
 
 | Presentation              | Interception                                                       | Forced destruction                         |
@@ -103,12 +145,14 @@ Rejecting unsupported configuration avoids silently dropping a data-loss guard.
 `DesktopWindowCapabilities.CloseConfirmation` reflects the actual embedded host.
 
 Custom window hosts (stable since SDK `0.10.0`; see
-[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
+[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
 remain source compatible:
 `IDesktopWindowHost.SupportsCloseConfirmation` defaults to false. To opt in, return true and honor `DesktopWindowHostOptions.CloseRequested`:
 when it is set, suppress the native user close event and invoke the callback instead.
 Keep `CloseAsync` unconditional and raise `Closed` after native destruction. An opted-out
 host is rejected before opening when the application supplies a confirmation policy.
+Since SDK `0.16.0`, a host that reports `DesktopWindowCapabilities.Ownership`
+receives a window's owner in `DesktopWindowHostOptions.OwnerHandle` and its `Modality`.
 
 AppKit still requires a main-thread entry point and event pumping. The dedicated
 Desktop smoke test provides that runner. The higher-level asynchronous
@@ -127,7 +171,7 @@ thread. It checks bridge responsiveness during the pending decision, veto, retry
 approved destruction. Root CI runs this smoke on Linux x64, Windows x64 and macOS Apple Silicon. Local execution evidence is retained with the native smoke outputs;
 adding CI coverage is not evidence that a remote platform run has passed.
 
-The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Desktop.Gtk4/README.md)
+The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
 also exercises close veto/retry on its own dispatcher. Select the native backend
 you ship when verifying your application's close and cleanup behavior.
 

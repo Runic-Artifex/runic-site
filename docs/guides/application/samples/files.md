@@ -60,7 +60,8 @@ an exception:
 
 - Before the Window opens, and in tests, every operation returns
   `Unavailable(OwnerUnavailable)`. The same applies to CS-WebUI, which has no
-  native window, and to a Window shown in an installed browser.
+  native window, and to a Window shown in an installed browser. There, the page
+  sends files as [uploads](#blobs-and-uploads).
 - After the Window closes, every operation returns `Unavailable(OwnerClosed)`.
 - A Linux process without a GTK backend returns
   `Unavailable(ProviderNotConfigured)`.
@@ -183,7 +184,7 @@ another Window has it open. The `platform.files.openDocument` capability
 reports whether the Window's dialogs return documents. For a recent-files list,
 store the bytes of the lease's `CreateBookmarkAsync` and reopen the document
 with `IDesktopFileBookmarks.OpenDocumentAsync`; see
-[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform/README.md#document-apps).
+[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#document-apps).
 
 ## When atomic save is unavailable
 
@@ -210,7 +211,7 @@ through it, and an unsandboxed application on GTK 3 can choose GTK's own file ch
 `LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That was a
 lower-level provider API that you composed yourself, with no automatic fallback.
 The
-[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
+[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
 describes both mechanisms.
 
 When the save is unavailable, `BeginWriteAsync` returns
@@ -221,6 +222,85 @@ as "not saved", tell the user and offer Save As to another destination; never
 report success. This SDK has no other write policy: `FileWritePolicy` has only
 `RequireAtomicReplace`.
 
+## Blobs and uploads
+
+The file dialogs keep files in .NET. Since SDK `0.16.0`, binary data can also
+cross to and from the page without JSON. It works on every host, and on
+CS-WebUI, which has no file dialogs, an upload is the way to get a file into
+.NET.
+
+**A blob for the page.** A `RunicBlob` is an image, thumbnail or download that
+a ViewModel produces: a state property, a DTO or collection member, or a
+command or operation result. Create one with `RunicBlob.FromBytes`, `FromFile`
+or `FromStream`. The page receives `{url, type, size, name}` and uses `url`
+directly:
+
+<!-- prettier-ignore -->
+```tsx docs-test=readme:packages/web/views/README.md
+{state.avatar && <img src={state.avatar.url} alt="" />}
+<a href={report.url} download={report.name ?? undefined}>Download</a>
+```
+
+- The URL is unguessable and works only for its Window (on Runic Desktop and
+  WPF only for its browser). It stops working when the property stops holding
+  the blob, when the View is released, when the Window closes, or at once with
+  `Release()`. The host answers byte ranges.
+- Every response carries a sandboxing content security policy, so uploaded
+  HTML or SVG runs no script in the application's origin.
+- A Window keeps at most 1,024 blobs of command results and interaction
+  inputs; blobs in state and `[RunicCollection]` rows stay while shown.
+- A `RunicBlob` property is read-only for the page, and a `RunicBlob` command
+  input is `RUNICBRIDGE065`; take a `RunicUpload`.
+
+**An upload from the page.** A command whose parameter is a `RunicUpload`
+takes a file the user picked in the page:
+
+<!-- prettier-ignore -->
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+[RelayCommand]
+private async Task AttachAsync(RunicUpload file, CancellationToken cancellationToken)
+{
+    // Everything about an upload comes from the page: check what you read before you use it.
+    await file.SaveAsAsync(Path.Combine(_attachments, Guid.NewGuid().ToString("N")), cancellationToken: cancellationToken);
+    Attachments.Add(new Attachment(file.FileName, file.Length));
+}
+```
+
+The page streams the file over HTTP to the Window's host with
+`client.upload(file, { signal, onProgress })`, or `upload` from
+`@runic-artifex/views`, and passes the resulting reference to the command:
+
+<!-- prettier-ignore -->
+```ts docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+const file = input.files![0]!;
+const ref = await client.upload(file, { signal, onProgress: ({ loaded, total }) => setProgress(loaded / total) });
+await client.attach(ref);
+```
+
+- The command reads the file with `OpenReadAsync` or moves it with
+  `SaveAsAsync`. `FileName`, `ContentType` and the content are untrusted.
+- An upload works only on the connection that sent it, only once, for at most
+  10 minutes, and is dropped after 30 seconds without data.
+- `MaximumUploadBytes` (256 MiB) and `MaximumWindowUploadBytes` (1 GiB) on
+  `RunicWindowOptions` and the host options limit uploads.
+
+On CS-WebUI, each Window serves blobs and uploads from a loopback endpoint of
+its own, on another origin than the page. A page `Content-Security-Policy` must
+allow `http://localhost:*` for `img-src`, `media-src` and `connect-src`. A
+Window whose endpoint cannot start opens without blobs and uploads.
+
+**Testing.** `RunicWindowTestHost.UploadAsync` simulates a page's upload that a
+command then takes, and `ReadBlobAsync` returns what the host serves for a
+blob URL. A ViewModel test without a Window uses `RunicUpload.FromBytes`. On
+the page, `mockBlob()` makes a blob whose URL loads in a test, and the mock
+Bridge's `uploads` keeps what the page uploaded.
+
+The
+[attachments example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/attachments)
+shows an avatar and attachment uploads, and the
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#blobs-and-uploads)
+lists each host's endpoint.
+
 ## Next steps
 
 - [App settings and desktop preferences](settings.md) stores application data
@@ -230,5 +310,5 @@ report success. This SDK has no other write policy: `FileWritePolicy` has only
 - [Desktop preferences, notifications, file handoff, and clipboard](../../desktop-services.md)
   covers the providers behind these services.
 - The
-  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
   lists every per-Window service and owner.

@@ -16,7 +16,7 @@ Primitives 9.0.0; the fork also tests Primitives 8.4.0 used by ReactiveUI 25.
 
 DynamicData's cache, filtering, grouping, transforms and disposal stay in .NET.
 Runic exports the resulting collection through a generated, reflection-free
-bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/dynamicdata/README.md)
+bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/dynamicdata/README.md)
 has a 100,000-row source cache, keyed browser rendering and an independent
 viewport for each presentation.
 
@@ -57,7 +57,7 @@ public ReadOnlyObservableCollection<Row> Rows { get; }
 
 The property must be read-only and nonnullable, with nonnullable DTO rows.
 Keys must be unique, stable and nonempty: supported key types are `int`,
-`string` and `Guid`. Initialize the collection before attaching a bridge.
+`string` and `Guid`, and since SDK `0.16.0` also `long`. Initialize the collection before attaching a bridge.
 Collection notifications produce indexed add, remove, replace and move
 operations. Immutable replacements and direct `INotifyPropertyChanged` row
 notifications serialize only changed rows. Unchanged browser rows keep their
@@ -83,9 +83,9 @@ when an observed collection changes outside the window's model turn, such as a
 `Bind` without `ObserveOn` the window's scheduler. A change notification that
 arrives after the window's model context closed no longer throws
 `ObjectDisposedException` into the binding, which ended it. See
-[state changes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/specs/application/state-changes.md)
+[state changes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/state-changes.md)
 and the .NET
-[language mappings](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/specs/application/language-mappings.md#publication-units-and-change-detection).
+[language mappings](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/language-mappings.md#publication-units-and-change-detection).
 
 ## Bound the presented collection
 
@@ -113,6 +113,105 @@ backend's reported start. Coalesce pending scroll requests to the most recent
 range. This helper does not implement variable-height measurement or browser
 rendering. The browser copies each changed field's array and checks its keys,
 so a bounded viewport remains useful even when delta payloads are small.
+
+## Query collections
+
+A DynamicData-bound `[RunicCollection]` sends its rows to every page, so its
+source must fit in memory and a page bounds its share with a viewport. Since
+SDK `0.16.0`, use a `RunicQueryCollection<TRow, TKey>` instead when the list
+is too large to send, such as a database table, and the page should sort,
+filter and scroll it. The rows stay in an `IRunicRowSource`;
+`RunicQueryableRowSource` runs over any `IQueryable`, such as Entity Framework
+Core or an in-memory list, with the fields `RunicQueryFields` allows:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public OrdersViewModel(Func<ShopContext> database, IRunicModelContext context)
+{
+    var fields = new RunicQueryFields<Order>()
+        .AddText("customer", order => order.Customer)
+        .Add("amount", order => order.Amount)
+        .Add("placed", order => order.Placed)
+        .AddCustom("mine", (orders, _) => orders.Where(order => order.Customer == Environment.UserName));
+    Orders = new(new RunicQueryableRowSource<Order, int>(() => database().Orders, fields, order => order.Id),
+        order => order.Id, new RunicQueryCollectionOptions { ModelContext = context });
+}
+```
+
+- The page's state holds only `{ query, total, version }`. Each page or
+  CS-WebUI client reads its own range, so scrolling one client doesn't move
+  another. The query (sort and filter) is ViewModel state that every
+  presentation shares.
+- The collection loads pages of 100 rows outside model turns, shares and
+  caches them (64 pages), and cancels loads no request waits for, so memory
+  stays bounded however long the list is.
+- Each connection has at most two row requests, one query change and one key
+  search in flight per collection; more are `rejected` with the reason
+  `busy`, and the client retries them.
+- Field names, filter values and `custom` arguments come from the page:
+  `RunicQueryFields` rejects anything it doesn't list as invalid input. A row
+  source of your own implements `Validate` the same way.
+- Call `Invalidate(key)` after a row changed in place and `Refresh()` after
+  rows were added or removed.
+- Keys are `string`, `Guid` or `int`. A setter, `[RunicCollection]` on the same
+  property, another key type or rows that aren't DTOs are `RUNICBRIDGE060`.
+
+On the page, the generated client has `client.queries.{name}`:
+
+<!-- prettier-ignore -->
+```ts docs-test=readme:packages/web/views/README.md
+const rows = catalog.queries.rows;           // QueryCollection<CatalogRow>
+rows.setRange(500, 40);                      // placeholders now, rows when they arrive
+rows.subscribe(() => render(rows.current));  // { query, total, version, start, count, rows, loading, error }
+await rows.setQuery({ sort: [{ field: "label", descending: true }], filters: [{ field: "label", op: "contains", value: "9" }] });
+const index = await rows.indexOf("4711");    // the key's position in the current query, or undefined
+```
+
+`createQueryViewportController` lays rows out with variable heights and
+scrolls to a key. React, Vue and Svelte wrap it as `useQueryCollection`,
+Angular as `injectQueryCollection`, and `@runic-artifex/views-effect` has
+`queryCollectionChanges` and `queryViewportChanges`:
+
+<!-- prettier-ignore -->
+```tsx docs-test=readme:packages/web/react/README.md
+const list = useQueryCollection(client.queries.rows, { estimateSize: 32 });
+return <div ref={list.ref} style={{ height: 480, overflow: "auto" }}>
+  <div style={{ height: list.totalSize, position: "relative" }}>
+    {list.items.map(item => <div key={item.key ?? `p${item.index}`} ref={list.measure(item.index)} style={{ position: "absolute", top: item.top, width: "100%" }}>
+      {item.row?.label ?? "…"}
+    </div>)}
+  </div>
+</div>;
+```
+
+A WPF View binds `Orders.CreateView()` to a virtualizing `ItemsControl`. A
+`SourceCache` can be the row source, through `RunicQueryableRowSource` over
+`cache.Items.AsQueryable()`, with its changes invalidating the collection:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+_changes = cache.Connect().Subscribe(changes =>
+{
+    // Adds and removes move the rows after them; updates stay where they are.
+    if (changes.Adds > 0 || changes.Removes > 0 || changes.Moves > 0) Rows.Refresh();
+    else Rows.Invalidate(changes.Select(change => change.Key));
+});
+```
+
+In tests, `QueryRowsAsync`, `SetQueryAsync` and `IndexOfAsync` send what a
+page sends, and `RunicTestRowSource` serves rows with latency and records what
+was loaded:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Testing/README.md
+var source = new RunicTestRowSource<Order, int>(orders, fields, order => order.Id);
+using var host = RunicWindowTestHost.Create(services, new OrdersViewModel(source, context));
+var rows = await host.Root.QueryRowsAsync(vm => vm.Orders, 500, 40);
+Assert.Equal(1, source.Loads.Count);
+```
+
+The [query collections example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/query-collections)
+shows 100,000 rows with sort, filter, variable heights and scrolling to a row.
+See
+[query collections](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#query-collections)
+for every rule, including flattened trees.
 
 ## Performance evidence
 

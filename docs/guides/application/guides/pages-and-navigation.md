@@ -59,9 +59,9 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
@@ -112,7 +112,7 @@ since SDK `0.11.0`, a project whose references contain both gets build warning
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.15.1/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -131,7 +131,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -441,7 +441,7 @@ still works and runs inline; a wrapper that implemented
 `IRunicModelHookScheduler` to post hooks as turns can be removed. A decorator
 that wraps a scheduling context must implement and forward the interface, or
 hooks run outside turns again; see
-[threading](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md#threading).
+[threading](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md#threading).
 Content that a factory returned for a target the navigator rejected is
 disposed asynchronously, after `WhenIdleAsync`.
 
@@ -554,7 +554,7 @@ var error = Dialog.PushForResult<bool>(NavigationTarget.Create<IDialogViewModel>
   `Queue` policy, so closing a dialog doesn't supersede one pushed meanwhile.
 
 See
-[queueing requests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md#queueing-requests)
+[queueing requests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md#queueing-requests)
 for every rule.
 
 ### Guard the Window close
@@ -589,7 +589,7 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   taking `IRunicWindowContext` in its constructor and calling its
   `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
   it is new in SDK `0.7.0-preview.8`; see
-  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -704,7 +704,7 @@ agreed work there, not after the `await`, because by then another entry may be
 current. Guards that switch on `NavigationOperation` handle `Confirm` in their
 default arm. Both replace a `CanLeaveTabAsync()` of your own beside the
 pages' guards; see
-[asking without navigating](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md#asking-without-navigating).
+[asking without navigating](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md#asking-without-navigating).
 
 With ReactiveUI, `ReactiveNavigationSelectionExtensions` observes the
 selection and creates its command:
@@ -741,11 +741,12 @@ function CustomersPage({ view, state }: { view: CustomersPageClient; state: Cust
 
 Don't move the highlighted tab before the command settles: `state.tabs`
 changes only when the switch commits, so the tab bar shows the kept tab after
-a veto. The tab set is static in a web View. In WPF,
+a veto. Here the tab set is fixed; for tabs that open and close at run time,
+see [document tabs](#document-tabs). In WPF,
 `NavigationSelector.Selection` binds a `TabControl` to the selection; see
 [incremental WPF adoption](../migrations/wpf-incremental.md#2-share-navigation-retain-native-mvvm).
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
 lists every rule.
 
 ## With CommunityToolkit.Mvvm
@@ -801,6 +802,241 @@ private async Task CloseEditorAsync()
     if (!await _editor.RequestCloseAsync()) StatusText = "The editor has unsaved changes.";
 }
 ```
+
+## Document tabs
+
+[Tabs that keep their own pages](#tabs-that-keep-their-own-pages) have a fixed
+set of tabs in a web View. Since SDK `0.16.0`, mark a get-only
+`NavigationSelection` with `[RunicRegionCollection(typeof(TContent))]` when
+the ViewModel opens tabs at run time, such as documents that each keep their
+own back stack. The ViewModel adds a region with `Add`:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public sealed partial class EditorWindowViewModel(RunicNavigator navigator) : ObservableObject
+{
+    [RunicRegionCollection(typeof(IDocumentPage))]
+    public NavigationSelection Documents { get; } = navigator.CreateSelection(this, []);
+
+    [RelayCommand]
+    private async Task<NavigationOutcome> OpenAsync(string path)
+    {
+        var tab = navigator.CreateRegion<IDocumentPage>(this, NavigationTarget.Create<DocumentViewModel, string>(path));
+        Documents.Add(tab);
+        return (await Documents.SelectAsync(tab)).Outcome;
+    }
+}
+```
+
+The page receives `{ regions, selected }`, where each region is `{ key, content }`,
+and the generated client selects and closes tabs by key:
+
+<!-- prettier-ignore -->
+```ts docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+readonly documents: RegionCollection<DocumentPageReference | DocumentInfoPageReference>;
+// { regions: readonly { key: string; content: R | null }[]; selected: number | null }
+selectDocuments(key: string): Promise<RegionOutcome>;
+closeDocuments(key: string): Promise<RegionOutcome>;
+```
+
+- A key stays the same while its tab exists and is never reused in the
+  Window, so key each tab's component by it. A push inside a tab changes
+  `content` and keeps `key`.
+- `select{Name}(key)` is `SelectAsync`: the tab left is asked as `Retain`.
+  `close{Name}(key)` is `RemoveAsync`: every page of the tab is asked as
+  `Retire`. Both resolve with the `NavigationOutcome`; a veto is `Rejected`
+  with `Guard`. `selected` changes only when a switch commits.
+- A second close of a tab whose close is pending joins it, so the guards ask
+  once. A select while a close is pending supersedes the close, and the tab
+  stays.
+- `PageCanClose = false` generates no `close{Name}`; the ViewModel closes such
+  tabs itself.
+- A guarded Window close removes the tabs one by one. The tabs before the
+  first one that refuses are closed, and the Window stays open. To decide for
+  every tab at once, own the tabs and the selection by a page entry in a
+  region slot: the clear of that slot asks every tab in one transition.
+- `RUNICBRIDGE070` reports the attribute on another property type, with a
+  setter or with a content type without a View; `RUNICBRIDGE071` reports a
+  generated method that collides with another client member.
+- A page and a host that don't both list `region-collections/1` keep the
+  `0.15` behaviour.
+
+The React, Vue, Svelte and Angular adapters render the tabs with
+`RegionOutlets`, which by default keeps hidden tabs mounted, so each tab keeps
+its DOM; `mode: "selected"` unmounts them. `panelProps(entry)` adds tab-panel
+attributes, and `regionEntries()` lists the tabs for a tab bar:
+
+<!-- prettier-ignore -->
+```tsx docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+<nav>
+  {regionEntries(state.documents).map(tab => (
+    <span key={tab.key}>
+      <button aria-pressed={tab.selected} onClick={() => void view.selectDocuments(tab.key)}>Tab {tab.index + 1}</button>
+      <button onClick={() => void view.closeDocuments(tab.key)}>×</button>
+    </span>
+  ))}
+</nav>
+<RegionOutlets collection={state.documents} registry={pages} />
+```
+
+With ReactiveUI, `WhenRegionsChanged()` emits the selection's `Regions` after
+each `Add` and committed `RemoveAsync`, and `CreateCloseCommand()` takes a
+region and outputs the `NavigationOutcome` of `RemoveAsync`. In a test,
+`state.Regions(...)` reads the tabs, and `SelectRegionAsync` and
+`CloseRegionAsync` send the page's requests:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Testing/README.md
+var tabs = (await host.Root.SnapshotAsync()).Regions(vm => vm.Documents);
+// tabs.Keys, tabs.Regions[i].Content (a PageReference or null), tabs.Selected
+var closed = await host.Root.CloseRegionAsync(vm => vm.Documents, tabs.Keys[0]);
+// closed.RegionOutcome: Committed, or Rejected with Guard when a page refused
+```
+
+In page tests, a mock's `regions` handler stands in for the guards; see
+[testing frontends](frontend-testing.md#behaviour-that-016-tests-meet). The
+[document tabs example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/document-tabs)
+uses all of it, and
+[region collections](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#region-collections)
+lists every rule.
+
+## Save and restore navigation
+
+Since SDK `0.16.0`, a route map names pages with paths such as
+`customers/42/invoices/7`. With it, the navigator saves a Window's navigation,
+rebuilds it after a restart and opens deep links. Register the routes with the
+Window's services; every `AddRunicNavigationRoutes` call adds to one map, so a
+feature can register its own:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+services.AddRunicNavigationRoutes(routes => routes
+    .Map<CustomerListViewModel>("customers")                       // Create<T>()
+    .Map<CustomerViewModel, int>("customers/{id:int}")              // Create<T, int>(id)
+    .Map<InvoiceViewModel, InvoiceRef>("customers/{id:int}/invoices/{invoice:int}",
+        values => new InvoiceRef(values.GetInt32("id"), values.GetInt32("invoice")),
+        invoice => new NavigationRouteValues().Set("id", invoice.Customer).Set("invoice", invoice.Invoice))
+```
+
+A template has literal segments and typed parameters: `{name}` (a string),
+`:int`, `:long`, `:guid` or `:bool`. A route path is at most 2048 characters
+without control characters. A string parameter comes from a link, an address
+bar or a saved file: treat it as untrusted text, such as a key to look up.
+
+`navigator.GetPath()` returns a `NavigationPath`: each region's entries by
+route, the regions and selections below them, and the selected tabs.
+`NavigationPath.ToJson` and `FromJson` store it wherever the application keeps
+its state:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+// When the window closes: next to the window placement, in the application's own store.
+File.WriteAllText(statePath, navigator.GetPath().ToJson());
+
+// After the window opened at the next start, with saving switched off until it returns:
+var result = await navigator.RestoreAsync(NavigationPath.FromJson(File.ReadAllText(statePath)));
+foreach (var issue in result.Issues) logger.LogInformation("Not restored: {Location} ({Kind})", issue.Location, issue.Kind);
+```
+
+- `RestoreAsync` uses ordinary navigation requests, so guards and hooks run.
+  It keeps the entries that already match, and lists what it left out in
+  `NavigationRestoreResult.Issues` instead of failing.
+- A region stops at its first page that no longer has a route, unless
+  `NavigationRestoreOptions.UnmappedEntries` is `Skip`. A restore takes at
+  most 256 entries per region and 256 tabs per selection.
+- Don't save while `RestoreAsync` runs, or a partial restore overwrites the
+  saved path. Store the application's version beside the path and discard a
+  path that another version wrote.
+- Document tabs are restored by position: `NavigationSelectionOptions.RestoreRegion`
+  creates each missing tab. A tab that nothing could be restored into is
+  discarded; `RunicNavigator.DiscardRegionAsync` does the same for a tab the
+  application created and then didn't add.
+
+`region.OpenRouteAsync(route, mode)` opens a route path from a link, a
+notification or a second launch, and returns `null` when no route matches.
+`NavigationRouteOpen.Stack` builds the history from the route's prefixes, so
+`customers/42/invoices/7` gives Customers, Customer 42 and Invoice 7.
+`NavigationRouteLinks.TryGetRoute` reads the route of a `myapp://…` or an
+`https` link of the application's hosts:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Navigation/README.md
+async Task OpenLinksAsync(IEnumerable<Uri> links)
+{
+    foreach (var link in links)
+        if (NavigationRouteLinks.TryGetRoute(link, ["myapp"], out var route))
+            await shell.Main.OpenRouteAsync(route, NavigationRouteOpen.Stack); // the window's region, from any thread
+}
+```
+
+A link is untrusted input: only the map's routes open, so check that the
+record a route names exists, and confirm anything destructive in the page.
+The [document tabs example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/document-tabs)
+reopens its tabs after a restart and opens `document-tabs://` links. A restart
+test saves with `SavePath()` and restores with `RestorePathAsync(saved)`:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Testing/README.md
+var restore = await restarted.ServiceProvider.GetRequiredService<RunicNavigator>().RestorePathAsync(saved);
+await Assert.That(restore.IsExact).IsTrue(); // otherwise restore.Result.Issues says what was left out
+```
+
+See
+[routes, saved paths and deep links](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md#routes-saved-paths-and-deep-links)
+for the matching and restore rules.
+
+## Back and the URL
+
+Since SDK `0.16.0`, a web View page can go back in its Window and keep its URL
+in step with the Window's navigation, on Runic Desktop and CS-WebUI alike.
+`installBackNavigation()` makes the mouse's Back button, Alt+Left, Cmd+[ on
+macOS and the Browser Back key run `RunicNavigator.BackAsync()`. That goes
+back in the innermost presented region that can, such as the selected tab or
+an open dialog, through its departure guards; `navigateBack()` does the same
+from code. For the URL, choose the Window's path region and give its pages
+routes:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+public ShellViewModel(RunicNavigator navigator)
+{
+    Main = navigator.CreateRegion<IPage>(this, NavigationTarget.Create<CustomerListViewModel>());
+    _path = RunicPresentation.SyncNavigationPath(Main); // uses the registered INavigationRouteMap
+}
+```
+
+<!-- prettier-ignore -->
+```ts docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+import { installBackNavigation, installNavigationPath } from "@runic-artifex/views";
+installNavigationPath(); // #/customers/42 follows Main; Back, Forward and the address bar open their paths
+```
+
+- The URL follows the region's current page, such as
+  `#/customers/42/invoices/7`. The browser's Back and Forward and the address
+  bar open their path through the guards; a refused change puts the URL back.
+  History entries keep their index and path across a reload.
+- A path in the URL when the page loads opens as a deep link, also when the
+  Window chooses its path region later.
+- With both installs, the Back keys go back in the page's history, so a Back
+  runs once. Several pages of one Window follow the same path region, and the
+  last change wins. A second `SyncNavigationPath` for the navigator throws
+  until the first is disposed.
+- For a router of the page's own, such as SvelteKit's, use
+  `openNavigationPath(path)` and `onNavigationPath(listener)`. The framework
+  adapters re-export these functions.
+- A page and a host that don't both list `navigation-path/1` keep the earlier
+  behaviour: the page's navigation calls fail with a `failed` BridgeError.
+
+In page tests, `createMockBridge({ navigation })` answers the navigation
+requests and `pushNavigationPath` stands in for a change in .NET. In .NET
+tests, `NavigateBackAsync()` sends the Window's Back,
+`OpenNavigationPathAsync(path)` acts as the browser's Back, Forward or address
+bar, and `NavigationPathPushes` lists what the page was told:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Testing/README.md
+using var path = RunicPresentation.SyncNavigationPath(shell.Main);
+var refused = await host.OpenNavigationPathAsync("home");   // a browser Back that a dirty editor refuses
+await Assert.That(refused.Outcome?.Rejection).IsEqualTo(NavigationRejection.Guard);
+await Assert.That(refused.Path).IsEqualTo("editors/a");     // the URL the page puts back
+await Assert.That(host.NavigationPathPushes[^1]).IsEqualTo(new RunicNavigationPathPush("editors/a", "push"));
+```
+
+See
+[Back and the URL](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#back-and-the-url)
+and [the window's Back](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md#the-windows-back).
 
 ## Commands scoped to their page
 
@@ -884,7 +1120,7 @@ uses the feature. A close that ends before every page replied is logged at
 Debug as event 1026 (`WindowCloseUnacknowledged`). These replace a
 `UiRendered` command that a page called after an animation frame, and a close
 token with an acknowledgement command of your own. See
-[waiting until the page shows a state](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Views/README.md#waiting-until-the-page-shows-a-state).
+[waiting until the page shows a state](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#waiting-until-the-page-shows-a-state).
 
 ## Next steps
 
@@ -892,10 +1128,10 @@ token with an acknowledgement command of your own. See
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.
 - Since SDK `0.11.0`, `RunicTestNavigationEntry.CreateAsync` in
-  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.15.1/packages/dotnet/Runic.Application.Testing/README.md)
+  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Testing/README.md)
   unit-tests a page that takes its `NavigationEntryContext`, such as a confirm
   dialog, without a Window.
