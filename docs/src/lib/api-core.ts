@@ -87,7 +87,10 @@ export type ApiTypeView = {
   type: ApiType;
   slug: string;
   href: string;
-  /** Types with members get a page; others are documented on the package page. */
+  /**
+   * Every type and npm export gets a page; npm re-exports are listed on the
+   * package page with a link to the export they forward.
+   */
   page: boolean;
   anchor: string;
   summaryText: string;
@@ -196,6 +199,32 @@ export function docText(nodes: DocNode[] | undefined): string {
     .trim();
 }
 
+const sentenceEnd = /(?<!\b(?:e\.g|i\.e|etc|vs))[.!?](?=\s+[A-Z]|\s*$)/;
+
+/**
+ * The first sentence of a summary, for the package index; the page of the
+ * type has all of it. Stops at a code block or list, and keeps the first
+ * paragraph of a summary that starts with one.
+ */
+export function leadSentence(nodes: DocNode[] | undefined): DocNode[] {
+  const lead: DocNode[] = [];
+  for (const node of nodes ?? []) {
+    if (typeof node === 'string') {
+      const end = sentenceEnd.exec(node);
+      if (end) {
+        lead.push(node.slice(0, end.index + 1));
+        break;
+      }
+      lead.push(node);
+    } else if ('p' in node) {
+      if (lead.length) break;
+      return leadSentence(node.p);
+    } else if ('pre' in node || 'ul' in node || 'ol' in node) break;
+    else lead.push(node);
+  }
+  return lead;
+}
+
 function truncate(text: string, length: number) {
   return text.length > length
     ? `${text.slice(0, length - 1).replace(/\s+\S*$/, '')}…`
@@ -244,9 +273,10 @@ export class ApiReference {
     const groups = new Map<string, ApiTypeView[]>();
     const usedSlugs = new Set<string>();
     for (const type of model.types) {
-      const page =
-        pin.ecosystem === 'nuget' ||
-        ['class', 'interface', 'enum'].includes(type.kind);
+      // One page per export, as for .NET types, keeps the package page a
+      // short index: the inline functions, constants and type aliases made the
+      // @runic-artifex/views page 392 KiB with 0.16.0.
+      const page = pin.ecosystem === 'nuget' || type.kind !== 'reexport';
       const base =
         pin.ecosystem === 'nuget'
           ? type.id.slice(2).replace(/`/g, '-')
@@ -446,6 +476,7 @@ export class ApiReference {
       .map((id) => this.link(id));
     return {
       package: { id: pkg.id, href: pkg.href, version: pkg.version },
+      scope: pkg.ecosystem === 'nuget' ? 'Namespace' : 'Module',
       title: `${type.name} ${kindLabel(type.kind)}`,
       name: type.name,
       kind: kindLabel(type.kind),
@@ -478,7 +509,11 @@ export class ApiReference {
     };
   }
 
-  /** View model of a package page, with inline entries for page-less types. */
+  /**
+   * View model of a package page: an index of its types with the first
+   * sentence of their summary, and npm re-exports in full. Entries carry only
+   * their slug: the page derives the address and the `api-` anchor from it.
+   */
   packagePage(packageSlug: string) {
     const pkg = this.packages.find(
       (candidate) => candidate.slug === packageSlug,
@@ -486,6 +521,7 @@ export class ApiReference {
     if (!pkg) return null;
     return {
       id: pkg.id,
+      href: pkg.href,
       ecosystem: pkg.ecosystem,
       version: pkg.version,
       framework: pkg.framework ?? null,
@@ -495,29 +531,31 @@ export class ApiReference {
       groups: pkg.groups.map((group) => ({
         title: group.title,
         id: anchorSlug(`ns-${group.title}`),
-        types: group.types.map((view) => ({
-          name: view.type.name,
-          kind: kindLabel(view.type.kind),
-          href: view.page ? view.href : null,
-          anchor: view.anchor,
-          summary: this.blocks(
-            view.type.docs?.summary?.filter(
-              (node) => typeof node === 'string' || !('pre' in node),
-            ),
-          ),
-          // Page-less types are documented here in full.
-          inline: view.page
-            ? null
-            : {
-                signature: this.signatureBlock(
-                  view.type.signature,
-                  `${view.type.name} declaration`,
-                ),
-                docs: view.type.reexport
-                  ? `<p>Re-exported from ${this.link(view.type.reexport)}.</p>`
-                  : this.docs(view.type),
-              },
-        })),
+        types: group.types.map((view) => {
+          const entry = {
+            name: view.type.name,
+            kind: kindLabel(view.type.kind),
+            slug: view.slug,
+          };
+          if (view.page)
+            return {
+              ...entry,
+              summary: this.blocks(leadSentence(view.type.docs?.summary)),
+            };
+          // Re-exports, which have no page, are documented here in full.
+          return {
+            ...entry,
+            inline: {
+              signature: this.signatureBlock(
+                view.type.signature,
+                `${view.type.name} declaration`,
+              ),
+              docs: view.type.reexport
+                ? `<p>Re-exported from ${this.link(view.type.reexport)}.</p>`
+                : this.docs(view.type),
+            },
+          };
+        }),
       })),
     };
   }

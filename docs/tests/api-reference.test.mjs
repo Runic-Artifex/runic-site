@@ -9,7 +9,12 @@ import activeSdkRelease from '../src/lib/active-sdk-release.json' with { type: '
 import manifest from '../sources/api-inputs.json' with { type: 'json' };
 import { finishApiPackages } from '../scripts/api-postprocess.mjs';
 import { digestInputs } from '../scripts/source-inputs.mjs';
-import { ApiReference, learnUrl, shortName } from '../src/lib/api-core.ts';
+import {
+  ApiReference,
+  leadSentence,
+  learnUrl,
+  shortName,
+} from '../src/lib/api-core.ts';
 import { apiPackageSlug } from '../src/lib/api-paths.ts';
 
 const docsRoot = fileURLToPath(new URL('../', import.meta.url));
@@ -103,23 +108,27 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // 2.75 MiB since 0.14.0 and 2.5 MiB since 0.12.0.
   assert.ok(inputs <= 3.75 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads. 416 KiB per page
-  // since 0.16.0, whose @runic-artifex/views page needs about 392 KiB with
-  // forms, query collections, blobs and navigation paths; 272 KiB since
-  // 0.14.0 and 224 KiB since 0.13.0.
+  // __data.json payloads that client-side navigation loads. 224 KiB per page
+  // since npm exports have pages of their own and package pages list the
+  // first sentence of each summary: the @runic-artifex/views package page
+  // needs about 197 KiB, Runic.Desktop.DesktopWindow about 168 KiB; 416 KiB
+  // since 0.16.0, whose @runic-artifex/views page with every function and
+  // type alias inline needed about 392 KiB, 272 KiB since 0.14.0 and 224 KiB
+  // since 0.13.0.
   let compressed = 0;
   for (const file of files(buildApi)) {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 416 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 224 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 7.5 MiB since 0.16.0, which needs about 7.14 MiB; 6 MiB since 0.15.0,
-  // 5.75 MiB since 0.14.0, 5.5 MiB since 0.13.0 and 5.25 MiB since the
-  // platform services of 0.11.0.
+  // 8.75 MiB since the about 300 functions, constants and type aliases of the
+  // npm packages have pages of their own, which needs about 8.36 MiB; 7.5 MiB
+  // since 0.16.0, 6 MiB since 0.15.0, 5.75 MiB since 0.14.0, 5.5 MiB since
+  // 0.13.0 and 5.25 MiB since the platform services of 0.11.0.
   assert.ok(
-    compressed <= 7.5 * 1024 * 1024,
+    compressed <= 8.75 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });
@@ -133,19 +142,27 @@ test('every package and type has its page', () => {
     );
     assert.equal(packageHtml.match(/<h1\b/g)?.length, 1, pkg.id);
     for (const view of pkg.groups.flatMap((group) => group.types)) {
+      // The package page lists every type under its anchor, which links that
+      // once led to inline npm entries keep reaching.
+      assert.ok(packageHtml.includes(`id="${view.anchor}"`), view.type.id);
+      // Every type and npm export but a re-export has a page.
+      assert.equal(
+        view.page,
+        pkg.ecosystem === 'nuget' || view.type.kind !== 'reexport',
+        view.type.id,
+      );
       if (view.page) {
+        assert.ok(packageHtml.includes(`href="${view.href}"`), view.type.id);
         const html = readFileSync(
           join(buildApi, pkg.slug, view.slug, 'index.html'),
           'utf8',
         );
         assert.equal(html.match(/<h1\b/g)?.length, 1, view.type.id);
         pages++;
-      } else {
-        assert.ok(packageHtml.includes(`id="${view.anchor}"`), view.type.id);
       }
     }
   }
-  assert.ok(pages > 300, `only ${pages} type pages`);
+  assert.ok(pages > 1000, `only ${pages} type pages`);
   assert.equal(apiPackageSlug('@runic-artifex/views'), 'runic-artifex-views');
   assert.equal(apiPackageSlug('Runic.Assets'), 'Runic.Assets');
   const catalog = readFileSync(
@@ -475,4 +492,30 @@ test('hides interfaces internal to another documented assembly', () => {
       [undefined, 'public sealed class Transport'],
     ],
   );
+});
+
+test('package pages list the first sentence of a summary', () => {
+  assert.deepEqual(
+    leadSentence([
+      'Wires an ',
+      { c: '<input>' },
+      ' to a field, e.g. a text box. Then it commits on blur.',
+    ]),
+    ['Wires an ', { c: '<input>' }, ' to a field, e.g. a text box.'],
+  );
+  assert.deepEqual(
+    leadSentence(['Starts it.', { c: 'start()' }, ' returns at once.']),
+    ['Starts it.'],
+  );
+  assert.deepEqual(leadSentence(['Creates one:', { pre: 'create()' }]), [
+    'Creates one:',
+  ]);
+  assert.deepEqual(
+    leadSentence([{ p: ['First paragraph.'] }, { p: ['Second.'] }]),
+    ['First paragraph.'],
+  );
+  assert.deepEqual(leadSentence(['Version 0.16 or later']), [
+    'Version 0.16 or later',
+  ]);
+  assert.deepEqual(leadSentence(undefined), []);
 });
