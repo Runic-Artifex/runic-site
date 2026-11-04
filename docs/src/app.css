@@ -1113,6 +1113,8 @@ h1 .api-kind {
 }
 
 .api-content {
+  /* The last column, also on pages without a member list, such as functions. */
+  grid-column: -2;
   min-width: 0;
   font-size: var(--text-ui);
   line-height: 1.6;

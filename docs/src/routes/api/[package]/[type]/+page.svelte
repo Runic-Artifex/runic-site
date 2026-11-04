@@ -31,7 +31,7 @@
     />
     <h1><code>{type.name}</code> <span class="api-kind">{type.kind}</span></h1>
     <p class="api-meta">
-      Namespace <code>{type.namespace}</code> in {type.package.id}
+      {type.scope} <code>{type.namespace}</code> in {type.package.id}
       {type.package.version}
     </p>
   </div>

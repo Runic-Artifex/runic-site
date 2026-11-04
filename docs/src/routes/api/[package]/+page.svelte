@@ -52,18 +52,20 @@
         <section aria-labelledby={group.id}>
           <h2 id={group.id}><code>{group.title}</code></h2>
           <dl class="api-type-list">
-            {#each group.types as type (type.anchor)}
-              <dt id={type.anchor}>
-                {#if type.href}
-                  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- type paths come from the prerendered reference -->
-                  <a href={type.href}><code>{type.name}</code></a>
-                {:else}
+            {#each group.types as type (type.slug)}
+              <dt id={`api-${type.slug}`}>
+                {#if 'inline' in type}
                   <code>{type.name}</code>
+                {:else}
+                  <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- type paths come from the prerendered reference -->
+                  <a href={`${pkg.href}${type.slug}/`}
+                    ><code>{type.name}</code></a
+                  >
                 {/if}
                 <span class="api-kind">{type.kind}</span>
               </dt>
               <dd>
-                {#if type.inline}
+                {#if 'inline' in type}
                   <!-- eslint-disable-next-line svelte/no-at-html-tags -- escaped by api-core -->
                   {@html type.inline.signature}
                   <!-- eslint-disable-next-line svelte/no-at-html-tags -- escaped by api-core -->
