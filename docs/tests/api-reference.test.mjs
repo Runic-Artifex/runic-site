@@ -111,7 +111,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // __data.json payloads that client-side navigation loads. 224 KiB per page
   // since npm exports have pages of their own and package pages list the
   // first sentence of each summary: the @runic-artifex/views package page
-  // needs about 197 KiB, Runic.Desktop.DesktopWindow about 172 KiB; 416 KiB
+  // needs about 197 KiB, Runic.Desktop.DesktopWindow about 168 KiB; 416 KiB
   // since 0.16.0, whose @runic-artifex/views page with every function and
   // type alias inline needed about 392 KiB, 272 KiB since 0.14.0 and 224 KiB
   // since 0.13.0.
