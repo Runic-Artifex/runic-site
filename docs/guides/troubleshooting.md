@@ -21,10 +21,10 @@ something fails without one.
 | `RUNICP`                                    | `@runic-artifex/vite-plugin-runic`                                                                                     | [SDK diagnostics](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/diagnostics.md#vite-plugin)                              |
 | `RUNICDESK1xx`, `RUNICASSETS`               | Retired experimental-API IDs, such as the native server's `RUNICDESK102` until SDK `0.15.0`; remove their suppressions | [Experimental APIs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/experimental.md)                                       |
 | `RCLI`                                      | Runic Command Line and any tool built on it, including `dotnet runic`                                                  | [Command Line diagnostics](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/docs/guides/command-line/diagnostics.md)         |
-| `RTR`                                       | The Translations compiler, in the build, the tool and the editors, and `runic-translations support`                    | [Translations diagnostics](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.8.0/docs/guides/translations/diagnostics.md) |
+| `RTR`                                       | The Translations compiler, in the build, the tool and the editors, and `runic-translations support`                    | [Translations diagnostics](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/diagnostics.md) |
 
 The links above are for SDK `0.16.0`, Command Line `0.11.0`
-and Translations `0.8.0`. For another release, change the tag in the
+and Translations `0.9.1`. For another release, change the tag in the
 address. `dotnet runic` reports a few `RCLI8xxx` codes of its own; the SDK
 diagnostics list them.
 
@@ -358,7 +358,7 @@ machine with only a newer .NET SDK builds the application.
 
 - Guides with their own troubleshooting sections:
   [embed and serve assets](assets/README.md#troubleshooting) and the
-  [Translations .NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.8.0/docs/guides/translations/quickstart-dotnet.md#troubleshooting).
+  [Translations .NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/quickstart-dotnet.md#troubleshooting).
 - The [0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.13.0.md#upgrading)
   list the steps for upgrading from 0.12, the
   [migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#from-012-to-013)

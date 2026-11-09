@@ -268,6 +268,30 @@ export const products: Product[] = [
         label: 'Document messages',
       },
       {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/libraries.md',
+        label: 'Ship translations in a library',
+      },
+      {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/composition.md',
+        label: 'Compose library and application catalogs',
+      },
+      {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/translators.md',
+        label: 'Work with translators and translation tools',
+      },
+      {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/migrate-resx.md',
+        label: 'Migrate from .resx',
+      },
+      {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/migrate-i18next.md',
+        label: 'Migrate from i18next',
+      },
+      {
+        href: 'https://github.com/Runic-Artifex/runic-translations-sdk/blob/main/docs/guides/translations/runic-views.md',
+        label: 'Translate a Runic Views app (needs Runic SDK 0.17)',
+      },
+      {
         href: 'https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations',
         label: 'Translations guides',
       },
@@ -281,11 +305,11 @@ export const products: Product[] = [
     description:
       'Runic Translations discovers one translations/runic.json project with locale-scoped MessageFormat 2 files. Its deterministic compiler generates identifier-safe message calls, locale metadata, request-local SSR support, typed C# and tree-shakable ESM while keeping its runtime ABI portable and NativeAOT-ready.',
     releaseProduct: null,
-    version: '0.8.0',
+    version: '0.9.1',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.8.0',
+      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.9.1',
     source: 'https://github.com/Runic-Artifex/runic-translations-sdk',
     bestFor: [
       'Deterministic localization builds',

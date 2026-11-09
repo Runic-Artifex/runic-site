@@ -77,8 +77,15 @@ installed browsers ignore it. The page still sets its own `lang`.
 | Menu bar and context menus      | GTK's direction, or `LayoutDirection`; a global menu is the desktop's | Mirrored with `LayoutDirection`                        | AppKit's direction; standard menu titles from `StandardMenuTitles` |
 | Status icon menu                | Drawn by the panel, in the session's language                         | Mirrored with `DesktopStatusIconState.LayoutDirection` | AppKit's direction for the application                             |
 | Message boxes                   | GTK 3: the window's direction; GTK 4: the application's language      | The window's direction                                 | The application's language                                         |
-| File dialogs                    | Drawn by the desktop portal, in the session's language                | Windows display language                               | AppKit's direction for the application                             |
+| File dialogs                    | The desktop portal, in the session's language; the title is Runic's   | Windows display language                               | AppKit's direction for the application                             |
 | Notifications                   | Drawn by the notification server                                      | Windows display language                               | Drawn by the system                                                |
+
+On Linux the portal draws the file dialog's controls, but Runic passes the
+title: in SDK `0.16.0` it is always English (`Open file`, `Open files`,
+`Open directory`, `Save file`), and a save dialog without a suggested name
+proposes `Untitled`. The next SDK release, unreleased at
+[runic-sdk#830](https://github.com/Runic-Artifex/runic-sdk/pull/830), lets the
+application replace these texts with `DesktopPlatformTexts.Current`.
 
 Since SDK `0.11.0`, `DesktopWindowOptions.LayoutDirection` (`Default`,
 `LeftToRight` or `RightToLeft`, from `Runic.Platform`) sets the direction of a

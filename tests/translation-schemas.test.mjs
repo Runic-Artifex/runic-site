@@ -18,12 +18,14 @@ const previouslyPublished = [
   'locale-artifact-v5.schema.json',
   'message-ast-v5.schema.json',
   'project-v1.schema.json',
-  'web-module-manifest-v3.schema.json',
-];
-const addedInTranslations080 = [
   'translations-serve-v1.schema.json',
   'translations-support-v1.schema.json',
   'translations-tool-v1.schema.json',
+  'web-module-manifest-v3.schema.json',
+];
+const addedInTranslations091 = [
+  'interchange-review-v2.schema.json',
+  'translations-status-v1.schema.json',
 ];
 // sha256 of editor-state-v1 as last published from Translations f160e56.
 const editorStateV1 =
@@ -57,9 +59,9 @@ test('apex schemas preserve canonical identifiers and the pinned portal bytes', 
   }
 });
 
-test('apex keeps every published schema URL and adds the 0.8.0 schemas', async () => {
+test('apex keeps every published schema URL and adds the 0.9.1 schemas', async () => {
   const files = new Set(await builtFiles());
-  for (const name of [...previouslyPublished, ...addedInTranslations080])
+  for (const name of [...previouslyPublished, ...addedInTranslations091])
     assert.ok(files.has(name), name);
 });
 
