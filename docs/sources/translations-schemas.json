@@ -1,9 +1,9 @@
 {
   "repository": "Runic-Artifex/runic-translations-sdk",
-  "revision": "e322f8dd1af7946986cb889c327a2e73c0817fb8",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-translations-sdk/archive/e322f8dd1af7946986cb889c327a2e73c0817fb8.tar.gz",
+  "revision": "413913512e5623b8829c241e64478cd398b4c4ba",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-translations-sdk/archive/413913512e5623b8829c241e64478cd398b4c4ba.tar.gz",
   "sourcePath": "specs/translations/schemas",
-  "contentDigest": "sha256:57ed0f4b1ff8b252c9c268e4486a319cdb38a9f1223ba2fdfdf859be8bb12651",
+  "contentDigest": "sha256:2132146143753747cc7559d051778d5dd1c51136e746d1115ed2fc1f93a53a61",
   "retained": [
     {
       "name": "editor-state-v1.schema.json",

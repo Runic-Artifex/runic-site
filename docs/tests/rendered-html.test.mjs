@@ -342,7 +342,8 @@ test('uses the canonical Runic Translations identifiers', async () => {
   assert.match(html, /Runic\.Translations\.\*/);
   assert.match(html, /runic-translations-sdk/);
   assert.match(stripMarkup(html), /released independently from the Runic SDK/);
-  assert.ok(html.includes('runic-translations-sdk/releases/tag/v0.8.0'));
+  assert.ok(html.includes('runic-translations-sdk/releases/tag/v0.9.1'));
+  assert.doesNotMatch(html, /releases\/tag\/v0\.9\.0/);
   assert.doesNotMatch(html, /independent preview is not yet published/);
 });
 
@@ -432,7 +433,16 @@ test('product documentation areas link to their owning guides', async () => {
     assert.ok(html.includes(`href="${guide}"`), slug);
   }
   const translations = await render('/products/runic-translations');
-  for (const quickstart of ['quickstart-vite.md', 'quickstart-sveltekit.md'])
+  for (const quickstart of [
+    'quickstart-vite.md',
+    'quickstart-sveltekit.md',
+    'libraries.md',
+    'composition.md',
+    'translators.md',
+    'migrate-resx.md',
+    'migrate-i18next.md',
+    'runic-views.md',
+  ])
     assert.ok(
       translations.includes(
         `href="${github}runic-translations-sdk/blob/main/docs/guides/translations/${quickstart}"`,

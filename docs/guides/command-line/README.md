@@ -342,15 +342,15 @@ translates them with a [Translations](../translations/README.md) catalog. It
 ships English and German text for every framework key, including the prompt
 text that Command Line `0.7.0-preview.1` added and the response-file text of
 `0.9.0`, and it looks up your own command descriptions in your catalog.
-Translations `0.8.0` is tested with Command Line `0.9.0` and depends on its
-minor, `[0.9.0, 0.10)`; a later Command Line minor needs a new Translations
+Translations `0.9.1` is tested with Command Line `0.9.1` and depends on its
+minor, `[0.9.1, 0.10)`; a later Command Line minor needs a new Translations
 release. Until then, translate a CLI on Command Line `0.9.1`.
 Add the adapter and the build package to the project from
 [your first command](#your-first-command):
 
 ```sh docs-test=skip:translations-repository
-dotnet add package Runic.Translations.CommandLine --version 0.8.0
-dotnet add package Runic.Translations.Build --version 0.8.0
+dotnet add package Runic.Translations.CommandLine --version 0.9.1
+dotnet add package Runic.Translations.Build --version 0.9.1
 ```
 
 The build package compiles a `translations/` folder next to the project file.
@@ -424,10 +424,15 @@ as French, gets English. The same text appears in the JSON `message` fields;
 command names, option spellings, codes and `messageKey` values never change.
 
 - **Resolver.** `TranslationCommandTextResolver` looks up each key in your
-  catalog first, so the catalog can also override framework text, then in its
-  English and German text, and otherwise leaves Command Line's English text.
-  Pass the manager to follow locale switches, or an `ITranslationSnapshot` for
-  one fixed locale. A message name is the key with each hyphen removed and the
+  catalog and in its English and German text, and otherwise leaves Command
+  Line's English text. Your catalog can also override framework text. Since
+  Translations `0.9.1` the lookup is locale-first: for each locale of the
+  requested locale's fallback chain your message comes before the built-in
+  one, so the built-in German beats an override your catalog has only in
+  English. Pass the manager to follow locale switches, an
+  `ITranslationSnapshot` for one fixed locale, or an `ITranslationContext` or a
+  `TranslationContextBuilder` to resolve in the invocation's culture and to
+  add languages with overlays, such as French packs. A message name is the key with each hyphen removed and the
   next letter capitalized: `help.show-help` is `help.showHelp`. The
   [framework text keys](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.11.0/docs/guides/command-line/text-keys.md)
   list every key and its arguments.
@@ -449,7 +454,7 @@ command names, option spellings, codes and `messageKey` values never change.
   variable writes the exception of an `RCLI5000` host failure to stderr.
 
 The
-[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.8.0/packages/dotnet/Runic.Translations.CommandLine/README.md)
+[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/packages/dotnet/Runic.Translations.CommandLine/README.md)
 describes the resolver in full.
 
 ## Next steps

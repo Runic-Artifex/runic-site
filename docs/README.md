@@ -106,17 +106,18 @@ digest in `sources/translations-schemas.json`. Synchronize a changed pin with:
 bun docs/scripts/sync-translations-schemas.mjs <schema-source-directory> <pinned-revision>
 ```
 
-The pin is Runic Translations 0.8.0, which ships `asset-manifest-v1`,
-`capabilities-v1`, `external-pack-v5`, `locale-artifact-v5`, `message-ast-v5`,
-`project-v1`, `translations-serve-v1`, `translations-support-v1`,
-`translations-tool-v1` and `web-module-manifest-v3`.
+The pin is Runic Translations 0.9.1, which ships `asset-manifest-v1`,
+`capabilities-v1`, `external-pack-v5`, `interchange-review-v2`,
+`locale-artifact-v5`, `message-ast-v5`, `project-v1`, `translations-serve-v1`,
+`translations-status-v1`, `translations-support-v1`, `translations-tool-v1` and
+`web-module-manifest-v3`.
 
 A schema a newer pin no longer ships keeps its public URL as a retained legacy
 schema: list it under `retained` in `sources/translations-schemas.json` with
 the revision and file `sha256` that last published it. The sync script keeps
 retained files in place and the content digest covers only the current pin.
 `editor-state-v1` (last shipped at Translations `f160e56`) is retained this way;
-it is not part of Translations 0.8.0.
+it is not part of Translations 0.9.1.
 
 The docs tests verify the checked-in schema digests and published bytes. The
 marketing build deterministically mirrors the current and retained schemas into
@@ -185,7 +186,7 @@ direnv exec <runic-sdk-checkout> bun docs/scripts/test-api-extractor.mjs
 
 Site CI has no .NET, so this test runs by hand. Search has one entry per type.
 `tests/api-reference.test.mjs` checks the pins, digest and size budgets: at
-most 3.75 MiB of inputs, 416 KiB of HTML per page, and 7.5 MiB for all
+most 3.75 MiB of inputs, 224 KiB of HTML per page, and 8.75 MiB for all
 reference pages and their `__data.json` payloads gzipped. The link check covers every
 reference page.
 
