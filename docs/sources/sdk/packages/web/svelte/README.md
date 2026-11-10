@@ -183,7 +183,9 @@ handle also has `value` and `text`, which `bind:value={title.value}` reads and s
 or text failed (a `BridgeError` or a `FieldError`, whose `kind` is `rejected`, `conflict`, `committed-with-error` or
 `invalid-text`). `FieldError`, `FieldOptions`, `FieldState` and `BridgeField` are exported from this package. See the
 [field controller](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#fields) for the receipts
-and text forms.
+and text forms. An `invalid-text` error has a `reason` and `arguments`: render `useText(() => name.error).current` after
+`configureFieldErrorText` to show your own text for it in the window's language
+([Translating field errors](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#translating-field-errors)).
 
 #### Row cells and nested members
 
@@ -266,9 +268,17 @@ the reference as its `page` prop:
 ```
 
 The outlet is generic over the reference union, so the registry must have a
-component for every kind with a matching `page` prop. A different reference
-remounts the component, a kind without a component renders an English
-`<p role="alert">`, and the optional `fallback` snippet renders while `content` is empty.
+component for every kind with a matching `page` prop. A component whose `page`
+is a shared page reference, such as `ResultPagePageReference` of a .NET
+[`[RunicSharedClient]`](../../dotnet/Runic.Application.Views/README.md#shared-clients)
+interface, registers for each of its kinds:
+`{ ...registryEntries(resultPageKinds, ResultPage), settings: Settings }`. A different reference
+remounts the component, and the optional `fallback` snippet renders while
+`content` is empty. A kind without a component renders an English
+`<p role="alert">` in a development build (`process.env.NODE_ENV`, which Vite
+sets, is not `production`); a production build renders nothing and reports the
+kind once through the page's error reporting (`installErrorReporting`,
+`onBridgeDiagnostic`).
 
 The optional `missing` snippet replaces that alert, for example with localized
 text. It receives the reference whose kind has no component, and its markup
@@ -559,7 +569,22 @@ validation error's `text`, in the window's language, and renders again when the
 language changes. A string shows as it is; `null` and `undefined` show
 `fallback`. Connect the page's Translations runtime once with
 `configureTranslatedText` ([Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#translated-text)).
-`useWindowLocale()` reads the window's locale. With SvelteKit server
+`useWindowLocale()` reads the window's locale.
+
+`useTextLocale().current` is the locale that text is shown in, as a reactive
+property. It is one handle for the page and needs no component, so the locale
+resolver can read it; templates that call `m.*()` then render again on a
+language switch. `syncDocumentLocale()` keeps `<html lang dir>` on that locale:
+
+```ts
+// main.ts
+const textLocale = useTextLocale();
+configureLocaleResolver(() => textLocale.current ?? locale.getLocale());
+configureTranslatedText({ ...locale, resolve, direction: localeDirection });
+syncDocumentLocale();
+```
+
+With SvelteKit server
 rendering, call `configureTranslatedText` in the browser only (for example in
 `onMount`), or render on the server with `resolveTextReference` and the
 request's locale.
@@ -567,6 +592,23 @@ request's locale.
 ```svelte
 const status = useText(() => view.state?.status);
 <p>{status.current}</p>
+```
+
+## `useAppearance()`
+
+Follows the page's appearance while its owner lives, as the reactive property
+`current`: the colour scheme, contrast and reduced motion of the page's engine,
+combined with the desktop's text scale, accent colour, forced-colours palette,
+contrast and motion that a Runic host pushes ([Appearance](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#appearance)).
+Every member is `null` under server rendering, so a SvelteKit page renders the
+same on the server and in the browser until the browser's first effect.
+
+```svelte
+<script lang="ts">
+  import { useAppearance } from "@runic-artifex/svelte";
+  const look = useAppearance();
+</script>
+<main style:font-size="{look.current.textScale ?? 1}rem">…</main>
 ```
 
 ## Errors

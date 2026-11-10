@@ -184,7 +184,7 @@ another Window has it open. The `platform.files.openDocument` capability
 reports whether the Window's dialogs return documents. For a recent-files list,
 store the bytes of the lease's `CreateBookmarkAsync` and reopen the document
 with `IDesktopFileBookmarks.OpenDocumentAsync`; see
-[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform/README.md#document-apps).
+[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Platform/README.md#document-apps).
 
 ## When atomic save is unavailable
 
@@ -211,7 +211,7 @@ through it, and an unsandboxed application on GTK 3 can choose GTK's own file ch
 `LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That was a
 lower-level provider API that you composed yourself, with no automatic fallback.
 The
-[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
+[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
 describes both mechanisms.
 
 When the save is unavailable, `BeginWriteAsync` returns
@@ -296,9 +296,9 @@ the page, `mockBlob()` makes a blob whose URL loads in a test, and the mock
 Bridge's `uploads` keeps what the page uploaded.
 
 The
-[attachments example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/attachments)
+[attachments example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/attachments)
 shows an avatar and attachment uploads, and the
-[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#blobs-and-uploads)
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Views/README.md#blobs-and-uploads)
 lists each host's endpoint.
 
 ## Next steps
@@ -310,5 +310,5 @@ lists each host's endpoint.
 - [Desktop preferences, notifications, file handoff, and clipboard](../../desktop-services.md)
   covers the providers behind these services.
 - The
-  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
   lists every per-Window service and owner.

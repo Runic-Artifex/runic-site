@@ -7,9 +7,9 @@ reads checked-write receipts and shows the validation messages that .NET
 reports for the member.
 
 > This guide follows Runic SDK 0.16.0. Code blocks are excerpts of the
-> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/notes-view-first),
+> [Notes examples](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/notes-view-first),
 > which the SDK's CI builds and tests, or of the package READMEs. The
-> [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/views/README.md#fields)
+> [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/web/views/README.md#fields)
 > is the reference for the field controller.
 
 ## Field descriptors
@@ -193,12 +193,12 @@ what the native inputs use: `time` omits zero seconds (`10:30`), and
 `datetime` shows the page's local time and writes the page's offset. A nullable
 UTC `DateTime` that starts as `null` is written as a local date-time, which
 .NET reads as `Unspecified`; give it a `parse` that writes UTC, as the
-[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/views/README.md#fields)
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/web/views/README.md#fields)
 shows.
 
 Without its own `locale`, a field follows the window's locale when the
 application sets one with `IRunicWindowLocale`; see
-[The Window's language](../samples/settings.md#the-windows-language).
+[The application's language](languages.md).
 Otherwise it keeps the invariant form `1.5` and the ISO forms. The ViewModel
 receives the same values either way. `<input type="number">`, `type="date"`,
 `type="time"` and `datetime-local` need those invariant forms, so a field bound
@@ -270,7 +270,7 @@ Long text does not cross whole on every key. Under the `text-splice/1`
 feature, which the page and .NET negotiate on their own, setters and checked
 writes of a `string` member send only the changed range, and .NET rebuilds the
 value before it calls the setter. Nothing changes in application code; see
-[long text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/web/views/README.md#long-text-splices).
+[long text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/web/views/README.md#long-text-splices).
 
 ## Forms and edit sessions
 
@@ -278,7 +278,7 @@ Since SDK `0.16.0`, `RunicEditSession<T>` (`Runic.Navigation`) keeps a form's
 saved baseline and tells whether the edited values differ from it: `IsDirty`,
 with change notification. It works with ReactiveUI, CommunityToolkit and WPF
 ViewModels. The
-[WPF hybrid editor](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/wpf-hybrid-editor)
+[WPF hybrid editor](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/wpf-hybrid-editor)
 forwards `IsDirty` as its own property, pairs it with `LeaveConfirmation` and
 accepts what a save wrote:
 
@@ -297,7 +297,7 @@ _leave = LeaveConfirmation.InDialog(regions.Dialog,
 `Revert()` restores the baseline. After an asynchronous save, pass what the
 save wrote to `Accept`: a plain `Accept()` after the `await` would also take
 what the user typed meanwhile as saved. See
-[edit sessions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Navigation/README.md#edit-sessions).
+[edit sessions](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Navigation/README.md#edit-sessions).
 
 On the page, `useForm` (React, Vue, Svelte), `injectForm` (Angular) and
 `createFormController` combine fields into one `dirty`, `pending` and `valid`
@@ -369,9 +369,9 @@ internal void UpdateLine(int id, InvoiceLine line)
   `RunicViewDriver.WritePathAsync(vm => vm.Lines, ["7", "quantity"], 3)`.
 
 The
-[invoice grid example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/invoice-grid)
+[invoice grid example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/invoice-grid)
 edits an address and the cells of an invoice's lines this way; see
-[editable rows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#editable-rows-and-nested-fields).
+[editable rows](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Views/README.md#editable-rows-and-nested-fields).
 
 ## Validation from .NET
 
@@ -419,9 +419,9 @@ against the first stable releases of the ReactiveUI.Validation fork:
 (namespaces `ReactiveUI.Validation.Reactive.*`). The application references
 the one that matches its ReactiveUI flavour; the generated Bridge needs no
 further package. The
-[Views package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#structured-validation)
+[Views package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Views/README.md#structured-validation)
 and the
-[validation wire format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/specs/application/README.md#validation)
+[validation wire format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/specs/application/README.md#validation)
 describe paths, order and limits.
 
 ### Translated validation messages
@@ -432,7 +432,7 @@ page shows in the window's language, with the message as the fallback: set
 DataAnnotations or `ObservableValidator` check, or implement
 `IRunicTextReferenceSource` for ReactiveUI.Validation. A field's `errors` are
 translated automatically; see
-[The Window's language](../samples/settings.md#the-windows-language).
+[The application's language](languages.md).
 
 ## Validation in progress
 
@@ -462,7 +462,7 @@ The field's `validating` is then true, so a form can show "checking…", and a
 form's `pending` includes it. A pending member is not an error. The wire
 feature is `validation-pending/1`; pages and hosts before 0.16 ignore it. In
 tests, `RunicViewState.IsValidating(vm => vm.UserName)` reads it. See
-[validation in progress](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#validation-in-progress).
+[validation in progress](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Views/README.md#validation-in-progress).
 
 ## Upgrading from 0.15
 
@@ -483,7 +483,7 @@ Fields changed in SDK `0.16.0`:
   their drafts, up to 1 second later.
 
 The
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#fields-and-forms)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/docs/migration-1.0.md#fields-and-forms)
 lists these changes.
 
 ## Upgrading from 0.13
@@ -509,7 +509,7 @@ For generated members, move to the field API:
 - `{name}Errors` or `validation.errors` shown next to an input by hand become
   the field's `errors`.
 
-The [migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/docs/migration-1.0.md#fields)
+The [migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/docs/migration-1.0.md#fields)
 lists these changes, and
 [Typed domain failures](typed-failures.md) shows how Save reports its declared
 failures after the fields' writes.

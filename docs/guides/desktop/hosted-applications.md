@@ -27,7 +27,7 @@ parameter it defines. Runic has no flag or environment variable for it, so an
 application without such a path cannot be hosted, and the processes it starts
 never inherit the mode:
 
-```csharp docs-test=skip:unreleased-sdk
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views.Desktop/README.md
 #pragma warning disable RUNICDESK103 // Hosted application windows are experimental.
 if (args is ["hosted"])
 {
@@ -37,6 +37,7 @@ if (args is ["hosted"])
             new RunicDesktopHostOptions { Guest = RunicGuestOptions.FromStandardInput() },
             async host =>
             {
+                // When the host goes away while the Window opens, the open throws; Run then returns 0.
                 await using var window = await host.OpenWindowAsync<MainWindow>();
                 await window.WaitForCloseAsync();
                 return 0;
@@ -67,14 +68,14 @@ pages show the host's appearance. When the host goes away, the Windows close and
 with the guest's parameter. It shows each guest Window in a native window of the
 host:
 
-```csharp docs-test=skip:unreleased-sdk
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views.Desktop/README.md
 #pragma warning disable RUNICDESK103 // Hosted application windows are experimental.
 var applications = host.HostedApplications;
 applications.WindowOpened += (_, e) => Console.WriteLine($"{e.Window.Application.Guest.Name} opened {e.Window.Type}");
 await using var tool = await applications.StartAsync(
     new RunicGuestStartInfo("/opt/tool/Tool", ["hosted"]),
-    new RunicHostedApplicationOptions { Policy = new ToolPolicy() });
-int exitCode = await tool.Exited;
+    new RunicHostedApplicationOptions { Policy = new ToolWindowPolicy() });
+var exitCode = await tool.Exited;
 ```
 
 Each `StartAsync` starts a guest process for this host session. A failed start
@@ -98,24 +99,29 @@ rate of menus, dialogs, launches and announcements.
 
 A guest words its own dialog titles and menu texts, and nothing marks them as
 the guest's. A host that does not ship the guest itself can mark them, or narrow
-what the guest may open:
+what the guest may open. The example's shell puts the guest's name in front of
+each dialog title and opens only the Runic documentation:
 
-```csharp docs-test=skip:unreleased-sdk
-sealed class ToolPolicy : IRunicHostedWindowPolicy
+```csharp docs-test=source:examples/hosted-windows/Shell/CounterPolicy.cs
+public sealed class CounterPolicy : IRunicHostedWindowPolicy
 {
+    // A guest's dialogs show over its window with the guest's own title and text, which nothing marks as the guest's: the
+    // shell puts the guest's name in front of each title.
     public ValueTask<RunicHostedDialogDecision> DialogAsync(RunicHostedDialogRequest request, CancellationToken cancellationToken)
     {
         var guest = request.Window.Application.Guest.Name;
-        return ValueTask.FromResult(RunicHostedDialogDecision.Apply(request.MessageBox is { } box
-            ? request with { MessageBox = box with { Title = $"{guest}: {box.Title}" } }
-            : request with { Title = $"{guest}: {request.Title}" }));
+        return ValueTask.FromResult(RunicHostedDialogDecision.Apply(request.MessageBox is { } messageBox
+            ? request with { MessageBox = messageBox with { Title = Mark(guest, messageBox.Title) } }
+            : request with { Title = Mark(guest, request.Title) }));
     }
 
+    // Narrower than the defaults, which open any web or mail link the user's active window asks for: the shell opens only
+    // the Runic documentation, and no files. The guest sees a refusal as PermissionDenied.
     public ValueTask<RunicHostedServiceDecision> ServiceAsync(RunicHostedServiceRequest request, CancellationToken cancellationToken) =>
-        ValueTask.FromResult(request.IsAllowedByDefault
-            && (request.Kind != RunicHostedServiceKind.Launch || request.Uri is { Scheme: "https", Host: "docs.example.com" })
-                ? RunicHostedServiceDecision.Allow()
-                : RunicHostedServiceDecision.Refuse());
+        ValueTask.FromResult(request.IsAllowedByDefault && (request.Kind != RunicHostedServiceKind.Launch || MayOpen(request.Uri))
+            ? RunicHostedServiceDecision.Allow()
+            : RunicHostedServiceDecision.Refuse("The shell opens only the Runic documentation."));
+    // ...
 }
 ```
 
@@ -127,13 +133,20 @@ service requests, and changes its locale and appearance. It needs no host
 application and, for a guest that does not wait for its page to connect, no
 browser:
 
-```csharp docs-test=skip:unreleased-sdk
-var start = RunicServeOnlyApplication.CreateStartInfo("path/to/Tool.dll");
+```csharp docs-test=source:examples/hosted-windows/Counter/Tests/HostedCounterTests.cs
+var start = RunicServeOnlyApplication.CreateStartInfo(typeof(HostedCounterTests).Assembly
+    .GetCustomAttributes<AssemblyMetadataAttribute>().Single(attribute => attribute.Key == "CounterTool").Value!);
 start.ArgumentList.Add("hosted");
-await using var host = await RunicTestHost.StartGuestAsync(start, new RunicTestHostOptions { Locale = "de" });
-var window = await host.WaitForWindowAsync("MainWindow", TimeSpan.FromSeconds(30));
-await window.WaitForMenuBarAsync(_ => window.FindMenuItem("Datei", "Öffnen…") is not null, TimeSpan.FromSeconds(10));
+return RunicTestHost.StartGuestAsync(start, options);
+// ...
+await using var host = await StartAsync(new RunicTestHostOptions { Locale = "de" });
+var window = await host.WaitForWindowAsync(nameof(CounterWindow), Wait);
+
+await WaitForMenuAsync(window, "Zähler", "Zurücksetzen…");
 ```
+
+The example's tests also switch the host's language, answer the guest's
+message boxes and check that a link reaches the host's launcher.
 
 ## Platform notes
 

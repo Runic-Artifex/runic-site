@@ -578,7 +578,29 @@ without aliases, which `choices` repeats: `export const LayoutValues = ["List", 
 ```tsx
 const { maxLength, required } = EditorFields.title.constraints ?? {};
 <input {...title.inputProps} maxLength={maxLength} required={required} />
-``` `read` and `write` are the member and its setter; `checked` and `baseline` its
+```
+
+The validation errors that .NET reports for these attributes carry .NET's message. To show them in the window's
+language, either give them a text reference in .NET (`RunicValidationOptions.TextFor`, see
+[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#translated-text)),
+or check the constraints on the page and show your own message before the value is written:
+
+```ts
+import { m } from "virtual:runic-translations/app/messages";
+
+function constraintMessage(field: { readonly constraints?: BridgeFieldConstraints }, text: string): string | undefined {
+  const { required, minLength, maxLength } = field.constraints ?? {};
+  if (required && text.trim() === "") return m.field_required({});
+  if (maxLength !== undefined && text.length > maxLength) return m.field_too_long({ max: maxLength });
+  if (minLength !== undefined && text.length > 0 && text.length < minLength) return m.field_too_short({ min: minLength });
+  return undefined;
+}
+```
+
+A page check is a hint: .NET still validates, and its errors still arrive in `errors`. For a member checked on the
+page, show the page's message in place of `errors`, so the same problem does not show twice.
+
+`read` and `write` are the member and its setter; `checked` and `baseline` its
 checked write and `fieldBaseline`. A View with validation adds `errors(state)`: the member's messages from
 `{name}Errors`, or from `validation` at the member's path, followed by the messages below it, such as those of an
 object's members.
@@ -692,6 +714,65 @@ Receipts of checked writes, also when `write` of a text field calls one:
 | `rejected` | The draft stays; `error` is a `FieldError` `rejected` with the setter's message. The next input writes again. |
 | `conflict` | The draft stays; `conflict` and `error.current` are the producer's field, `error` is a `FieldError` `conflict`. Nothing is written until `retry()` writes the draft over the producer's value or `reset()` takes it. A conflict whose incoming value is the value sent is a success. |
 | `committed-with-error` | The value was committed and the draft is dropped; `error` is a `FieldError` `committed-with-error`. |
+
+#### Translating field errors
+
+`FieldError.message` is English. An `invalid-text` error of the kinds' parsers also has a `reason` and `arguments`,
+so an application can show its own text (`FieldErrorReason`, open):
+
+| `reason` | English `message` | `arguments` |
+| --- | --- | --- |
+| `required` | `Enter a number.` (`a whole number`, `a date`, `a time`, `a date and time`) | `expected`: `number`, `whole-number`, `date`, `time` or `date-time` |
+| `not-a-number` | `1e is not a number.` | `text` |
+| `not-a-whole-number` | `1.5 is not a whole number.` | `text` |
+| `too-many-fraction-digits` | `1.255 has more than 2 digits after the decimal separator.` | `text`, `scale` |
+| `out-of-range` | `79228162514264337593543950336 is too large.` (a `decimal` of 2⁹⁶ or more) | `text` |
+| `not-a-boolean` | `yes is not true or false.` | `text` |
+| `not-a-choice` | `Large is not one of Small, Medium.` | `text`, `choices` |
+| `not-a-date` | `soon is not a date (DD.MM.YYYY or YYYY-MM-DD).`, `2026-02-31 is not a date.` | `text`, `patterns` (form errors only) |
+| `not-a-time` | `soon is not a time (hh:mm or hh:mm:ss).`, `25:00 is not a time.` | `text`, `patterns` (form errors only) |
+| `not-a-date-time` | `soon is not a date and time (YYYY-MM-DDThh:mm).` | `text`, `patterns` |
+| `offset-out-of-range` | `2026-11-04T10:00+15:00 has an offset beyond ±14:00.` | `text` |
+| `no-text-form` | `This field has no text form.` | none |
+
+`text` is the trimmed text the user typed, and `patterns` the forms a text may take, the locale's first. A `number`
+field with `integer` (an `int` member) reports `required` with `expected: whole-number`, so a translated text can say
+"a whole number"; its English `message` stays `Enter a number.`. A field's own `parse` that throws, and the `rejected`,
+`conflict` and `committed-with-error` receipts, have no `reason`: `kind` says what happened, and `message` is the parse
+error's or the producer's text. A `FieldError` of an older copy of this package has no `arguments` and may have no
+`reason` either; the hook then receives empty `arguments`, and its `undefined` `reason` falls back to the message.
+
+Give the page your text once with `configureFieldErrorText`. It receives the error and the locale text references are
+shown in (`textLocale()`, the window's locale when the application sets one) and returns the text, or `undefined` for
+the English message. `resolveText(error)`, the framework packages' `useText` (`useText(name.error)` in React,
+`useText(() => name.error)` in Vue and Svelte), `injectText` and `{{ name.error() | runicText }}` (Angular), `texts`
+(Effect) and `describeBridgeError` then show it, and show it again when the language changes. With the generated ESM
+of Runic Translations, with one message per reason in your catalog:
+
+```ts
+import { configureFieldErrorText } from "@runic-artifex/views";
+import { m } from "virtual:runic-translations/app/messages";
+
+configureFieldErrorText((error, locale) => {
+  // `error.arguments` is always an object; `error.reason` can be undefined (an error of an older copy, or a kind
+  // without a reason), and the recipe then returns undefined for the English message.
+  const { text = "", scale = 0, expected = "number", patterns = [] } = error.arguments;
+  const options = locale === undefined ? {} : { locale };
+  switch (error.reason) {
+    case "required": return m.field_required({ expected }, options);           // .match {$expected :string}
+    case "not-a-number": return m.field_not_a_number({ text }, options);
+    case "too-many-fraction-digits": return m.field_too_many_fraction_digits({ text, scale }, options);
+    case "not-a-date": return m.field_not_a_date({ text, patterns }, options);              // a list argument
+    case undefined: return error.kind === "conflict" ? m.field_conflict({}, options) : undefined;
+    default: return undefined;                                                 // the English message
+  }
+});
+```
+
+A later call replaces an earlier one, and the returned function removes it. The hook is page-wide, like
+`configureTranslatedText`; a hook that throws is reported once per error and locale (again after a new hook is
+configured), and the message is shown. `fieldErrorText(error)` returns
+the text without a framework.
 
 #### Fields below a member and row cells
 
@@ -1474,12 +1555,13 @@ Text that a ViewModel produces as a Runic Translations text reference, such as a
 status line (a `TextReference` member) or a validation error's `text`, shows in
 the window's language (`translation-text/1`). Connect the page's Translations
 runtime once; the window's locale, which the application sets with
-`IRunicWindowLocale`, is then passed to its `setLocale`:
+`IRunicApplicationLocale` for every window or `IRunicWindowLocale` for one, is
+then passed to its `setLocale`:
 
 ```ts
-import { configureTranslatedText, resolveText, subscribeText } from "@runic-artifex/views";
+import { configureTranslatedText, resolveText, subscribeText, syncDocumentLocale } from "@runic-artifex/views";
 import { m } from "virtual:runic-translations/app/messages";
-import { configureLocaleResolver, createLocaleSource } from "virtual:runic-translations/app/runtime";
+import { configureLocaleResolver, createLocaleSource, localeDirection } from "virtual:runic-translations/app/runtime";
 import { resolveTextReference } from "virtual:runic-translations/app/transport";
 
 const locale = createLocaleSource({ initialLocale: navigator.language });
@@ -1487,7 +1569,9 @@ configureLocaleResolver(locale.getLocale);
 configureTranslatedText({
   ...locale,
   resolve: (reference, language) => resolveTextReference(reference, m, { locale: language }).text,
+  direction: localeDirection,
 });
+syncDocumentLocale();
 
 status.textContent = resolveText(editor.snapshot.status);
 subscribeText(() => { status.textContent = resolveText(editor.snapshot.status); });
@@ -1495,20 +1579,101 @@ subscribeText(() => { status.textContent = resolveText(editor.snapshot.status); 
 
 `resolveText(value, fallback)` formats a reference in the window's language, or
 shows its `fallbackText`, then `fallback`, then its key; a string shows as it
-is. For a validation error: `resolveText(error.text, error.message)`. Field
+is. For a validation error: `resolveText(error.text, error.message)`; for a
+field's `FieldError`, `resolveText(error)` with the text of
+`configureFieldErrorText` ([Translating field errors](#translating-field-errors)). Field
 errors already show translated messages and update on a language switch,
 and number, date and time fields without their own `locale` read and show their
 text in the window's locale, except while the user edits a draft; the wire value
 stays the invariant or ISO form. Bind such a field to a text input, or give it
 `locale: null` for `<input type="number">` or `type="date"`. A language switch on the
 page calls the application's command; a locale the page sets itself is set back
-by the next `locale` push. Under server rendering, configure the runtime in the
+by the next `locale` push. A window locale the runtime refuses, such as `de-CH`
+for a catalog with only `de` under the `Exact` policy, sets its closest parent
+(`de`) before an error is reported; a parent in another script is skipped, so
+`zh-Hant-TW` never falls back to `zh` (Simplified) nor `sr-Latn` to `sr`
+(Cyrillic). Under server rendering, configure the runtime in the
 browser only, or resolve with the request's locale.
-`windowLocale()` and `onWindowLocale` read the window's locale. The framework
+`windowLocale()` and `onWindowLocale` read the window's locale; `textLocale()`
+is the locale text is shown in, and `textDirection()` its writing direction
+(the runtime's `direction`, else the locale's script). `syncDocumentLocale()`
+sets `lang` and `dir` of `<html>` to them, now and after each switch, and leaves
+the document's own `lang` while there is no locale yet. The framework
 packages wrap this as `useText` (React, Vue, Svelte), `injectText` and the
-`runicText` pipe (Angular) and `texts` (Effect). The mock bridge's
-`setWindowLocale(locale)` pushes a locale in page tests. See
+`runicText` pipe (Angular) and `texts` (Effect). A template that calls the
+page's own `m.*()` renders again on a switch when the locale resolver reads
+the framework's text locale: `useTextLocale` (React, Vue, Svelte),
+`textLocaleSignal` (Angular) or the `textLocales()` stream (Effect). The mock bridge's
+`setWindowLocale(locale)` pushes a locale in page tests. Every `hello` also
+reports the browser's `navigator.languages` (`client-languages/1`, a .NET host
+of 0.17 or later), so the application can choose the window's language from
+`RunicConnection.Languages`; the mock bridge's `clientLanguages` shows what the
+page reported, in BCP 47 case as a producer keeps it. The list is personal data
+that can help fingerprint the browser, and a remote CS-WebUI server receives it
+too: to keep it on the page, call `configureClientLanguages({ send: false })` in
+`main.ts` before the page connects, and every `hello` sends `languages: []`. An
+application negotiates the tags against the locales it ships; it never assigns
+one directly. See
 [Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#translated-text) for the .NET side.
+
+## Appearance
+
+`appearance()` is the page's appearance, and `onAppearance(listener)` calls the
+listener with it each time it changes, until the returned function is called:
+
+| Member | From |
+| --- | --- |
+| `colorScheme` | The engine's `prefers-color-scheme`, which follows a window's own scheme; without it, the host's |
+| `contrast` | `"no-preference"`, `"more"` or `"forced-colors"`: the latest change of the engine's `forced-colors`/`prefers-contrast` and the host's (below) |
+| `reducedMotion` | `true` for less motion: the latest change of the engine's `prefers-reduced-motion` and the host's |
+| `textScale` | The host: the desktop's text size as a factor (1.5 for half as large again) |
+| `accentColor` | The host: the desktop's accent colour, `#rrggbb` |
+| `systemColors` | The host: while forced colours are on (a Windows contrast theme), the palette, named after the CSS system colours (`canvas`, `canvasText`, `linkText`, `grayText`, `highlight`, `highlightText`, `buttonFace`, `buttonText`) |
+| `engine` | The engine's media queries alone, `{ colorScheme, contrast, reducedMotion }`: what the page's CSS sees |
+| `host` | What the host pushed, or `null` |
+
+A member is `null` when neither source knows it, and every member is `null`
+under server rendering (`unknownAppearance`). The host's values come from the
+`appearance/1` feature: `RunicDesktopHost` reads the desktop's settings
+(`IDesktopSettings`) and pushes them to the pages of every window that only
+this computer can reach, also when they change. A serve-only window, a host on
+every network interface (`DesktopHostOptions.NetworkExposure`) and CS-WebUI
+push no values, so `host` stays `null` or has every member `null`.
+
+`contrast` and `reducedMotion` start from the engine's value, which is what the
+page's CSS sees. When the host pushes a change of one of them, the host's value
+applies until the engine's media query changes, so the store follows the
+desktop also where the engine does not while the page is open. Read `engine` to
+style what the CSS sees, for example to skip your own high-contrast styles while
+`engine.contrast` is `"forced-colors"`, and `host` for what the desktop asks for:
+
+| Engine | The engine's values while the page is open | `contrast` and `reducedMotion` |
+| --- | --- | --- |
+| Windows, WebView2 | Read when the window opens; an open page may not follow "Animation effects" | Follow the host's changes |
+| macOS, WKWebView | Follow "Increase contrast" and "Reduce motion" | The engine's, also after the host's push of the same change |
+| Linux, WebKitGTK 4.1 (GTK 3) | Follow GTK's settings | The engine's, also after the host's push of the same change |
+| Linux, WebKitGTK 6.0 (GTK 4) | Read when the process's first web view starts | Follow the host's changes |
+| Installed browsers, serve-only | The browser's own | The engine's; the host pushes no values |
+
+See [what each engine reports](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md#contrast-forced-colors-and-reduced-motion)
+for the media queries themselves. The page runtime keeps only the host's raw
+push; a page bundles the store only when it imports `appearance`,
+`onAppearance` or a framework hook.
+
+```ts
+import { onAppearance } from "@runic-artifex/views";
+
+onAppearance(look => {
+  document.documentElement.style.fontSize = `${look.textScale ?? 1}rem`;
+  if (look.accentColor) document.documentElement.style.setProperty("--accent", look.accentColor);
+});
+```
+
+The framework packages wrap it as `useAppearance` (React, Vue, Svelte),
+`injectAppearance` (Angular) and the `appearances()` stream (Effect). The mock
+bridge's `setAppearance({ textScale: 1.5, contrast: "more" })` pushes an
+appearance in page tests, as `WindowContentSession.Appearance` does in .NET
+tests.
 
 ## Connection state
 

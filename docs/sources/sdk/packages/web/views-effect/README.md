@@ -194,9 +194,17 @@ failures of that re-read are reported through `onBridgeDiagnostic` from
 
 `texts(value, fallback?)` is a stream of a text reference's text in the window's
 language: the text now, then the text after each language switch.
-`textChanges()` emits on each switch. Connect the page's Translations runtime
+`textChanges()` emits on each switch, and `textLocales()` is the locale that
+text is shown in, now and after each switch, for rendering the page's own
+`m.*()` messages again. Connect the page's Translations runtime
 once with `configureTranslatedText` from `@runic-artifex/views`
 ([Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#translated-text)).
+
+### Appearance
+
+`appearances()` is a stream of the page's appearance: the appearance now, then
+each new one, from the engine's media queries or a host push
+([Appearance](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#appearance)).
 
 ### View requests
 

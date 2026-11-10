@@ -11,6 +11,7 @@
 - [ViewModel state and threads](model-context.md)
 - [Operations and cancellation](operations-and-cancellation.md)
 - [Forms and validation](forms-and-validation.md)
+- [The application's language](languages.md)
 - [Testing frontends](frontend-testing.md)
 - [Open and save files](../samples/files.md)
 - [App settings and desktop preferences](../samples/settings.md)

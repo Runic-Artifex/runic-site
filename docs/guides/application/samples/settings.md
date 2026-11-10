@@ -27,13 +27,13 @@ without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
 This store, from the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/multi-window),
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/multi-window),
 loads the settings on demand and saves them by writing a temporary file and
 moving it over the old one, so a crash never leaves a half-written file. It
 uses System.Text.Json's source generator, so it works with NativeAOT:
 
 ```csharp docs-test=source:examples/multi-window/SettingsStore.cs
-public sealed record AppSettings(string Theme = "system", string? LastFolder = null, string Language = "en")
+public sealed record AppSettings(string Theme = "system", string? LastFolder = null, string? Language = null)
 // ...
 
 [JsonSerializable(typeof(AppSettings))]
@@ -228,52 +228,77 @@ settings.Saved += (_, saved) => _ = host.Desktop.SetColorSchemeAsync(saved.Color
   Custom window hosts implement `IDesktopColorSchemeWindowHost`.
 
 The
-[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Desktop/README.md#switching-while-the-application-runs)
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Desktop/README.md#switching-while-the-application-runs)
 lists what each window host sets.
 
-## The Window's language
+## Contrast, text size and accent colour
 
-Since SDK `0.16.0`, text that a ViewModel produces can follow the Window's
-language. Give the member, DTO member or command result the type
-`Runic.Translations.TranslationReference` (a message key, typed arguments and a
-fallback text), and the page formats it with its Runic Translations runtime.
+Since SDK `0.17.0`, Windows and pages follow more of the desktop's appearance
+than light and dark. In .NET, `DesktopAppearance.Contrast` reports the
+desktop's contrast preference in three states (`NoPreference`, `More` and
+`ForcedColors`), and `SystemColors` the palette of a Windows contrast theme.
+`HighContrast` is unchanged, and `DesktopColorScheme` stays light or dark.
 
-The application owns the language. `IRunicWindowLocale`, which
-`AddRunicWindowService()` registers, sets it for one Window. The multi-window
-example sets it from the settings file in the constructor, before the Window's
-pages show their first state, and switches it with a command:
+A page's CSS reads `prefers-contrast`, `forced-colors` and
+`prefers-reduced-motion`, but no engine gives script the desktop's text size,
+accent colour or contrast palette, and not every engine follows a change while
+the window is open. With the Views feature `appearance/1`, Runic Desktop pushes
+the desktop's appearance to each window's pages and keeps it current. The
+page's appearance store combines the push with the engine's media queries:
 
-```csharp docs-test=source:examples/multi-window/ProjectViewModel.cs
-// The Window's pages show text references in this language from their first state on.
-_language = settings.Load().Language;
-locale.Locale = _language;
-// ...
-// Switches this Window's language and saves it, so new Windows start in it. The page asks for it; the
-// ViewModel owns it.
-ChooseLanguageCommand = ReactiveCommand.Create<string>(language =>
-{
-    settings.Save(settings.Load() with { Language = language });
-    locale.Locale = language;
-    Language = language;
+```ts docs-test=readme:packages/web/views/README.md
+import { onAppearance } from '@runic-artifex/views';
+
+onAppearance((look) => {
+  document.documentElement.style.fontSize = `${look.textScale ?? 1}rem`;
+  if (look.accentColor)
+    document.documentElement.style.setProperty('--accent', look.accentColor);
 });
 ```
 
-`Status`, the status line, is a `TranslationReference`. `null`, the default
-locale, leaves each page in its own language; a language switch on the page
-calls the ViewModel's command.
+- The frameworks wrap it as `useAppearance` (React, Vue, Svelte),
+  `injectAppearance` (Angular) and `appearances()` (Effect). `engine` is what
+  the page's CSS sees, and `host` what the desktop asks for.
+- The desktop's settings describe the user at this computer, so only windows
+  that nothing else can reach get them: not serve-only windows, a host on every
+  network interface or CS-WebUI windows, whose pages get every member `null`.
+- In tests, set `host.Content.Appearance` and read `host.AppearancePushes`; a
+  page test calls the mock bridge's `setAppearance`.
 
-- The page connects its generated Translations runtime once with
-  `configureTranslatedText`, then shows references with `useText` (React, Vue,
-  Svelte), `injectText` or the `runicText` pipe (Angular), `texts` (Effect) or
-  `resolveText`. A reference it cannot translate shows its fallback text.
-- Field errors are translated automatically, and number, date and time fields
-  follow the Window's locale; see
-  [Locale-aware fields](../guides/forms-and-validation.md#locale-aware-fields).
-- In tests, `RunicViewState.Read(vm => vm.Status)` reads a reference, and the
-  mock bridge's `setWindowLocale("de")` pushes a locale.
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+host.Content.Appearance = new DesktopAppearance(DesktopColorScheme.Dark) { Contrast = DesktopContrast.More, TextScale = 1.5 };
+await Assert.That(host.AppearancePushes[^1]?.TextScale).IsEqualTo(1.5);
+```
 
-[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
-in the Views README shows the page setup and each framework's helper.
+[Contrast, forced colors and reduced motion](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Desktop/README.md#contrast-forced-colors-and-reduced-motion)
+in the Runic.Desktop README lists what each engine reports, and
+[Appearance](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/web/views/README.md#appearance)
+in the Views npm README describes the store.
+
+## The language
+
+Since SDK `0.16.0`, text that a ViewModel produces can follow the Window's
+language: give the member the type `Runic.Translations.TranslationReference`,
+and the page formats it with its Runic Translations runtime. Since SDK
+`0.17.0`, the language is the application's. `IRunicApplicationLocale`, which
+`AddRunicWindowService()` registers, switches every Window at once, and the
+multi-window example saves the user's choice after a switch succeeded:
+
+```csharp docs-test=source:examples/multi-window/ProjectViewModel.cs
+ChooseLanguageCommand = ReactiveCommand.CreateFromTask<string>(async (language, token) =>
+{
+    if (ProjectServices.SupportedLanguage(translations, language) is not { } supported) return;
+    await application.SetLocaleAsync(supported, token);
+    settings.Save(settings.Load() with { Language = supported });
+});
+```
+
+At the next start it passes the saved language to
+`IRunicApplicationLocale.SetLocaleAsync` before the first Window opens. A
+Window can still set a language of its own with `IRunicWindowLocale`; save its
+`OwnLocale`, which is `null` while the Window follows the application.
+[The application's language](../guides/languages.md) shows the whole setup,
+Runic's own text in English and German, and the tests.
 
 ## Next steps
 

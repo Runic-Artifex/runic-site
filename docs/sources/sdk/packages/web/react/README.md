@@ -200,7 +200,9 @@ same on every render. `aria-invalid` is true while the field has `errors` or an 
 or text failed (a `BridgeError` or a `FieldError`, whose `kind` is `rejected`, `conflict`, `committed-with-error` or
 `invalid-text`). `FieldError`, `FieldOptions`, `FieldState` and `BridgeField` are exported from this package. See the
 [field controller](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#fields) for the receipts
-and text forms.
+and text forms. An `invalid-text` error has a `reason` and `arguments`: render `useText(name.error)` after
+`configureFieldErrorText` to show your own text for it in the window's language
+([Translating field errors](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#translating-field-errors)).
 
 #### Row cells and nested members
 
@@ -312,9 +314,16 @@ const { state } = useSuspenseView(page, { releaseTimeout: 30_000 });
 `<ViewOutlet content={reference} registry={pages} fallback={…} />` renders the
 component registered for `reference.kind` with the reference as its `page`
 prop. Declare the registry with `satisfies ViewRegistry<State["main"]>` so each
-kind has a component whose `page` prop matches. A different reference
-remounts the component; a kind without a component renders an English
-`<p role="alert">`, and `fallback` renders while `content` is empty.
+kind has a component whose `page` prop matches. A component whose `page` is a
+shared page reference, such as `ResultPagePageReference` of a .NET
+[`[RunicSharedClient]`](../../dotnet/Runic.Application.Views/README.md#shared-clients)
+interface, registers for each of its kinds:
+`{ ...registryEntries(resultPageKinds, ResultPage), settings: Settings }`. A different reference
+remounts the component, and `fallback` renders while `content` is empty. A kind
+without a component renders an English `<p role="alert">` in a development build
+(`process.env.NODE_ENV` is not `production`); a production build renders nothing
+and reports the kind once through the page's error reporting
+(`installErrorReporting`, `onBridgeDiagnostic`).
 
 `missing` replaces that alert, for example with localized text. It receives the
 reference whose kind has no component, and its markup (including any `role`) is yours:
@@ -590,11 +599,39 @@ language changes. A string shows as it is; `null` and `undefined` show
 `configureTranslatedText` ([Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#translated-text)).
 `useWindowLocale()` reads the window's locale.
 
+`useTextLocale()` renders the locale that text is shown in, and renders again
+when it changes. Call it in a component that renders the page's own messages,
+so `m.*()` runs again after a language switch; the component's children render
+with it, except memoized ones. `syncDocumentLocale()`, once in `main.tsx`, keeps
+`<html lang dir>` on that locale.
+
+```tsx
+function Toolbar() {
+  useTextLocale();
+  return <button>{m.save()}</button>;
+}
+```
+
 ```tsx
 const status = useText(view.state?.status);
 <p>{status}</p>
 function ErrorLine({ error }: { error: BridgeValidationMessage }) {
   return <li>{useText(error.text, error.message)}</li>;
+}
+```
+
+## `useAppearance()`
+
+Renders the page's appearance and renders again when it changes: the colour
+scheme, contrast and reduced motion of the page's engine, combined with the
+desktop's text scale, accent colour, forced-colours palette, contrast and motion
+that a Runic host pushes ([Appearance](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#appearance)). The server snapshot
+has every member `null`.
+
+```tsx
+function Shell({ children }: { readonly children: ReactNode }) {
+  const { textScale, reducedMotion } = useAppearance();
+  return <main style={{ fontSize: `${textScale ?? 1}rem` }} data-motion={reducedMotion ? "reduce" : "full"}>{children}</main>;
 }
 ```
 

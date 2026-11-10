@@ -124,6 +124,7 @@ export const products: Product[] = [
       'application-wpf',
       'templates',
       'views-effect',
+      'views-translations',
       'svelte',
     ],
     source:
