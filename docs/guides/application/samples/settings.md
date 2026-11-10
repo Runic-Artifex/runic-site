@@ -246,13 +246,13 @@ the window is open. With the Views feature `appearance/1`, Runic Desktop pushes
 the desktop's appearance to each window's pages and keeps it current. The
 page's appearance store combines the push with the engine's media queries:
 
+<!-- prettier-ignore -->
 ```ts docs-test=readme:packages/web/views/README.md
-import { onAppearance } from '@runic-artifex/views';
+import { onAppearance } from "@runic-artifex/views";
 
-onAppearance((look) => {
+onAppearance(look => {
   document.documentElement.style.fontSize = `${look.textScale ?? 1}rem`;
-  if (look.accentColor)
-    document.documentElement.style.setProperty('--accent', look.accentColor);
+  if (look.accentColor) document.documentElement.style.setProperty("--accent", look.accentColor);
 });
 ```
 

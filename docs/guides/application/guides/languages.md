@@ -131,25 +131,19 @@ framework's reactive text locale: `useTextLocale()` (React, Vue, Svelte),
 starter templates call it. The translated template's React page connects the
 catalog like this:
 
+<!-- prettier-ignore -->
 ```ts docs-test=template:translations/react/src/translations.ts frontend=react translations=true
-export function startTranslations(
-  initialLocale = navigator.language,
-): () => void {
+export function startTranslations(initialLocale = navigator.language): () => void {
   const locale = createLocaleSource({ initialLocale });
   // Every catalog on the page follows the window's language, also those of component libraries.
   const stopResolver = configureSharedLocaleResolver(locale.getRequestedLocale);
   const stopText = configureTranslatedText({
     ...locale,
-    resolve: (reference, language) =>
-      resolveTextReference(reference, m, { locale: language }).text,
+    resolve: (reference, language) => resolveTextReference(reference, m, { locale: language }).text,
     direction: localeDirection,
   });
   const stopDocument = syncDocumentLocale();
-  return () => {
-    stopDocument();
-    stopText();
-    stopResolver();
-  };
+  return () => { stopDocument(); stopText(); stopResolver(); };
 }
 ```
 
@@ -189,17 +183,12 @@ services.AddRunicViewsTranslations();   // Runic's own text, in the same context
 `DesktopPlatformTexts` in the application's locale. On the page, register the
 catalog once in `main.ts`:
 
+<!-- prettier-ignore -->
 ```ts docs-test=readme:packages/dotnet/Runic.Application.Views.Translations/README.md
-import {
-  configureRunicViewsText,
-  runicViewsCatalog,
-} from '@runic-artifex/views-translations';
+import { configureRunicViewsText, runicViewsCatalog } from '@runic-artifex/views-translations';
 
-configureRunicViewsText(); // field errors in the window's language
-const resolveReference = transport.createReferenceResolver([
-  { transport, messages: m },
-  runicViewsCatalog,
-]);
+configureRunicViewsText();   // field errors in the window's language
+const resolveReference = transport.createReferenceResolver([{ transport, messages: m }, runicViewsCatalog]);
 ```
 
 - **Only English and German.** `ITranslationContext.SupportedLocales` lists
