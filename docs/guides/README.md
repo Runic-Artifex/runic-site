@@ -19,15 +19,16 @@ needs and leads on from there:
 
 - [Getting started](application/getting-started/README.md), [choosing a host and MVVM library](application/choosing.md), [Windows and Views, step by step](application/tutorial/README.md) and [adding Runic to an existing app](application/existing-app.md).
 - [Pages and navigation](application/guides/pages-and-navigation.md), [ViewModel state and threads](application/guides/model-context.md) and the [glossary](application/glossary.md).
+- [The application's language](application/guides/languages.md): one locale for every Window, the `--translations` template and Runic's own text in English and German.
 - Samples: [open and save files](application/samples/files.md), [app settings and desktop preferences](application/samples/settings.md), [ask the user from a ViewModel](application/samples/prompts.md) and [update every Window from a shared service](application/samples/cross-window.md).
 - [Published-package desktop consumer](application/package-consumer.md) and
   [operations and cancellation](application/guides/operations-and-cancellation.md).
 - [Incremental WPF migration](application/migrations/wpf-incremental.md): independent Translations and Command Line, native navigation, then optional web Views [hosted in WPF](application/migrations/wpf-hybrid.md).
 - [Runic Application Views](application/README.md) and [application architecture](application/architecture/README.md).
-- [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/notes-reactive-views/README.md).
+- [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/notes-reactive-views/README.md).
 - [Accessible Desktop views](desktop/accessibility.md): screen readers on each host, status messages, range controls, selection, focus and keyboard.
-- [Desktop native services](desktop-services.md), [host selection](desktop/host-selection.md), [window close lifecycle](desktop/window-close-lifecycle.md), and
-  [right-to-left layouts](desktop/right-to-left.md).
+- [Desktop native services](desktop-services.md), [host selection](desktop/host-selection.md), [window close lifecycle](desktop/window-close-lifecycle.md),
+  [right-to-left layouts](desktop/right-to-left.md), and [hosted applications](desktop/hosted-applications.md): show another Runic application's windows as your own.
 - [Ship a Desktop application](desktop/shipping.md), [package it with Nix](desktop/nix-packaging.md), and [report crashes](desktop/crash-reporting.md).
 - [Runic Command Line](command-line/README.md).
 - [Runic Translations](translations/README.md), the [Translations repository's guides](https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations) and [migrating Svelte translation imports](migrations/translations-svelte.md).

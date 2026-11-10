@@ -21,11 +21,13 @@ services.AddSingleton<RowStore>();
 services.AddScoped<RowsViewModel>();
 ```
 
-The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/multi-window)
+The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/multi-window)
 opens its first Window from the host callback. The application ends when that
 Window closes. Before it opens the Window, the example applies the app's theme
-to every Window with `host.Desktop.SetColorSchemeAsync`; see
-[Light and dark at run time](settings.md#light-and-dark-at-run-time):
+to every Window with `host.Desktop.SetColorSchemeAsync`, see
+[Light and dark at run time](settings.md#light-and-dark-at-run-time), and
+starts in the application's language, see
+[The application's language](../guides/languages.md):
 
 ```csharp docs-test=source:examples/multi-window/Program.cs
 return RunicDesktopHost.Run(provider, async host =>
@@ -35,6 +37,9 @@ return RunicDesktopHost.Run(provider, async host =>
     var settings = provider.GetRequiredService<SettingsStore>();
     await host.Desktop.SetColorSchemeAsync(settings.Load().ColorScheme);
     settings.Saved += (_, saved) => _ = host.Desktop.SetColorSchemeAsync(saved.ColorScheme).AsTask();
+    // ...
+    await provider.StartLanguageAsync(Environment.GetEnvironmentVariable("RUNIC_LOCALE"));
+    SetMenuBar();
     // The first Window. Its ViewModel opens more with IRunicWindowService; the application ends when this one closes.
     await using var window = await host.OpenWindowAsync<ProjectWindow>(new RunicWindowOptions { Width = 640, Height = 420 });
     await window.WaitForCloseAsync();
@@ -48,10 +53,11 @@ The host is passed only to that callback; it isn't registered in the
 container. To open Windows from a command or a service, register
 `IRunicWindowService` with `AddRunicWindowService()`. It is new in SDK
 `0.7.0-preview.7`, as is the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.16.0/examples/multi-window).
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/multi-window).
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
 // IRunicWindowService, which ProjectViewModel uses to open more Windows, find open documents and ask for an account.
+// It also registers IRunicApplicationLocale, the application's language.
 services.AddRunicWindowService();
 ```
 
@@ -200,7 +206,7 @@ public sealed partial class AccountViewModel(IRunicWindowResult<string> result) 
 - Cancelling the opener's token closes the Window without asking and throws
   `OperationCanceledException`.
 - The example's
-  [AccountWindow.cs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/examples/multi-window/AccountWindow.cs)
+  [AccountWindow.cs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/multi-window/AccountWindow.cs)
   also has a Cancel command, which closes the Window with
   `IRunicWindowContext.RequestCloseAsync`.
 
@@ -228,7 +234,7 @@ Window with `IRunicWindowContext.Window`, as the account chooser above does.
 An owned Window hides and shows with its owner, and closes when its owner
 closes. A guarded owner asks its owned Windows before it closes; see
 [Owned Windows](../../desktop/window-close-lifecycle.md#owned-windows). The
-[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Views/README.md#owned-and-window-modal-windows)
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Views/README.md#owned-and-window-modal-windows)
 has the full platform table.
 
 ## The threading rule across Windows
@@ -276,7 +282,8 @@ it:
 
 ```csharp docs-test=source:examples/multi-window/ProjectViewModel.cs
 public ProjectViewModel(ProjectService project, SettingsStore settings, IDesktopSettings desktop,
-    IRunicWindowService windows, IRunicWindowContext window, IRunicModelContext context, IRunicWindowLocale locale)
+    IRunicWindowService windows, IRunicWindowContext window, IRunicModelContext context,
+    IRunicApplicationLocale application, IRunicWindowLocale locale, TranslationContext translations)
 {
     _project = project;
     _context = context;
@@ -398,7 +405,7 @@ reload. A WPF `RunicViewHost` has no Window scope and reports none.
 In a test, `host.Root.ForConnection("bob-tab", clientKey: "bob")` drives the
 Window as a second page, `RunicViewDriver.Connection` is a driver's
 connection, and `host.Connections` lists them; see
-[Several pages of one window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/packages/dotnet/Runic.Application.Testing/README.md#several-pages-of-one-window).
+[Several pages of one window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Testing/README.md#several-pages-of-one-window).
 
 **Security fix for CS-WebUI in `0.16.0`.** Before, a page that reloaded, or
 another browser that connected right after a page left, could take over the
@@ -406,7 +413,19 @@ closed page's connection, so a command still running for it could send its
 questions and pushes to the new page. Full protection needs a 0.16 page and a
 0.16 host: update the Runic NuGet and npm packages together, and replace any
 copy of `runic-cswebui.js` that the application keeps outside `www/`; see the
-[release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.16.0/eng/release/notes/0.16.0.md#security-connection-keys-on-cs-webui).
+[release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/eng/release/notes/0.16.0.md#security-connection-keys-on-cs-webui).
+
+**Security fix for CS-WebUI in `0.17.0`.** A CS-WebUI window's page server and
+its blob endpoint did not hold both loopback addresses that `localhost` names,
+so another process on the same computer could listen on the other one and
+receive or serve the window's page, blobs and uploads. Update to
+`Runic.Application.Views.CsWebUi` `0.17.0-preview.1`, which requires CsWebUi
+2.5.0-beta.4.9; applications need no code changes. See the advisories
+[GHSA-vhx5-crr3-7pv5](https://github.com/Runic-Artifex/runic-sdk/security/advisories/GHSA-vhx5-crr3-7pv5)
+and
+[GHSA-9p7m-x6rx-97qh](https://github.com/Runic-Artifex/cs-webui/security/advisories/GHSA-9p7m-x6rx-97qh),
+and the
+[release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/eng/release/notes/0.17.0.md#security-cs-webui-blob-endpoint).
 
 ## Next steps
 

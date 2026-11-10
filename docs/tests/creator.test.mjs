@@ -49,6 +49,7 @@ test('picker toggles are the template Boolean parameters', () => {
     creatorToggles.map((toggle) => [toggle.flag, toggle.defaultValue]),
     [
       ['--tests', false],
+      ['--translations', false],
       ['--nix', false],
       ['--packaging', false],
       ['--restore', false],

@@ -102,11 +102,14 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  // 3.75 MiB since 0.16.0 added view requests, window management, forms,
+  // 4 MiB since 0.17.0 added the application locale, Runic's own text
+  // (Runic.Application.Views.Translations and @runic-artifex/views-translations),
+  // appearance, shared clients and hosted application windows, which need
+  // about 3.85 MiB; 3.75 MiB since 0.16.0 added view requests, window management, forms,
   // query collections, blobs, region collections, navigation paths and the
   // platform test fakes, about 400 public types that need about 3.53 MiB;
   // 2.75 MiB since 0.14.0 and 2.5 MiB since 0.12.0.
-  assert.ok(inputs <= 3.75 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  assert.ok(inputs <= 4 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
   // __data.json payloads that client-side navigation loads. 224 KiB per page
   // since npm exports have pages of their own and package pages list the
@@ -123,12 +126,13 @@ test('API inputs and rendered pages stay within their size budgets', () => {
       assert.ok(bytes.length <= 224 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 8.75 MiB since the about 300 functions, constants and type aliases of the
+  // 9.25 MiB since 0.17.0, which needs about 8.96 MiB; 8.75 MiB since the
+  // about 300 functions, constants and type aliases of the
   // npm packages have pages of their own, which needs about 8.36 MiB; 7.5 MiB
   // since 0.16.0, 6 MiB since 0.15.0, 5.75 MiB since 0.14.0, 5.5 MiB since
   // 0.13.0 and 5.25 MiB since the platform services of 0.11.0.
   assert.ok(
-    compressed <= 8.75 * 1024 * 1024,
+    compressed <= 9.25 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });
@@ -366,11 +370,15 @@ test('signatures reference only public types of the reference packages', () => {
       model.types.map((type) => type.id),
     ),
   );
-  // Internal types of the documented assemblies share their namespaces.
+  // Internal types of the documented assemblies share their namespaces. A
+  // Runic extension class in a .NET namespace, such as
+  // Microsoft.Extensions.DependencyInjection, does not make that namespace's
+  // .NET types internal ones.
   const namespaces = new Set(
     Object.values(models)
       .filter((model) => model.framework)
-      .flatMap((model) => model.types.map((type) => type.namespace)),
+      .flatMap((model) => model.types.map((type) => type.namespace))
+      .filter((namespace) => !/^(System|Microsoft)(\.|$)/.test(namespace)),
   );
   const failures = [];
   for (const model of Object.values(models).filter((m) => m.framework))

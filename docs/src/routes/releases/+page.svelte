@@ -47,6 +47,47 @@
         > remain available on GitHub.
       </p>
     </DocSection>
+    <DocSection title="Security advisories">
+      <p>
+        Runic SDK 0.17.0 and CS-WebUI 2.5.0-beta.4.9 fix two local-process
+        issues of applications on the CS-WebUI host: another process on the same
+        computer that listened on the other loopback address of a window's port
+        could receive or serve the window's traffic. Runic Desktop and WPF
+        applications are not affected, and nothing is reachable from another
+        computer. Applications need no code changes.
+      </p>
+      <ul>
+        <li>
+          <a
+            href="https://github.com/Runic-Artifex/runic-sdk/security/advisories/GHSA-vhx5-crr3-7pv5"
+            rel="external">GHSA-vhx5-crr3-7pv5</a
+          >: <code>Runic.Application.Views.CsWebUi</code> 0.16.0-preview.1 and earlier,
+          including the blob and upload endpoint on Linux and macOS. Fixed in 0.17.0-preview.1.
+        </li>
+        <li>
+          <a
+            href="https://github.com/Runic-Artifex/cs-webui/security/advisories/GHSA-9p7m-x6rx-97qh"
+            rel="external">GHSA-9p7m-x6rx-97qh</a
+          >: the page server that WebUI runs for every CS-WebUI window,
+          <code>CsWebUi</code> 2.5.0-beta.4.8 and earlier. Fixed in
+          <a
+            href="https://github.com/Runic-Artifex/cs-webui/releases/tag/v2.5.0-beta.4.9"
+            rel="external">CS-WebUI 2.5.0-beta.4.9</a
+          >, which <code>Runic.Application.Views.CsWebUi</code> 0.17.0-preview.1 requires.
+        </li>
+      </ul>
+      <p>
+        Update every Runic package to 0.17.0 together. Applications that call
+        <code>CsWebUi.Native</code>'s <code>Show</code>,
+        <code>StartServer</code> or <code>GetUrl</code> themselves stay exposed
+        until WebUI listens on both loopback addresses; use
+        <code>CsWebUi</code>'s <code>WebUiWindow</code> instead. See the
+        <a
+          href="https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/eng/release/notes/0.17.0.md#security-cs-webui-blob-endpoint"
+          rel="external">0.17.0 release notes</a
+        >.
+      </p>
+    </DocSection>
     <DocSection title="Update the components you use">
       <p>
         Keep SDK packages on the same preview version, restore dependencies and

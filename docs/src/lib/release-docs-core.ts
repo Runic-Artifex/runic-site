@@ -33,6 +33,7 @@ const productLabels: Readonly<Record<string, string>> = {
   svelte: 'Svelte',
   templates: 'Templates',
   'views-effect': 'Effect bindings',
+  'views-translations': 'Runic text in English and German',
   vite: 'Vite plugin',
 };
 // Package IDs that the pinned SDK snapshot (sources/sdk) renamed after the

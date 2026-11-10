@@ -145,8 +145,11 @@ const queries = {
 // 576 KiB raw and 160 KiB gzipped with the 0.16.0 API types and guides
 // (about 400 new types: view requests, windows, forms, query collections,
 // blobs, document tabs and navigation paths), which need about 684 KiB raw
-// and 177 KiB gzipped.
-const budget = { raw: 720 * 1024, gzip: 184 * 1024 };
+// and 177 KiB gzipped, and from 720 KiB raw and 184 KiB gzipped with the
+// 0.17.0 API types and guides (the application's language, Runic's own text,
+// appearance, shared clients and hosted applications), which need about
+// 725 KiB raw and 184 KiB gzipped.
+const budget = { raw: 768 * 1024, gzip: 192 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {

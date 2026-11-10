@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.16.0",
+  "version": "0.17.0",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "b407196c31a626627bb86452d09460cb4cc4bc7f",
@@ -30,6 +30,10 @@
     {
       "name": "@runic-artifex/views-effect",
       "path": "packages/web/views-effect"
+    },
+    {
+      "name": "@runic-artifex/views-translations",
+      "path": "packages/web/views-translations"
     },
     {
       "name": "@runic-artifex/react",
@@ -95,7 +99,7 @@
     },
     {
       "name": "Runic.Application.Views.CsWebUi",
-      "version": "0.16.0-preview.1",
+      "version": "0.17.0-preview.1",
       "project": "packages/dotnet/Runic.Application.Views.CsWebUi/Runic.Application.Views.CsWebUi.csproj"
     },
     {
@@ -105,6 +109,10 @@
     {
       "name": "Runic.Application.Views.Wpf",
       "project": "packages/dotnet/Runic.Application.Views.Wpf/Runic.Application.Views.Wpf.csproj"
+    },
+    {
+      "name": "Runic.Application.Views.Translations",
+      "project": "packages/dotnet/Runic.Application.Views.Translations/Runic.Application.Views.Translations.csproj"
     },
     {
       "name": "Runic.Application.Templates",
@@ -312,6 +320,7 @@
         "tests/dotnet/Runic.Application.Testing.Tests",
         "tests/dotnet/Runic.Application.Logging.Tests",
         "tests/dotnet/Runic.Application.Views.Desktop.Tests",
+        "tests/native/Runic.Application.HostedWindows.Smoke",
         "tests/benchmarks/Runic.Application.Views.Benchmarks",
         "tests/benchmarks/host-scripts",
         "tests/benchmarks/Runic.Desktop.ServerBenchmarks",
@@ -350,6 +359,18 @@
       ],
       "paths": [
         "packages/web/views-effect"
+      ]
+    },
+    "views-translations": {
+      "dependsOn": [
+        "application"
+      ],
+      "paths": [
+        "packages/dotnet/Runic.Application.Views.Translations",
+        "packages/web/views-translations",
+        "tests/dotnet/Runic.Application.Views.Translations.Tests",
+        "tests/fixtures/application/views-translations-consumer",
+        "tests/fixtures/application/views-translations-vite"
       ]
     },
     "vite": {
@@ -417,6 +438,7 @@
         "examples/notes-view-first",
         "examples/notes-reactive-views",
         "examples/document-tabs",
+        "examples/hosted-windows",
         "examples/dynamicdata",
         "examples/invoice-grid",
         "examples/query-collections",

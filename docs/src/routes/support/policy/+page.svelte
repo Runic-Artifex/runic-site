@@ -64,7 +64,7 @@
           >0.9.1</code
         >) only fixes or adds, and only the latest minor gets fixes. Releases
         from 0.9.0 on carry no <code>-preview.N</code>
-        suffix; GitHub still marks them as prereleases. 0.16.0 is the current minor
+        suffix; GitHub still marks them as prereleases. 0.17.0 is the current minor
         release. Views protocol 4, introduced in 0.13.0, is the protocol that 1.0
         keeps, and later releases add only features negotiated in its
         <code>hello</code>. The release candidates <code>1.0.0-rc.N</code> start
