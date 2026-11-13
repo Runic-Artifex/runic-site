@@ -23,7 +23,7 @@ without a .NET SDK can create a project. Its arguments follow `--`, as they
 do for `dnx Runic.Create`; add `--nix` for the project's `flake.nix`:
 
 ```sh
-nix run github:Runic-Artifex/runic-sdk/v0.16.0#create -- MyApp --frontend react --nix
+nix run github:Runic-Artifex/runic-sdk/v0.17.1#create -- MyApp --frontend react --nix
 cd MyApp
 git init && git add -A
 nix develop              # the .NET SDK, Node and the package manager, from the new flake
@@ -44,7 +44,7 @@ network, and installs the template into `~/.templateengine`, as
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     runic-sdk = {
-      url = "github:Runic-Artifex/runic-sdk/v0.16.0";
+      url = "github:Runic-Artifex/runic-sdk/v0.17.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -116,7 +116,7 @@ Arguments that `buildDotnetModule` also takes (`dotnetFlags`, `runtimeDeps`,
 | `spellingDictionaries` | `[ ]` | Hunspell dictionaries for WebKitGTK's spell checker, such as `[ hunspellDicts.de_CH hunspellDicts.en_US ]`, on the wrapper's `XDG_DATA_DIRS`; see [Spell checking](#spell-checking). Only with `desktop` and `desktop-gtk4`. |
 | `nativeAot` | `false` | Publish `projectFile` with NativeAOT; see [NativeAOT](#nativeaot). Self-contained either way when set. |
 | `selfContainedBuild` | `nativeAot` | A self-contained JIT build. |
-| `nativeServer` | from the lock files | The native Desktop server (`Runic.Desktop.NativeServer`) with its library built from source (`nix/runic-server.nix`, the crates `native/Cargo.lock` pins) instead of the package's prebuilt one: NativeAOT links its static library, JIT copies its shared library. `true` when a lock file lists `Runic.Desktop.NativeServer`; a project that references the SDK's projects sets it together with `-p:RunicDesktopServer=Native` in `dotnetFlags`. |
+| `nativeServer` | from the lock files | The native Desktop server (`Runic.Desktop.NativeServer`) with its library built from source (`nix/runic-server.nix`, the crates `native/Cargo.lock` pins) instead of the package's prebuilt one: NativeAOT links its static library (or, with the project's `RunicDesktopNativeServerLinkage`, puts the shared one beside the executable or leaves the server to the application's own Rust library; see [below](#the-native-desktop-server-and-an-applications-own-rust-library)), JIT copies its shared library. `true` when a lock file lists `Runic.Desktop.NativeServer`; a project that references the SDK's projects sets it together with `-p:RunicDesktopServer=Native` in `dotnetFlags`. |
 | `runicServer` | `nix/runic-server.nix` | The native server library `nativeServer` uses, such as a patched build. |
 | `testRunner` | `"VSTest"` | How `doCheck` runs `testProjectFile`: `"VSTest"` with nixpkgs' `dotnet test`, or `"Microsoft.Testing.Platform"`; see [Tests](#tests). |
 | `completions` | `null` | Shell completions the program prints, installed for bash, zsh and fish: `program` (default `meta.mainProgram`), `command` (default `[ "completion" ]`) and `shells`. See [Shell completions](#shell-completions). |
@@ -528,6 +528,35 @@ references and `testProjectFile` keep their own settings: tests are restored
 with their usual lock file and run under the JIT. A project that sets
 `PublishAot` itself, or a `dotnetFlags` entry that sets
 `CustomAfterDirectoryBuildProps`, overrides it.
+
+#### The native Desktop server and an application's own Rust library
+
+An application that links a Rust static library of its own cannot also link
+the native server's static library: each brings Rust's standard library, and
+the link fails on duplicate symbols. The project's
+`RunicDesktopNativeServerLinkage` chooses another way
+([Runic.Desktop.NativeServer](../packages/dotnet/Runic.Desktop.NativeServer/README.md#nativeaot-and-an-applications-own-rust-library)),
+and `buildRunicApplication` follows it with the library it builds from source
+(`nativeServer`):
+
+- `Shared`: the source-built `librunic_server.so` is installed beside the
+  executable in `lib/<pname>`, where the executable loads it.
+- `Application`: the application's own Rust derivation builds the
+  `runic-server` crate into its static library, and the NativeAOT executable
+  takes the server from there. The source-built library still serves the JIT
+  builds, such as `testProjectFile`'s tests. The crate is a git dependency of
+  the application's `Cargo.lock`, so `rustPlatform.buildRustPackage` needs its
+  hash, with the version of the release:
+
+  ```nix
+  cargoLock = {
+    lockFile = ./native/Cargo.lock;
+    outputHashes."runic-server-0.17.1" = "sha256-…";
+  };
+  ```
+
+  Cargo uses the application's `[profile.release]` for the crate, and the
+  application's nixpkgs `rustc` must be at least the crate's `rust-version`.
 
 ## NixOS and Home Manager modules
 

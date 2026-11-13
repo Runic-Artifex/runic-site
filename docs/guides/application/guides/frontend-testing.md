@@ -9,8 +9,8 @@ shows.
 
 > Since SDK `0.14.0`, every `runic-app` frontend has such a test. Every code
 > block is an excerpt of the `runic-app` template, of the
-> [Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/notes-view-first)
-> or of a package README, at SDK `0.17.0`.
+> [Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/notes-view-first)
+> or of a package README, at SDK `0.18.0`.
 
 ## The template's test
 
@@ -83,17 +83,17 @@ test("the page connects, increments the Counter and reports a reconnect and a cl
 
 The other frontends run the same steps:
 
-- Vue: [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.test.ts).
+- Vue: [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/tools/Runic.Application.Templates/content/runic-app/frontends/vue/src/App.test.ts).
 - Svelte and SvelteKit:
-  [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.test.ts)
+  [`src/App.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/src/App.test.ts)
   and
-  [`src/routes/page.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/routes/page.test.ts).
+  [`src/routes/page.test.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/tools/Runic.Application.Templates/content/runic-app/frontends/sveltekit/src/routes/page.test.ts).
   Their
-  [`vitest.config.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/vitest.config.ts)
+  [`vitest.config.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/tools/Runic.Application.Templates/content/runic-app/frontends/svelte/vitest.config.ts)
   merges the Vite configuration and resolves the `browser` condition, so
   Svelte's browser build provides `mount()`.
 - Angular:
-  [`src/app/app.spec.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/tools/Runic.Application.Templates/content/runic-app/frontends/angular/src/app/app.spec.ts).
+  [`src/app/app.spec.ts`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/tools/Runic.Application.Templates/content/runic-app/frontends/angular/src/app/app.spec.ts).
   `run test` runs `ng test`, whose `test` target in `angular.json` uses the
   `@angular/build:unit-test` builder with Vitest. The test creates the
   component with `TestBed` and waits for Angular to render:
@@ -313,7 +313,7 @@ default), and the next binding of the same connector takes it over. A test
 that checks that a route closes on unmount passes `keepAlive: 0`, as
 `useView(page, { keepAlive: 0 })` or `injectView(page, { keepAlive: 0 })`, or
 waits for the period. See
-[Client lifetime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/web/views/README.md#client-lifetime).
+[Client lifetime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/views/README.md#client-lifetime).
 
 **Requests before `hello`.** Since SDK `0.14.0`, a request that reaches the
 mock before the connection's `hello` is held up to 5 seconds and admitted
@@ -369,7 +369,7 @@ var editor = await document.ViewAsync<EditorViewModel>(vm => vm.CurrentPane);
 ```
 
 The
-[`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Testing/README.md)
+[`Runic.Application.Testing` README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md)
 covers hosts, deterministic time, navigation and interactions. For
 operations, see [Operations and cancellation](operations-and-cancellation.md).
 
@@ -406,9 +406,9 @@ and a test build of the application calls
 and carries `[assembly: RunicServeOnlyTestPlatform]`. Active fakes log warning
 1158 `ServeOnlyTestPlatformActive`. Keep the call, the attribute and the package
 reference out of production builds. See
-[platform services](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Testing/README.md#platform-services)
+[platform services](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md#platform-services)
 and
-[platform services in a browser test](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Testing/README.md#platform-services-in-a-browser-test).
+[platform services in a browser test](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md#platform-services-in-a-browser-test).
 
 ## Real Windows in tests
 
@@ -434,7 +434,7 @@ one, with their parameter, key, owner and root driver, and
 `WaitForOpenedWindowAsync<TWindow>()` waits for one, such as a dialog whose
 command still waits for its result. Owned and window-modal Windows behave as on
 Runic Desktop; see
-[windows and their close decision](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Testing/README.md#windows-and-their-close-decision).
+[windows and their close decision](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md#windows-and-their-close-decision).
 
 A ViewModel that takes `IRunicWindowPresentation` (see
 [Control a Window from its ViewModel](../../desktop-services.md#control-a-window-from-its-viewmodel))
@@ -444,7 +444,7 @@ gets a recording `RunicTestWindowPresentation` from
 activity and waits until the ViewModel received it, and
 `host.FlushWindowPresentationAsync()` waits for the changes a command's
 requests caused. See
-[the Window's presentation](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Testing/README.md#the-windows-presentation).
+[the Window's presentation](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md#the-windows-presentation).
 
 ## Every Window in serve-only tests
 
@@ -461,13 +461,13 @@ var second = await app.WaitForWindowUrlAsync(1, TimeSpan.FromSeconds(10));
 The type is the Window class's full name or its name without the namespace,
 as the host writes it on its `RUNIC_APPLICATION_WINDOW=` line. A wait that runs
 out throws `TimeoutException` and leaves the application running. See
-[the whole application in a browser](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser).
+[the whole application in a browser](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md#the-whole-application-in-a-browser).
 
 ## Further reading
 
-- [Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/web/views/README.md#testing)
+- [Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/views/README.md#testing)
   in the `@runic-artifex/views` README: every mock option.
-- [The Notes example's frontend tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/notes-view-first/Frontend/test/notes.test.ts),
+- [The Notes example's frontend tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/notes-view-first/Frontend/test/notes.test.ts),
   which run with `bun test`.
-- [Upgrading from 0.13 to 0.14](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/docs/migration-1.0.md#from-013-to-014)
-  and [from 0.15 to 0.16](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/docs/migration-1.0.md#from-015-to-016).
+- [Upgrading from 0.13 to 0.14](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-013-to-014)
+  and [from 0.15 to 0.16](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-015-to-016).

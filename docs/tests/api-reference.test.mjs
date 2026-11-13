@@ -111,7 +111,9 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // 2.75 MiB since 0.14.0 and 2.5 MiB since 0.12.0.
   assert.ok(inputs <= 4 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads. 224 KiB per page
+  // __data.json payloads that client-side navigation loads. 256 KiB per page
+  // since 0.18.0, whose @runic-artifex/views package page with the hosted
+  // regions, component and instance APIs needs about 241 KiB; 224 KiB
   // since npm exports have pages of their own and package pages list the
   // first sentence of each summary: the @runic-artifex/views package page
   // needs about 197 KiB, Runic.Desktop.DesktopWindow about 168 KiB; 416 KiB
@@ -123,16 +125,17 @@ test('API inputs and rendered pages stay within their size budgets', () => {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 224 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 256 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 9.25 MiB since 0.17.0, which needs about 8.96 MiB; 8.75 MiB since the
+  // 9.5 MiB since 0.18.0, which needs about 9.38 MiB; 9.25 MiB since 0.17.0,
+  // which needs about 8.96 MiB; 8.75 MiB since the
   // about 300 functions, constants and type aliases of the
   // npm packages have pages of their own, which needs about 8.36 MiB; 7.5 MiB
   // since 0.16.0, 6 MiB since 0.15.0, 5.75 MiB since 0.14.0, 5.5 MiB since
   // 0.13.0 and 5.25 MiB since the platform services of 0.11.0.
   assert.ok(
-    compressed <= 9.25 * 1024 * 1024,
+    compressed <= 9.5 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });

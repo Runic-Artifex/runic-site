@@ -1,7 +1,7 @@
 {
   "repository": "Runic-Artifex/runic-sdk",
-  "revision": "daeb17e5c3fb0b625d5d988d359cd12ffa51f8c6",
-  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/daeb17e5c3fb0b625d5d988d359cd12ffa51f8c6.tar.gz",
+  "revision": "e025c0ab74aa76547e2d0307de223c43d5271228",
+  "archiveUrl": "https://github.com/Runic-Artifex/runic-sdk/archive/e025c0ab74aa76547e2d0307de223c43d5271228.tar.gz",
   "files": [
     "eng/support.json",
     "eng/workspace.json",
@@ -10,6 +10,17 @@
     "examples/first-window-desktop/Program.cs",
     "examples/first-window/CounterViewModel.cs",
     "examples/first-window/Frontend/src/app.ts",
+    "examples/hosted-components/Dashboard/Frontend/index.html",
+    "examples/hosted-components/Dashboard/Program.cs",
+    "examples/hosted-components/Dashboard/WidgetPolicy.cs",
+    "examples/hosted-components/Widget/Frontend/src/component.ts",
+    "examples/hosted-components/Widget/Frontend/vite.config.ts",
+    "examples/hosted-components/Widget/Program.cs",
+    "examples/hosted-region/Check/Program.cs",
+    "examples/hosted-region/Check/Tests/HostedCheckTests.cs",
+    "examples/hosted-region/Installer/CheckPolicy.cs",
+    "examples/hosted-region/Installer/Frontend/index.html",
+    "examples/hosted-region/Installer/InstallerViewModel.cs",
     "examples/hosted-windows/Counter/CounterServices.cs",
     "examples/hosted-windows/Counter/CounterViewModel.cs",
     "examples/hosted-windows/Counter/Program.cs",
@@ -134,5 +145,5 @@
     "tools/Runic.Assets.Packer/README.md",
     "tools/dotnet-runic/README.md"
   ],
-  "contentDigest": "sha256:89e93157a819c0ab2b43da01a539617eb7b48e1ca991b0e4c52661e8b8661f4c"
+  "contentDigest": "sha256:63ff0681cf022237fd7f9d2e63c115081c3d4419db5a11d0c20dcb4626fb8c5f"
 }
