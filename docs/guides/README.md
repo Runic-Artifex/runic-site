@@ -28,7 +28,7 @@ needs and leads on from there:
 - [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/notes-reactive-views/README.md).
 - [Accessible Desktop views](desktop/accessibility.md): screen readers on each host, status messages, range controls, selection, focus and keyboard.
 - [Desktop native services](desktop-services.md), [host selection](desktop/host-selection.md), [window close lifecycle](desktop/window-close-lifecycle.md),
-  [right-to-left layouts](desktop/right-to-left.md), and [hosted applications](desktop/hosted-applications.md): show another Runic application's windows as your own.
+  [right-to-left layouts](desktop/right-to-left.md), [hosted applications](desktop/hosted-applications.md): show another Runic application's windows as your own, and [hosted regions](desktop/hosted-regions.md): show them inside a region of your own page.
 - [Ship a Desktop application](desktop/shipping.md), [package it with Nix](desktop/nix-packaging.md), and [report crashes](desktop/crash-reporting.md).
 - [Runic Command Line](command-line/README.md).
 - [Runic Translations](translations/README.md), the [Translations repository's guides](https://github.com/Runic-Artifex/runic-translations-sdk/tree/main/docs/guides/translations) and [migrating Svelte translation imports](migrations/translations-svelte.md).
