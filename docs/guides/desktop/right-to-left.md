@@ -81,11 +81,11 @@ installed browsers ignore it. The page still sets its own `lang`.
 | Notifications                   | Drawn by the notification server                                      | Windows display language                               | Drawn by the system                                                |
 
 On Linux the portal draws the file dialog's controls, but Runic passes the
-title: in SDK `0.16.0` it is always English (`Open file`, `Open files`,
+title, which is English by default (`Open file`, `Open files`,
 `Open directory`, `Save file`), and a save dialog without a suggested name
-proposes `Untitled`. The next SDK release, unreleased at
-[runic-sdk#830](https://github.com/Runic-Artifex/runic-sdk/pull/830), lets the
-application replace these texts with `DesktopPlatformTexts.Current`.
+proposes `Untitled`. Since SDK `0.17.0` the application replaces these texts
+with `DesktopPlatformTexts.Current`; see
+[Runic's own text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Platform/README.md#runics-own-text).
 
 Since SDK `0.11.0`, `DesktopWindowOptions.LayoutDirection` (`Default`,
 `LeftToRight` or `RightToLeft`, from `Runic.Platform`) sets the direction of a
@@ -97,7 +97,7 @@ the GTK window, its header bar with GTK 4, and Runic's menu bar and context
 menus. macOS and installed browsers ignore it, and `Validate` reports each
 option a presentation ignores. Choose it with the application's language, as
 in the
-[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Desktop/README.md#right-to-left-languages):
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop/README.md#right-to-left-languages):
 
 ```csharp docs-test=skip:illustrative-fragment
 var culture = CultureInfo.CurrentUICulture;

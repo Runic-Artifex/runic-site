@@ -25,7 +25,7 @@ needs and leads on from there:
   [operations and cancellation](application/guides/operations-and-cancellation.md).
 - [Incremental WPF migration](application/migrations/wpf-incremental.md): independent Translations and Command Line, native navigation, then optional web Views [hosted in WPF](application/migrations/wpf-hybrid.md).
 - [Runic Application Views](application/README.md) and [application architecture](application/architecture/README.md).
-- [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/examples/notes-reactive-views/README.md).
+- [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/first-window/README.md), [CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/notes-view-first/README.md), and [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/notes-reactive-views/README.md).
 - [Accessible Desktop views](desktop/accessibility.md): screen readers on each host, status messages, range controls, selection, focus and keyboard.
 - [Desktop native services](desktop-services.md), [host selection](desktop/host-selection.md), [window close lifecycle](desktop/window-close-lifecycle.md),
   [right-to-left layouts](desktop/right-to-left.md), [hosted applications](desktop/hosted-applications.md): show another Runic application's windows as your own, and [hosted regions](desktop/hosted-regions.md): show them inside a region of your own page.

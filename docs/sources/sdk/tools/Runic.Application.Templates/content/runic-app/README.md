@@ -17,9 +17,12 @@ with __PACKAGE_MANAGER_NAME__, builds the application, starts the
 __DEVELOPMENT_SERVER_NAME__ development server, and opens the app. Frontend
 edits reload in place; C# edits rebuild and restart the app. Stop it with Ctrl+C.
 
-If something is missing, `dotnet runic doctor` checks the .NET SDK, Node.js
-or Bun, __PACKAGE_MANAGER_NAME__, the lock file, and the Runic package
-versions. It works before the first restore.
+It needs .NET SDK 10.0.403 or later, or the .NET 11 SDK together with the
+.NET 10 runtime, which the application runs on.
+
+If something is missing, `dotnet runic doctor` checks the .NET SDK and
+runtime, Node.js or Bun, __PACKAGE_MANAGER_NAME__, the lock file, and the Runic
+package versions. It works before the first restore.
 
 `dotnet build` and `dotnet run` also work without the tool. The first build
 installs the frontend packages with __PACKAGE_MANAGER_NAME__, and later builds
@@ -170,7 +173,7 @@ clipboard on the default Runic Desktop host (create the project without
 | `ApplicationIdentity.cs` | The application ID and name from the project file. |
 <!--#endif -->
 <!--#if (translations) -->
-| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The build generates `AppText` for C# and the page's ESM in `Frontend/.runic/translations`. See [Translate it](#translate-it). |
+| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The build generates `AppText` for C# and the page's ESM in `Frontend/.runic/translations`. See [Translate it](#translate-it). |
 <!--#endif -->
 | `icons/` | The application's placeholder icon: `icon.svg`, `icon.png` (512 px) and `icon.ico` (16 to 256 px). |
 <!--#if (packaging) -->
@@ -262,7 +265,7 @@ through the Translations Vite plugin: after you edit a message, build again
 (`dotnet build`, or restart `dotnet runic dev`) to update the page; `vite dev`
 does not reload messages. Native text such as menus, a tray icon and dialogs
 formats from the same catalog in C#: `new AppText(translations).Messages`.
-See [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/runic-views.md).
+See [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-views.md).
 
 <!--#endif -->
 ## Test it

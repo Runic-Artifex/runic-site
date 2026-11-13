@@ -616,7 +616,7 @@ same on the server and in the browser until the browser's first effect.
 The `error` of `useView` and of a command or operation helper is typed
 `unknown`: it holds whatever the connection or the call rejected with. A Bridge
 failure is a `BridgeError` from `@runic-artifex/views`. Show it with
-`describeBridgeError(error)`, one English sentence, instead of `String(error)`,
+`describeBridgeError(error)`, one sentence (in the window's language with `configureRunicViewsText()`), instead of `String(error)`,
 and narrow it with `isBridgeError` (or `instanceof`) before reading `kind`,
 `route` or `detail`:
 
@@ -761,3 +761,18 @@ The package re-exports `installBackNavigation`, `installNavigationPath`,
 starts, before or after mounting: the mouse's Back button and Alt+Left then go
 back in the .NET window, and `#/customers/42` follows its path region. See
 [Back and the URL](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#back-and-the-url).
+
+## Hosted regions (experimental)
+
+`RunicHostedRegion` from `@runic-artifex/svelte/experimental` renders
+`<runic-hosted-region>`, a region where the host application shows a hosted guest's
+Window ([hosted regions](../views/README.md#hosted-regions-experimental)). Its `fallback` snippet takes the region's state and
+shows while no guest page shows in it:
+
+```svelte
+<RunicHostedRegion name="check" style="height: 420px" onstatechange={onState}>
+  {#snippet fallback(state)}
+    {#if state === "ended"}<RunAgain />{:else}<p>Starting the check…</p>{/if}
+  {/snippet}
+</RunicHostedRegion>
+```

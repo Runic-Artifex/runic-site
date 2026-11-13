@@ -4,7 +4,7 @@ Runic Translations compiles your message files into typed C# and TypeScript
 APIs. This page explains the concepts and leads to the quick start for your
 platform.
 
-It covers release `0.9.1`. The Translations repository owns the
+It covers release `0.10.0`. The Translations repository owns the
 detailed guides; every link to it points at that release. Translations is
 versioned on its own, so its version does not need to match the Application
 SDK. Use one exact Translations version for every Translations package and tool
@@ -12,16 +12,16 @@ in a project. Since `0.8.0` versions are plain `0.y.z` until 1.0: a new minor
 may contain breaking changes, listed with upgrade steps in its release notes,
 and a patch only fixes or adds.
 
-Use `0.9.1`, not `0.9.0`. Only `Runic.Translations` and
-`Runic.Translations.Build` `0.9.0` reached NuGet, and both are deprecated: a
-library packed with that `Runic.Translations.Build` cannot be pushed to
-nuget.org. `0.9.1` is the first complete release of the 0.9 features. It has
-eight NuGet packages (`Runic.Translations`, `.Build`, `.CommandLine`,
-`.Hosting`, `.Tooling`, `.Wpf`, `.Templates` and the
+`0.10.0` has eight NuGet packages (`Runic.Translations`, `.Build`,
+`.CommandLine`, `.Hosting`, `.Tooling`, `.Wpf`, `.Templates` and the
 `dotnet-runic-translations` tool) and three npm packages
 (`@runic-artifex/vite-plugin-runic-translations`,
 `@runic-artifex/translations-svelte` and
-`@runic-artifex/translations-sveltekit`); `Runic.Translations.Hosting` is new.
+`@runic-artifex/translations-sveltekit`). It is the Translations release of the
+0.18 release train: it was tested with Runic Command Line `0.12.0` and Runic SDK
+`0.18.0`, `Runic.Translations.CommandLine` `0.10.0` needs Command Line `0.12`,
+and SDK `0.18`'s `Runic.Application.Views.Translations` needs Translations
+`0.10`. Of the 0.9 line, use `0.9.1`, not the deprecated `0.9.0`.
 
 ## How it works
 
@@ -100,7 +100,7 @@ fewer of them or select on them differently, but it cannot add new ones.
 Messages may also contain markup for links, actions and icons, which the
 application binds to typed slots. Runic implements a bounded profile of
 MessageFormat 2, not every Unicode MF2 feature; the
-[RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/rmf2.md)
+[RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/rmf2.md)
 lists what is supported.
 
 ## What gets generated
@@ -155,7 +155,7 @@ locale changes; see
 C# code outside the Views, such as a tray menu, can use the frontend's catalog
 through a `RunicTranslationProject` item, also outside the project's directory.
 The generated catalog loads each locale on first use. See the
-[Runic Desktop note](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/runic-desktop.md#strings-outside-the-views).
+[Runic Desktop note](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views).
 
 On the web, import `m` and call a message function:
 
@@ -210,7 +210,7 @@ it once in the root component:
 </script>
 ```
 
-See the [Vite quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/quickstart-vite.md#svelte-without-sveltekit).
+See the [Vite quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/quickstart-vite.md#svelte-without-sveltekit).
 
 ## Libraries and composition
 
@@ -241,11 +241,11 @@ services.AddRunicTranslations(options => options.InitialLocale = settings.Langua
 
 The context is a singleton by default, for desktop applications, or one per
 scope with `options.Lifetime = ServiceLifetime.Scoped`, for web requests. See
-[Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/libraries.md),
-[Catalogs from libraries](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/composition.md) and the
-[`Runic.Translations.Hosting` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/packages/dotnet/Runic.Translations.Hosting/README.md).
+[Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/libraries.md),
+[Catalogs from libraries](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/composition.md) and the
+[`Runic.Translations.Hosting` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/packages/dotnet/Runic.Translations.Hosting/README.md).
 Translation packs downloaded at run time use the same overlays; see
-[Ship translation updates without a release](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/ota.md).
+[Ship translation updates without a release](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/ota.md).
 
 ## Validate your messages
 
@@ -266,11 +266,11 @@ one `runic.commandline/1` response; `--runic-output` is a hidden alias until
 2.0. The tool also reads `@file` response files. Errors carry `RTR` IDs, which
 are the same in the build, the tool,
 the Runic MF2 Translations extensions for
-[VS Code](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/tools/vscode-runic-translations/README.md)
+[VS Code](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/tools/vscode-runic-translations/README.md)
 and
-[Visual Studio](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/tools/visualstudio-runic-translations/README.md),
+[Visual Studio](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/tools/visualstudio-runic-translations/README.md),
 and the Editor; the
-[diagnostics reference](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/diagnostics.md)
+[diagnostics reference](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/diagnostics.md)
 explains each one.
 
 `runic-translations import-text` turns tables keyed by their base text into one
@@ -282,11 +282,11 @@ runic-translations import-text --project translations --group stored \
 ```
 
 See the
-[RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/rmf2.md#import-a-text-keyed-catalog).
+[RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/rmf2.md#import-a-text-keyed-catalog).
 `runic-translations import --from resx|i18next` migrates `.resx` files and
 i18next JSON; see
-[Migrate from .resx](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/migrate-resx.md) and
-[Migrate from i18next](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/migrate-i18next.md).
+[Migrate from .resx](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/migrate-resx.md) and
+[Migrate from i18next](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/migrate-i18next.md).
 
 ## Work with translators
 
@@ -300,7 +300,7 @@ predates a change to its source. `runic-translations status` reports coverage
 per locale, and `--min-coverage de=100,fr=80` fails CI when one lags. The
 `pseudoLocales` setting in `runic.json` adds pseudo-locales such as `en-XA` to
 development builds. See
-[Work with translators and translation tools](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/translators.md).
+[Work with translators and translation tools](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/translators.md).
 
 ## The Translations Editor
 
@@ -310,7 +310,7 @@ with the same compiler, and exports and imports XLIFF. Since `0.9.1` it also
 opens every catalog of a workspace and shows library catalogs as read-only
 layers next to your overrides. It is available from
 source only: this release has no Editor download. See the
-[Editor README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/apps/translations-editor/README.md)
+[Editor README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/apps/translations-editor/README.md)
 to build and launch it.
 
 ## Choose your platform
@@ -318,33 +318,66 @@ to build and launch it.
 Each quick start starts from an empty folder and ends with a running app:
 
 - **.NET**: the
-  [.NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/quickstart-dotnet.md)
+  [.NET quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/quickstart-dotnet.md)
   creates a translations library with `dotnet new runic-translations-project`
   and prints the first message from a console app.
 - **WPF**: the
-  [WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
+  [WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
   binds messages in XAML with `{rt:Message}`, next to existing `.resx`
   resources.
 - **Vite and TypeScript**: the
-  [Vite quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/quickstart-vite.md)
+  [Vite quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/quickstart-vite.md)
   adds the Vite plugin, renders a message and builds on CI.
 - **SvelteKit**: the
-  [SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/quickstart-sveltekit.md)
+  [SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/quickstart-sveltekit.md)
   adds localized routes, a language switcher and server rendering per request.
 - **Command line**: [translate a CLI](../command-line/README.md#translate-a-cli)
   with the `Runic.Translations.CommandLine` adapter, which translates Runic
   Command Line help, errors and faults.
 - **Runic Desktop**: there is no separate adapter. Use the .NET runtime and the
   Vite plugin as above; the
-  [Runic Desktop note](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/runic-desktop.md)
+  [Runic Desktop note](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-desktop.md)
   explains how locale files are delivered.
 - **Runic Views**:
-  [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/runic-views.md)
+  [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-views.md)
   connects the page, ViewModels and native text to one catalog. It needs
-  runic-sdk `0.17`, which is not released yet; until then the guide describes
-  unreleased APIs.
+  Runic SDK `0.17` or later; SDK `0.18` needs Translations `0.10`.
+- **Framework text**:
+  [Framework text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/framework-text.md)
+  covers both framework catalogs (`runic-command-line` and Runic SDK's
+  `runic-views`), how to register and override them, what stays English, and
+  the German style guide.
 
-## Upgrading to 0.9.1
+## Upgrading to 0.10.0
+
+Update every Translations package, the npm packages and the
+`dotnet-runic-translations` tool to `0.10.0` together, then rebuild.
+
+- **Command-line apps** that use `Runic.Translations.CommandLine`: update
+  `Runic.CommandLine` (and `.Spectre`, `.Processes`) to `0.12` together with
+  every Translations package. The adapter depends on Command Line
+  `[0.12.0, 0.13.0-0.0)` and no longer restores with Command Line `0.9`; see
+  [translate a CLI](../command-line/README.md#translate-a-cli).
+- **Overrides of `runic-command-line`**: some messages take other inputs with
+  Command Line `0.12` (for example `diagnostics.unknownCommand` takes
+  `$command`, and `diagnostics.invalidChoiceHidden` takes `$help`). The build
+  reports an override that no longer fits (`RTR0016`, `RTR0065`) or names a
+  removed key (`RTR0103`).
+- **Tests that compare German or English CLI output** see the new wording, and
+  the usage line and hint after each usage error.
+- **`Runic.Translations.Hosting` and `Runic.Translations.Wpf`** now depend on
+  `Runic.Translations` `[0.10.0, 0.11.0-0.0)`: update `Runic.Translations` to
+  the same minor, or restore reports `NU1608`.
+- **Runic SDK.** `Runic.Application.Views.Translations` `0.18.0` needs
+  Translations `0.10`; SDK `0.17` uses `0.9.1`.
+- **Tool.** `dotnet-runic-translations --version`, the `serve` handshake and
+  SARIF reports carry the package version, such as `0.10.0`, instead of `0.2`.
+
+The
+[0.10.0 upgrade notes](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/eng/release/notes/0.10.0.md#upgrading-from-09)
+list every change.
+
+### Upgrading to 0.9.1
 
 Update every Translations package, the npm packages and the
 `dotnet-runic-translations` tool to `0.9.1` together, then rebuild. If you
@@ -376,7 +409,7 @@ application code usually touches:
   [translate a CLI](../command-line/README.md#translate-a-cli).
 
 The
-[0.9.1 upgrade notes](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/eng/release/notes/0.9.1.md#upgrading-from-08)
+[0.9.1 upgrade notes](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/eng/release/notes/0.9.1.md#upgrading-from-08)
 list every change.
 
 ## Next steps
@@ -387,12 +420,14 @@ list every change.
 - [Translations in ViewModels](../application/guides/model-context.md#translations-in-viewmodels)
   shows how a Runic ViewModel follows locale changes.
 - The
-  [RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/rmf2.md)
+  [RMF2 guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/rmf2.md)
   covers the full message syntax, markup, documents and mounted source folders.
 - The
-  [ESM backend guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/esm.md)
+  [ESM backend guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/esm.md)
   describes the generated web modules in detail.
-- [Right-to-left text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/bidi.md)
+- [Right-to-left text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/bidi.md)
   explains placeholder isolation and text direction.
-- [Release notes for 0.9.1](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/eng/release/notes/0.9.1.md)
-  list what changed in this release.
+- [Release notes for 0.10.0](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/eng/release/notes/0.10.0.md)
+  list what changed in this release, and those for
+  [0.9.1](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/eng/release/notes/0.9.1.md)
+  what changed before it.

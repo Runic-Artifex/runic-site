@@ -746,8 +746,9 @@ details.
 
 **Platform notes.**
 
-- Hosts and guests run on Runic Desktop only. A CS-WebUI, hosted or serve-only
-  application cannot host.
+- Hosts and guests run on Runic Desktop only. A CS-WebUI or hosted application
+  cannot host. A serve-only application hosts only in regions of its pages
+  ([browser hosts](#browser-serve-only-hosts)).
 - Hosted windows have no browser fallback: a browser tab would send the user's
   own `127.0.0.1` cookies to the guest. The host needs an embedded web view.
   WebView2 and WKWebView are built in. On Linux the host selects one:
@@ -800,9 +801,17 @@ if (args is ["hosted"])
   and prove that it started this process. A failure, such as no offer or a host
   that `RunicGuestOptions.AcceptHost` declines, throws
   `RunicHostedApplicationException` with its `Code` and logs event 2010. Hosted
-  mode refuses to start elevated, with `DesktopHostOptions.NetworkExposure`
-  other than loopback, or, on Linux and macOS, when its real or effective user
-  is not its parent's or it cannot read its parent's (`guest-other-user`).
+  mode refuses to start with `DesktopHostOptions.NetworkExposure` other than
+  loopback, or when it runs as another user than its parent or cannot read its
+  parent's (`guest-other-user`). It refuses to start elevated
+  (`guest-elevated`), unless the application sets
+  `RunicGuestOptions.AllowElevatedHost` and its host
+  `RunicGuestStartInfo.AllowElevatedGuest`: then its parent must run elevated
+  as the same user (`guest-elevated-host-not-elevated` otherwise), which the
+  application checks itself, and it logs event 2025. An unelevated host cannot
+  allow an elevated guest (`host-not-elevated`). The
+  [security guide](../../../docs/security.md#elevated-hosts-and-guests) lists
+  what the user's unelevated processes can still reach.
 - **Windows.** No window toolkit loop starts, and the application never shows a
   window of its own. Each Window's page is served as in serve-only mode, and the
   host opens a window that loads it with a one-time launch address; the host's
@@ -977,6 +986,13 @@ var exitCode = await tool.Exited;
   requests (20 a second), the files and links it opens (5 per ten seconds), its requests that can activate a window
   (present, minimize, set-visible, set-full-screen and toggle-maximized: 2 a second after a burst of 3) and its announcements (2 a second after a burst of 5). The host rebuilds a window's native bar
   at most every 50 milliseconds, however many changes arrive.
+- **Elevated guests.** A guest that an elevated host starts runs elevated too, and refuses hosted mode
+  (`guest-refused` with `guest-elevated`). An elevated host whose guest needs administrator rights as well, such as an
+  installer that hosts a check tool, sets `RunicGuestStartInfo.AllowElevatedGuest`, and the guest
+  `RunicGuestOptions.AllowElevatedHost`; the guest then checks that its parent runs elevated as the same user. The
+  host must run elevated (`host-not-elevated` otherwise) and name the guest by a fully qualified path, in a location
+  only administrators can change; see
+  [security](../../../docs/security.md#elevated-hosts-and-guests).
 - **Permissions.** A guest's request for the camera and microphone is granted only as far as the host grants its
   own windows (`RunicDesktopHost.WindowOptions.AllowedPermissions`); a host that grants nothing grants a guest
   nothing. A policy can grant more through `RunicHostedWindowDecision.Allow(request.WindowOptions with { ... })`.
@@ -991,8 +1007,8 @@ var exitCode = await tool.Exited;
 - **End.** When the guest exits or crashes, or its channel closes, the host closes its windows, ends its process tree
   and completes `Exited` with its exit code (event 2017). `StopAsync` asks the guest to shut down and ends it after
   `StopTimeout` (10 seconds); `RequestStopAsync` asks each window first; `KillAsync` ends it at once. The guests
-  still running stop when the host's Desktop shuts down and when `RunicDesktopHost.Run` returns. A hosted or
-  serve-only application cannot host.
+  still running stop when the host's Desktop shuts down and when `RunicDesktopHost.Run` returns. A hosted application
+  cannot host; a serve-only one shows guests' windows only in regions ([browser hosts](#browser-serve-only-hosts)).
 
 Each engine keeps a guest session's cookies, storage and caches apart from the host's and from other guests':
 
@@ -1008,6 +1024,134 @@ after all its windows closed starts with an empty store, cookies, localStorage a
 store lives for the whole session. HTTP authentication, client certificates and the system's proxy and
 trust settings are the engine's and the user's, not the store's. A custom `IDesktopWindowHostFactory` shows hosted
 windows only if its window host implements `IDesktopEphemeralDataStoreWindowHost`.
+
+### Showing a guest's window in a region
+
+With `region/1`, which Runic's guests of 0.18 and later implement (`RunicHostedWindowRequest.CanEmbed`), the policy
+can show a guest's Window in a region of one of the host's own pages instead of in a window of its own, such as an
+installer whose step page shows a check tool between its header and footer. The page declares the region with Runic's
+`<runic-hosted-region name="check">` element, and the region shows the guest's page in a frame from the guest's own
+loopback origin ([specification](../../../specs/desktop/host-protocol.md#regions-region1)). The
+[hosted regions guide](../../../docs/hosted-regions.md) covers both sides and troubleshooting, and the
+[hosted region example](../../../examples/hosted-region/README.md) is such an installer:
+
+```csharp
+#pragma warning disable RUNICDESK103 // Hosted application windows are experimental.
+sealed class CheckPolicy : IRunicHostedWindowPolicy
+{
+    public ValueTask<RunicHostedWindowDecision> OpenWindowAsync(RunicHostedWindowRequest request, CancellationToken cancellationToken) =>
+        ValueTask.FromResult(request.Owner is null && request.CanEmbed
+            ? RunicHostedWindowDecision.Embed("check")
+            : RunicHostedWindowDecision.Refuse("The installer shows the check in its step page."));
+}
+```
+
+- **Attach.** `Embed(name)` needs one host window to declare the region, now or later; `Embed(hostWindow, name)` names
+  the host's Window. Two host windows that declare the name when the window opens fail the guest's open with
+  `region-ambiguous`. The window is open at once (`RunicHostedWindow.PresentationKind` is `Region`, and
+  `Presentation` throws), and `RunicHostedWindow.Region` follows it: `Waiting` until a page declares the region,
+  `Loading` while the guest's page loads, `Attached` once it connected, `Detached` and `Ended`. Its events, and
+  `IRunicHostedApplications.RegionAttached` and `RegionDetached`, are raised in order with the window events.
+- **Detach and attach again.** When the page removes the region, reloads or navigates, the window is detached and stays
+  open; it attaches again with a new frame launch address when a region of the same name appears in the same host
+  window (`RunicHostedRegionOptions.ReattachOnReload`, on by default). `DetachAsync` and `MoveToAsync(window, name)` let
+  the host detach the window or move it to another region. When the host window closes, its region windows close.
+- **Departures.** A departure the host decides, such as a wizard's Back or Next, asks the guest first: register
+  `region.AsDepartureGuard()` with the step's navigation entry, or call `RequestCloseAsync`. The guard lets the departure
+  go ahead once the guest allowed the close and its Window closed.
+- **Ended and empty.** When the guest closes its Window or goes away, the region is `Ended` and the page shows the
+  element's fallback content; showing a "run the check again" button that starts a new guest is the host's choice
+  (`RunicHostedApplication.Exited` has the exit code).
+- **In a region.** `present` brings the host window forward and moves the focus into the region only when the host
+  page holds no focus; `RegionOptions.FocusOnAttach` does the same when the window attaches. The guest's `resize` is a
+  preferred size (`PreferredWidth`, `PreferredHeight`), which a region declared with `sizing="content-height"` takes
+  within `MinimumHeight` and `MaximumHeight`; the title of the guest's page (`Title`, `TitleChanged`) names the frame,
+  and `IsDocumentEdited` can mark the step. Minimize, visibility, full screen, maximize, moves, colour schemes and the
+  represented file do not apply (`embedded`). The guest's menu bar is not shown; its context menus, dialogs, monitors
+  and announcements are the host window's, and a detached window's dialogs report `OwnerUnavailable`.
+- **Window services.** The guest works in the window when the host window is active and the user moved the focus into
+  the region with Tab, Shift+Tab or a click; focus that `present`, the host or the guest's own script moved there is the
+  guest's (`IsGuestActivated`).
+- **Permissions.** The frame gets the camera and microphone only as the window would (`RegionOptions.Permissions`
+  widens it).
+- **Origins.** The guest serves the frame from the loopback family the host page does not use, so no cookie of the host
+  page reaches it. An embedded host allows the guest to fall back to the same family where the other cannot be bound,
+  and logs it (event 2027). The frame's embedder is the origin with which the page connected, such as a development
+  server's. The guest's storage in a region lives in the host window's profile: treat it as session-scoped. A refused
+  or failed attach leaves the window detached (event 2026).
+- **Content-Security-Policy.** A host page with a policy allows the frame with `frame-src http:`: the frame comes from
+  `[::1]` on a port that changes with each run, which a CSP host source cannot name. A guest page whose own policy sets
+  `frame-ancestors 'none'` blocks its own region, and a guest Window that shows a development server's address cannot be
+  attached: a frame shows only content that the guest serves itself.
+
+- **Drops, permissions and keys.** The host window's web view routes the attached frame to its guest
+  (`Runic.Desktop/README.md`): a drop onto the frame reaches the guest as `files-dropped` under the policy
+  (`RunicHostedServiceKind.FileDrop`), never the host page; the frame's camera and microphone requests are decided by
+  the region's permissions, except on WebKitGTK, which denies them; a shortcut the guest's page leaves unhandled runs
+  the host window's menu item. A window host of the application's own, such as Runic.Desktop.Gtk4's, routes none of
+  these: drops onto the frame are discarded there.
+- **Crashes.** When the engine reports that the frame's content process ended, the region detaches with `crashed`; a
+  frame of its own process (WebView2) attaches again with a new code, and a host page whose own process ended
+  (WebKit's frames share it) declares the region again when it reloads.
+- **Elevated guests.** A guest of the elevated pair admits connections, also its frame's, only from elevated loopback
+  peers (event 2029). On macOS, which has no peer lookup, it refuses region mode, and `Embed` leaves the window detached
+  (event 2026, `refused`).
+
+#### Browser (serve-only) hosts
+
+A serve-only application (`RunicDesktopHostOptions.ServeOnly` or `RUNIC_APPLICATION_SERVE_ONLY=1`) is a **browser
+host**: its pages run in the user's browser, and it shows guests' windows only in their regions
+([specification](../../../specs/desktop/host-protocol.md#browser-hosts)). Start guests and write the policy as above;
+`RunicHostedWindowRequest.CanOpenWindow` is `false`, and a decision other than `Embed` fails the guest's open with
+`hosted-window-refused` (event 2020, `WindowModeUnavailable`).
+
+- **Reduced features, as in serve-only mode.** The guest's dialogs, menus and window services report
+  `OwnerUnavailable`, and its `present` and announcements `BackendUnavailable`. Its window opens no owned windows. The
+  region is active while it holds the focus of its page.
+- **Cross-site only.** The guest never falls back to the host page's loopback family, since the browser holds other
+  local applications' cookies: without IPv6, a page on `127.0.0.1` shows the region's fallback content
+  (`cross-site-unavailable`, event 2026). A page opened through `localhost` gets its frame from `[::1]`, else
+  `127.0.0.1`.
+- **Elevated guests refuse** a browser host's page (`guest-elevated`): their windows stay open and detached.
+- The guest's storage lives in the user's browser profile; see the security guide's
+  [Hosted windows in a region](../../../docs/security.md#hosted-windows-in-a-region).
+
+#### Components (trusted component mode)
+
+For applications of the same vendor, a region can show the guest's Views as a **component** in the host page's own
+document instead of in a frame (`region-component/1`), so they take the page's theme and layout and Tab moves through
+them as through the page ([specification](../../../specs/desktop/host-protocol.md#component-mode-region-component1)).
+Host page and guest code then share one JavaScript realm: the guest's code can read the page and use its Bridge, and the
+page holds the guest's token. Both sides opt in:
+
+```csharp
+// The guest: allow component embedding by the hosts of your own suite. A filter, not a security boundary.
+Guest = RunicGuestOptions.FromStandardInput() with
+{
+    AllowComponentEmbedding = host => host.Name == "Contoso Installer",
+},
+
+// The host's policy: a component where the guest allows it, a frame otherwise.
+ValueTask.FromResult(request.CanEmbedComponent
+    ? RunicHostedWindowDecision.EmbedComponent("check")
+    : RunicHostedWindowDecision.Embed("check"));
+```
+
+- **The guest's build.** The guest builds its component with the `component` target of
+  `@runic-artifex/vite-plugin-runic`, which writes `_runic_component/` next to its page. A guest without it refuses a
+  component attach, and `EmbedComponent` then leaves the window detached; `CanEmbedComponent` is `false` for a guest that
+  does not allow the host.
+- **The host page's Content-Security-Policy** must allow the guest's origin for scripts and connections. Components of
+  an embedded host come from `127.0.0.1` on a port that changes with each run: add `http://127.0.0.1:*` to
+  `script-src` and `ws://127.0.0.1:*` to `connect-src` of `RunicDesktopHostOptions.ContentSecurityPolicy` (see the
+  security guide's "Components in a host page").
+- **In a component.** `RunicHostedRegion.IsComponent` is `true`. The component has the host page's permissions, focus,
+  drops and keys; `RegionOptions.Permissions` and `sizing="content-height"` do not apply, and the guest sends no title.
+  `State` reaches `Attached` once the component connected, as in frame mode.
+- **Elevated guests** of the elevated pair offer component mode where they check their peers (Windows, Linux); on macOS
+  they refuse it as they refuse frames (event 2026, `refused`).
+- The [hosted components example](../../../examples/hosted-components/README.md) is a dashboard with two widget
+  processes as components, under the policy above.
 
 ## Automation
 

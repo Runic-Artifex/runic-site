@@ -3146,27 +3146,27 @@ tests, `RunicViewState.IsValidating(vm => vm.UserName)` and
 Text that a ViewModel produces, such as a status line or a validation
 message, can follow the window's language without a call per string. The
 ViewModel produces a text reference of
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/transport.md)
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/transport.md)
 (a message key, typed arguments and a fallback text) instead of a sentence, and
 the page formats it with its Translations runtime (the `translation-text/1`
 feature). When the language changes, the page formats the references it has
 again.
 
-The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/runic-views.md)
+The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-views.md)
 walks through one catalog for the page and C#, the application's language,
 native text and tests, step by step. This section is the reference. It needs
-Runic Translations 0.9.1 or later. `dotnet new runic-app --translations` starts
+Runic Translations 0.10.0 or later. `dotnet new runic-app --translations` starts
 an application with all of it, and the
 [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
 shows it in English, German and Arabic.
 
 **One catalog.** Keep the catalog with the frontend and name its `runic.json`
 in the .NET project, which then gets the generated C# API for every message
-([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
+([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
 
 ```xml
-<PackageReference Include="Runic.Translations" Version="0.9.1" />
-<PackageReference Include="Runic.Translations.Build" Version="0.9.1" PrivateAssets="all" />
+<PackageReference Include="Runic.Translations" Version="0.10.0" />
+<PackageReference Include="Runic.Translations.Build" Version="0.10.0" PrivateAssets="all" />
 <RunicTranslationProject Include="Frontend/translations/runic.json" />
 ```
 
@@ -3536,7 +3536,7 @@ validation text, resolve them by catalog with the generated transport's
 one of a catalog the page does not list shows its fallback text. One written
 against another release of a catalog is checked key by key: it translates while
 its key and arguments still match, and shows its fallback text otherwise
-([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/transport.md)):
+([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/transport.md)):
 
 ```ts
 import * as appTransport from "virtual:runic-translations/app/transport";
@@ -3557,7 +3557,7 @@ configureTranslatedText({
 With the Vite plugin's `dependencies: "auto"`, the page's copy of a library
 catalog is regenerated with the application's `overrides`, so a reference
 resolves to the same text as in C#
-([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/libraries.md)).
+([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/libraries.md)).
 
 **Right-to-left text.** Since Runic Translations 0.9, a catalog that declares a
 right-to-left locale, such as `ar` or `he`, isolates the placeholders of its
@@ -3568,7 +3568,7 @@ them correctly; compare such text in tests after the runtime's
 in `runic.json` turns it on or off. The runtime's `localeDirection`, passed as
 `direction`, gives `syncDocumentLocale` and `textDirection()` the direction of
 each locale; see
-[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.9.1/docs/guides/translations/bidi.md).
+[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/bidi.md).
 
 `syncDocumentLocale()` sets `lang` and `dir` on `<html>` (direction from the
 runtime's `direction`, such as `localeDirection`, else the locale's script) and
@@ -4530,7 +4530,7 @@ trace id; correlate them with the host's spans by time and route.
 | 2007 | `DesktopDevelopmentReloadFailed` | Debug | A window did not reload after the directory changed, for example because it closed meanwhile. | |
 | 2008 | `DesktopLayoutDirectionFailed` | Warning | An embedded window did not change its native direction after its window locale (`IRunicWindowLocale`) changed. | `ErrorType` |
 | 2009 | `DesktopAppearanceWatchFailed` | Warning | Watching the desktop's appearance settings (`IDesktopSettings`) for the Windows' pages (`appearance/1`) failed; the pages keep the last appearance read, and the next Window that opens watches again. | `ErrorType` |
-| 2010 | `DesktopHostedStartFailed` | Error | Hosted mode (`RunicGuestOptions`, Runic host protocol) did not start; `RunicDesktopHost.Run` throws `RunicHostedApplicationException` with the same code. | `Code`, `Reason` |
+| 2010 | `DesktopHostedStartFailed` | Error | Hosted mode (`RunicGuestOptions`, Runic host protocol) did not start; `RunicDesktopHost.Run` throws `RunicHostedApplicationException` with the same code. An elevation refusal names its decision: `guest-elevated`, `guest-elevated-host-not-elevated` or `guest-other-user`. | `Code`, `Reason` |
 | 2011 | `DesktopHostedShutdown` | Information | A hosted application's host went away or asked it to shut down; its Windows close. | `Reason` |
 | 2012 | `DesktopHostedExit` | Warning | A hosted application's body did not return within 10 seconds after its host went away, so the process exits. | `Seconds` |
 | 2013 | `DesktopHostedChannelFailed` | Warning | Handling a message of the host channel, closing a hosted Window, or an event handler of a hosted Window's presentation failed. | `ErrorType` |
@@ -4543,6 +4543,11 @@ trace id; correlate them with the host's spans by time and route.
 | 2020 | `DesktopHostedWindowPolicyFailed` | Error | The host's `IRunicHostedWindowPolicy` or a `WindowOpened`/`WindowClosed` handler threw; the guest's request fails. | `ErrorType` |
 | 2021 | `DesktopHostedGuestOutput` | Debug | A line a guest application wrote to its standard output, other than its launch line, which carries a secret. | `FileName`, `Line` |
 | 2022 | `DesktopHostedGuestError` | Debug | A line a guest application wrote to its standard error. | `FileName`, `Line` |
+| 2025 | `DesktopHostedElevated` | Information | Hosted mode starts elevated: the application runs elevated, its parent, checked by the application, runs elevated as the same user, and both allow the pair (`RunicGuestOptions.AllowElevatedHost`, `RunicGuestStartInfo.AllowElevatedGuest`). | `Decision` |
+| 2026 | `DesktopHostedRegionAttachFailed` | Warning | A guest refused or failed to attach its window to a region of a host page (`region-attach`); the window stays open and detached, and the page shows its fallback. | `Name`, `Region`, `Reason` |
+| 2027 | `DesktopHostedRegionSameSite` | Warning | A guest serves a region's frame from the host page's own loopback family, since it cannot listen on the other one: the frame receives the cookies of the host page's origin. | `Name`, `Region` |
+| 2028 | `DesktopHostedRegionFailed` | Warning | Handling a region of a hosted application failed, such as a push to the host page. | `ErrorType` |
+| 2029 | `DesktopHostedPeerRefused` | Warning | An elevated hosted application (the elevated pair) refused a connection to one of its listeners from a loopback peer that does not run elevated, or whose process it cannot look up, before it read the request (`elevated-peer-refused`). At most ten a minute. | `Peer` |
 | 2100 | `CsWebUiWindowShowFailed` | Error | CS-WebUI cannot show a window: it finds no browser, the selected browser does not exist or start, its page does not connect in time, or the WebView does not start. `OpenWindowAsync` fails with a `RunicWindowConfigurationException`. | `Window`, `Code`, `Browser`, `BrowserPath`, `DiagnosticMessage` |
 | 2101 | `CsWebUiNativeLibraryUnchecked` | Warning | CS-WebUI loads a WebUI library that the application selected through `CSWEBUI_NATIVE_LIBRARY` or `WebUiNativeLibrary.SetLibraryPath`, whose version Runic cannot check; it needs WebUI commit `efac0e24` or later and is tested with `24c7d196e` (CsWebUi 2.5.0-beta.4.9). Once per process, before the first window opens. | `Path` |
 | 2102 | `CsWebUiMenuCommandFailed` | Error | A menu bar command of a CS-WebUI Window's root ViewModel (`IRunicMenuCommandSource`, `RunicCsWebUiHostOptions.MenuBar`) threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |

@@ -27,7 +27,7 @@ without a file dialog and without the
 [platform limits on atomic save](files.md#when-atomic-save-is-unavailable).
 
 This store, from the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.17.0/examples/multi-window),
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/multi-window),
 loads the settings on demand and saves them by writing a temporary file and
 moving it over the old one, so a crash never leaves a half-written file. It
 uses System.Text.Json's source generator, so it works with NativeAOT:
@@ -228,7 +228,7 @@ settings.Saved += (_, saved) => _ = host.Desktop.SetColorSchemeAsync(saved.Color
   Custom window hosts implement `IDesktopColorSchemeWindowHost`.
 
 The
-[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Desktop/README.md#switching-while-the-application-runs)
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop/README.md#switching-while-the-application-runs)
 lists what each window host sets.
 
 ## Contrast, text size and accent colour
@@ -270,9 +270,9 @@ host.Content.Appearance = new DesktopAppearance(DesktopColorScheme.Dark) { Contr
 await Assert.That(host.AppearancePushes[^1]?.TextScale).IsEqualTo(1.5);
 ```
 
-[Contrast, forced colors and reduced motion](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Desktop/README.md#contrast-forced-colors-and-reduced-motion)
+[Contrast, forced colors and reduced motion](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop/README.md#contrast-forced-colors-and-reduced-motion)
 in the Runic.Desktop README lists what each engine reports, and
-[Appearance](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/web/views/README.md#appearance)
+[Appearance](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/views/README.md#appearance)
 in the Views npm README describes the store.
 
 ## The language

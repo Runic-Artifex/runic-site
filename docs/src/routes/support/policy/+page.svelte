@@ -64,7 +64,7 @@
           >0.9.1</code
         >) only fixes or adds, and only the latest minor gets fixes. Releases
         from 0.9.0 on carry no <code>-preview.N</code>
-        suffix; GitHub still marks them as prereleases. 0.17.0 is the current minor
+        suffix; GitHub still marks them as prereleases. 0.18.0 is the current minor
         release. Views protocol 4, introduced in 0.13.0, is the protocol that 1.0
         keeps, and later releases add only features negotiated in its
         <code>hello</code>. The release candidates <code>1.0.0-rc.N</code> start
@@ -236,9 +236,11 @@
             rel="external">experimental APIs</a
           >
           page. An npm package exports experimental APIs only from its
-          <code>./experimental</code> subpath. No .NET or npm API is
-          experimental since 0.10.0, which removed every
-          <code>./experimental</code> entry; 0.11.0 to 0.16.0 add none.
+          <code>./experimental</code> subpath. 0.10.0 removed every
+          <code>./experimental</code> entry, and 0.11.0 to 0.17.0 add none.
+          0.18.0 adds new <code>./experimental</code> entries for hosted
+          regions, which with hosted applications are experimental under
+          <code>RUNICDESK103</code>.
         </li>
         <li>
           <strong>Preview:</strong>

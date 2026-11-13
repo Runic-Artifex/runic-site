@@ -273,10 +273,13 @@ controllers in [Framework bindings](#framework-bindings).
 | `@runic-artifex/views/generated` | Generated modules: `connectView`, `viewReferences`, `disposable`, `defineCollection(s)`, `defineInteractions`, `defineRequests`, `bridgeOperations`, `decodeBridgeValidation` |
 | `@runic-artifex/views/generated/wire` | Generated modules and generated `*.mock.ts` files: the wire decoders, imported as `import * as bridgeWire` |
 | `@runic-artifex/views/generated/mock` | Generated `*.mock.ts` files: `mockTypedView` and its spec types |
+| `@runic-artifex/views/experimental` | Experimental APIs ([docs/experimental.md](../../../docs/experimental.md#npm-packages)): [hosted regions](#hosted-regions-experimental) |
 
 Every entry has `types`, `import` and `default` conditions; the package is ESM
 only. Application code imports the root entry and `/mock`. The `/experimental`
-entry of 0.9 was removed in 0.10: its APIs graduated to the root entry. The
+entry holds APIs that may change in a minor release; importing it is the opt-in.
+The `/experimental` entry of 0.9 was removed in 0.10, when its APIs graduated to
+the root entry, and 0.18 added it again for hosted regions. The
 `/bindings` and `/generated*` entries are versioned with the generator and the
 .NET packages: code that a release generated keeps working with the runtime of
 any later release of the same major, but their shape is not for hand-written
@@ -736,8 +739,8 @@ so an application can show its own text (`FieldErrorReason`, open):
 | `no-text-form` | `This field has no text form.` | none |
 
 `text` is the trimmed text the user typed, and `patterns` the forms a text may take, the locale's first. A `number`
-field with `integer` (an `int` member) reports `required` with `expected: whole-number`, so a translated text can say
-"a whole number"; its English `message` stays `Enter a number.`. A field's own `parse` that throws, and the `rejected`,
+field with `integer` (an `int` member) reports `required` with `expected: whole-number` and the English `message`
+`Enter a whole number.` (`Enter a number.` before 0.18). A field's own `parse` that throws, and the `rejected`,
 `conflict` and `committed-with-error` receipts, have no `reason`: `kind` says what happened, and `message` is the parse
 error's or the producer's text. A `FieldError` of an older copy of this package has no `arguments` and may have no
 `reason` either; the hook then receives empty `arguments`, and its `undefined` `reason` falls back to the message.
@@ -996,7 +999,11 @@ The text is the same as Runic.Platform's `DesktopShortcut`, which Runic
 Desktop's macOS menu items use, and both are checked against the cases in
 [specs/desktop/fixtures/shortcuts.json](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/desktop/fixtures/shortcuts.json).
 Pass `{ apple: true }` or `{ apple: false }` to choose the platform rule
-instead of detecting it from `navigator`. See the
+instead of detecting it from `navigator`. Key and modifier names (`Ctrl`,
+`Page Up`, `Del`, and `Space` on Apple platforms) follow the window's language
+with Runic's text (`configureRunicViewsText()` gives `Strg+Umschalt+Bild-ab` in
+German; `configureRunicText` takes your own for the `shortcut.*` and
+`platform.*_key` keys). See the
 [shortcut guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#keyboard-shortcuts-in-the-page)
 for which keys to leave to text fields and the web view.
 
@@ -1436,10 +1443,16 @@ take the method's typed failure.
 
 ## Errors and diagnostics
 
-`describeBridgeError(error)` turns anything a binding reports as `error` into one English sentence for a status line
-or an alert, instead of `String(error)` ("BridgeError: …"): a `rejected` or `failed` error shows the producer's
-message, such as a setter's validation text; `disconnected`, `released`, `timeout` and `unavailable` name the
-condition; a `FieldError` shows its message. Development `detail` is never included. `isBridgeError(error, kind?)`
+`describeBridgeError(error)` turns anything a binding reports as `error` into one sentence for a status line or an
+alert, instead of `String(error)` ("BridgeError: …"): a `BridgeError` gets Runic's sentence for its reason, such as
+`invalid-input` ("The input is not valid.") or `capacity`, or else for its kind (`disconnected`, `released`,
+`failed`, …); a `FieldError` shows the application's text for it, such as a setter's validation message. A
+`BridgeError`'s own `message` is the producer's diagnostic text, such as `Count has an invalid value.`, and is not
+shown (since 0.18; before, a `rejected` or `failed` error showed it). Development `detail` is never included. The
+sentences are English unless the page has Runic's text in its language: `configureRunicViewsText()` of
+[`@runic-artifex/views-translations`](../views-translations/README.md) adds English and German, and
+`configureRunicText((key, locale) => …)` takes the application's own text for each `RunicTextKey` (`bridge.failed`,
+`bridge.disconnected`, …; `runicTextKeys` lists them). `isBridgeError(error, kind?)`
 tells a `BridgeError`, of one kind or a list of kinds, and narrows `error.kind`:
 
 ```tsx
@@ -1713,3 +1726,150 @@ framework packages wrap it for components: `useBridgeConnection` in
 `injectBridgeConnection` in `@runic-artifex/angular`. During `vite dev`,
 `@runic-artifex/vite-plugin-runic` shows the page's state on its DevTools dock from
 page load.
+
+## Runic instances
+
+The runtime of a page belongs to a Runic instance. A page that does nothing about
+instances uses the **page instance**: its Bridge is `window.__runicBridge`, which the
+.NET host's script installs, and everything works as in earlier releases.
+
+`createRunicInstance({ bridge })` creates another instance on a Bridge you give it.
+Two instances share nothing: not the connection, Views, connection state,
+diagnostics, translated text and window locale, appearance, fields or kept clients.
+This is the base for running several Runic guests, or a guest inside a host page, in
+one document.
+
+```ts
+import { createRunicInstance } from "@runic-artifex/views";
+
+const instance = createRunicInstance({ bridge });
+const editor = await instance.run(() => connectEditor());
+const stop = instance.run(() => onBridgeConnection(state => { banner.hidden = state !== "lost"; }));
+// Later: ends its connection and releases its Views.
+instance.dispose();
+```
+
+`instance.run(fn)` makes the instance current while `fn` runs synchronously. What
+`fn` calls, including generated `connect*` functions, controllers and the text,
+locale, appearance and connection functions, belongs to the instance, and what it
+starts keeps the instance. Code after an `await` inside `fn` does not, so call
+`run` again there. Framework packages provide an instance to a subtree:
+`RunicInstanceProvider` in `@runic-artifex/react`, `provideRunicInstance` in
+`@runic-artifex/vue` and `@runic-artifex/angular`, `setRunicInstance` in
+`@runic-artifex/svelte`, and `CurrentRunicInstance` in `@runic-artifex/views-effect`.
+The page's history (`installNavigationPath`, `installBackNavigation`) and its
+uncaught errors (`installErrorReporting`) stay with the page instance. See
+[Runic instances](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/application/README.md#runic-instances).
+
+### Components
+
+`@runic-artifex/views/component` is the runtime of trusted component mode: a
+guest's Views as a custom element in a host page's own document. The `component`
+build target of `@runic-artifex/vite-plugin-runic` builds it; the guest writes the
+mount function:
+
+```ts
+// src/component.tsx
+import { createRoot } from "react-dom/client";
+import { RunicInstanceProvider } from "@runic-artifex/react";
+import type { RunicComponentMount } from "@runic-artifex/views/component";
+
+const mount: RunicComponentMount = ({ container, instance }) => {
+  const root = createRoot(container);
+  root.render(<RunicInstanceProvider instance={instance}><App /></RunicInstanceProvider>);
+  return () => root.unmount();
+};
+export default mount;
+```
+
+Each element has an open shadow root with the bundle's CSS as constructable
+stylesheets, and its own instance on the Bridge it is connected with
+(`element.connect({ bridge })`). The element mounts while it is in the document and
+disposes its instance when it is removed. Its `lang` and `dir` follow its
+instance's text locale. A component bundle carries its own copy of this package,
+whose `defaultInstance()` is the instance of its one connected element: code
+outside a provider and outside `run`, such as `resolveText` in an event handler or
+a generated client's `upload`, uses that element's instance, never the host page's.
+With several elements of one bundle on a page, such code has no instance and a
+connect call rejects as `unavailable`; call it inside `instance.run` or under the
+provider. A component calls none of the document-level installers
+(`installNavigationPath`, `installBackNavigation`, `installErrorReporting`), uses
+`createMenuBarController` with `keyboard: false`, and shows no title of its own.
+An element connected with `{ url, token }` connects to its guest itself with
+`connectComponentBridge`: the component token that the host page received for the
+region is its WebSocket subprotocol, and the guest admits it only from the host
+page's origin ([component mode](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/desktop/host-protocol.md#component-mode-region-component1)).
+The connection never runs script that its guest sends and never navigates the host
+page; it closes when the element is removed. `<runic-hosted-region>` does all this
+when the host shows a guest as a component.
+
+## Hosted regions (experimental)
+
+A host application can show another Runic application's Window, a **guest**, in a
+region of its own page instead of in a window of its own
+([regions](../../../specs/desktop/host-protocol.md#regions-region1) of the Runic host
+protocol). The page marks the region with `<runic-hosted-region>`, from
+`@runic-artifex/views/experimental`; the host's .NET policy decides what shows in it
+(`RunicHostedWindowDecision.Embed`, experimental family `RUNICDESK103`):
+
+```html
+<runic-hosted-region name="check" style="height: 420px">
+  <p slot="fallback">Starting the system check…</p>
+  <p slot="ended">The system check has ended.</p>
+</runic-hosted-region>
+<script type="module">
+  import { defineHostedRegion } from "@runic-artifex/views/experimental";
+  defineHostedRegion();
+</script>
+```
+
+The framework packages wrap it as `RunicHostedRegion` in their own `./experimental`
+entries, which define the element themselves.
+
+- **What it shows.** The guest's page, in a sandboxed `<iframe>` from the guest's own
+  loopback origin, inside the element's closed shadow root. The page never gets a
+  reference to the frame and cannot read or script it; style its border with
+  `::part(frame)`. Children with `slot="fallback"` show while no guest page shows; a
+  child whose `slot` names a state (`waiting`, `loading`, `detached`, `ended`,
+  `unsupported`) shows instead in that state.
+- **Attributes.** `name` (required, 1 to 64 ASCII letters, digits, `.`, `_` or `-`),
+  `sizing` (`fill`, the default, where the page's layout sets the height and the guest
+  scrolls inside, or `content-height`, where the guest's content sets it) and `label`,
+  the region's accessible name, which overrides the guest page's title. Give a `fill`
+  region a height. The element reflects `state` and `focused` as attributes, and
+  dispatches `runicregionstatechange` (`detail: {state, previous}`) and
+  `runicregiontitlechange` (`detail: {title}`).
+- **What it tells the host.** Its size, device pixel ratio, place in the viewport,
+  visibility and focus, over the page's own Bridge (`hosted-regions/1`), never to the
+  guest. Its place stays with the host, which uses it for context menus.
+- **Focus.** Tab and Shift+Tab move through the frame in document order, as through
+  any frame. The element reports how the focus entered (`tab`, `shift-tab`, a click,
+  or `script`); the host lets the guest use the clipboard and launches only after the
+  user moved the focus in. A guest page cannot take the focus away from the host page
+  through the host: the host moves the focus into a region only while the page holds
+  none.
+- **One name, one region.** A page declares a name once; the latest connected element
+  of a name shows the region, and an earlier one shows its fallback.
+- **Moving the element** in the document removes its frame and declares the region
+  again: a frame's address is good for one load, so the host attaches the guest anew.
+- **Components.** When the host shows the guest as a component
+  (`RunicHostedWindowDecision.EmbedComponent`, trusted component mode), the element
+  imports the guest's component module from the guest's origin and shows its element
+  instead of a frame, in the page's own document: the page's CSS custom properties
+  reach it, and Tab moves through it as through the page. The page's
+  Content-Security-Policy must allow the guest's origin in `script-src` and
+  `connect-src` (`http://127.0.0.1:*` and `ws://127.0.0.1:*` in a Runic window);
+  without it the element shows its fallback as `unsupported`. The guest's code runs
+  in the page's realm: embed components only of applications you trust as your own
+  page.
+- **Without a host.** On a page whose host does not implement hosted regions, or
+  without a Bridge, the element is `unsupported` and shows its fallback.
+- **The page's Content-Security-Policy.** The element styles its shadow root with a
+  constructed stylesheet, so it needs no `'unsafe-inline'` styles. The guest's frame
+  comes from `[::1]` on a port that changes with each run, which a CSP host source
+  cannot name: a page with a policy allows it with `frame-src http:`, or the frame
+  is blocked and the region stays `loading`.
+- **The guest.** A guest's page in a region is its served build, not a development
+  server, and a guest whose own `Content-Security-Policy` sets
+  `frame-ancestors 'none'` blocks its own region. Treat its `localStorage` and
+  IndexedDB as session-scoped: they live in the host's browser profile.
