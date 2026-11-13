@@ -180,6 +180,7 @@ is a product filter, not a security boundary. The
 lists what Runic enforces and what a host should keep in its policy.
 
 The [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.17.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#hosted-applications)
-describes every option, event and limit. From SDK `0.18.0` a host can also show
-a guest's Window in a region of its own page: see
-[hosted regions](hosted-regions.md).
+describes every option, event and limit.
+
+From SDK `0.18.0` a host can also show a guest's Window in a region of its own
+page instead of a window: see [hosted regions](hosted-regions.md).
