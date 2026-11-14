@@ -11,15 +11,15 @@ construction, typed commands, property writes, and operation lifetimes. The
 browser opens and closes a presentation of each View it shows, so a content
 session can create and release its logical View as frontend routes change. Generated clients are framework-neutral;
 React, Vue, Svelte, Angular, and plain TypeScript use the same contract. They
-share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/views/README.md),
+share one browser runtime, [`@runic-artifex/views`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/web/views/README.md),
 which also provides a mock Bridge for development without .NET. The
-[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/react/README.md) and
-[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/vue/README.md) packages, `useView` in
-[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/svelte/README.md) and
-`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/angular/README.md)
+[React](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/web/react/README.md) and
+[Vue](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/web/vue/README.md) packages, `useView` in
+[`@runic-artifex/svelte`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/web/svelte/README.md) and
+`injectView()` in [`@runic-artifex/angular`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/web/angular/README.md)
 connect and dispose clients with component lifetimes. Since SDK `0.11.0`, a
 SvelteKit frontend uses `@runic-artifex/svelte` with
-[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/web/sveltekit/README.md),
+[`@runic-artifex/sveltekit`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/web/sveltekit/README.md),
 which prerenders its pages for the Window.
 
 Start with [getting started](getting-started/README.md), follow
@@ -27,11 +27,11 @@ Start with [getting started](getting-started/README.md), follow
 [add Runic to an existing app](existing-app.md). Existing WPF applications can
 [adopt Runic incrementally](migrations/wpf-incremental.md), keeping their shell
 and models while adding native navigation and optional embedded web Views. The
-[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/first-window/README.md) is the smallest example; then read the
-[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/notes-view-first/README.md) and
-[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/notes-reactive-views/README.md) examples. The
+[first Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/first-window/README.md) is the smallest example; then read the
+[CommunityToolkit Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/notes-view-first/README.md) and
+[Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/notes-reactive-views/README.md) examples. The
 package API and build properties are in the
-[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md).
+[`Runic.Application.Views` package guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md).
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.
@@ -39,7 +39,7 @@ types are in the `Runic.Application.Views` namespace; the
 ## Navigation and model context packages
 
 Since 0.7.0-preview.4, navigation and model contexts live in
-[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md).
+[`Runic.Navigation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md).
 It can be used independently of Views; `Runic.Application.Views` references it
 transitively. Add `using Runic.Navigation;` for `RunicNavigator`, regions,
 `IRunicModelContext`, `RunicModelContext` and `RunicModelContextRegistry`, then
@@ -52,7 +52,7 @@ scheduling helpers, `AddRunicReactiveModelContext()` and
 `using Runic.Application.Views.ReactiveUI;` for them.
 [Pages and navigation](guides/pages-and-navigation.md) and
 [ViewModel state and threads](guides/model-context.md) show both in use. The
-[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.7.0-preview.4.md)
+[preview.4 migration tables](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.7.0-preview.4.md)
 list the moved types.
 
 ## Upgrading generated clients
@@ -100,9 +100,9 @@ together, and add `@runic-artifex/views` to the frontend's dependencies.
   [forms and validation](guides/forms-and-validation.md).
 
 The
-[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.13.0.md#upgrading)
+[0.13.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.13.0.md#upgrading)
 list everything to check when upgrading, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-012-to-013)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/migration-1.0.md#from-012-to-013)
 has before and after tables.
 
 ## Upgrading from 0.13 to 0.14
@@ -175,9 +175,9 @@ change: the new features are negotiated in `hello`, so a `0.13` page and a
   older than 10.0.403 or a Bun older than 1.4.4.
 
 The
-[0.14.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.14.0.md#upgrading)
+[0.14.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.14.0.md#upgrading)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-013-to-014)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/migration-1.0.md#from-013-to-014)
 has before and after tables for each area, including tests, Windows, Nix and
 the CLI tools.
 
@@ -186,7 +186,7 @@ the CLI tools.
 Update every Runic NuGet and npm package to `0.15.1` together
 (`Runic.Application.Views.CsWebUi` to `0.15.1-preview.1`) and rebuild, so the
 generated clients, bridges and mocks regenerate. `0.15.1` is `0.15.0` with
-[one fix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.15.1.md):
+[one fix](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.15.1.md):
 a Svelte `$effect` that reads only `client`, `error` or `pending` from
 `useView` no longer runs again with every state. Views protocol 4 does not
 change: the new features `presentation-epoch/1` and `presented/1` are
@@ -275,9 +275,9 @@ behave as in `0.14`. Check these if they apply:
   Code that awaited it and then read `title.error` still works.
 
 The
-[0.15.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.15.0.md#upgrading)
+[0.15.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.15.0.md#upgrading)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-014-to-015)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/migration-1.0.md#from-014-to-015)
 has before and after tables for each area, including the native server's
 library version and Nix.
 
@@ -378,9 +378,9 @@ fake file dialog of your own becomes
 and [page errors in .NET logs](../desktop/crash-reporting.md#page-errors-in-net-logs).
 
 The
-[0.16.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.16.0.md#upgrading)
+[0.16.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.16.0.md#upgrading)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-015-to-016)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/migration-1.0.md#from-015-to-016)
 has before and after tables for each area, including tests.
 
 ## Upgrading from 0.16 to 0.17
@@ -429,9 +429,9 @@ owner-less file dialogs for CS-WebUI, and, experimental,
 [hosted applications](../desktop/hosted-applications.md).
 
 The
-[0.17.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.17.0.md#upgrading-from-016)
+[0.17.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.17.0.md#upgrading-from-016)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-016-to-017)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/migration-1.0.md#from-016-to-017)
 collects them.
 
 ## Upgrading from 0.17 to 0.18
@@ -475,14 +475,75 @@ these if they apply:
 New in `0.18.0`, experimental under `RUNICDESK103`: a host can show a guest
 application's Window in a region of its own page (region mode), or a guest's
 Views as a component in its document (trusted component mode); see the SDK's
-[hosted regions guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/hosted-regions.md).
+[hosted regions guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/hosted-regions.md).
 An elevated host can host an elevated guest of the same user. Stable: exact
 window bounds and a run-time minimum size (`DesktopWindow.SetBoundsAsync`,
 `SetMinimumSizeAsync`, `DesktopWindowState.Bounds`), and Runic's own page text
 in German.
 
 The
-[0.18.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.18.0.md#upgrading-from-017)
+[0.18.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.18.0.md#upgrading-from-017)
 list everything to check, and the
-[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/migration-1.0.md#from-017-to-018)
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/migration-1.0.md#from-017-to-018)
+collects them.
+
+## Upgrading from 0.18 to 0.19
+
+Update every Runic NuGet and npm package to `0.19.0` together
+(`Runic.Application.Views.CsWebUi` to `0.19.0-preview.1`) and rebuild, so the
+generated clients and Bridges regenerate. No application API was removed.
+Check these if they apply:
+
+- **Rebuild every assembly that contains generated Bridges**, including a
+  separate `RunicApplicationFrontendModelAssembly` and ViewModel libraries that
+  other applications reference. The Bridge runtime in
+  `Runic.Application.Views.Generated` is no longer generic over the ViewModel,
+  so a Bridge that the 0.18 generator wrote fails to load. The host reports it
+  at the first Window or View as `RUNICBRIDGE038`, which names the assembly to
+  rebuild. The wire protocol and the generated TypeScript client are
+  unchanged. A hand-written Bridge, such as a test double, derives from
+  `ViewModelBridge`, passes `typeof` of its ViewModel and casts the ViewModel
+  in each descriptor lambda.
+- **Runic Translations 0.11 and Runic Command Line 0.13.**
+  `Runic.Application.Views.Translations` requires Translations
+  `[0.11.0, 0.12.0)`, so move every Translations package to `0.11.0`.
+  `dotnet-runic`, `Runic.Create` and the `Runic.Assets` packer bundle Command
+  Line `0.13.0`; an application that uses Command Line itself moves to `0.13.0`
+  (see [Upgrading from 0.12](../command-line/README.md#upgrading-from-012)).
+- **The tools' help and usage errors** follow Command Line 0.13: help lists
+  arguments by their placeholder (`<source-directory>`), names options in
+  `[requires: …]` and `[conflicts: …]` by their spelling, and shows no
+  `[default: False]` for flags. In `--format json`, `RCLI1005`'s `arguments`
+  hold the placeholder; a script that read the ID from them reads the new
+  `binding` member instead.
+- **A Windows title bar without a forced colour scheme follows the system's
+  dark mode.** A WebView2 window with `DesktopColorScheme.NoPreference`, and a
+  WPF window after `SetColorSchemeAsync(NoPreference)`, takes the system's app
+  mode. Set `Light` for a light title bar, which also pins the page's
+  `prefers-color-scheme`.
+- **`RUNICBRIDGE039`**, a new generator warning, reports a
+  `[RunicOperationClose]` declaration that reaches no operation. Only code that
+  uses the experimental close drain can meet it.
+- **`RunicTestWindowPresentation.AllFeatures`** now includes `SidePanel`,
+  `Maximize` and `Placement`; a test that compared `Features` with a list of
+  its own adds them.
+
+New in `0.19.0`, experimental: a **side panel** beside the window's page, by
+which the window grows (`OpenSidePanelAsync`, `RUNICDESK104`; see the SDK's
+[side panel guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/side-panel.md)),
+a **close drain** that keeps a Window open until its accepted work has finished,
+also at shutdown (`RunicWindowOptions.CloseDrain`, `[RunicOperationClose]`,
+`RUNICDESK105`), and an
+[appearance override per hosted region](../desktop/hosted-regions.md#design-and-appearance)
+(`RUNICDESK103`). Stable: `DesktopWindow.MaximizeAsync`, `RestoreAsync` and
+`SetPlacementAsync`, the same on `IRunicWindowPresentation` for ViewModels,
+WPF and hosted windows, per-window services for a window the application
+opened itself (`DesktopPlatformServices.AttachWindowServices`), and
+`AcceptedWorkScope.WaitForAcceptedAsync`. A NativeAOT executable grows by
+about 24 KiB per bridged ViewModel instead of about 118 KiB.
+
+The
+[0.19.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.19.0.md#upgrading-from-018)
+list everything to check, and the
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/migration-1.0.md#from-018-to-019)
 collects them.

@@ -342,7 +342,7 @@ test('uses the canonical Runic Translations identifiers', async () => {
   assert.match(html, /Runic\.Translations\.\*/);
   assert.match(html, /runic-translations-sdk/);
   assert.match(stripMarkup(html), /released independently from the Runic SDK/);
-  assert.ok(html.includes('runic-translations-sdk/releases/tag/v0.10.0'));
+  assert.ok(html.includes('runic-translations-sdk/releases/tag/v0.11.0'));
   assert.doesNotMatch(html, /releases\/tag\/v0\.9\.0/);
   assert.doesNotMatch(html, /independent preview is not yet published/);
 });
@@ -426,7 +426,7 @@ test('product documentation areas link to their owning guides', async () => {
       'runic-translations',
       `${github}runic-translations-sdk/blob/main/docs/guides/translations/quickstart-dotnet.md`,
     ],
-    ['runic-command-line', `${github}runic-cli-sdk/blob/v0.12.0/README.md`],
+    ['runic-command-line', `${github}runic-cli-sdk/blob/v0.13.0/README.md`],
   ]) {
     const html = await render(`/products/${slug}`);
     assert.match(html, /id="guides"/);

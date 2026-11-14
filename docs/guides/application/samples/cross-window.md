@@ -21,7 +21,7 @@ services.AddSingleton<RowStore>();
 services.AddScoped<RowsViewModel>();
 ```
 
-The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/multi-window)
+The [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.19.0/examples/multi-window)
 opens its first Window from the host callback. The application ends when that
 Window closes. Before it opens the Window, the example applies the app's theme
 to every Window with `host.Desktop.SetColorSchemeAsync`, see
@@ -53,7 +53,7 @@ The host is passed only to that callback; it isn't registered in the
 container. To open Windows from a command or a service, register
 `IRunicWindowService` with `AddRunicWindowService()`. It is new in SDK
 `0.7.0-preview.7`, as is the
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/multi-window).
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.19.0/examples/multi-window).
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
 // IRunicWindowService, which ProjectViewModel uses to open more Windows, find open documents and ask for an account.
@@ -206,7 +206,7 @@ public sealed partial class AccountViewModel(IRunicWindowResult<string> result) 
 - Cancelling the opener's token closes the Window without asking and throws
   `OperationCanceledException`.
 - The example's
-  [AccountWindow.cs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/multi-window/AccountWindow.cs)
+  [AccountWindow.cs](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/multi-window/AccountWindow.cs)
   also has a Cancel command, which closes the Window with
   `IRunicWindowContext.RequestCloseAsync`.
 
@@ -234,7 +234,7 @@ Window with `IRunicWindowContext.Window`, as the account chooser above does.
 An owned Window hides and shows with its owner, and closes when its owner
 closes. A guarded owner asks its owned Windows before it closes; see
 [Owned Windows](../../desktop/window-close-lifecycle.md#owned-windows). The
-[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#owned-and-window-modal-windows)
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#owned-and-window-modal-windows)
 has the full platform table.
 
 ## The threading rule across Windows
@@ -405,7 +405,7 @@ reload. A WPF `RunicViewHost` has no Window scope and reports none.
 In a test, `host.Root.ForConnection("bob-tab", clientKey: "bob")` drives the
 Window as a second page, `RunicViewDriver.Connection` is a driver's
 connection, and `host.Connections` lists them; see
-[Several pages of one window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md#several-pages-of-one-window).
+[Several pages of one window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Testing/README.md#several-pages-of-one-window).
 
 **Security fix for CS-WebUI in `0.16.0`.** Before, a page that reloaded, or
 another browser that connected right after a page left, could take over the
@@ -413,7 +413,7 @@ closed page's connection, so a command still running for it could send its
 questions and pushes to the new page. Full protection needs a 0.16 page and a
 0.16 host: update the Runic NuGet and npm packages together, and replace any
 copy of `runic-cswebui.js` that the application keeps outside `www/`; see the
-[release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.16.0.md#security-connection-keys-on-cs-webui).
+[release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.16.0.md#security-connection-keys-on-cs-webui).
 
 **Security fix for CS-WebUI in `0.17.0`.** A CS-WebUI window's page server and
 its blob endpoint did not hold both loopback addresses that `localhost` names,
@@ -425,7 +425,7 @@ receive or serve the window's page, blobs and uploads. Update to
 and
 [GHSA-9p7m-x6rx-97qh](https://github.com/Runic-Artifex/cs-webui/security/advisories/GHSA-9p7m-x6rx-97qh),
 and the
-[release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.17.0.md#security-cs-webui-blob-endpoint).
+[release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.17.0.md#security-cs-webui-blob-endpoint).
 
 ## Next steps
 

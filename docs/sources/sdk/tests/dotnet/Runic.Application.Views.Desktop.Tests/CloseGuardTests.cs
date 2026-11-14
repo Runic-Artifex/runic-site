@@ -9,6 +9,7 @@ using Runic.Desktop;
 using Runic.Navigation;
 using TUnit.Core;
 using static DesktopChecks;
+using PropertyDescriptor = Runic.Application.Views.Generated.PropertyDescriptor;
 
 
 // RunicWindow.GuardClose on Runic Desktop: a user close of the embedded window asks the departure guards of the
@@ -412,8 +413,12 @@ sealed class GuardFixture : IAsyncDisposable
     public RecordingLoggerFactory Logs { get; }
     public ConfirmingWindowHost Native { get; }
 
+    // The Runic Desktop host the Window opened on, for its shutdown.
+    public DesktopHost Desktop => _host;
+
     public static async Task<GuardFixture> OpenAsync<TWindow>(Func<CancellationToken, ValueTask<bool>>? confirmClose = null,
-        bool confirmsClose = true, NavigationAdmission admission = NavigationAdmission.Supersede) where TWindow : RunicWindow<GuardedShellModel>, new()
+        bool confirmsClose = true, NavigationAdmission admission = NavigationAdmission.Supersede, RunicCloseDrain? closeDrain = null,
+        TimeSpan? shutdownDrainTimeout = null) where TWindow : RunicWindow<GuardedShellModel>, new()
     {
         var script = new CloseGuardScript { Admission = admission };
         var logs = new RecordingLoggerFactory();
@@ -433,6 +438,7 @@ sealed class GuardFixture : IAsyncDisposable
             WindowHostFactory = factory,
             WaitForConnection = false,
             DiagnosticSink = diagnostics.Enqueue,
+            ShutdownDrainTimeout = shutdownDrainTimeout ?? TimeSpan.FromSeconds(30),
         });
         try
         {
@@ -440,6 +446,7 @@ sealed class GuardFixture : IAsyncDisposable
             {
                 SurfaceOptions = new DesktopSurfaceOptions { Content = new DesktopContent.Html("<!doctype html>") },
                 WindowOptions = new DesktopWindowOptions { Browser = BrowserKind.Embedded, ConfirmCloseAsync = confirmClose },
+                CloseDrain = closeDrain,
             });
             var window = await windows.OpenWindowAsync<TWindow>();
             return new GuardFixture(provider, host, window, window.Host, window.ViewModel, script, logs, factory.Hosts.Single(), diagnostics);
@@ -535,6 +542,9 @@ sealed class GuardedShellModel : INotifyPropertyChanged
 
     public NavigationRegion<GuardedPage> Main { get; }
 
+    // The Window's context, for its close drain (DrainOnClose).
+    public IRunicWindowContext Context => _window;
+
     // What a Quit command does: the Bridge starts it in a turn of the Window's model context.
     public async Task<bool> QuitAsync() => await await _context.InvokeAsync(() => _window.RequestCloseAsync().AsTask());
 
@@ -544,26 +554,26 @@ sealed class GuardedShellModel : INotifyPropertyChanged
 // What the generator writes for a ViewModel with one NavigationRegion property: the state presents the region's
 // current page as content and names its reference, so the page is served by a route of its own.
 sealed class GuardedShellBridge(IBridgeTransport transport, GuardedShellModel vm, WindowContentSession content)
-    : ViewModelBridge<GuardedShellModel>(transport, vm, "guardedShell", State(content),
-        [new PropertyDescriptor<GuardedShellModel>("Main", "page", static vm => vm.Main.Current, null, static vm => vm.Main)], [],
+    : ViewModelBridge(transport, vm, typeof(GuardedShellModel), "guardedShell", State(content),
+        [new PropertyDescriptor("Main", "page", static vm => ((GuardedShellModel)vm).Main.Current, null, static vm => ((GuardedShellModel)vm).Main)], [],
         [], content: content)
 {
-    private static BridgeStateMember<GuardedShellModel>[] State(WindowContentSession content) =>
+    private static BridgeStateMember[] State(WindowContentSession content) =>
     [
         new("title", static (writer, vm) =>
         {
-            if (vm.Main.Current is { } page) writer.WriteStringValue(page.Title);
+            if (((GuardedShellModel)vm).Main.Current is { } page) writer.WriteStringValue(page.Title);
             else writer.WriteNullValue();
         }),
         new("page", (writer, vm) =>
         {
-            if (vm.Main.Current is not { } page)
+            if (((GuardedShellModel)vm).Main.Current is not { } page)
             {
-                content.Clear(vm, "Main");
+                content.Clear(((GuardedShellModel)vm), "Main");
                 writer.WriteNullValue();
                 return;
             }
-            var presented = content.Present(vm, "Main", "page", page,
+            var presented = content.Present(((GuardedShellModel)vm), "Main", "page", page,
                 (transport, presented, route) => new PageBridge(transport, content, new PageModel(presented), route));
             writer.WriteStartObject();
             writer.WriteString("kind", "page");
@@ -580,26 +590,26 @@ sealed class GuardedShellBridge(IBridgeTransport transport, GuardedShellModel vm
 
     // The page's bridge. A list page presents every row as content, and disposing the bridge releases the rows with it,
     // so the page and its rows are released as one tree.
-    private sealed class PageBridge : ViewModelBridge<PageModel>
+    private sealed class PageBridge : ViewModelBridge
     {
         private readonly WindowContentSession _content;
         private readonly GuardedPage _page;
 
         public PageBridge(IBridgeTransport transport, WindowContentSession content, PageModel model, string route)
-            : base(transport, model, route, State(content), [], [], [], content: content)
+            : base(transport, model, typeof(PageModel), route, State(content), [], [], [], content: content)
         {
             _content = content;
             _page = model.Page;
         }
 
-        private static BridgeStateMember<PageModel>[] State(WindowContentSession content) =>
+        private static BridgeStateMember[] State(WindowContentSession content) =>
         [
-            new("title", static (writer, model) => writer.WriteStringValue(model.Page.Title)),
+            new("title", static (writer, model) => writer.WriteStringValue(((PageModel)model).Page.Title)),
             new("rows", (writer, model) =>
             {
                 writer.WriteStartArray();
-                foreach (var row in model.Page.Rows)
-                    writer.WriteStringValue(content.PresentItem(model.Page, "Rows", "row", row,
+                foreach (var row in ((PageModel)model).Page.Rows)
+                    writer.WriteStringValue(content.PresentItem(((PageModel)model).Page, "Rows", "row", row,
                         static (rows, _, rowRoute) => new RowBridge(rows, new RowModel(), rowRoute)).Id);
                 writer.WriteEndArray();
             }),
@@ -620,10 +630,10 @@ sealed class GuardedShellBridge(IBridgeTransport transport, GuardedShellModel vm
 
     // A row's bridge, with a settable note.
     private sealed class RowBridge(IBridgeTransport transport, RowModel model, string route)
-        : ViewModelBridge<RowModel>(transport, model, route,
-            [new("note", static (writer, model) => writer.WriteStringValue(model.Note))],
-            [new PropertyDescriptor<RowModel>("Note", "note", static model => model.Note,
-                static (model, value) => model.Note = value.GetString() ?? throw new FormatException("Expected a string."))],
+        : ViewModelBridge(transport, model, typeof(RowModel), route,
+            [new("note", static (writer, model) => writer.WriteStringValue(((RowModel)model).Note))],
+            [new PropertyDescriptor("Note", "note", static model => ((RowModel)model).Note,
+                static (model, value) => ((RowModel)model).Note = value.GetString() ?? throw new FormatException("Expected a string."))],
             [], []);
 }
 

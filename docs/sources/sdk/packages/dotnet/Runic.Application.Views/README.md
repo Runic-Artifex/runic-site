@@ -672,6 +672,13 @@ after a user close.
   Save drafts as the user edits, or handle the close afterwards, where that
   matters. `RequestCloseAsync` still asks there, because the application is
   the one closing.
+- A guard that agreed does not have to wait for the Window's work itself: a
+  [close drain](#closing-after-the-windows-work-has-drained) (0.19,
+  experimental) keeps the window open after every guard agreed until that work
+  has ended. A guard that waits commits to nothing either:
+  `AcceptedWorkScope.WaitForAcceptedAsync` waits without closing the scope's
+  admission, so a later guard that keeps the Window open leaves the scope
+  accepting work as before.
 
 ### Closing a ViewModel's own Window
 
@@ -724,14 +731,22 @@ public sealed partial class EditorViewModel(IRunicWindowContext window) : Observ
 - `RequestCloseAsync(cancellationToken)` is the Window's own
   `RequestCloseAsync`: it asks `CanCloseAsync` when the Window sets
   `GuardClose`, returns `false` with the Window open when that keeps it, and
-  `true` once it closed. It works on Runic Desktop and on CS-WebUI, where the
+  `true` once it closed. With a
+  [close drain](#closing-after-the-windows-work-has-drained) it returns `true`
+  once the close was approved, while the Window drains, so a "Save and close"
+  command does not wait for a drain that waits for it;
+  `IRunicWindow.WaitForCloseAsync` waits for the Window itself. It works on Runic Desktop and on CS-WebUI, where the
   request is guarded although the browser's own close is not.
 - The context belongs to the Window's DI scope. A scoped service that the
   ViewModel takes shares it; a navigation entry created with
   `RunicNavigatorOptions.CreateEntryScopes` has a scope of its own, so pass the context to it from
   the Window's ViewModel. Resolved outside a Window's scope, or called before
   the Window has opened, for example from the ViewModel's constructor, it
-  throws `InvalidOperationException`.
+  throws `InvalidOperationException`. In the scope of a `DesktopWindow` the
+  application opened itself and attached with
+  `DesktopPlatformServices.AttachWindowServices` (0.19), it asks the window's
+  `DesktopWindowOptions.ConfirmCloseAsync`, as the close button does, and
+  `Window` stays `null`.
 - The interface has one method, so a test registers a fake that answers
   `true` or `false` after the application's services, or opens the Window and
   lets its guards decide.
@@ -924,10 +939,13 @@ casts `IRunicWindow.Host` to a host's type:
 | `MinimizeAsync()` | Minimizes it to the taskbar or Dock. |
 | `SetVisibleAsync(visible)` | Hides it without closing it, for example to a status icon, or shows it again. |
 | `SetFullScreenAsync(fullScreen)` | Enters or leaves full screen. |
+| `MaximizeAsync()`, `RestoreAsync()` | Maximizes the Window, or returns it to its normal bounds from maximized, minimized or full screen; a second call changes nothing. |
+| `SetPlacementAsync(placement)`, `Placement` | Gives the open Window a saved placement (the bounds it restores to, maximized, full screen), and reports where it is; [placement](#maximizing-and-placing-the-window). |
 | `SetDocumentEditedAsync(edited)` | Marks unsaved changes where the platform shows them: the dot in the macOS close button. |
 | `SetColorSchemeAsync(scheme)` | Switches it between light and dark; the page's `prefers-color-scheme` follows. |
 | `IsActive`, `IsMinimized`, `IsVisible`, `Activity` | Whether it has the keyboard focus, is minimized and is shown, with `ActivityChanged` and `PropertyChanged`. |
 | `Features` | What the host can do now. |
+| `OpenSidePanelAsync(options)`, `SidePanel` | Opens another page of the Window beside its page, growing the Window; [experimental](#a-side-panel-beside-the-windows-page). |
 
 With CommunityToolkit.Mvvm, a ViewModel that polls less while the user works
 elsewhere and hides to the status area:
@@ -1005,19 +1023,178 @@ public InboxViewModel(IRunicWindowPresentation window)
   dropped): it reports the native window, not whether a View currently shows
   the ViewModel. Use the View lifetime hooks for that.
 
-| Host | Present | Minimize | Hide and show | Full screen | Document edited | Color scheme | Activity |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Runic Desktop, WebView2 | Yes | Yes | Yes | Yes | No | Yes; shared by the windows of a configured `ProfilePath` | Yes |
-| Runic Desktop, WKWebView | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| Runic Desktop, WebKitGTK (GTK 3, GTK 4) | Yes | Yes | Yes | Yes | No | Yes, shared by every window of the application | Yes; minimized only on X11 |
-| Runic Desktop, an installed browser after a fallback | No | No | No | No | No | No | No |
-| WPF, `WpfPlatformServices.ForWindowPresentation(window)` | Yes | Yes | Yes | Yes | No | Title bar and the pages of `RunicViewHost`s | Yes |
-| CS-WebUI | Yes | WebView only | No | No | No | No | No |
+| Host | Present | Minimize | Hide and show | Full screen | Maximize, restore, placement | Document edited | Color scheme | Activity |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Runic Desktop, WebView2 | Yes | Yes | Yes | Yes | Yes | No | Yes; shared by the windows of a configured `ProfilePath` | Yes |
+| Runic Desktop, WKWebView | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Runic Desktop, WebKitGTK (GTK 3, GTK 4) | Yes | Yes | Yes | Yes | Yes; no position on Wayland | No | Yes, shared by every window of the application | Yes; minimized only on X11 |
+| Runic Desktop, an installed browser after a fallback | No | No | No | No | No | No | No | No |
+| A host application's window (`runic-host/1`) | As the host lists | As listed | As listed | As listed | As listed; the host's policy decides | As listed | As listed | As listed |
+| A host application's region | Yes | No | No | No | No | Yes | No | Yes |
+| WPF, `WpfPlatformServices.ForWindowPresentation(window)` | Yes | Yes | Yes | Yes | Yes, in WPF DIPs | No | Title bar and the pages of `RunicViewHost`s | Yes |
+| CS-WebUI | Yes | WebView only | No | No | No | No | No | No |
+
+A serve-only application's Windows have no native window: every request
+reports `OwnerUnavailable`.
 
 A custom Runic Desktop window host provides the activity and the color scheme
 through `IDesktopActivityWindowHost` and `IDesktopColorSchemeWindowHost`; a
 custom Window host gives the Window its own presentation with
 `RunicWindowOpening<TViewModel>.UsePresentation` once the native window exists.
+
+#### Maximizing and placing the Window
+
+`MaximizeAsync`, `RestoreAsync` and `SetPlacementAsync` (0.19, stable) are
+idempotent requests: a maximized Window stays maximized, and `RestoreAsync`
+always ends at the normal bounds, also for a Window minimized while it was
+maximized, which the platform itself brings back maximized (`PresentAsync`
+keeps that behaviour). `Features` lists `Maximize` for the first two and
+`Placement` for `SetPlacementAsync` and `Placement`.
+
+`Placement` is a `RunicWindowPlacement`: the bounds the Window restores to,
+and whether it is maximized or full-screen. Save it when the Window closes and
+give it back to put the Window where the user left it:
+
+```csharp
+[RelayCommand]
+private async Task RestoreLayoutAsync()
+{
+    if (_settings.WindowPlacement is { } saved) await _window.SetPlacementAsync(saved);
+}
+
+// When the Window closes; it stays readable after the close.
+_settings.WindowPlacement = _window.Placement;
+```
+
+- **Units.** The values are the host's, as a placement saved from the same
+  host reads them; save placements per host rather than convert them. On Runic
+  Desktop they are those of `DesktopWindowState.Placement` (physical `X/Y`
+  and device-independent `Width/Height` on Windows, points on macOS, logical
+  pixels on Linux), and Runic.Application.Views.Desktop converts with
+  `ToRunicPlacement()` and `ToDesktopPlacement()`, so a placement saved with
+  `DesktopPlatformServices.GetWindowState` passes between the two layers. In
+  WPF all four are device-independent pixels. An open side panel is not part
+  of the bounds.
+- **Keeping or fitting.** `X` and `Y` both `null` keep the position, and a
+  `Width` or `Height` of zero or less keeps that dimension. Runic Desktop keeps
+  the bounds on a monitor that exists now, as at open, so `Placement` can report
+  other bounds than the ones passed. A host application's policy may refuse a
+  request (`PermissionDenied`) or clamp the placement.
+- **Wayland** has no window positions: a placement with `X` and `Y` reports
+  `BackendUnavailable` and changes nothing. Pass one without them, as
+  `Placement` reads there. A minimized window on Wayland comes back only with
+  `PresentAsync`.
+- **Activation on Windows.** Windows activates a window that it maximizes or
+  brings back from minimized, as it does when the user does so; Runic does not
+  hide this. Restoring a visible maximized window, and a placement that keeps
+  the window's state, leave the activation alone.
+- **Completion.** A request completes when the window was asked: macOS
+  animates a zoom, and a Linux window manager decides when the window is
+  maximized. `PropertyChanged` reports `Placement` in a turn of the Window's
+  model context, with the changes of a drag combined.
+- A kiosk window stays full-screen: the requests that would leave full screen
+  report `Conflict`.
+
+A custom Runic Desktop window host supports them by implementing
+`IDesktopWindowShowStateHost` and reporting `DesktopWindowCapabilities.WindowPlacement`.
+
+#### A side panel beside the Window's page
+
+`OpenSidePanelAsync` (0.19, experimental under
+[`RUNICDESK104`](../../../docs/experimental.md#RUNICDESK104)) opens another
+page of the Window beside its page, in a strip on one edge by which the Window
+grows, so the page keeps its size and its place on the screen. The panel's page
+is a second connection of the same Window: it binds to the same ViewModel tree,
+for example to a `SidePanel` property of the root ViewModel, through a route of
+the application's own frontend (`Path`). It does not follow or drive the
+Window's navigation path. When the panel cannot open, the ViewModel shows the
+content another way, such as an overlay of its page:
+
+```csharp
+[RelayCommand]
+private async Task ShowDebugAsync()
+{
+    var result = await _window.OpenSidePanelAsync(new RunicSidePanelOptions { Width = 360, Path = "side-panel" });
+    if (result is RunicSidePanelResult.Opened opened)
+    {
+        opened.Panel.Closed += (_, e) => IsDebugPanelOpen = false;   // in a turn of the Window's model context
+        IsDebugPanelOpen = true;
+    }
+    else
+    {
+        ShowDebugOverlay = true;   // Unsupported, Maximized, Snapped, NoRoom, ...
+    }
+}
+```
+
+- `Edge` is `End` by default: the right edge of a left-to-right Window and the
+  left edge of a right-to-left one. `Width` is in the Window's units (DIPs,
+  points, logical pixels), at least `RunicSidePanelOptions.MinimumWidth` (120).
+- `RunicSidePanelResult` is `Opened` with the `IRunicSidePanel`, which is also
+  `SidePanel` from then on, or `Refused` with a `RunicSidePanelRefusal`, after
+  which the Window is unchanged. Treat an unknown refusal as `Unsupported`.
+- The Window refuses while it is minimized or hidden (`Minimized`),
+  full-screen, maximized or snapped, when the grown Window would leave the
+  monitor's work area or the panel is wider than half of it (`NoRoom`; the
+  Window is never moved to make room), for the left edge on Wayland
+  (`PositionUnavailable`), while a panel is open (`AlreadyOpen`), and when the
+  panel's page does not load (`LoadFailed`). Once the Window closed, the result
+  is `Closed`.
+- `IRunicSidePanel` moves to the other edge (`MoveToEdgeAsync`), changes its
+  width (`SetWidthAsync`), takes the focus (`FocusAsync`) and closes
+  (`CloseAsync`, or disposing it). Move and width changes return the same
+  refusals, `null` when done, and `Closed` once the panel closed.
+- `Closed` is raised once, in a turn of the Window's model context, whether the
+  application, the panel's page (`window.close()`), a crash or the Window's
+  close closed it (`RunicSidePanelCloseReason`). `SidePanel` is `null` again by
+  then, and `PropertyChanged` reports both changes.
+- `Features.HasFlag(RunicWindowPresentationFeatures.SidePanel)` says whether
+  the host has a panel at all, for example to hide the command.
+- A presentation written for 0.18 keeps compiling: the interface's default
+  members refuse with `Unsupported` and report no panel.
+
+| Host | Side panel |
+| --- | --- |
+| Runic Desktop, WebView2 | Yes |
+| Runic Desktop, WKWebView | Yes |
+| Runic Desktop, WebKitGTK (GTK 3, GTK 4) | Yes; on Wayland the right edge only (the left edge refuses with `PositionUnavailable`) |
+| Runic Desktop, an installed browser after a fallback; a serve-only application | `Unsupported` |
+| A custom Runic Desktop window host (other than `Runic.Desktop.Gtk4`'s); WPF | `Unsupported`: the WPF application owns its layout and can place a second `RunicWebView` |
+| CS-WebUI | `Unsupported` |
+| A hosted application's Window or region (`runic-host/1`) | `Unsupported` |
+
+The [side panel guide](../../../docs/side-panel.md) and the
+[side panel example](../../../examples/side-panel/README.md) show the panel's
+route in the frontend, the overlay fallback and each platform's limits. The
+[Runic.Desktop README](../Runic.Desktop/README.md#side-panel) describes the
+geometry: exact bounds on close, maximize and full screen while open, and what
+`DesktopWindowState` reports. In tests, `RunicTestWindowPresentation` decides
+the panel as a desktop window does
+([Runic.Application.Testing](../Runic.Application.Testing/README.md#the-windows-presentation)).
+
+### Per-window services by way of opening
+
+The per-window services a ViewModel takes in its constructor are live only for
+a window that a host opened or attached. A scope that nothing attached hands
+out the same objects, unbound: the presentation reports `OwnerUnavailable`, the
+locale only keeps its value, `IRunicConnections` is empty and
+`IRunicWindowContext.RequestCloseAsync` throws.
+
+| Way of opening | `IRunicWindowPresentation` | `IRunicWindowLocale` | `IRunicConnections` | Dialogs, clipboard (`IWindowPlatformServices`) | `IRunicWindowContext` | `appearance/1` push |
+| --- | --- | --- | --- | --- | --- | --- |
+| `OpenWindowAsync` on `RunicDesktopHost` | Yes | Yes, with the native direction | Yes | Yes, with `AddRunicPlatformServices()` | `RequestCloseAsync` and `Window` | Yes, when only this computer reaches the page; a hosted guest's from its host |
+| `OpenWindowAsync` on `RunicCsWebUiHost` | Yes (see the table above) | Yes | Yes | Yes, with `AddRunicPlatformServices()` | `RequestCloseAsync` and `Window` | No |
+| A `DesktopWindow` the application opened, `DesktopPlatformServices.AttachWindowServices(window, scope, content)` (0.19) | Yes | Yes, with the native direction, when it gets `content` | Yes, with `content` | Yes, with `AddRunicPlatformServices()` | `RequestCloseAsync` (the window's `ConfirmCloseAsync` decides); `Window` is `null` | Yes, with `content`, when only this computer reaches the page |
+| A `DesktopWindow` the application opened, `DesktopPlatformServices.ForWindowPresentation(window)` (0.19) | Yes, passed to the ViewModel | No | No | `DesktopPlatformServices.ForWindow(new DesktopNativeOwner(window))` | No | No |
+| A WPF window, `WpfPlatformServices.ForWindowPresentation(window)` | Yes, passed to the ViewModel | No | No (no Window scope) | `WpfPlatformServices.ForWindow(window)` | No | Yes, for the pages of its `RunicViewHost`s |
+| `RunicWindowTestHost` (Runic.Application.Testing) | `RunicTestWindowPresentation`, with `AddRunicTestWindowPresentation()` | Yes | Yes | The test's own registrations | `RequestCloseAsync` and `Window` | Set by the test (`Content.Appearance`) |
+
+Only `OpenWindowAsync` gives a Window `IRunicWindowService.Windows`,
+`IRunicWindowParameter<T>`, `RunicWindowOptions.Owner`, `GuardClose` and the
+binding of the ViewModel's menu commands. A window the application opens
+itself takes its owner from `DesktopWindowOptions.Owner` and confirms a close
+with `DesktopWindowOptions.ConfirmCloseAsync`; see
+[a window the application opens itself](../Runic.Application.Views.Desktop/README.md#a-window-the-application-opens-itself).
 
 ### What the page sees of a close
 
@@ -1042,6 +1219,110 @@ uses the feature, such as a page of an older release. `DisposeAsync` and
 `CloseAsync(TimeSpan.Zero)` tell the pages but do not wait. Only the first
 close of a Window tells and waits; later calls return its result. An
 unacknowledged close is logged at Debug as event 1026.
+
+### Closing after the Window's work has drained
+
+> Experimental (0.19, [`RUNICDESK105`](../../../docs/experimental.md#RUNICDESK105)):
+> `RunicCloseDrain`, `RunicWindowOptions.CloseDrain`, `RunicOperationClose`,
+> `IRunicWindowContext.DrainOnClose` and `RunicWindowCloseResult.RemainingDurableWork`.
+> `AcceptedWorkScope.WaitForAcceptedAsync` is stable.
+
+An application whose Window runs durable work, such as a change to an external
+system that must not stop halfway, can keep the window open after the user
+closed it until that work has ended, without a prompt. Three declarations say
+what the close waits for and what it cancels:
+
+```csharp
+// The Window stays open after a decided close until its accepted work has ended.
+await windows.OpenWindowAsync<DeployWindow>(new RunicWindowOptions { CloseDrain = RunicCloseDrain.UntilDrained });
+
+public sealed partial class DeployViewModel : ObservableObject
+{
+    public DeployViewModel(IRunicWindowContext window, DeploymentWork work)
+    {
+        // Application work outside the Window's operations: the close waits for it too.
+        window.DrainOnClose(work.Accepted);
+    }
+
+    // Durable: never asked to cancel by a close or a shutdown; the close waits for it.
+    [RelayCommand]
+    [property: RunicOperationClose(RunicOperationClose.Durable)]
+    private Task ApplyAsync(CancellationToken cancellationToken) => ...;
+
+    // Read-only: asked to cancel as soon as the close is decided.
+    [RelayCommand]
+    [property: RunicOperationClose(RunicOperationClose.Cancel)]
+    private Task RefreshAsync(CancellationToken cancellationToken) => ...;
+}
+```
+
+With ReactiveUI, put `[RunicOperationClose(...)]` on the command property. On
+the ViewModel class it covers each of its operations, and a property's
+declaration wins.
+
+- **`RunicCloseDrain`.** `None`, the default, closes the visible window as soon
+  as the close is decided, as before 0.19. `For(timeout)` keeps it until the
+  work has ended or the time passed; then operations without a declaration are
+  asked to cancel and the window closes. `UntilDrained` has no timeout.
+- **The order.** A user close, or `IRunicWindowContext.RequestCloseAsync`, asks
+  the Window's guards first (`CanCloseAsync`, `ConfirmCloseAsync`); a refusal
+  changes nothing. Once every guard agreed, the Window leaves
+  `IRunicWindowService.Windows`, operation admission stops (`owner-closing`),
+  `Cancel` operations are asked to cancel, and the pages receive `closing` with
+  `draining: true`. They stay connected and keep receiving the Window's state,
+  so the page can show that it is finishing, with progress. The window closes by
+  itself when the work has ended.
+- **A second user close** during the drain is ignored.
+- **`RunicOperationClose`.** `Default`, without a declaration, is waited for and
+  asked to cancel at the drain's or close's timeout, as before 0.19, under every
+  `CloseDrain`. `Cancel` is asked to cancel when the close is decided. `Durable`
+  is never asked to cancel by a Window's close, `CloseAsync`, disposal or the
+  host's shutdown token (`WindowContentSessionOptions.OperationShutdown`); the
+  client's `cancel()` and a `RunicOperationRetirement.Cancel` retirement still
+  cancel it. Awaited command calls count as `Default`.
+- **`DrainOnClose(scope)`.** The close waits for the work that the
+  `AcceptedWorkScope` accepted before the close was decided
+  (`WaitForAcceptedAsync`), and never cancels it. The scope keeps accepting
+  work, and several Windows may drain one scope. Dispose the result to stop.
+- **The application's own close.** `CloseAsync(timeout)` keeps its timeout and
+  honours the declarations; called during a drain, it ends the drain at the
+  timeout. `DisposeAsync` closes the visible window at once. Durable work still
+  running is counted in `RunicWindowCloseResult.RemainingDurableWork`, not in
+  `RemainingOperations`, and keeps the Window's scope until it ended:
+  `Completion`, and the Window's disposal, wait for it.
+
+- **`RequestCloseAsync`** returns `true` once the close was decided, not when
+  the window has gone, so a "Save and close" command that is itself work the
+  drain waits for does not wait for itself. `WaitForCloseAsync` waits for the
+  window.
+
+Where it applies:
+
+| Host | Visible drain | Shutdown (Ctrl+C, SIGTERM, quit) |
+| --- | --- | --- |
+| Runic Desktop's embedded window (WebView2, WKWebView, WebKitGTK with GTK 3 and GTK 4), `RunicDesktopHostOptions.CloseDrain` for every Window | Yes | Drains visibly for up to `DesktopHostOptions.ShutdownDrainTimeout` (30 s), then closes; `ShutdownRequested` follows the drains |
+| A window the application opens itself (`DesktopPlatformServices.AttachWindowServices`) | With `DesktopWindowOptions.CloseDrainAsync` | As above |
+| A hosted application's Window (runic-host/1) and its regions | Yes: it reports `window-closed` after the drain, and the host keeps its window until then | Within the guest's `ShutdownDrainTimeout`; the host's stop timeout still ends it |
+| An installed browser, serve-only mode, CS-WebUI | No: the window closes at once, with `WindowCloseDrainUnavailable` (event 1055) | The Window's scope still waits for durable work |
+| WPF (`RunicViewHost`) | No: the application owns its window's `Closing` (below) | The application's own |
+| `RunicWindowTestHost` | `RunicWindowTestHostOptions.CloseDrain`, `RunicTestWindow.IsDraining` | |
+
+The operation declarations and `DrainOnClose` apply on every host. A WPF
+window waits for its work in its own `Closing` handler: cancel the first close,
+wait without closing admission, then close again.
+
+```csharp
+private bool _drained;
+
+private async void OnClosing(object? sender, CancelEventArgs e)
+{
+    if (_drained) return;
+    e.Cancel = true;                        // keep the window visible
+    await _work.WaitForAcceptedAsync();     // admission stays open while it waits
+    _drained = true;
+    Close();
+}
+```
 
 ### Menu bar commands
 
@@ -1614,8 +1895,8 @@ export type DocumentPane = "Editor" | "Preview";
   or `input` for scalars.
 
 <a id="generated-code-support-api"></a>
-The generated C# bridge calls public runtime types such as `ViewModelBridge<T>`,
-`PropertyDescriptor<T>`, `CommandDescriptor<T>`, `BridgeWire`, `BridgeJson` and
+The generated C# bridge calls public runtime types such as `ViewModelBridge`,
+`PropertyDescriptor`, `CommandDescriptor`, `BridgeWire`, `BridgeJson` and
 `ReactiveCommandExecution`. They are in the `Runic.Application.Views.Generated`
 namespace (`Runic.Application.Views.ReactiveUI.Generated` and
 `Runic.Application.Views.ReactiveUI.Reactive.Generated` for the ReactiveUI
@@ -1625,7 +1906,11 @@ policy keeps them binary compatible within a major release for code that an
 earlier minor release generated, but their source shape may change for
 hand-written code. Generated files name them with `global::`, so regenerating
 is the only migration; hand-written code that names them, such as a test Bridge,
-adds `using Runic.Application.Views.Generated;`.
+adds `using Runic.Application.Views.Generated;`. The generated `AddRunicBridges()`
+first passes the generated-code contract version to
+`BridgeGeneratedCode.RequireContract`, so Bridges that another major release
+generated fail with [`RUNICBRIDGE038`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge038),
+which names the assembly to rebuild, instead of a `TypeLoadException`.
 
 Each ViewModel's generated bridge is an internal class `<Name>Bridge`, such as
 `CounterBridge` for `CounterViewModel`, in the `Runic.Application.Views.Generated.Bridges`
@@ -1858,7 +2143,7 @@ generator, such as a CommunityToolkit `[ObservableProperty]`, points at its
 a link to its entry in the [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 for the release you use.
 
-`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034` and `053` are warnings; the generator's
+`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039` and `053` are warnings; the generator's
 (`013`, `020`, `028`, `031` and `032`) repeat on builds that reuse the cached generation. Every other
 code fails the build. The
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
@@ -3146,27 +3431,27 @@ tests, `RunicViewState.IsValidating(vm => vm.UserName)` and
 Text that a ViewModel produces, such as a status line or a validation
 message, can follow the window's language without a call per string. The
 ViewModel produces a text reference of
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/transport.md)
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/transport.md)
 (a message key, typed arguments and a fallback text) instead of a sentence, and
 the page formats it with its Translations runtime (the `translation-text/1`
 feature). When the language changes, the page formats the references it has
 again.
 
-The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-views.md)
+The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/runic-views.md)
 walks through one catalog for the page and C#, the application's language,
 native text and tests, step by step. This section is the reference. It needs
-Runic Translations 0.10.0 or later. `dotnet new runic-app --translations` starts
+Runic Translations 0.11.0 or later. `dotnet new runic-app --translations` starts
 an application with all of it, and the
 [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
 shows it in English, German and Arabic.
 
 **One catalog.** Keep the catalog with the frontend and name its `runic.json`
 in the .NET project, which then gets the generated C# API for every message
-([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
+([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
 
 ```xml
-<PackageReference Include="Runic.Translations" Version="0.10.0" />
-<PackageReference Include="Runic.Translations.Build" Version="0.10.0" PrivateAssets="all" />
+<PackageReference Include="Runic.Translations" Version="0.11.0" />
+<PackageReference Include="Runic.Translations.Build" Version="0.11.0" PrivateAssets="all" />
 <RunicTranslationProject Include="Frontend/translations/runic.json" />
 ```
 
@@ -3536,7 +3821,7 @@ validation text, resolve them by catalog with the generated transport's
 one of a catalog the page does not list shows its fallback text. One written
 against another release of a catalog is checked key by key: it translates while
 its key and arguments still match, and shows its fallback text otherwise
-([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/transport.md)):
+([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/transport.md)):
 
 ```ts
 import * as appTransport from "virtual:runic-translations/app/transport";
@@ -3557,7 +3842,7 @@ configureTranslatedText({
 With the Vite plugin's `dependencies: "auto"`, the page's copy of a library
 catalog is regenerated with the application's `overrides`, so a reference
 resolves to the same text as in C#
-([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/libraries.md)).
+([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/libraries.md)).
 
 **Right-to-left text.** Since Runic Translations 0.9, a catalog that declares a
 right-to-left locale, such as `ar` or `he`, isolates the placeholders of its
@@ -3568,7 +3853,7 @@ them correctly; compare such text in tests after the runtime's
 in `runic.json` turns it on or off. The runtime's `localeDirection`, passed as
 `direction`, gives `syncDocumentLocale` and `textDirection()` the direction of
 each locale; see
-[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.10.0/docs/guides/translations/bidi.md).
+[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/bidi.md).
 
 `syncDocumentLocale()` sets `lang` and `dir` on `<html>` (direction from the
 runtime's `direction`, such as `localeDirection`, else the locale's script) and
@@ -3656,8 +3941,10 @@ reconnects keeps no stale value) and on each change:
   or the platform's own, which it creates while a Window is open and disposes
   after the last one closed, and keeps it current with one watch while any
   Window is open; the views of Runic.Application.Views.Wpf (`RunicViewHost`,
-  `CreateWpfViewAsync`) share one such watch per registered `IDesktopSettings`,
-  or one of the platform's own, and hold no view's services. A read that fails
+  `CreateWpfViewAsync`) and the windows an application attaches with
+  `DesktopPlatformServices.AttachWindowServices` (0.19) share one such watch per
+  registered `IDesktopSettings`, or one of the platform's own, and hold no
+  view's or window's services. A read that fails
   keeps the last appearance. A watch that throws is logged as event 2009, and
   the next Window that opens watches again.
 - The desktop's accessibility settings and palette describe the user at this
@@ -4349,7 +4636,10 @@ await shell.Main.PushAsync(NavigationTarget.Create<ReportViewModel>(),
 
 The registry of operations is per Window: a second Window, or a second launch,
 cannot observe an operation the first Window started, and closing the Window
-waits for its operations up to the close timeout, then cancels them. Work that
+waits for its operations up to the close timeout, then cancels them. An
+operation declared `[RunicOperationClose(RunicOperationClose.Durable)]` (0.19,
+experimental) is never cancelled by the close: the Window's scope stays until it
+ended (see [Closing after the Window's work has drained](#closing-after-the-windows-work-has-drained)). Work that
 must outlive a Window, or that several Windows observe, belongs to an
 application-owned service registered outside the Window's scope, as
 nix-manager's `IOperationService`:
@@ -4486,6 +4776,7 @@ trace id; correlate them with the host's spans by time and route.
 | 1052 | `WindowCloseGuardFailed` | Error | A guarded Window's `CanCloseAsync` throws; the window stays open. A departure guard that throws is logged by the navigator as 1060 instead. | `Window`, `ErrorType` |
 | 1053 | `WindowCloseGuardUnavailable` | Warning | A Window with `GuardClose` opens on a presentation that cannot keep its window open, such as CS-WebUI or a browser, so a user close does not ask `CanCloseAsync`. | `Window`, `Presentation` |
 | 1054 | `WindowFileDropFailed` | Error | `IRunicFileDropTarget.OnFilesDroppedAsync` of a Window's root ViewModel threw for a drop of files; later drops still arrive. | `ViewModel`, `FileCount`, `ErrorType` |
+| 1055 | `WindowCloseDrainUnavailable` | Warning | A Window with a close drain (`RunicWindowOptions.CloseDrain`, `RunicDesktopHostOptions.CloseDrain`) opens on a presentation that cannot keep its window open, such as an installed browser, serve-only mode or CS-WebUI: the window closes at once, and the Window's scope still waits for durable work. Experimental (`RUNICDESK105`). | `Window`, `Presentation` |
 | 1090 | `ReactiveSchedulerKept` | Information | A Runic Desktop, CS-WebUI or test-host window opens while ReactiveUI's main-thread scheduler is one set before `AddRunicReactiveModelContext()`, so Runic's was not installed. Once per scheduler type; a UI dispatcher's scheduler, such as WPF's, is not logged. | `Scheduler` |
 | 1091 | `ReactiveSchedulerReplaced` | Warning | Such a window opens after another scheduler replaced the installed one, for example a later `RxAppBuilder` `BuildApp()` with `WithPlatformServices()`. Call `WithRunicModelContext()` on that builder. Once per scheduler type; a UI dispatcher's scheduler is not logged. | `Scheduler` |
 | 1100 | `HotReloadRestartRequired` | Error | A Hot Reload edit changed a generated Bridge contract; restart the application. The `RUNIC_IDE_CONTRACT_RESTART_REQUIRED` line also goes to standard error. | `Mismatch` |
@@ -4548,6 +4839,7 @@ trace id; correlate them with the host's spans by time and route.
 | 2027 | `DesktopHostedRegionSameSite` | Warning | A guest serves a region's frame from the host page's own loopback family, since it cannot listen on the other one: the frame receives the cookies of the host page's origin. | `Name`, `Region` |
 | 2028 | `DesktopHostedRegionFailed` | Warning | Handling a region of a hosted application failed, such as a push to the host page. | `ErrorType` |
 | 2029 | `DesktopHostedPeerRefused` | Warning | An elevated hosted application (the elevated pair) refused a connection to one of its listeners from a loopback peer that does not run elevated, or whose process it cannot look up, before it read the request (`elevated-peer-refused`). At most ten a minute. | `Peer` |
+| 2030 | `DesktopHostedRegionAppearanceUnavailable` | Warning | The host gave a region window an appearance override (`RunicHostedRegionOptions.Appearance`, `RunicHostedRegion.SetAppearanceAsync`), but the guest does not implement `region-appearance/1`, such as a 0.18 guest: the window shows the desktop's appearance. Once per window. | `Name`, `Region` |
 | 2100 | `CsWebUiWindowShowFailed` | Error | CS-WebUI cannot show a window: it finds no browser, the selected browser does not exist or start, its page does not connect in time, or the WebView does not start. `OpenWindowAsync` fails with a `RunicWindowConfigurationException`. | `Window`, `Code`, `Browser`, `BrowserPath`, `DiagnosticMessage` |
 | 2101 | `CsWebUiNativeLibraryUnchecked` | Warning | CS-WebUI loads a WebUI library that the application selected through `CSWEBUI_NATIVE_LIBRARY` or `WebUiNativeLibrary.SetLibraryPath`, whose version Runic cannot check; it needs WebUI commit `efac0e24` or later and is tested with `24c7d196e` (CsWebUi 2.5.0-beta.4.9). Once per process, before the first window opens. | `Path` |
 | 2102 | `CsWebUiMenuCommandFailed` | Error | A menu bar command of a CS-WebUI Window's root ViewModel (`IRunicMenuCommandSource`, `RunicCsWebUiHostOptions.MenuBar`) threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |
@@ -4575,6 +4867,8 @@ trace id; correlate them with the host's spans by time and route.
 | 3019 | `DesktopQuitConfirmationFailed` | Error | `DesktopHostOptions.ConfirmQuitAsync` threw; the application keeps running. | `ErrorType` |
 | 3020 | `DesktopReopenHandlerFailed` | Error | A `DesktopHost.ReopenRequested` handler threw; later handlers still run. | `ErrorType` |
 | 3021 | `EmbeddedConnectionDeadlineExtended` | Warning | An embedded WebView had requested nothing after `ConnectionTimeout` but was still loading the page, so Runic Desktop kept waiting, up to four times the timeout. Once per presentation, also when the page then connects. | `TimeoutSeconds`, `Progress` (what the WebView was doing), `LimitSeconds` |
+| 3022 | `WindowCloseDrainFailed` | Error | A window's `DesktopWindowOptions.CloseDrainAsync` threw; the window closes. | `ErrorType` |
+| 3023 | `DesktopShutdownDraining` | Information | A shutdown waits for windows that drain (`DesktopWindowOptions.CloseDrainAsync`) before it closes them, for up to `DesktopHostOptions.ShutdownDrainTimeout`. | `Count`, `LimitSeconds` |
 | 3040 | `WindowActivityHandlerFailed` | Error | A `DesktopWindow.ActivityChanged` handler threw; later handlers and events still run. | `ErrorType` |
 
 `Model` is the ViewModel type name, `Member` the command or property, and
@@ -4582,7 +4876,7 @@ trace id; correlate them with the host's spans by time and route.
 as `content12`). A declared failure is an expected outcome, so it is logged at
 Debug, still with its exception; `FailureType` is the failure value's type.
 
-Events 1000-1012, 1018-1026, 1050-1053, 1100-1102, 1130, 1140, 1180-1181, 1190-1193 and 1210-1211 use the category `Runic.Application.Views`
+Events 1000-1012, 1018-1026, 1050-1055, 1100-1102, 1130, 1140, 1180-1181, 1190-1193 and 1210-1211 use the category `Runic.Application.Views`
 (`RunicViewsTelemetry.LogCategory`); event 1130 uses the logger of the Window's session; the Hot Reload events 1100-1102 use the
 logger of the window session that owns the Bridge. Events 1110-1114 use
 `Runic.Application.Views.Wpf` and the factory of the host's `Services`; so does event 1130 of
@@ -4909,6 +5203,19 @@ including awaited continuations and `Task.Run`. Code that continues in that
 task after the drain must not use the resources the owner released. If the
 close is queued to another thread without the execution context, do not await
 its disposal from the accepted task; let the task return instead.
+
+`WaitForAcceptedAsync(cancellationToken)` waits until the work accepted before
+the call has finished and keeps admission open: work accepted later is accepted
+as usual and not waited for, so a close guard can wait for the work and still
+keep its Window open. Called from accepted work of the scope, it does not wait
+for that work, as `DrainAsync` does not. Its token stops only the wait.
+
+A Window's close waits for a scope that its context registered with
+`IRunicWindowContext.DrainOnClose(scope)` (0.19, experimental), within the
+close's timeout or [close drain](#closing-after-the-windows-work-has-drained),
+and never cancels its work. This replaces draining the scope inside a close
+guard, which closed its admission before a later guard could still keep the
+Window open.
 
 The scope does not serialize operations, dispatch model changes, request
 cancellation, or implement recovery. The application still owns those policies

@@ -85,7 +85,7 @@ title, which is English by default (`Open file`, `Open files`,
 `Open directory`, `Save file`), and a save dialog without a suggested name
 proposes `Untitled`. Since SDK `0.17.0` the application replaces these texts
 with `DesktopPlatformTexts.Current`; see
-[Runic's own text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Platform/README.md#runics-own-text).
+[Runic's own text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Platform/README.md#runics-own-text).
 
 Since SDK `0.11.0`, `DesktopWindowOptions.LayoutDirection` (`Default`,
 `LeftToRight` or `RightToLeft`, from `Runic.Platform`) sets the direction of a
@@ -97,7 +97,7 @@ the GTK window, its header bar with GTK 4, and Runic's menu bar and context
 menus. macOS and installed browsers ignore it, and `Validate` reports each
 option a presentation ignores. Choose it with the application's language, as
 in the
-[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop/README.md#right-to-left-languages):
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Desktop/README.md#right-to-left-languages):
 
 ```csharp docs-test=skip:illustrative-fragment
 var culture = CultureInfo.CurrentUICulture;

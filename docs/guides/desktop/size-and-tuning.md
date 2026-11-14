@@ -58,7 +58,7 @@ Core Kestrel (`Runic.Desktop.Kestrel`). For the SDK's first-window example on
 linux-x64, its NativeAOT executable is 9.97 instead of 12.96 MiB and serves its
 first page after about 13 instead of 21 ms, and a framework-dependent build
 needs no ASP.NET Core runtime. The
-[native server's README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop.NativeServer/README.md#what-you-get)
+[native server's README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Desktop.NativeServer/README.md#what-you-get)
 has the measurements for each publish mode, and
 [the presentation server](host-selection.md#presentation-server) explains the
 choice. The measurements below predate it and use Kestrel.

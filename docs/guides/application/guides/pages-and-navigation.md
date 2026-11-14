@@ -59,9 +59,9 @@ history. It adds what a page property leaves to you:
   exception, and a page can return a value to the code that opened it.
 
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md)
 is the reference for every operation, hook and ownership rule, and the
-[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
+[ReactiveUI walkthrough](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation.ReactiveUI/README.md#walkthrough)
 covers the adapter.
 
 The entry context as a constructor parameter, `INavigationAware`,
@@ -112,7 +112,7 @@ since SDK `0.11.0`, a project whose references contain both gets build warning
 Register the navigator with the Window's other services.
 `AddRunicNavigation()` adds one navigator per Window scope, on the model
 context that `AddRunicReactiveModelContext()` registers. The
-[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/notes-reactive-views),
+[Reactive Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.19.0/examples/notes-reactive-views),
 which this guide follows, registers:
 
 ```csharp docs-test=source:examples/notes-reactive-views/NotesApplication.cs
@@ -131,7 +131,7 @@ services.AddScoped<ShellViewModel>();
 No command in this guide takes a scheduler: the model context is ReactiveUI's
 main-thread scheduler. In WPF the dispatcher is, once ReactiveUI's WPF platform
 is built; the
-[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
+[WPF ReactiveUI example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/wpf-navigation/README.md#the-reactiveui-variant)
 registers the navigator with `AddRunicWpfNavigation()`:
 
 ```csharp docs-test=source:examples/wpf-navigation/NotesNavigation.ReactiveUI/App.xaml.cs
@@ -441,7 +441,7 @@ still works and runs inline; a wrapper that implemented
 `IRunicModelHookScheduler` to post hooks as turns can be removed. A decorator
 that wraps a scheduling context must implement and forward the interface, or
 hooks run outside turns again; see
-[threading](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md#threading).
+[threading](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md#threading).
 Content that a factory returned for a target the navigator rejected is
 disposed asynchronously, after `WhenIdleAsync`.
 
@@ -554,7 +554,7 @@ var error = Dialog.PushForResult<bool>(NavigationTarget.Create<IDialogViewModel>
   `Queue` policy, so closing a dialog doesn't supersede one pushed meanwhile.
 
 See
-[queueing requests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md#queueing-requests)
+[queueing requests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md#queueing-requests)
 for every rule.
 
 ### Guard the Window close
@@ -589,7 +589,7 @@ sealed class GuardedWindow : RunicWindow<GuardedShellModel>
   taking `IRunicWindowContext` in its constructor and calling its
   `RequestCloseAsync`. `AddRunicWindowService()` registers it per Window, and
   it is new in SDK `0.7.0-preview.8`; see
-  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
+  [Closing a ViewModel's own Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#closing-a-viewmodels-own-window).
 
 - The page's web View asks the user, as it does for its Close: the close is the
   Window's own departure, so the guard's interaction reaches the View mounted
@@ -704,7 +704,7 @@ agreed work there, not after the `await`, because by then another entry may be
 current. Guards that switch on `NavigationOperation` handle `Confirm` in their
 default arm. Both replace a `CanLeaveTabAsync()` of your own beside the
 pages' guards; see
-[asking without navigating](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md#asking-without-navigating).
+[asking without navigating](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md#asking-without-navigating).
 
 With ReactiveUI, `ReactiveNavigationSelectionExtensions` observes the
 selection and creates its command:
@@ -746,7 +746,7 @@ see [document tabs](#document-tabs). In WPF,
 `NavigationSelector.Selection` binds a `TabControl` to the selection; see
 [incremental WPF adoption](../migrations/wpf-incremental.md#2-share-navigation-retain-native-mvvm).
 The
-[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
+[Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md#selecting-among-sibling-regions)
 lists every rule.
 
 ## With CommunityToolkit.Mvvm
@@ -893,9 +893,9 @@ var closed = await host.Root.CloseRegionAsync(vm => vm.Documents, tabs.Keys[0]);
 
 In page tests, a mock's `regions` handler stands in for the guards; see
 [testing frontends](frontend-testing.md#behaviour-that-016-tests-meet). The
-[document tabs example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/document-tabs)
+[document tabs example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.19.0/examples/document-tabs)
 uses all of it, and
-[region collections](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#region-collections)
+[region collections](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#region-collections)
 lists every rule.
 
 ## Save and restore navigation
@@ -966,7 +966,7 @@ async Task OpenLinksAsync(IEnumerable<Uri> links)
 
 A link is untrusted input: only the map's routes open, so check that the
 record a route names exists, and confirm anything destructive in the page.
-The [document tabs example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/document-tabs)
+The [document tabs example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.19.0/examples/document-tabs)
 reopens its tabs after a restart and opens `document-tabs://` links. A restart
 test saves with `SavePath()` and restores with `RestorePathAsync(saved)`:
 
@@ -976,7 +976,7 @@ await Assert.That(restore.IsExact).IsTrue(); // otherwise restore.Result.Issues 
 ```
 
 See
-[routes, saved paths and deep links](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md#routes-saved-paths-and-deep-links)
+[routes, saved paths and deep links](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md#routes-saved-paths-and-deep-links)
 for the matching and restore rules.
 
 ## Back and the URL
@@ -1035,8 +1035,8 @@ await Assert.That(host.NavigationPathPushes[^1]).IsEqualTo(new RunicNavigationPa
 ```
 
 See
-[Back and the URL](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#back-and-the-url)
-and [the window's Back](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md#the-windows-back).
+[Back and the URL](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#back-and-the-url)
+and [the window's Back](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md#the-windows-back).
 
 ## Shared clients
 
@@ -1091,7 +1091,7 @@ const pages = { ...registryEntries(resultPageKinds, ResultPage), settings: Setti
   `RUNICBRIDGE036`.
 
 See
-[Shared clients](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#shared-clients)
+[Shared clients](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#shared-clients)
 in the Views README for the generated types and the matching rules.
 
 ## Commands scoped to their page
@@ -1176,7 +1176,7 @@ uses the feature. A close that ends before every page replied is logged at
 Debug as event 1026 (`WindowCloseUnacknowledged`). These replace a
 `UiRendered` command that a page called after an animation frame, and a close
 token with an acknowledgement command of your own. See
-[waiting until the page shows a state](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#waiting-until-the-page-shows-a-state).
+[waiting until the page shows a state](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#waiting-until-the-page-shows-a-state).
 
 ## Next steps
 
@@ -1184,10 +1184,10 @@ token with an acknowledgement command of your own. See
   that commands, regions and guards run on.
 - [Operations and cancellation](operations-and-cancellation.md) covers
   long-running commands.
-- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Navigation/README.md)
+- The [Runic.Navigation guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Navigation/README.md)
   documents transitions, entry state, results and testing with a real
   navigator.
 - Since SDK `0.11.0`, `RunicTestNavigationEntry.CreateAsync` in
-  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Testing/README.md)
+  [Runic.Application.Testing](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Testing/README.md)
   unit-tests a page that takes its `NavigationEntryContext`, such as a confirm
   dialog, without a Window.
