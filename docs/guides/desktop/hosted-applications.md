@@ -9,13 +9,13 @@ The host owns the frames, the placement and the activation. It shows the
 guest's menu bar and dialogs, and it decides what the guest may do.
 
 **Experimental since SDK `0.17.0`.** The host and guest APIs, the test host and
-the [Runic host protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/specs/desktop/host-protocol.md)
-report [`RUNICDESK103`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/experimental.md#RUNICDESK103).
+the [Runic host protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/specs/desktop/host-protocol.md)
+report [`RUNICDESK103`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/experimental.md#RUNICDESK103).
 They can change in a minor release, also after 1.0. Suppress the ID in the
 host, the guest and their tests.
 
 **Checked with**: Runic CI runs the
-[hosted windows example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/hosted-windows/README.md)
+[hosted windows example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/hosted-windows/README.md)
 on Linux x64. A shell hosts a counter in a WebKitGTK window, and the counter's
 tests run under the test host. The protocol's conformance scenarios and the
 native smoke run on Windows, macOS and Linux.
@@ -176,10 +176,10 @@ gets none of the host's credentials or cookies. A guest reaches its own windows
 only, and elevated or other-user guests refuse hosted mode. Any process of the
 same user that knows a guest's parameter can host it, so `RunicGuestOptions.AcceptHost`
 is a product filter, not a security boundary. The
-[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/security.md#hosted-application-windows)
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/security.md#hosted-application-windows)
 lists what Runic enforces and what a host should keep in its policy.
 
-The [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#hosted-applications)
+The [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#hosted-applications)
 describes every option, event and limit.
 
 From SDK `0.18.0` a host can also show a guest's Window in a region of its own

@@ -50,7 +50,11 @@ The host owns the hosting lifecycle:
   and changes that queue behind a running one collapse into the latest.
 - Closing releases the Bridge session first, which drains its accepted
   operations, then its Desktop surface and its own `DesktopHost`, and only then
-  removes and disposes the native child.
+  removes and disposes the native child. The operations' `RunicOperationClose`
+  declarations apply to it. The WPF window is the application's, so a close
+  drain (sdk#900) is its `Window.Closing` handler: cancel the first close, await
+  the work's `AcceptedWorkScope.WaitForAcceptedAsync()`, then close again; see
+  [Closing after the Window's work has drained](../Runic.Application.Views/README.md#closing-after-the-windows-work-has-drained).
 - When the presentation can't open (no WebView2 Runtime, no Bridge registered
   for the model, a missing frontend), the host shows its content, the
   **fallback**, sets `State` to `Failed` and keeps the exception in `Error`.
@@ -365,9 +369,18 @@ had. `SetColorSchemeAsync` sets the title bar's dark mode, once the window has a
 handle if it has none yet, and the page's `prefers-color-scheme` of every
 `RunicViewHost` in the window, including one added later or still starting; the
 application's WPF controls keep the theme the application gives them.
-`NoPreference` gives the title bar the system's apps theme as it is at the time
-of the call. `SetDocumentEditedAsync` reports `Unavailable(BackendUnavailable)`,
-as on Windows generally. `IsActive`, `IsMinimized` and `IsVisible` follow
+`NoPreference` gives the title bar the system's app mode and follows it when the
+user switches it while the window is open; a window whose scheme was never set
+keeps WPF's default title bar. `SetDocumentEditedAsync` reports `Unavailable(BackendUnavailable)`,
+as on Windows generally. `MaximizeAsync` and `RestoreAsync` set `WindowState`,
+leaving full screen first; `RestoreAsync` ends normal, also for a window
+minimized while it was maximized. `Placement` and `SetPlacementAsync` use WPF's
+device-independent pixels for all four values: `RestoreBounds` while the
+window is maximized, minimized or full-screen, else `Left`, `Top` and its actual
+size. `SetPlacementAsync` sets `Left`, `Top`, `Width` and `Height`, which WPF
+keeps as the restored bounds of a maximized or minimized window, then the state.
+WPF does not fit the bounds on a monitor. Windows activates a window that it
+maximizes or brings back from minimized. `IsActive`, `IsMinimized` and `IsVisible` follow
 `Activated`, `Deactivated`, `StateChanged` and `IsVisibleChanged`, and the
 changes are raised on the window's dispatcher, the ViewModels' thread in WPF. A
 handler that throws is logged as event 1130 (`WindowPresentationHandlerFailed`,

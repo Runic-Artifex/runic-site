@@ -43,6 +43,9 @@ signal, ends the process at once; the copies that `dotnet run`, `dotnet watch`
 and `dotnet runic dev` forward do not. Set
 `DesktopHostOptions.HandleShutdownSignals` to `false` to handle these signals
 yourself. Hosts created with `DesktopHost.StartAsync` do not handle signals.
+Windows with a close drain stay open while their work drains first, for up to
+`DesktopHostOptions.ShutdownDrainTimeout`; see
+[closing after the work has drained](#closing-after-the-work-has-drained).
 
 On macOS, `DesktopEventLoop.Run` (both overloads) creates the shared
 `NSApplication` and sets Runic's application delegate before the application's
@@ -503,6 +506,81 @@ await window.HideAsync();             // to the status icon
 await window.ShowAsync();             // back
 ```
 
+### Closing after the work has drained
+
+`DesktopWindowOptions.CloseDrainAsync` keeps a window open and visible after its
+close was approved until the application's work has ended, then closes it
+without asking again. Runic Windows set it from `RunicWindowOptions.CloseDrain`
+(`RunicDesktopHostOptions.CloseDrain` for every Window); a window the application
+opens itself, such as one with `DesktopPlatformServices.AttachWindowServices`,
+sets it directly:
+
+```csharp
+var work = new AcceptedWorkScope();   // the application's durable work
+var window = await surface.OpenWindowAsync(new DesktopWindowOptions
+{
+    ConfirmCloseAsync = AskToSaveAsync,                                // decides first
+    CloseDrainAsync = (_, ct) => new(work.WaitForAcceptedAsync(ct)),   // then the window waits
+});
+```
+
+- **When it runs.** Once per window, on the thread pool, after the user's close
+  (close button, Alt+F4, Command and W, the window manager),
+  `DesktopWindow.RequestCloseAsync` or a quit's close guard was approved, and when
+  the host shuts down. `DesktopCloseDrainContext.Reason` says which
+  (`DesktopCloseReason`, an open set). A refusal of `ConfirmCloseAsync` changes
+  nothing, so admission of new work stays open until every guard agreed.
+- **While it runs.** The window moves, minimizes and repaints, and its page stays
+  connected. A second close by the user is ignored, and `RequestCloseAsync`
+  returns `true` at once: it returns at the decision, not when the window has
+  gone, so a "Save and close" command that is itself the work being waited for
+  does not wait for itself. `WaitForCloseAsync` waits for the window.
+- **How it ends.** The window closes when the callback returns, also when it
+  throws (event 3022, `WindowCloseDrainFailed`). Its token is cancelled by a
+  forced close (`CloseAsync`, disposal), the shutdown's limit and the host's
+  disposal; the window then closes even if the callback has not returned.
+  Cancellation ends the visible phase only: Runic cancels none of the
+  application's work.
+- **Every built-in host.** WebView2, WKWebView, WebKitGTK with GTK 3 and
+  `Runic.Desktop.Gtk4` refuse the native close through their close confirmation
+  (`DesktopWindowCapabilities.CloseConfirmation`), which the drain uses even
+  without `ConfirmCloseAsync`. An installed browser, or a custom window host
+  without close confirmation, cannot keep its window open: the window closes at
+  once, the drain runs after it, `WaitForCloseAsync` returns after the drain, and
+  the window opens with the warning `close-drain-unavailable`.
+
+A **shutdown** (the first Ctrl+C, SIGTERM, SIGHUP or closed Windows console, and
+a quit once `ConfirmQuitAsync` and the windows' guards agreed) drains in this
+order:
+
+1. `DesktopHost.ShutdownStarting` is cancelled.
+2. The windows without a drain close at once. The others drain in parallel
+   (`DesktopCloseReason.Shutdown`); a window already draining after a user close
+   keeps its drain. Event 3023, `DesktopShutdownDraining`, is logged.
+3. When every drain returned, or `DesktopHostOptions.ShutdownDrainTimeout` (30
+   seconds by default, `Timeout.InfiniteTimeSpan` for no limit) has passed,
+   `DesktopHost.ShutdownRequested` is cancelled and the remaining windows close.
+4. The application returns as usual; work it still owns ends on its own.
+
+Without a window that drains, both tokens are cancelled together, as before 0.19.
+Observe `ShutdownStarting` for work that should stop early, such as polling, and
+leave the work the drains wait for alone. The operating system can end the
+process earlier, whatever the application does, so keep its limits above
+`ShutdownDrainTimeout`:
+
+| Limit | Default |
+| --- | --- |
+| Closing a Windows console | about 5 seconds |
+| Windows logoff and shutdown | Windows' own |
+| systemd `TimeoutStopSec` | 90 seconds |
+| `docker stop` (`-t`) | 10 seconds |
+| A hosting application's `RunicHostedApplicationOptions.StopTimeout` | 10 seconds |
+| A second Ctrl+C | at once |
+
+On macOS a quit's reply to the system waits until the application returned, so a
+logout waits for the drain too. The close drain is experimental
+(`RUNICDESK105`).
+
 `DesktopWindow.NativeHandle` is the top-level window of an open embedded window,
 or zero for an installed browser or a closed window. Its kind depends on the
 window host:
@@ -551,7 +629,10 @@ await surface.OpenWindowAsync(new DesktopWindowOptions { ColorScheme = DesktopCo
 WebView2 keeps the preferred color scheme per profile, so windows that share a
 `ProfilePath` show the scheme of the last one opened with a scheme; each
 window has its own profile unless `ProfilePath` is set. Without the option, a
-Windows title bar stays light as before. Where the option has no effect,
+Windows title bar follows the system's app mode (Settings > Personalization >
+Colors, "Choose your app mode"), also when the user switches it while the
+window is open, and a contrast theme keeps its own title bar colours; the page's
+`prefers-color-scheme` follows the system as before. Where the option has no effect,
 `DesktopHost.Validate` warns with `color-scheme-unsupported` and the window
 follows the system. A [custom window host](#custom-window-hosts) receives the
 option in `DesktopWindowHostOptions.ColorScheme`, and reports
@@ -579,7 +660,7 @@ and changes only once the window applied it: a switch that fails leaves it.
 
 | Window host | What a switch sets |
 | --- | --- |
-| Windows, WebView2 | The profile's preferred color scheme and the title bar's dark mode (`DWMWA_USE_IMMERSIVE_DARK_MODE`, attribute 19 on Windows 10 1809 to 1909). `NoPreference` returns the profile to the system's scheme and gives the title bar the system's apps theme as it is at the time of the call; a later change of the system's theme does not reach the title bar |
+| Windows, WebView2 | The profile's preferred color scheme and the title bar's dark mode (`DWMWA_USE_IMMERSIVE_DARK_MODE`, attribute 19 on Windows 10 1809 to 1909). `NoPreference` returns the profile to the system's scheme and the title bar to the system's app mode, which it follows from then on (`WM_SETTINGCHANGE` "ImmersiveColorSet") |
 | macOS, WKWebView | `NSWindow.appearance`; the application's scheme also sets `NSApp.appearance`, which menus, alerts and panels follow |
 | Linux, GTK 3 | GTK's `gtk-application-prefer-dark-theme` setting, which WebKitGTK's `prefers-color-scheme` follows |
 | Linux, GTK 4 | GTK's `gtk-interface-color-scheme` (GTK 4.20 or later) and `gtk-application-prefer-dark-theme`; the libadwaita style manager instead when the application has initialized libadwaita |
@@ -1029,6 +1110,133 @@ and a smaller window grows to it. It needs
 `DesktopWindowCapabilities.Bounds`; without them the call fails with
 `window-capability-unavailable`, whose message names the capability and why the
 presentation lacks it.
+
+### Maximize, restore and placement of an open window
+
+`DesktopWindow.MaximizeAsync` and `RestoreAsync` ask for a state and do nothing
+when the window is in it already, unlike `ToggleMaximizedAsync`, whose result
+depends on the state when the call reaches the window. `MaximizeAsync` leaves
+full screen first and brings a minimized window back maximized. `RestoreAsync`
+leaves full screen, un-maximizes and un-minimizes the window, and a window
+minimized while it was maximized comes back at its normal bounds, not
+maximized; `FocusAsync` keeps the platform's "back to maximized". A hidden
+window stays hidden and shows in the state asked for.
+
+`DesktopWindow.SetPlacementAsync` gives an open window a placement, as
+`DesktopWindowOptions.Placement` gives a window that opens. It takes a
+`DesktopWindowPlacement` in the units `State.Placement` reports, so a placement
+saved there, or reported by another window, passes back as it is:
+
+```csharp
+// Show this window where the user left the other one, maximized if it was.
+await window.SetPlacementAsync(other.State!.Placement);
+await window.ShowAsync();
+```
+
+It sets the bounds the window restores to also while the window is maximized,
+minimized, full-screen or hidden, where `SetBoundsAsync` refuses: a maximized
+window stays maximized with new restored bounds (unless `Maximized` is
+`false`), a minimized window stays minimized and a hidden one hidden, and each
+takes the placement's state when it is next restored or shown. `X` and `Y`
+`null` keep the position, and a `Width` or `Height` of zero or less keeps that
+dimension. The placement is fitted to the monitors that exist now as at open,
+and `State.Placement` then reports it back after that fit: `X` and `Y` exactly,
+the size within one unit on Windows, where it converts with the scale of the
+monitor it lands on. With a [side panel](#side-panel) open the placement is the
+page's, as `State.Placement` reports it, and the window grows by the panel on
+its edge. `MaximizeAsync` keeps the panel.
+
+The calls complete when the window has been asked: macOS animates and a window
+manager decides on Linux, so `StateChanged` reports the result. They need
+`DesktopWindowCapabilities.WindowPlacement`; a `Kiosk` window refuses
+`MaximizeAsync`, `RestoreAsync` and a placement that is not full-screen with
+`InvalidOperationException`.
+
+| Presentation | `MaximizeAsync` | `RestoreAsync` | `SetPlacementAsync` |
+| --- | --- | --- | --- |
+| Windows WebView2 | `SW_MAXIMIZE`, which activates the window, as the user's maximize does | `SW_SHOWNOACTIVATE` for a visible maximized window, which stays inactive; a minimized one comes back normal through `SetWindowPlacement` and is activated | One `SetWindowPlacement` with the restored rectangle; activates a window it maximizes or brings back from minimized |
+| macOS WKWebView | `zoom:`; a miniaturized window is deminiaturized first | Unzooms, also a miniaturized window, which is deminiaturized | One `setFrame:display:`, then `zoom:` for a maximized placement, so a later restore returns to the frame. A sheet takes none (`window-capability-unavailable`) |
+| Linux GTK 3 | `gtk_window_maximize` | Unmaximizes, and on X11 deiconifies | Unmaximize, move and resize, maximize in one main-loop turn |
+| Linux GTK 4 | `gtk_window_maximize` | Unmaximizes; a minimized window comes back by presenting it | Default size, `XMoveResizeWindow` on X11, then the state |
+| Wayland (GTK 3 and GTK 4) | Yes | Yes; Wayland reports no minimized window, so `FocusAsync` brings one back | Size and state; a placement with `X` and `Y` fails as a whole with `window-position-unavailable` and changes nothing |
+| Installed browser, WPF `RunicWebView` | Refused: `window-capability-unavailable` | Same | Same |
+| Custom `IDesktopWindowHostFactory` | When its host implements `IDesktopWindowShowStateHost` | Same | Same |
+
+### Side panel
+
+`DesktopWindow.OpenSidePanelAsync` shows a page of the window's surface beside
+the window's page, in a strip on one edge by which the window grows. The page
+keeps its size and its place on the screen: its viewport, media queries and
+`position: fixed` elements do not change. Experimental under
+[`RUNICDESK104`](../../../docs/experimental.md#RUNICDESK104); 0.19 shows it on
+Windows (WebView2), macOS (WKWebView) and Linux (WebKitGTK, GTK 3 and GTK 4).
+
+```csharp
+#pragma warning disable RUNICDESK104 // The side panel is experimental.
+var result = await window.OpenSidePanelAsync(new DesktopSidePanelOptions
+{
+    Edge = DesktopWindowEdge.End, // the right edge of a left-to-right window
+    Width = 372,                  // device-independent pixels, at least 120
+    Path = "side-panel",          // relative to the page's address; "#/side-panel" for a hash router
+});
+if (result is DesktopSidePanelResult.Refused { Reason: var reason })
+{
+    // Show the content in an overlay of the page instead.
+}
+#pragma warning restore RUNICDESK104
+```
+
+- **One step, exact bounds.** The window loads the panel's page in a hidden view
+  first, then grows in one native operation (`SetWindowPos`, `setFrame:display:`,
+  or one configure request on X11): on the right edge by widening, on the left
+  edge by moving left and widening. The width converts once into native
+  units (`DesktopWindowBounds.Expand`), so closing the panel restores exactly the
+  bounds the window had, unless the user moved or resized it meanwhile; then only
+  the docked edge moves back. `DesktopSidePanel.MoveToEdgeAsync` moves the window
+  by the panel's width and swaps the views, and `SetWidthAsync` moves the docked
+  edge, so an application can offer its own control for the width; there is no
+  splitter.
+- **One ViewModel tree.** The panel's page is a second connection of the window
+  with a credential of its own (`IRunicConnections` lists it), so it binds
+  to the same ViewModel tree as the page. It is not granted `navigation-path/1`:
+  its address and history are its own. It may show hosted regions. Files dropped
+  on it are refused, `window.close()` in it closes the panel, and its title is
+  not the window's. A panel page that crashes reloads once; a second crash closes
+  it with `DesktopSidePanelCloseReason.Crashed`.
+- **While it is open**, `State.Bounds` and `VisibleBounds` include the panel and
+  `State.Placement` does not, so a restored window opens at its page's size. The
+  minimum width grows by the panel's. When the user resizes, maximizes or makes the
+  window full-screen, the panel keeps its width and the page takes the rest;
+  closing the panel then leaves the window's frame and shrinks the bounds it
+  restores to. Tab past the page's last element focuses the panel's first, and
+  Shift+Tab hands focus back; UI Automation, the macOS accessibility API and
+  AT-SPI list the panel before the page on the left edge and after it on the
+  right. On macOS a left panel lies under the traffic lights of a custom title
+  bar; its page reports its own drag regions and should leave room for the
+  buttons. Give the panel's page a `<title>` and a `complementary` landmark.
+- **Refusals** (`DesktopSidePanelResult.Refused`, the window unchanged):
+  `Minimized` (also hidden), `FullScreen` (also kiosk), `Maximized`, `Snapped`,
+  `NoRoom` (the grown visible frame would leave the monitor's work area, or the
+  panel is wider than half of it; the window is never moved to make room),
+  `PositionUnavailable` (the left edge on Wayland), `AlreadyOpen`, `LoadFailed`
+  (the page did not load within `LoadTimeout`) and `Unsupported`: an installed
+  browser, a custom window host or WPF's `RunicWebView`, a hosted application's
+  window or region, a surface that admits several clients, and a host that
+  lacks what the panel needs (a transparent GTK 3 window, for one). `DesktopWindow.CheckSidePanel(edge, width)`
+  answers the same from the last reported state, synchronously, for enabling a
+  command. `MoveToEdgeAsync` and `SetWidthAsync` refuse for the same reasons.
+
+| Platform | Side panel |
+| --- | --- |
+| Windows (WebView2) | A second WebView2 controller from the page's environment in a child window; `WM_NCCALCSIZE` keeps the page's pixels in place when the left edge moves |
+| macOS (WKWebView) | A second `WKWebView` with the page's website data store in the window's content view; one `setFrame:display:` with both views laid out in the same turn; the views are each other's next key view |
+| Linux (WebKitGTK, GTK 3; GTK 4 with `Runic.Desktop.Gtk4`) | A related view of the page (same web context and web process, a user content manager of its own) beside it in an overlay. The layout changes at the first allocation with the new width, so the page keeps its width; on the left edge the window manager may show the moved frame one frame before the page follows. The window manager must grant the new bounds; one that does not gets the change after a second, and the page takes what remains. Wayland gives no positions: the right edge only, the left edge refuses with `PositionUnavailable`. The panel's page is in the page's web process, so a crash of one usually takes both: the page reloads as before, and the panel reloads once. The panel's page shares `localStorage` with the page but not `sessionStorage`, and asks for no permission (camera, microphone). Drops from outside are refused: on GTK 3 from outside the panel's view, on GTK 4 also drags inside its page. A transparent GTK 3 window refuses the panel (`Unsupported`) |
+| Installed browser, custom window host, WPF `RunicWebView`, hosted window | `Unsupported`; `Runic.Desktop.Gtk4`'s window host is the exception |
+
+The [side panel guide](../../../docs/side-panel.md) covers the panel's page, the
+fallback where the window cannot grow, accessibility and each platform's known
+limits; the [side panel example](../../../examples/side-panel/README.md) opens a
+panel from a ViewModel.
 
 ## Menu bar and keyboard shortcuts
 
@@ -2001,6 +2209,7 @@ The optional interfaces each add one feature:
 | --- | --- | --- |
 | `IDesktopNativeDispatchWindowHost` | `DesktopWindow.InvokeNativeAsync` and the platform services' owner thread | `SupportsNativeDispatch` |
 | `IDesktopWindowStateHost` | `DesktopWindow.State`, `StateChanged` and restoring `DesktopWindowHostOptions.Placement` ([Window state and restore](#window-state-and-restore)) | `DesktopWindowCapabilities.State` |
+| `IDesktopWindowShowStateHost` | `DesktopWindow.MaximizeAsync`, `RestoreAsync` and `SetPlacementAsync` ([Maximize, restore and placement of an open window](#maximize-restore-and-placement-of-an-open-window)) | `DesktopWindowCapabilities.WindowPlacement` |
 | `IDesktopFileDropWindowHost` | `DesktopWindow.FilesDropped`, with paths from the native drop, never from the page ([File drops](#file-drops)) | `DesktopWindowCapabilities.FileDrop` |
 | `IDesktopDragSourceWindowHost` | `DesktopWindow.StartDragAsync`, with data the application checked ([Dragging files out](#dragging-files-out)) | `DesktopWindowCapabilities.FileDrag` |
 | `IDesktopSpellCheckingWindowHost` | `DesktopHost.SetSpellCheckingLanguagesAsync` in an open window; apply `DesktopWindowHostOptions.SpellCheckingLanguages` when opening ([Spell checking](#spell-checking)) | — |
@@ -2011,7 +2220,7 @@ The optional interfaces each add one feature:
 | `IDesktopEventLoopWindowHostFactory` | A toolkit loop on the process main thread | — |
 | `ILinuxDesktopWindowHostFactory` | The Linux toolkit the factory loads | `Backend` |
 
-The GTK 4 host implements the first three, `IDesktopSpellCheckingWindowHost`, `IDesktopActivityWindowHost` and
+The GTK 4 host implements the first four, `IDesktopSpellCheckingWindowHost`, `IDesktopActivityWindowHost` and
 `IDesktopColorSchemeWindowHost`, and its factory the last two; `RunicWebView` implements `IDesktopFileDropWindowHost`
 and `IDesktopColorSchemeWindowHost`. A host that reports
 `DesktopWindowCapabilities.Announcements` implements `AnnounceAsync`
@@ -2040,8 +2249,12 @@ describes the window owner the platform services receive for a window.
 
 ## Experimental APIs
 
-No API of this package is experimental. Its former IDs are retired, so remove
-their suppressions: `RUNICDESK100` (custom window hosts) graduated in 0.10.0, and
+The [side panel](#side-panel) is experimental under `RUNICDESK104` (0.19, for one
+minor), the [close drain](#closing-after-the-work-has-drained) (`CloseDrainAsync`,
+`DesktopCloseDrainContext`, `DesktopCloseReason`, `ShutdownDrainTimeout` and
+`ShutdownStarting`) under `RUNICDESK105` (0.19, for one minor), and `DesktopWindowHostOptions.EphemeralDataStore` with
+`IDesktopEphemeralDataStoreWindowHost` under `RUNICDESK103` (hosted windows). The
+former IDs are retired, so remove their suppressions: `RUNICDESK100` (custom window hosts) graduated in 0.10.0, and
 `RUNICDESK101` (the low-level presentation transport) was split in 0.10.0:
 `ExecuteJavaScriptAsync`, `ConnectionCount` and `SubscribeConnectionEvents`, with
 `DesktopConnectionEvent` and `DesktopConnectionEventKind`, are stable, and the

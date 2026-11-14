@@ -16,20 +16,21 @@ other processes. A region shows the guest in one of two ways:
   only for applications of the same vendor.
 
 **Experimental since SDK `0.18.0`**, as hosted applications are: suppress
-[`RUNICDESK103`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/experimental.md#RUNICDESK103).
+[`RUNICDESK103`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/experimental.md#RUNICDESK103).
 The page element is in `@runic-artifex/views/experimental`, and React, Vue,
 Svelte and Angular wrap it as `RunicHostedRegion` in their `./experimental`
 entries. Host and guest both need 0.18: a guest of 0.17 cannot be shown in a
-region.
+region. From SDK `0.19.0` a host can also give a region's window an
+[appearance of its own](#design-and-appearance), which needs a guest of 0.19.
 
 **Checked with**: Runic CI runs the
-[hosted region example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/hosted-region/README.md)
+[hosted region example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/hosted-region/README.md)
 and the
-[hosted components example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/hosted-components/README.md)
+[hosted components example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/hosted-components/README.md)
 on Linux (GTK 3 and WebKitGTK 4.1) and, as the elevated pair, on Windows x64
 (WebView2). Automation checks that the guest's controls inside a region appear
 in the accessibility tree. **Assistive-technology behaviour of hosted regions
-(NVDA, Narrator, VoiceOver) was not checked manually for 0.18.0**: nothing yet
+(NVDA, Narrator, VoiceOver) was not checked manually for 0.18.0 or 0.19.0**: nothing yet
 confirms how a screen reader reads a guest's page inside a region.
 
 ## Show a guest's Window in a region
@@ -121,7 +122,7 @@ What the guest should know:
   `RunicTestHostOptions.EmbedWindow` chooses the windows, and
   `AttachRegionAsync(embedder)` returns the one-time frame address to load in a
   test page. The hosted region example's
-  [check tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/hosted-region/Check/Tests/HostedCheckTests.cs)
+  [check tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/hosted-region/Check/Tests/HostedCheckTests.cs)
   attach a region and play the host's departures without a browser.
 
 ### The page's Content-Security-Policy
@@ -147,7 +148,9 @@ default-src 'self'; script-src 'self'; frame-src http:; object-src 'none'; base-
 | The frame's content process ends             | Detach `crashed`, attach again   | Detach `crashed`; the page reloads | Detach `crashed`; the page reloads                                   | Detach `reload`                    |
 
 `Runic.Desktop.Gtk4`'s window routes nothing of a region's frame. On Linux,
-prefer the GTK 3 host for an application that shows regions.
+prefer the GTK 3 host for an application that shows regions. Whether a region
+page's `prefers-color-scheme` follows an [appearance override](#design-and-appearance)
+also depends on the engine.
 
 ### Browser (serve-only) hosts
 
@@ -211,6 +214,92 @@ The guest's code runs in the host page's realm and can read and change the page
 and use its Bridge, and the page holds the guest's token. Embed components only
 of applications of your own vendor.
 
+## Design and appearance
+
+From SDK `0.19.0` a host can give a region's window an **appearance override**
+of its own (`region-appearance/1`, part of `RUNICDESK103`). The case is an
+installer whose wizard step shows a check tool, where both offer the same
+design menu: Light, Dark, High contrast and System. The installer's menu
+decides for both, because to the user they are one window. The
+[hosted region example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/hosted-region/README.md#design) has
+such a menu.
+
+The host maps each design to a `RunicHostedAppearance`. Each member that is set
+replaces the host's desktop value for the region window's pages, and `null`
+keeps it, so the desktop's text scale and accent colour still reach the guest.
+"System" is no override: `null`, or `DesktopColorScheme.NoPreference`, which
+reads as `null`.
+
+```csharp docs-test=skip:sdk-guide-excerpt
+#pragma warning disable RUNICDESK103 // Hosted application windows are experimental.
+static RunicHostedAppearance? AppearanceOf(string design) => design switch
+{
+    "light" => new RunicHostedAppearance { ColorScheme = DesktopColorScheme.Light },
+    "dark" => new RunicHostedAppearance { ColorScheme = DesktopColorScheme.Dark },
+    "high-contrast" => new RunicHostedAppearance { ColorScheme = DesktopColorScheme.Light, Contrast = DesktopContrast.More },
+    _ => null, // System: the desktop's appearance.
+};
+
+// The policy passes the current design when the guest's window opens, so its page starts in it.
+RunicHostedWindowDecision.Embed("check", new RunicHostedRegionOptions { Appearance = AppearanceOf(design) });
+
+// The design menu changes it later, attached or detached.
+await region.SetAppearanceAsync(AppearanceOf(design), cancellationToken);
+```
+
+The guest's page receives the merged appearance as its own, before its first
+content: `appearance()` and `onAppearance` from `@runic-artifex/views` report
+the colour scheme, contrast and reduced motion that the host set. Runic sets
+nothing on the guest page's root, so the page maps the appearance there itself
+and styles from that. The same page in a window of its own then follows the
+desktop with the same code:
+
+```ts docs-test=skip:sdk-guide-excerpt
+import {
+  appearance,
+  onAppearance,
+  type Appearance,
+} from '@runic-artifex/views';
+
+const mapAppearance = (look: Appearance) => {
+  document.documentElement.style.colorScheme = look.colorScheme ?? '';
+  document.documentElement.dataset['contrast'] =
+    look.contrast ?? 'no-preference';
+  document.documentElement.toggleAttribute(
+    'data-reduced-motion',
+    look.reducedMotion === true,
+  );
+};
+mapAppearance(appearance());
+onAppearance(mapAppearance);
+```
+
+- **Per window.** The override applies to the region window's pages only, a
+  component's included. Windows that the region window owns, the guest's other
+  windows and the host's own pages keep the desktop's appearance.
+- **Replaced as a whole.** `SetAppearanceAsync` replaces the override and
+  `null` removes it; `RunicHostedRegion.Appearance` is the current one. Set
+  while the region is detached, it applies to the next page an attach loads.
+  `MoveToAsync` and re-attaching keep it.
+- **Older guests.** A guest of 0.18 still shows in the region, with the
+  desktop's appearance: `RunicHostedWindowRequest.CanOverrideAppearance` and
+  `RunicHostedRegion.CanSetAppearance` are `false`, `SetAppearanceAsync`
+  returns `false`, and the host logs event 2030 once for the window. A policy
+  for which the design matters decides with `CanOverrideAppearance`.
+- **Style from the appearance, not from media queries.** A host cannot set
+  `prefers-contrast`, `forced-colors` or `prefers-reduced-motion` on a frame:
+  style from `[data-contrast="more"]` and `[data-reduced-motion]` after the
+  mapping above. `<runic-hosted-region>` sets the override's colour scheme as
+  the CSS `color-scheme` of the frame, or of a component's element; whether the
+  frame's `prefers-color-scheme` follows it depends on the engine (WebView2,
+  Chromium and WebKitGTK 2.54 do, WKWebView and older WebKitGTK do not). A
+  component shares the host page's media queries. A desktop that forces
+  colours, such as a Windows contrast theme, keeps forcing them in the frame.
+- **Tests.** `RunicTestHost` plays the host:
+  `RunicTestHostOptions.RegionAppearance` and
+  `SetRegionAppearanceAsync(window, appearance)`. The mock bridge's
+  `setAppearance(value, { override })` plays such a push in page tests.
+
 ## Elevated installers
 
 An installer that runs as administrator can host a check tool that needs
@@ -226,18 +315,23 @@ window detached (event 2026, `refused`), so show fallback content that says so.
 
 The host logs these events (`Runic.Application.Views.Desktop`):
 
-| Event                                  | Meaning                                                                                                                                                                                                                                                                    |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026 `DesktopHostedRegionAttachFailed` | The guest refused or failed to attach its window; the window stays open and detached, and the page shows its fallback. The reason (`refused`, `guest-elevated`, `cross-site-unavailable`, `embedding-unsupported`, `invalid-request`, `invalid-reply`, `failed`) says why. |
-| 2027 `DesktopHostedRegionSameSite`     | The guest serves the frame from the host page's own loopback family (no IPv6), so the frame receives the host page's cookies. Embedded hosts only.                                                                                                                         |
-| 2028 `DesktopHostedRegionFailed`       | Region handling failed with an exception.                                                                                                                                                                                                                                  |
-| 2029 `DesktopHostedPeerRefused`        | An elevated guest refused a connection from a process that does not run elevated, or whose process it cannot look up. Logged by the guest.                                                                                                                                 |
+| Event                                           | Meaning                                                                                                                                                                                                                                                                    |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026 `DesktopHostedRegionAttachFailed`          | The guest refused or failed to attach its window; the window stays open and detached, and the page shows its fallback. The reason (`refused`, `guest-elevated`, `cross-site-unavailable`, `embedding-unsupported`, `invalid-request`, `invalid-reply`, `failed`) says why. |
+| 2027 `DesktopHostedRegionSameSite`              | The guest serves the frame from the host page's own loopback family (no IPv6), so the frame receives the host page's cookies. Embedded hosts only.                                                                                                                         |
+| 2028 `DesktopHostedRegionFailed`                | Region handling failed with an exception.                                                                                                                                                                                                                                  |
+| 2029 `DesktopHostedPeerRefused`                 | An elevated guest refused a connection from a process that does not run elevated, or whose process it cannot look up. Logged by the guest.                                                                                                                                 |
+| 2030 `DesktopHostedRegionAppearanceUnavailable` | The host gave a region window an appearance override, but the guest (0.18 or older) does not apply one: the window shows the desktop's appearance. Once per window.                                                                                                        |
 
 - **The region stays `loading`**: the host page's policy blocks the frame
   (`frame-src http:`), or the guest's page sets `frame-ancestors 'none'`.
 - **The region stays `waiting`**: no window was decided for it. The guest did
   not start, its policy refused it, two host windows declared the name
   (`region-ambiguous`), or `CanEmbed` was `false`.
+- **The guest's page does not follow the host's design**: it styles from
+  `prefers-contrast` or `prefers-color-scheme`, which a frame cannot be given,
+  maps `onAppearance` without applying `appearance()` at the start, or the
+  guest is 0.18 (event 2030).
 - **A component region is `unsupported`**: the page's policy does not admit
   `http://127.0.0.1:*` in `script-src` or `ws://127.0.0.1:*` in `connect-src`.
 - **`native-server-unavailable`, "implements ABI 4, but Runic.Desktop needs
@@ -248,7 +342,7 @@ On Windows, `RUNIC_DESKTOP_REGION_TRACE=1` makes WebView2 write each region
 frame's creation, navigation and process failure to standard error as
 `REGION TRACE webview2: …`. It is a diagnostic aid, not an interface.
 
-## Known issues in 0.18.0
+## Known issues in 0.19.0
 
 - Assistive-technology behaviour of hosted regions (NVDA, Narrator, VoiceOver)
   was not checked manually. Automated checks cover layout, focus and Tab order,
@@ -259,15 +353,20 @@ frame's creation, navigation and process failure to standard error as
 - `Runic.Desktop.Gtk4`'s window routes nothing of a region's frame: drops onto
   it are discarded.
 - On macOS an elevated guest cannot be shown in a region or as a component.
+- With an appearance override, a guest page's `prefers-color-scheme` in a
+  region is best effort: WKWebView and WebKitGTK before 2.54 do not follow the
+  frame's `color-scheme`. Style the page from its appearance.
 
 ## More
 
 The SDK's
-[hosted regions guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/hosted-regions.md)
+[hosted regions guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/hosted-regions.md)
 covers both modes in full, and the
-[0.18.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/eng/release/notes/0.18.0.md#region-mode-866-experimental)
-list what each part added. The security guide describes
-[hosted windows in a region](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/security.md#hosted-windows-in-a-region),
-[components in a host page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/security.md#components-in-a-host-page)
+[0.18.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.18.0.md#region-mode-866-experimental)
+list what each part added, and the
+[0.19.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/eng/release/notes/0.19.0.md#an-appearance-override-per-hosted-region-917-experimental)
+the appearance override. The security guide describes
+[hosted windows in a region](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/security.md#hosted-windows-in-a-region),
+[components in a host page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/security.md#components-in-a-host-page)
 and
-[elevated hosts and guests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/security.md#elevated-hosts-and-guests).
+[elevated hosts and guests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/security.md#elevated-hosts-and-guests).

@@ -88,7 +88,7 @@ and that blocks the owner until it closes, as a dialog does. Runic Windows use
 `RunicWindowOptions.Owner` and `Modality`; see
 [Owned and window-modal Windows](../application/samples/cross-window.md#owned-and-window-modal-windows)
 and the
-[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop/README.md#owned-and-window-modal-windows).
+[Runic.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Desktop/README.md#owned-and-window-modal-windows).
 
 - A close that the owner's `ConfirmCloseAsync` or `GuardClose` decides (the
   user's, or `RequestCloseAsync`) and a quit first ask the windows it owns,
@@ -145,7 +145,7 @@ Rejecting unsupported configuration avoids silently dropping a data-loss guard.
 `DesktopWindowCapabilities.CloseConfirmation` reflects the actual embedded host.
 
 Custom window hosts (stable since SDK `0.10.0`; see
-[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
+[custom window hosts](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Desktop/README.md#custom-window-hosts))
 remain source compatible:
 `IDesktopWindowHost.SupportsCloseConfirmation` defaults to false. To opt in, return true and honor `DesktopWindowHostOptions.CloseRequested`:
 when it is set, suppress the native user close event and invoke the callback instead.
@@ -171,7 +171,7 @@ thread. It checks bridge responsiveness during the pending decision, veto, retry
 approved destruction. Root CI runs this smoke on Linux x64, Windows x64 and macOS Apple Silicon. Local execution evidence is retained with the native smoke outputs;
 adding CI coverage is not evidence that a remote platform run has passed.
 
-The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
+The [GTK 4 provider's native smoke](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Desktop.Gtk4/README.md)
 also exercises close veto/retry on its own dispatcher. Select the native backend
 you ship when verifying your application's close and cleanup behavior.
 

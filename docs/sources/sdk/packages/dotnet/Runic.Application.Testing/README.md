@@ -683,11 +683,49 @@ something (the request then reports `BackendUnavailable` and changes nothing),
 and `Respond` to answer with another result, such as a desktop that refuses the
 focus.
 
+It keeps a placement too, at 100, 100 with 800 by 600 at first (`Placement`).
+`MaximizeAsync` maximizes it and `RestoreAsync` returns it to normal, both
+leaving full screen and bringing a minimized window back active, as on Windows;
+`SetPlacementAsync` takes the placement's bounds and state unchanged (a
+`Width` or `Height` of zero keeps it). The requests are recorded as `Maximize`,
+`Restore` and `SetPlacement` (with `Placement` as passed), and
+`SetPlacement(placement)` moves the window as its user would, without a
+request, so a test checks a ViewModel that saves `Placement`:
+
+```csharp
+fake.SetPlacement(new RunicWindowPlacement { X = 40, Y = 50, Width = 1024, Height = 768, Maximized = true });
+await host.FlushWindowPresentationAsync();
+Assert.Equal(fake.Placement, host.ViewModel.SavedPlacement);
+```
+
 `AddRunicTestWindowPresentation(immediate: true)` makes the fake itself the
 scope's presentation, and a ViewModel built by hand can take a
 `new RunicTestWindowPresentation()`. Used directly, the fake raises its changes
 at once on the calling thread, inside the request, and keeps answering after
 the scope ends; a change its own handlers cause is still raised after them.
+
+The fake also decides a side panel (`OpenSidePanelAsync`, experimental under
+`RUNICDESK104`) as a Runic Desktop window on Windows does. It is an 860-wide
+window at `WindowX` 530 on a 1920-wide work area: an open panel grows
+`WindowWidth` on its edge (and moves `WindowX` on the left edge), moving it and
+changing its width move the frame, and closing it shrinks the window back. It
+refuses with `Unsupported` without `RunicWindowPresentationFeatures.SidePanel`
+in `Features`, `AlreadyOpen`, `Minimized` (minimized or hidden), `FullScreen`,
+`Maximized` (`IsMaximized`), `Snapped` (`IsSnapped`) and `NoRoom`, in that
+order. `SetSidePanelRefusal(reason)` makes every side panel request refuse with
+a reason of the test's choice, such as `PositionUnavailable` or `LoadFailed`,
+until it is set to `null`, and `CloseSidePanel(reason)` closes the panel as
+its page, a crash or the window would. The requests are recorded
+(`OpenSidePanel`, `MoveSidePanel`, `SetSidePanelWidth`, `FocusSidePanel`,
+`CloseSidePanel`). A ViewModel that falls back to an overlay is tested like
+this:
+
+```csharp
+host.Presentation!.IsSnapped = true;
+(await host.Root.ExecuteAsync(vm => vm.ShowDebugCommand)).ThrowIfFailed();
+Assert.True(host.ViewModel.ShowDebugOverlay);
+Assert.Null(host.Presentation.SidePanel);
+```
 
 ### Windows and their close decision
 
@@ -743,6 +781,33 @@ Assert.True(shell.IsBlocked);
   another) and one id source. Disposing the result closes and releases every
   Window. A command that closes its own Window is cancelled by the close, as on
   every host, so don't assert its reply.
+
+#### A close drain
+
+With `RunicWindowTestHostOptions.CloseDrain`, or the Window's own
+`RunicWindowOptions.CloseDrain` (0.19, experimental `RUNICDESK105`), a close that
+the Window's guards approved keeps it open while its accepted work drains, as
+described in
+[closing after the Window's work has drained](../Runic.Application.Views/README.md#closing-after-the-windows-work-has-drained):
+
+```csharp
+await using var window = await RunicWindowTestHost.CreateWindowAsync<DeployWindow>(services,
+    hostOptions: new() { CloseDrain = RunicCloseDrain.For(TimeSpan.FromSeconds(30)) });
+var apply = window.Root<DeployViewModel>().Start(vm => vm.ApplyCommand);   // [RunicOperationClose(Durable)]
+Assert.True(await window.RequestUserCloseAsync());     // the guards agreed
+Assert.True(window.IsOpen && window.IsDraining);       // the page still receives the Window's state
+((FakeTimeProvider)window.Host<DeployViewModel>().Time).Advance(TimeSpan.FromSeconds(30));
+await window.Window.WaitForCloseAsync();               // unmarked operations were asked to cancel; Apply was not
+```
+
+- `RequestUserCloseAsync()` returns once the close was decided; a second call
+  during the drain is ignored and returns `true` without asking the guard.
+- The drain's timeout runs on the Window's clock. The page's `closing` push says
+  `draining: true` (`Host<T>().Transport.Messages`), and starts during the drain
+  are rejected with `owner-closing`.
+- `DisposeAsync`, or `Window.CloseAsync(TimeSpan.Zero)`, ends the drain at once
+  without cancelling durable work, and the disposal waits for that work: release
+  it in the test before the Window is disposed.
 
 ### Collections and frames
 
@@ -1255,8 +1320,11 @@ public async Task ClosesWhenTheHostAsks()
   await window.WaitForMenuBarAsync(_ => window.FindMenuItem("File", "Open…") is not null, TimeSpan.FromSeconds(10));
   await window.InvokeMenuItemAsync(window.FindMenuItem("File", "Open…")!);
   ```
-- `SetActivityAsync` and `SetColorSchemeAsync` report a window's activity and
-  colour scheme to the application. The host's locale, its user's languages
+- `SetActivityAsync`, `SetColorSchemeAsync` and `SetPlacementAsync` report a
+  window's activity, colour scheme and placement to the application. The
+  windows list `maximize` and `placement` by default
+  (`RunicTestHostOptions.WindowFeatures`), and a `set-placement` out of form is
+  rejected as `invalid-request`. The host's locale, its user's languages
   and its appearance start as `RunicTestHostOptions.Locale`, `Languages` and
   `Appearance` (none by default) and change with `RunicTestHost.SetLocaleAsync`
   and `SetAppearanceAsync`: the application's locale follows them unless it set
@@ -1311,6 +1379,28 @@ public async Task ClosesWhenTheHostAsks()
   `element.connect({ url, token })`; the guest admits the connection only from
   that origin, and serves its component build only to it. The page's
   Content-Security-Policy must allow the guest's origin.
+- A region's appearance override (`region-appearance/1`, from 0.19.0; add it to
+  `Features` with `region/1`): `RunicTestHostOptions.RegionAppearance` gives each
+  region window an override from its open, as a host's
+  `RunicHostedRegionOptions.Appearance` does, and
+  `host.SetRegionAppearanceAsync(window, appearance)` changes it, attached or
+  detached, as `RunicHostedRegion.SetAppearanceAsync` does. Each known member of
+  the `DesktopAppearance` replaces the host's `Appearance` for that window's
+  pages; `null` members and `DesktopColorScheme.NoPreference` keep it, and
+  `null` removes the override. The guest's page receives the merged appearance
+  with the override's colour scheme, contrast and reduced motion listed in the
+  `appearance` push's `override`.
+
+  ```csharp
+  await using var host = await RunicTestHost.StartGuestAsync(start, new RunicTestHostOptions
+  {
+      Features = ["menus/1", "dialogs/1", "window-services/1", "region/1", "region-appearance/1"],
+      EmbedWindow = _ => true,
+      RegionAppearance = _ => new DesktopAppearance(DesktopColorScheme.Dark) { Contrast = DesktopContrast.More },
+  });
+  var window = await host.WaitForWindowAsync("MainWindow", TimeSpan.FromSeconds(30));
+  await host.SetRegionAppearanceAsync(window, new DesktopAppearance(DesktopColorScheme.Light));
+  ```
 - The application's `OpenWindowAsync` waits for the page to connect when its
   `DesktopHostOptions.WaitForConnection` is set, the default, as it does with a
   real host. Load `LaunchUrl` in the browser under test, or start the

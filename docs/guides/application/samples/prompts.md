@@ -203,7 +203,7 @@ Since SDK `0.16.0`, a ViewModel can ask its page for a presentation action that
 needs no answer: focus a field, scroll a row into view, show a toast. Declare a
 get-only `ViewRequest<T>` property and call `Raise(input)`; nothing waits for
 the page. It works in both MVVM flavors. From the
-[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#asking-the-page-view-requests-and-questions):
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#asking-the-page-view-requests-and-questions):
 
 ```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
 public ViewRequest<FocusTarget> Focus { get; } = new(ViewRequestDelivery.NextMounted);
@@ -240,7 +240,7 @@ const stopFocus = editor.requests.focus.handle(({ field }) => document.getElemen
   every connection.
 - A `ViewRequest` or `ViewQuestion` member that is not a get-only property is
   the generator error
-  [`RUNICBRIDGE035`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/docs/diagnostics.md#runicbridge035).
+  [`RUNICBRIDGE035`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/docs/diagnostics.md#runicbridge035).
 - A page of `0.15` receives no requests; it keeps working.
 
 ## Ask the page and await its answer
@@ -334,7 +334,7 @@ calls the View's request handler; see
   WPF windows show a native message box since SDK `0.11.0`:
   `IWindowPlatformServices.MessageBoxes` (`IDesktopMessageBoxes`). Keep
   ordinary prompts in the page; see the
-  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Platform/README.md#message-boxes).
+  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Platform/README.md#message-boxes).
 
 ## Next steps
 

@@ -134,7 +134,7 @@ its origins). A minimal-API handler can return
 `RunicAssetResults.Asset(assets, path)`, and `RunicAssetFileProvider` exposes a
 source as an `IFileProvider` for `UseStaticFiles` and other file provider
 consumers; the
-[ASP.NET Core adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Assets.AspNetCore/README.md#content-security-policy)
+[ASP.NET Core adapter README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Assets.AspNetCore/README.md#content-security-policy)
 shows both.
 
 In 0.6.0-preview.1 `MapRunicAssetSource` serves exact manifest paths only, so
@@ -212,7 +212,7 @@ packers leave out `.git` and `.env*` unless you pass `--no-default-excludes`.
 From .NET code, `AssetArchive.WriteTrustedDirectoryAsync` packs your own build
 output on Linux, Windows and macOS, with `AssetArchiveDirectoryOptions` for the
 entry point and exclusions. The
-[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/tools/Runic.Assets.Packer/README.md)
+[packer README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/tools/Runic.Assets.Packer/README.md)
 lists its options, JSON output and exit codes.
 
 ### Trusted generated output
@@ -250,11 +250,11 @@ directory.
 
 ## Reference
 
-- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Assets/README.md):
+- [`Runic.Assets`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Assets/README.md):
   explicit embedded resources, the development directory source,
   validation and inspection.
-- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Assets.AspNetCore/README.md)
-  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Assets.Desktop/README.md):
+- [`Runic.Assets.AspNetCore`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Assets.AspNetCore/README.md)
+  and [`Runic.Assets.Desktop`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Assets.Desktop/README.md):
   HTTP behavior and routing.
-- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/specs/assets/archive-v1.md)
+- [Archive format](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/specs/assets/archive-v1.md)
   and the [framework-neutral asset boundary](adr/0013-framework-neutral-asset-boundary.md).

@@ -102,17 +102,19 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
-  // 4 MiB since 0.17.0 added the application locale, Runic's own text
+  // 4.25 MiB since 0.19.0 added the side panel, the close drain, window
+  // placement, per-window services and the hosted region appearance, which
+  // need about 4.16 MiB; 4 MiB since 0.17.0 added the application locale, Runic's own text
   // (Runic.Application.Views.Translations and @runic-artifex/views-translations),
   // appearance, shared clients and hosted application windows, which need
   // about 3.85 MiB; 3.75 MiB since 0.16.0 added view requests, window management, forms,
   // query collections, blobs, region collections, navigation paths and the
   // platform test fakes, about 400 public types that need about 3.53 MiB;
   // 2.75 MiB since 0.14.0 and 2.5 MiB since 0.12.0.
-  assert.ok(inputs <= 4 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  assert.ok(inputs <= 4.25 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
   // __data.json payloads that client-side navigation loads. 256 KiB per page
-  // since 0.18.0, whose @runic-artifex/views package page with the hosted
+  // (Runic.Desktop.DesktopWindow needs about 249 KiB at 0.19.0) since 0.18.0, whose @runic-artifex/views package page with the hosted
   // regions, component and instance APIs needs about 241 KiB; 224 KiB
   // since npm exports have pages of their own and package pages list the
   // first sentence of each summary: the @runic-artifex/views package page
@@ -128,14 +130,15 @@ test('API inputs and rendered pages stay within their size budgets', () => {
       assert.ok(bytes.length <= 256 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 9.5 MiB since 0.18.0, which needs about 9.38 MiB; 9.25 MiB since 0.17.0,
+  // 9.75 MiB since 0.19.0, which needs about 9.57 MiB; 9.5 MiB since 0.18.0,
+  // which needs about 9.38 MiB; 9.25 MiB since 0.17.0,
   // which needs about 8.96 MiB; 8.75 MiB since the
   // about 300 functions, constants and type aliases of the
   // npm packages have pages of their own, which needs about 8.36 MiB; 7.5 MiB
   // since 0.16.0, 6 MiB since 0.15.0, 5.75 MiB since 0.14.0, 5.5 MiB since
   // 0.13.0 and 5.25 MiB since the platform services of 0.11.0.
   assert.ok(
-    compressed <= 9.5 * 1024 * 1024,
+    compressed <= 9.75 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });
@@ -403,24 +406,26 @@ test('signatures reference only public types of the reference packages', () => {
 });
 
 test('signatures carry nullable reference annotations', () => {
+  // Since 0.19.0 the Bridge descriptors are no longer generic over the
+  // ViewModel (runic-sdk#901), so the constraint is checked on a query
+  // collection instead.
   const descriptor = models['dotnet/Runic.Application.Views.json'].types.find(
     (type) =>
-      type.id === 'T:Runic.Application.Views.Generated.CommandDescriptor`1',
+      type.id === 'T:Runic.Application.Views.Generated.CommandDescriptor',
   );
   const text = (parts) =>
     parts.map((part) => (typeof part === 'string' ? part : part[0])).join('');
   const execute = descriptor.members.find((m) => m.name === 'ExecuteAsync');
   assert.equal(
     text(execute.signature),
-    'public Func<T, CancellationToken, object?, Task>? ExecuteAsync { get; init; }',
+    'public Func<object, CancellationToken, object?, Task>? ExecuteAsync { get; init; }',
   );
-  const bridge = models['dotnet/Runic.Application.Views.json'].types.find(
-    (type) =>
-      type.id === 'T:Runic.Application.Views.Generated.ViewModelBridge`1',
+  const collection = models['dotnet/Runic.Application.Views.json'].types.find(
+    (type) => type.id === 'T:Runic.Application.Views.RunicQueryCollection`2',
   );
   assert.equal(
-    text(bridge.signature),
-    'public class ViewModelBridge<T> : IDisposable where T : INotifyPropertyChanged',
+    text(collection.signature),
+    'public sealed class RunicQueryCollection<TRow, TKey> : INotifyPropertyChanged, IDisposable where TKey : notnull',
   );
 });
 

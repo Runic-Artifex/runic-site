@@ -159,6 +159,21 @@ The same Window and `async host => ...` body run on CS-WebUI with
   the `CloseConfirmation` capability opens the Window unguarded for the user's
   close and logs event 1053 `WindowCloseGuardUnavailable`; `RequestCloseAsync`
   still asks `CanCloseAsync` there.
+- A Window with a close drain (`RunicWindowOptions.CloseDrain`, or
+  `RunicDesktopHostOptions.CloseDrain` for every Window; experimental,
+  `RUNICDESK105`) keeps its embedded window open after the user's close,
+  `RequestCloseAsync` or a quit was approved, until its operations, awaited
+  commands and drained scopes have ended (see
+  [Closing after the Window's work has drained](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#closing-after-the-windows-work-has-drained)).
+  The host sets `DesktopWindowOptions.CloseDrainAsync` for it, after a drain of
+  `WindowOptions`' own. The page stays connected, and the appearance feed and
+  connection bindings stay attached while the window is visible; the drop queue
+  and menu commands stop at once. Ctrl+C, SIGTERM and a quit cancel
+  `DesktopHost.ShutdownStarting`, drain such windows visibly for up to
+  `DesktopHostOptions.ShutdownDrainTimeout` and then cancel `ShutdownRequested`
+  ([closing after the work has drained](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Desktop/README.md#closing-after-the-work-has-drained)).
+  An installed browser and serve-only mode close at once and log event 1055
+  `WindowCloseDrainUnavailable`; the Window's scope still waits for durable work.
 - `DesktopPlatformServices.AnnounceAsync(window, message, priority)` asks the screen
   reader to speak a status message for a Window, such as "Saved", through its
   embedded window (`DesktopWindow.AnnounceAsync`; see
@@ -224,6 +239,12 @@ The same Window and `async host => ...` body run on CS-WebUI with
   while the window is open, subscribe to `DesktopWindow.StateChanged` of the
   host's `DesktopBridgeWindow<TViewModel>.Window`. A placement belongs to the machine and operating
   system that saved it: its units are each platform's.
+  A Window that is already open takes a placement with
+  `IRunicWindowPresentation.SetPlacementAsync`, from a ViewModel too:
+  `ToRunicPlacement()` converts a saved `DesktopWindowPlacement`, and
+  `ToDesktopPlacement()` converts the `IRunicWindowPresentation.Placement` a
+  ViewModel saved back for `RunicDesktopHost.Placement`. Both use the units of
+  `DesktopWindowState.Placement` ([Maximizing and placing the Window](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#maximizing-and-placing-the-window)).
 - `host.UseApplicationMenu(commands)` runs the application's menu bar commands
   by id until the returned object is disposed. They are application-wide, the
   `DesktopHost.MenuCommands` of every host on that Desktop host, so a second
@@ -420,7 +441,9 @@ The same Window and `async host => ...` body run on CS-WebUI with
   `useAppearance` sees the desktop's text scale, accent colour, contrast and
   forced-colours palette. A serve-only Window, and every Window of a host with
   `DesktopHostOptions.NetworkExposure = AllInterfaces`, gets none: their pages
-  may run on another machine.
+  may run on another machine. A window the application opens itself gets the
+  same push once `DesktopPlatformServices.AttachWindowServices` attached its
+  content session ([a window the application opens itself](#a-window-the-application-opens-itself)).
 - `AddRunicPlatformServices()` also registers `IDesktopNotifications`, one
   singleton for the application, which `DesktopPlatformServices.CreateNotifications(applicationId)`
   creates when it is first resolved and the service provider disposes. A
@@ -546,7 +569,8 @@ The same Window and `async host => ...` body run on CS-WebUI with
   `IsAvailable == false`. Examples are an installed browser after an
   embedded-window fallback, or a custom host without a native handle.
   Applications that open a `DesktopWindow` themselves create one with
-  `new DesktopNativeOwner(window)`.
+  `new DesktopNativeOwner(window)`, or attach a scope's services with
+  `DesktopPlatformServices.AttachWindowServices`, whose `NativeOwner` it is.
 - `DesktopBridgeTransport` connects a `DesktopSurface` to a
   `WindowContentSession` directly, for applications that compose a surface
   themselves. It is an `IBridgeConnectionTransport`: `Serve` delivers the
@@ -597,6 +621,70 @@ An exception from the application body passed to `Run` closes the windows,
 disposes the host and is rethrown by `Run`; Runic does not log it. The
 [crash reporting guide](https://docs.runic-artifex.eu/guides/desktop/crash-reporting/)
 shows how to log such crashes, capture a dump and keep NativeAOT symbols.
+
+### A window the application opens itself
+
+An application that opens its `DesktopWindow` itself, with
+`DesktopSurface.OpenWindowAsync`, for example to control its start-up order,
+gives a DI scope's per-window services that window with
+`DesktopPlatformServices.AttachWindowServices` (since 0.19). Its ViewModels
+then take `IRunicWindowPresentation`, `IRunicWindowLocale`,
+`IRunicConnections`, `IRunicWindowContext` and the platform services in their
+constructors, as under `RunicDesktopHost`:
+
+```csharp
+DesktopSurface surface = await desktop.CreateSurfaceAsync(surfaceOptions);
+DesktopWindow window = await surface.OpenWindowAsync(new DesktopWindowOptions
+{
+    Browser = BrowserKind.Embedded,
+    ConfirmCloseAsync = confirmClose, // what IRunicWindowContext.RequestCloseAsync asks
+});
+await using var scope = services.CreateAsyncScope(); // AddRunicWindowService(), AddRunicPlatformServices()
+var viewModel = scope.ServiceProvider.GetRequiredService<ShellViewModel>();
+using var transport = new DesktopBridgeTransport(surface);
+using var content = new WindowContentSession(transport, new WindowContentSessionOptions
+{
+    RootModel = viewModel,
+    ModelContext = scope.ServiceProvider.GetService<IRunicModelContext>(),
+});
+// Attach the generated Bridge to transport and content as before.
+await using var windowServices = DesktopPlatformServices.AttachWindowServices(window, scope.ServiceProvider, content);
+await window.WaitForCloseAsync();
+```
+
+- Call it once the window is open. ViewModels the scope resolved before keep
+  their services: the scope's own objects are the ones that are attached, so a
+  ViewModel that sets the window's colour scheme from its constructor's
+  `IRunicWindowPresentation` gets the results of a `RunicDesktopHost` Window.
+- With `content`, the window's locale follows and sets the session's, the
+  native layout direction and the language of the surface's own pages follow
+  it, `IRunicConnections` lists the page's connections, and the page receives
+  the desktop's appearance (`appearance/1`) when only this computer can reach it.
+  Presentation changes then arrive in turns of the session's model context.
+- The direction follows the locale unless the window opened with a direction of
+  its own that is not its locale's. The web view's language is the one
+  `DesktopWindowOptions.Language` gave it when it opened.
+- `IRunicWindowContext.RequestCloseAsync` calls `DesktopWindow.RequestCloseAsync`,
+  so the window's `ConfirmCloseAsync` decides; `IRunicWindowContext.Window` is
+  `null`, because there is no `IRunicWindow`. To keep the window open after an
+  approved close until the application's work has ended, set
+  `DesktopWindowOptions.CloseDrainAsync = (_, ct) => new(work.WaitForAcceptedAsync(ct))`
+  when you open it; the request then returns at the decision.
+- It throws `InvalidOperationException` for a closed window or a scope that a
+  Window already uses, and `ArgumentException` for a session of another
+  surface. A scope without `AddRunicWindowService()` attaches what it has, and
+  `DesktopWindowServices.Presentation` still presents the window.
+- The binding ends when the window closes or the returned
+  `DesktopWindowServices` is disposed: the presentation reports `OwnerClosed`,
+  the platform services stop, and the locale and appearance no longer reach the
+  window. It never disposes the scope, the session or the window. A new window
+  takes a new scope.
+
+ViewModels without a scope take `DesktopPlatformServices.ForWindowPresentation(window)`,
+one presentation per window, as `WpfPlatformServices.ForWindowPresentation` does
+for a WPF window. The
+[per-window services table](../Runic.Application.Views/README.md#per-window-services-by-way-of-opening)
+lists what each way of opening a window provides.
 
 ## From a command line
 
@@ -984,7 +1072,7 @@ var exitCode = await tool.Exited;
   default; Runic's guest sends its latest menus again when one is turned away), the dialogs a guest shows at once,
   across its windows (one by default; another reports `ResourceBusy` to a Runic guest), its clipboard and monitor
   requests (20 a second), the files and links it opens (5 per ten seconds), its requests that can activate a window
-  (present, minimize, set-visible, set-full-screen and toggle-maximized: 2 a second after a burst of 3) and its announcements (2 a second after a burst of 5). The host rebuilds a window's native bar
+  (present, minimize, set-visible, set-full-screen, toggle-maximized, maximize, restore and set-placement: 2 a second after a burst of 3) and its announcements (2 a second after a burst of 5). The host rebuilds a window's native bar
   at most every 50 milliseconds, however many changes arrive.
 - **Elevated guests.** A guest that an elevated host starts runs elevated too, and refuses hosted mode
   (`guest-refused` with `guest-elevated`). An elevated host whose guest needs administrator rights as well, such as an
@@ -1006,7 +1094,10 @@ var exitCode = await tool.Exited;
   above.
 - **End.** When the guest exits or crashes, or its channel closes, the host closes its windows, ends its process tree
   and completes `Exited` with its exit code (event 2017). `StopAsync` asks the guest to shut down and ends it after
-  `StopTimeout` (10 seconds); `RequestStopAsync` asks each window first; `KillAsync` ends it at once. The guests
+  `StopTimeout` (10 seconds); `RequestStopAsync` asks each window first; `KillAsync` ends it at once. A guest whose
+  Windows have a close drain reports each `window-closed` after its drain, and the host keeps the window, or the
+  region, open until then; on `shutdown` the guest drains within its own `ShutdownDrainTimeout` (30 seconds), so set
+  `StopTimeout` above it for such a guest. The guests
   still running stop when the host's Desktop shuts down and when `RunicDesktopHost.Run` returns. A hosted application
   cannot host; a serve-only one shows guests' windows only in regions ([browser hosts](#browser-serve-only-hosts)).
 
@@ -1152,6 +1243,47 @@ ValueTask.FromResult(request.CanEmbedComponent
   they refuse it as they refuse frames (event 2026, `refused`).
 - The [hosted components example](../../../examples/hosted-components/README.md) is a dashboard with two widget
   processes as components, under the policy above.
+
+#### Appearance in a region
+
+With `region-appearance/1` (0.19), which Runic's guests of 0.19 and later implement
+(`RunicHostedWindowRequest.CanOverrideAppearance`), the host gives a region window an **appearance override**, such as a
+wizard step in the design the user picked: each member of a `RunicHostedAppearance` that is not `null` replaces the host's
+desktop value for that window's pages, and `null` keeps it
+([specification](../../../specs/desktop/host-protocol.md#appearance-in-a-region-region-appearance1)):
+
+```csharp
+#pragma warning disable RUNICDESK103 // Hosted application windows are experimental.
+var highContrast = new RunicHostedAppearance { ColorScheme = DesktopColorScheme.Dark, Contrast = DesktopContrast.More };
+// From the window's open:
+RunicHostedWindowDecision.Embed("check", new RunicHostedRegionOptions { Appearance = highContrast });
+// Later, attached or detached; null removes the override, and a "System" choice is DesktopColorScheme.NoPreference.
+await region.SetAppearanceAsync(new RunicHostedAppearance { ColorScheme = DesktopColorScheme.Light });
+```
+
+- **What the guest's pages see.** The guest merges the override with the host's desktop appearance for that window only:
+  its pages, a component's included, receive the result before their first content, and their appearance store takes the
+  colour scheme, contrast and reduced motion that the override set over the engine's media queries. Windows the region
+  window owns, the guest's other windows, `RunicGuestSession.Appearance` and the host's own pages keep the desktop's.
+  With forced colours the pages get the override's `SystemColors`, else the desktop's palette when the desktop forces
+  colours too; `TextScale` is from 0.5 to 4.
+- **The frame.** The host page sets the override's colour scheme as the CSS `color-scheme` of the region's frame or
+  component. Whether the frame's `prefers-color-scheme` follows it depends on the engine and is best effort; a guest page
+  styles from its appearance store (`appearance()`, `onAppearance`), not from media queries. `prefers-contrast`,
+  `forced-colors` and `prefers-reduced-motion` cannot be set on a frame, and a desktop that forces colours keeps forcing
+  them in the frame.
+- **`SetAppearanceAsync`** replaces the override as a whole and works from any thread, attached or detached: the next
+  page receives it, and `MoveToAsync` and re-attaching keep it, since it belongs to the window. The guest receives the
+  latest of overrides set in quick succession. It returns `false` only for an ended region and for a guest without the
+  feature (`RunicHostedRegion.CanSetAppearance`).
+- **Older guests.** A 0.18 guest still shows in the region, with the desktop's appearance; the host logs event 2030 once
+  for the window, and `Appearance` records the override.
+- **Tests.** `RunicTestHost` plays the host: `RunicTestHostOptions.RegionAppearance` and `SetRegionAppearanceAsync`
+  ([Testing](../Runic.Application.Testing/README.md#a-hosted-application)).
+
+The hosted regions guide's [design and appearance](../../../docs/hosted-regions.md#design-and-appearance) walks through
+a design menu, the guest page's side and the CSS limits, and the
+[hosted region example](../../../examples/hosted-region/README.md#design) runs it.
 
 ## Automation
 

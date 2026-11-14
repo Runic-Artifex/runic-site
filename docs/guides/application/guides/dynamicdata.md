@@ -16,7 +16,7 @@ Primitives 9.0.0; the fork also tests Primitives 8.4.0 used by ReactiveUI 25.
 
 DynamicData's cache, filtering, grouping, transforms and disposal stay in .NET.
 Runic exports the resulting collection through a generated, reflection-free
-bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/examples/dynamicdata/README.md)
+bridge. The [runnable example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/dynamicdata/README.md)
 has a 100,000-row source cache, keyed browser rendering and an independent
 viewport for each presentation.
 
@@ -83,9 +83,9 @@ when an observed collection changes outside the window's model turn, such as a
 `Bind` without `ObserveOn` the window's scheduler. A change notification that
 arrives after the window's model context closed no longer throws
 `ObjectDisposedException` into the binding, which ended it. See
-[state changes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/specs/application/state-changes.md)
+[state changes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/specs/application/state-changes.md)
 and the .NET
-[language mappings](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/specs/application/language-mappings.md#publication-units-and-change-detection).
+[language mappings](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/specs/application/language-mappings.md#publication-units-and-change-detection).
 
 ## Bound the presented collection
 
@@ -207,10 +207,10 @@ var rows = await host.Root.QueryRowsAsync(vm => vm.Orders, 500, 40);
 Assert.Equal(1, source.Loads.Count);
 ```
 
-The [query collections example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.18.0/examples/query-collections)
+The [query collections example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.19.0/examples/query-collections)
 shows 100,000 rows with sort, filter, variable heights and scrolling to a row.
 See
-[query collections](https://github.com/Runic-Artifex/runic-sdk/blob/v0.18.0/packages/dotnet/Runic.Application.Views/README.md#query-collections)
+[query collections](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#query-collections)
 for every rule, including flattened trees.
 
 ## Performance evidence
