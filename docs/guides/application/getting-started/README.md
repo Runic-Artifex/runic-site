@@ -13,7 +13,8 @@ dotnet runic dev
 The creator asks for the project name, frontend, package manager, Window host,
 Linux GTK version (for Runic Desktop) and ViewModel library, then whether to add
 a test project, a Nix flake or the packaging manifests, and whether to restore
-the NuGet packages. Since SDK `0.10.0` it asks on standard error, so
+the NuGet packages. Since SDK `0.20.0` it also asks how to build an Angular
+frontend (for Angular only) and which editor files to add. Since SDK `0.10.0` it asks on standard error, so
 redirecting standard output does not turn the questions off. Pass `--yes`, set
 `RUNIC_COMMANDLINE_NO_INPUT=1` or redirect standard input to use the defaults;
 Escape or Ctrl+C at a question cancels with exit code 130. It installs
@@ -33,6 +34,8 @@ dotnet new runic-app --name MyApp --frontend svelte --package-manager bun --host
 | `--linux-gtk`       | `3`, `4` (Linux GTK version for `desktop`)       | `3`          |
 | `--desktop-server`  | `native`, `kestrel` (server for `desktop`)       | `native`     |
 | `--view-models`     | `reactiveui`, `toolkit` (CommunityToolkit.Mvvm)  | `reactiveui` |
+| `--angular-build`   | `cli`, `vite` (what builds Angular)              | `cli`        |
+| `--editor`          | `none`, `vscode`                                 | `none`       |
 
 The switches `--tests` (a TUnit test project), `--nix` (a Nix flake),
 `--packaging` (the `packaging/` manifests of `dotnet runic package`, to edit
@@ -91,6 +94,46 @@ The generated README describes the project layout, the ignored
 `Frontend/src/generated` clients, publishing, and the project settings. The
 [project creator](https://docs.runic-artifex.eu/create/) builds the command for
 your choices and previews the generated files.
+
+### Angular: the Angular CLI or Vite
+
+Since SDK `0.20.0`, `--frontend angular --angular-build vite` builds, serves
+and tests the same Angular frontend with Vite and the Analog Angular plugin
+(`@analogjs/vite-plugin-angular`) instead of the Angular CLI. The components
+are the same; Vite adds what the other frontends have:
+
+- with `--translations`, the Translations Vite plugin, so an edited message
+  reaches the page under `dotnet runic dev` without a build;
+- the dock, the Vite DevTools dock with its Runic panel (see
+  [debugging](../guides/debugging.md#the-dock));
+- the component build target, which an Angular guest of
+  [trusted component mode](../../desktop/hosted-regions.md#show-a-guest-as-a-component)
+  needs.
+
+Keep the Angular CLI, the default, when you rely on its builders and
+`ng build`, `ng serve` and `ng test`, or would rather not depend on a
+third-party plugin. Choose Vite for the development loop above or a component
+guest. The Analog plugin uses the Angular compiler's internal API, so update
+Angular and the plugin together. `vite build` checks no types, so the
+template's `build` and `typecheck` scripts run `ngc --noEmit`, and its test
+runs on Vitest. See the
+[template guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/tools/Runic.Application.Templates/README.md)
+and
+[building with the Angular CLI or Vite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/web/angular/README.md#building-with-the-angular-cli-or-vite).
+
+### Debug in your IDE
+
+Since SDK `0.20.0`, every project has `Properties/launchSettings.json`. Visual
+Studio and Rider list its profiles next to their Start button, and
+`dotnet run` uses the first, which starts the Window in `Development`: the
+browser's developer tools on the page and detailed Bridge errors. A Runic
+Desktop project has a second profile for WebView2 script debugging on Windows.
+`--editor vscode` adds `.vscode/` with tasks for `dotnet runic dev` and debug
+configurations for the C# extension. To debug C#, run
+`dotnet runic dev --no-window`, wait for `[dev] Ready`, and press F5: the
+Window starts under the debugger and frontend edits still reach it.
+[Debugging an application](../guides/debugging.md) covers each IDE, the
+browser's developer tools, the dock and Runic Inspect.
 
 ## Publish
 

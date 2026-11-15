@@ -305,7 +305,10 @@ reports `CommandId`. Command ids are 1–64 ASCII letters, digits, `.`, `_` or
 `new DesktopMenuItem(title, commandId)` look swapped, such as
 `new DesktopMenuItem("file.new", "New Window")`, a call converted from the
 older `DesktopMenuCommand(id, label)` order; its code fix swaps them and names
-both arguments. Since SDK `0.8.0-preview.2`, a
+both arguments. The `Runic.Platform` analyzers run while you type and in a
+build in every project that uses `Runic.Platform`, also one that gets it only
+through another package, such as `Runic.Desktop` or a Views host adapter; see
+[`RUNICPLAT001`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/diagnostics.md#runicplat001). Since SDK `0.8.0-preview.2`, a
 termination signal (Ctrl+C, SIGTERM from `systemctl --user stop` or a logout,
 SIGHUP) ends a windowless application instead of leaving it running until
 SIGKILL. To shut down in order, as the example does, set

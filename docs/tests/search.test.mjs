@@ -153,7 +153,8 @@ const queries = {
 // hosted region appearance), which need about 193 KiB gzipped, and from
 // 768 KiB raw with the 0.20.0 debugging and tracing guides (IDE debugging,
 // the browser's developer tools per engine, the dock, Runic Inspect and OTLP
-// traces), which need about 773 KiB raw.
+// traces) and the 0.20.0 additions to the getting-started, languages and
+// hosted-region guides, which need about 775 KiB raw and 195 KiB gzipped.
 const budget = { raw: 800 * 1024, gzip: 200 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {

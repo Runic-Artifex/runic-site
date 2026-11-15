@@ -183,6 +183,21 @@ Build the component with `vite build`; the development server serves the page
 only. A guest without the build refuses a component attach
 (`embedding-unsupported`).
 
+**An Angular guest** (experimental, since SDK `0.20.0`, under `RUNICDESK103`
+like every hosted window) builds its component with Vite and the Analog
+Angular plugin; `dotnet new runic-app --frontend angular --angular-build vite`
+creates such a frontend, and the Angular CLI cannot build one. The entry's
+default export is `runicComponentMount(Widget)` from
+`@runic-artifex/angular/experimental`. Each element starts its own zoneless
+Angular application and renders the standalone component in its shadow root,
+whose constructable stylesheets take the component's styles instead of
+`<style>` elements in `document.head`, so the host page's policy needs no
+`'unsafe-inline'` styles. Removing the element destroys its application. See
+[Angular components](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/web/angular/README.md#components-experimental);
+the
+[hosted components example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/hosted-components/README.md)'s
+widget has an Angular frontend (`-p:WidgetFrontend=Angular`).
+
 The host's policy decides `EmbedComponent` where the guest allows it:
 
 ```csharp docs-test=skip:sdk-guide-excerpt
