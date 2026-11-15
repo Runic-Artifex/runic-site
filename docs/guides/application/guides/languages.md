@@ -51,7 +51,7 @@ language for every Window. Windows that set none of their own switch with it,
 and Windows opened later start in it. `Follow` binds anything with a
 `SetLocaleAsync(locale, cancellationToken)`, such as a Runic Translations
 `TranslationContext`, so the C# catalog switches first. The
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/multi-window/README.md)
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/multi-window/README.md)
 registers its catalog that way:
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
@@ -147,7 +147,7 @@ export function startTranslations(initialLocale = navigator.language): () => voi
 }
 ```
 
-[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
+[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
 in the Views README has the table for each framework, references of several
 catalogs and server rendering.
 
@@ -205,7 +205,7 @@ const resolveReference = transport.createReferenceResolver([{ transport, message
 - **CS-WebUI** windows keep WebUI's own English error pages.
 
 The
-[Runic.Application.Views.Translations README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views.Translations/README.md)
+[Runic.Application.Views.Translations README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views.Translations/README.md)
 covers your own validation texts, the standard macOS menus, use without
 dependency injection, and the keys.
 

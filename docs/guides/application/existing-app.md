@@ -177,7 +177,7 @@ an Angular project puts `runicDevSessionProxy()` in the serve target's
 removed in SDK `0.15.0`, and a configuration that still imports it fails to
 load. An Angular project loads the same client from `main.ts` behind
 `ngDevMode`. Since SDK `0.15.0`, the client also reports each open View's
-state, which the Vite DevTools dock shows on a **Views** card with the route,
+state, which the dock (the Vite DevTools dock) shows on a **Views** card with the route,
 revision and presentation epoch, and lists commands that .NET answered
 `superseded` on a **Superseded commands** card. Both are in `/__runic/state`
 too (`views` and the timeline), for the Angular CLI. The production build
@@ -220,7 +220,7 @@ value warns with `RUNICBRIDGE029`.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
 in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the

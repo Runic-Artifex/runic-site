@@ -13,6 +13,8 @@
 - [Forms and validation](forms-and-validation.md)
 - [The application's language](languages.md)
 - [Testing frontends](frontend-testing.md)
+- [Debugging an application](debugging.md)
+- [Tracing Bridge calls](tracing.md)
 - [Open and save files](../samples/files.md)
 - [App settings and desktop preferences](../samples/settings.md)
 - [Ask the user from a ViewModel](../samples/prompts.md)
