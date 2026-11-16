@@ -154,8 +154,14 @@ const queries = {
 // 768 KiB raw with the 0.20.0 debugging and tracing guides (IDE debugging,
 // the browser's developer tools per engine, the dock, Runic Inspect and OTLP
 // traces) and the 0.20.0 additions to the getting-started, languages and
-// hosted-region guides, which need about 775 KiB raw and 195 KiB gzipped.
-const budget = { raw: 800 * 1024, gzip: 200 * 1024 };
+// hosted-region guides, which need about 775 KiB raw and 195 KiB gzipped,
+// and from 800 KiB raw and 200 KiB gzipped with the 0.21.0 guides (JavaScript
+// debuggers on Linux and in Chrome, WebView2's DevTools window and extensions,
+// the Runic DevTools extension, framework DevTools, custom object formatters,
+// the development server's access rules and the 0.21 renames), which need
+// about 798 KiB raw and 203 KiB gzipped before the 0.21.0 API types; the 0.20.0
+// API types had left under 1 KiB of the gzip budget.
+const budget = { raw: 832 * 1024, gzip: 212 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {
