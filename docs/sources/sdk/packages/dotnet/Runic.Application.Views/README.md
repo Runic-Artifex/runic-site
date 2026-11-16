@@ -1684,7 +1684,9 @@ private async Task SaveAsync(CancellationToken token)
   ones included, resumes in a later turn of the same context, as code on a UI
   thread resumes on that thread. Writes after `await` are applied in the order
   in which the continuations become ready, and no other turn runs between two
-  awaits of one body.
+  awaits of one body. An `await` of work that has already completed doesn't
+  wait: the code after it runs on in the current turn, ahead of continuations
+  that are still queued.
 - Code after `ConfigureAwait(false)`, in `Task.Run`, in a timer or in another
   background callback runs outside the context. Do CPU-bound or blocking work
   there, then commit: `await modelContext.InvokeAsync(() => Items = loaded)`.
@@ -1822,8 +1824,9 @@ The `dotnet new runic-app` template's Counter page has one of each.
 ## Generated TypeScript
 
 Each ViewModel gets a module named after it (`EditorViewModel` becomes
-`editor.ts`) with its state interface, client interface and `connect`
-function. Every enum, DTO and union in the contract becomes one exported type
+`editor.ts`) with its `connect` function, and the client's types (its state,
+client and page reference interfaces) in `editor.contract.d.ts` beside it,
+which `editor.ts` re-exports; see [Editor navigation](#editor-navigation). Every enum, DTO and union in the contract becomes one exported type
 named after its C# type, declared once in `types.ts` beside the modules. Next
 to each client, `editor.mock.ts` exports a typed test double, `mockEditor`; see
 [Testing](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#testing).
@@ -2143,8 +2146,18 @@ generator, such as a CommunityToolkit `[ObservableProperty]`, points at its
 a link to its entry in the [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 for the release you use.
 
-`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039` and `053` are warnings; the generator's
-(`013`, `020`, `028`, `031` and `032`) repeat on builds that reuse the cached generation. Every other
+Since 0.20 the package also ships Roslyn analyzers for the errors that the
+source alone shows, such as a command named `NewCommand` or a `ViewRequest<T>`
+with a public setter. Your IDE reports them while you type, with the same ID
+and message, and offers a code fix where it is mechanical. The analyzers also
+report the warnings `RUNICBRIDGE013`, `028`, `031`, `032`, `034`, `039` and `053` for your project's
+own code, while you type and in the build, so `#pragma warning disable` and
+`.editorconfig` severities apply to them as to any compiler warning. The
+[diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#errors-and-warnings-while-you-type)
+lists them.
+
+`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039` and `053` are warnings; the ones the generator
+reports itself (`020`, and the analyzer's when analyzers are off) repeat on builds that reuse the cached generation. Every other
 code fails the build. The
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 lists every code with its severity, what reports it, its cause and its fix.
@@ -2159,6 +2172,60 @@ of a check that passes stay in the command output. A
 failed command that reports no such error gets one summary error instead:
 `RUNICBRIDGE024` (an internal generator error) for the generator,
 `RUNICBRIDGE016` for the frontend commands.
+
+## Development source map
+
+Each build that generates Bridges also writes a development source map,
+`runic-bridge/sources.json`, beside the generated C# in the intermediate
+directory (`obj/<Configuration>/<TargetFramework>/`). It maps every member
+that a generated client and the Bridge frames name (state, setters, commands
+with the method that handles them, the state a command adds, interactions and
+View requests) to its C# symbol and `{file, line, column}`, from the same
+portable PDB that locates generator diagnostics, so a CommunityToolkit
+`[RelayCommand]` maps to its method and an `[ObservableProperty]` to its
+field or partial property. Without a PDB or source files the map lists the
+members without locations, and the build does not fail.
+
+The map is development-only: it stays in `obj`, never enters the generated
+TypeScript, the build or publish output, or a package, and the generator's
+cache regenerates it with the other outputs. Under `vite dev`,
+`@runic-artifex/vite-plugin-runic` serves it and opens a listed location in your
+editor (VS Code, Rider, or `LAUNCH_EDITOR`); see its
+[README](../../web/vite-plugin-runic/README.md#source-map-and-open-in-editor) for
+the format and the endpoints. Generated clients' declaration maps use the same
+locations ([Editor navigation](#editor-navigation)).
+
+### Editor navigation
+
+The generated client's types are declared in `<view>.contract.d.ts`, with a
+declaration map, `<view>.contract.d.ts.map`, into the ViewModel's C# sources.
+So in any TypeScript-aware editor (tsserver-based: VS Code, Visual Studio, and
+others) Go to Definition or Peek on a client member opens the C# it stands for,
+with no extension:
+
+| In the page | Opens |
+| --- | --- |
+| `client.save()`, `startSave`, `recoverSave`, `canSave(...)` | The command's handler, such as its `[RelayCommand]` method |
+| `state.title` (and `titleErrors`) | The property's getter, or its `[ObservableProperty]` field |
+| `client.setTitle(...)`, `writeTitle(...)` | The property's setter |
+| `state.canSave`, `isSaveExecuting` | The command's handler |
+| `client.interactions.confirm`, `client.requests.focus` | The interaction or View request property |
+| `EditorClient`, `EditorState` (Go to Type Definition) | The ViewModel class |
+
+The map's locations are those of the [development source map](#development-source-map);
+its `sources` are relative to the map, so a client committed to source control
+is the same on every machine. A member without a location (no PDB, or a source
+on another drive than the generated directory) stays in the `.d.ts`, and a
+client without any gets no map. Everything else, such as `connectEditor` or the
+page reference's `connect`, stays in the generated TypeScript.
+
+Imports don't change: `import { connectEditor, type EditorState } from "./generated/editor.js"`
+works as before, because `editor.ts` re-exports every type of the contract with
+`export type`. `.contract.d.ts` holds only types, so bundlers never load it and
+the built JavaScript is unchanged. Commit the `.contract.d.ts` and its map with
+the client. A library that compiles the generated directory with `tsc
+--declaration` into another directory copies the `.contract.d.ts` files there
+too, since `tsc` does not copy `.d.ts` inputs.
 
 ## Ship the frontend inside the executable
 
@@ -2231,7 +2298,7 @@ an extension point.
 | `RunicApplicationFrontendBuildEnabled` | `true` | Set `false` when another tool owns the frontend build. TypeScript is still generated. |
 | `RunicApplicationFrontendCopyEnabled` | `true` | Mirrors the frontend's output directory to the web root in the build output: a file that an earlier copy wrote and the output directory no longer has is deleted. Publish always mirrors it. |
 | `RunicApplicationFrontendOutputDirectory` | `dist` | The frontend build's output directory, relative to the frontend directory, which build and publish copy and `dotnet runic dev` serves from. |
-| `RunicApplicationFrontendTranslations` | `false` | `true` keeps `RunicApplicationFrontendTranslationsDirectory` equal to the ESM that `Runic.Translations.Build` writes for the project's catalog (`RunicTranslationsEmitEsm=true`), before the frontend builds: changed files are copied, and the files of removed or renamed messages are deleted. For a page that imports the generated files itself instead of through the Translations Vite plugin, such as the `runic-app` template's `--translations` option and a Bun or Angular page. No ESM, or a directory that holds other files, is [`RUNICBRIDGE037`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge037). See [Translated text](#translated-text). |
+| `RunicApplicationFrontendTranslations` | `false` | `true` keeps `RunicApplicationFrontendTranslationsDirectory` equal to the ESM that `Runic.Translations.Build` writes for the project's catalog (`RunicTranslationsEmitEsm=true`), before the frontend builds: changed files are copied, and the files of removed or renamed messages are deleted. For a page that imports the generated files itself instead of through the Translations Vite plugin, such as an Angular CLI page (the `runic-app` template's `--frontend angular --translations`) or a Bun page. No ESM, or a directory that holds other files, is [`RUNICBRIDGE037`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge037). See [Translated text](#translated-text). |
 | `RunicApplicationFrontendTranslationsDirectory` | `<frontend>/.runic/translations` | Where `RunicApplicationFrontendTranslations` mirrors the ESM; the page imports `messages.js`, `runtime.js` and `transport.js` from it. Keep it out of version control. |
 | `RunicApplicationFrontendWebRoot` | `www` | The directory below the build and publish output that receives the frontend and the hosts serve. Another name reaches the hosts as the `Runic.Application.FrontendWebRoot` runtime option; `RunicWindowOptions.ContentRoot` and WPF's `RunicViewHost.ContentRoot` still win. |
 | `RunicApplicationFrontendDelivery` | `Files` | `Files` copies the frontend to the web root. `Embedded` packs the same tree (referenced projects' frontends, this project's output and the host's `runic-views.js`) into the assembly with Runic.Assets, and the Runic Desktop, WPF and CS-WebUI hosts serve it; see [Ship the frontend inside the executable](#ship-the-frontend-inside-the-executable). Closed: another value, no single Desktop or CS-WebUI host, or a project that sets `RunicAssetsDist` itself warns with [`RUNICBRIDGE030`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge030) and builds as `Files`. |
@@ -2271,7 +2338,11 @@ from the bundle's `Contents/Resources/www`, where Apple expects resources
 (`RunicWindowOptions.ContentRoot` overrides both). `dotnet runic dev` sets
 `RunicApplicationFrontendBuildEnabled=false` and
 `RunicApplicationFrontendCopyEnabled=false` while its development server serves
-the frontend. The
+the frontend. Since 0.20, any build of the output that `dev` serves does the same
+while `dev` runs, such as an IDE's build before it starts the Window under its
+debugger (`dotnet runic dev --no-window`), and puts dev's development pages back
+into `www/` after a clean; `RunicApplicationFrontendDevSessionEnabled=false`
+turns that off, and publish is never affected. The
 [`dotnet runic` README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/dotnet-runic/README.md)
 lists the development-server properties it reads.
 
@@ -3431,50 +3502,64 @@ tests, `RunicViewState.IsValidating(vm => vm.UserName)` and
 Text that a ViewModel produces, such as a status line or a validation
 message, can follow the window's language without a call per string. The
 ViewModel produces a text reference of
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/transport.md)
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/transport.md)
 (a message key, typed arguments and a fallback text) instead of a sentence, and
 the page formats it with its Translations runtime (the `translation-text/1`
 feature). When the language changes, the page formats the references it has
 again.
 
-The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/runic-views.md)
+The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/runic-views.md)
 walks through one catalog for the page and C#, the application's language,
 native text and tests, step by step. This section is the reference. It needs
-Runic Translations 0.11.0 or later. `dotnet new runic-app --translations` starts
+Runic Translations 0.12.0 or later. `dotnet new runic-app --translations` starts
 an application with all of it, and the
 [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
 shows it in English, German and Arabic.
 
 **One catalog.** Keep the catalog with the frontend and name its `runic.json`
 in the .NET project, which then gets the generated C# API for every message
-([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
+([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
 
 ```xml
-<PackageReference Include="Runic.Translations" Version="0.11.0" />
-<PackageReference Include="Runic.Translations.Build" Version="0.11.0" PrivateAssets="all" />
+<PackageReference Include="Runic.Translations" Version="0.12.0" />
+<PackageReference Include="Runic.Translations.Build" Version="0.12.0" PrivateAssets="all" />
 <RunicTranslationProject Include="Frontend/translations/runic.json" />
 ```
 
 The page gets the same catalog's ESM one of two ways:
 
-- **From the .NET build**, as `dotnet new runic-app --translations` and the
-  multi-window example do. The build writes the ESM with the
-  `dotnet-runic-translations` tool of `.config/dotnet-tools.json`, and
-  `RunicApplicationFrontendTranslations` copies it to
-  `Frontend/.runic/translations` (gitignored) before the frontend builds; the
-  page imports `../.runic/translations/messages.js`, `runtime.js` and
-  `transport.js`. It works with every bundler, Angular's included, and needs no
-  npm package, but `vite dev` does not reload an edited message: build again.
+- **From the Translations Vite plugin**, for a Vite page, as
+  `dotnet new runic-app --translations` does with React, Vue, Svelte and
+  SvelteKit. `runicTranslations()` from
+  `@runic-artifex/vite-plugin-runic-translations` compiles the catalog with the
+  `dotnet-runic-translations` tool of `.config/dotnet-tools.json` (keep the tool,
+  the plugin and `Runic.Translations.Build` on one release) into
+  `Frontend/.runic/translations` (gitignored), serves it as
+  `virtual:runic-translations/<catalog>`, and writes the modules' types to
+  `.runic/translations/virtual.d.ts`, which a type check references. Under
+  `dotnet runic dev` (or `vite dev`) it compiles an edited, added or removed
+  message again and the page shows it without a build, in place where the page
+  allows it (**Edited messages in `vite dev`** below). The .NET project then
+  sets neither property below, so its build does not run the tool.
+
+  ```ts
+  // vite.config.ts
+  plugins: [react(), runic(), runicTranslations()],
+  ```
+
+- **From the .NET build**, for a page that cannot run Vite plugins, such as an
+  Angular CLI page (as `dotnet new runic-app --frontend angular --translations`
+  creates) or a Bun-bundled one, as the multi-window example does. The build
+  writes the ESM with the same tool, and `RunicApplicationFrontendTranslations`
+  copies it to `Frontend/.runic/translations` (gitignored) before the frontend
+  builds; the page imports `../.runic/translations/messages.js`, `runtime.js`
+  and `transport.js`. It works with every bundler and needs no npm package, but
+  the development server does not reload an edited message: build again.
 
   ```xml
   <RunicTranslationsEmitEsm>true</RunicTranslationsEmitEsm>
   <RunicApplicationFrontendTranslations>true</RunicApplicationFrontendTranslations>
   ```
-
-- **From the Translations Vite plugin**, which compiles the catalog for a Vite
-  page, reloads messages in `vite dev`, and serves the modules as
-  `virtual:runic-translations/<catalog>`, as in the examples below. Leave
-  `RunicApplicationFrontendTranslations` off then.
 
 **Values.** A member, DTO member, command input or result of type
 `Runic.Translations.TranslationReference` crosses the Bridge as the reference's
@@ -3813,6 +3898,32 @@ again on a switch only when it reads a reactive text locale:
 | React | `configureSharedLocaleResolver(locale.getRequestedLocale)` and `useTextLocale()` in each component that renders `m.*()` (its children render with it, except memoized ones) |
 | Effect | `textLocales()`, a stream of the locale; render the messages again on each |
 
+**Edited messages in `vite dev`.** With the Translations Vite plugin 0.12.0 or
+later, saving an edited message updates the page in place: the page keeps its
+component state, its language and its connection. The plugin swaps the new text
+into the loaded catalog and signals it on the global text-change channel
+`Symbol.for("runic.translations.text")`; `configureTranslatedText` follows that
+channel in the browser, also when it runs before the catalog loads, and renders
+the text again as a language switch does, through the same reactive text locale as the table above (in React, a
+component that calls `useTextLocale()` and its children, except memoized ones).
+Text references (`useText`, `injectText`, the `runicText` pipe, `texts`) format
+again too. In place means a message's text, its plural and selector variants
+and the text inside its markup, in any locale. These still reload the page,
+with the reason in the Vite log: an added, removed or renamed message, changed
+inputs or markup, a new locale, and a `runic.json` change. A page that does not
+call `configureTranslatedText` reloads as well, so it never shows stale text;
+one that calls it shows the new text wherever it renders again on a language
+switch.
+Text computed once, such as a `const` in a script, a SvelteKit `load` result or
+a `document.title` set in code, keeps its old text until it is computed again,
+as after a language switch. Only the development build of
+`@runic-artifex/views`, which `vite dev` resolves, follows the channel: a
+production bundle neither creates nor reads it, and the helpers behave as
+before. The Angular CLI's dev server (`ng serve`) runs no Vite
+plugins: a page built with it imports the ESM of the .NET build and reloads
+after `dotnet build`. In-place updates in Angular need Angular built with Vite
+(`@analogjs/vite-plugin-angular`) and the Translations Vite plugin.
+
 **References of several catalogs.** `configureTranslatedText` takes one
 `resolve`, and a later call replaces an earlier one. When ViewModels send
 references of a library's catalog too, such as a component library's
@@ -3821,7 +3932,7 @@ validation text, resolve them by catalog with the generated transport's
 one of a catalog the page does not list shows its fallback text. One written
 against another release of a catalog is checked key by key: it translates while
 its key and arguments still match, and shows its fallback text otherwise
-([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/transport.md)):
+([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/transport.md)):
 
 ```ts
 import * as appTransport from "virtual:runic-translations/app/transport";
@@ -3842,7 +3953,7 @@ configureTranslatedText({
 With the Vite plugin's `dependencies: "auto"`, the page's copy of a library
 catalog is regenerated with the application's `overrides`, so a reference
 resolves to the same text as in C#
-([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/libraries.md)).
+([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/libraries.md)).
 
 **Right-to-left text.** Since Runic Translations 0.9, a catalog that declares a
 right-to-left locale, such as `ar` or `he`, isolates the placeholders of its
@@ -3853,7 +3964,7 @@ them correctly; compare such text in tests after the runtime's
 in `runic.json` turns it on or off. The runtime's `localeDirection`, passed as
 `direction`, gives `syncDocumentLocale` and `textDirection()` the direction of
 each locale; see
-[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/bidi.md).
+[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/bidi.md).
 
 `syncDocumentLocale()` sets `lang` and `dir` on `<html>` (direction from the
 runtime's `direction`, such as `localeDirection`, else the locale's script) and
@@ -4941,6 +5052,25 @@ one instance. The duration histograms advise buckets from 0.5 ms to 10 s, and
 the size histogram from 256 B to 4 MiB. The queue depth reports the frames
 waiting for slow hosts across all Bridges when it is observed.
 
+**One trace with the page (0.20).** Under `vite dev` with an OTLP export, the
+page's Vite development client gives each Bridge call a W3C trace context, and
+the call's request carries it (Views protocol feature `trace-context/1`). While
+the `ActivitySource` has a listener, the request's first `runic.bridge.*` span
+takes the page's span as its remote parent and has the kind `Server`; the
+ViewModel's own spans, and the `HttpClient` or database spans they start, follow
+it, because model turns run in the `ExecutionContext` of the request that queued
+them. Without a listener, the member is not read. Export with the application's
+own OpenTelemetry setup; [Tracing Bridge calls](../../../docs/tracing.md) shows
+it with a local viewer.
+
+**Handler timing in Development (0.20).** When `DOTNET_ENVIRONMENT`, or else
+`ASPNETCORE_ENVIRONMENT`, is `Development` (`dotnet runic dev` sets it), the
+producer offers `handler-timing/1`: a request from a page whose development tools
+follow its calls asks for its timing, and the reply names the C# handler and
+its duration (`handler: { name, duration }`, such as `EditorViewModel.Save` and
+milliseconds). The Vite development client shows it on the "C# handlers" track
+of the browser's Performance panel. Outside Development, replies never carry it.
+
 ## Incremental generation
 
 The generated C# goes to `runic-bridge/` in the project's `IntermediateOutputPath`
@@ -4969,7 +5099,10 @@ command, `RunicApplicationHost`, `NODE_ENV` and the environment variables named 
 `RunicApplicationFrontendBuildEnvironment` items; only the hash is written, to
 `runic-bridge-frontend.state` in `BaseIntermediateOutputPath` (`obj/` by default). `dist` serves every configuration and target
 framework, so a build whose state differs from the one that last built `dist`
-builds it again, for example Debug after a Release build with other variables. Generated TypeScript is rewritten only when its
+builds it again, for example Debug after a Release build with other variables. An optimized build (`Optimize=true`:
+Release, `dotnet publish`) runs the frontend build with `NODE_ENV=production` unless the environment sets `NODE_ENV`,
+and the build state uses that value, so a Bun-built frontend (`Bun.build`, `bun build`) bundles the production build of
+`@runic-artifex/views` in Release and the development build in Debug. Generated TypeScript is rewritten only when its
 content changes, so C#-only edits skip the frontend build.
 `RunicApplicationFrontendInput` items are the extension point for inputs outside
 the frontend directory, such as workspace packages, shared components imported

@@ -10,6 +10,7 @@ import {
   defaultSelection,
   isValidApplicationId,
   isValidProjectName,
+  optionApplies,
   templateReplacements,
   templateSymbols,
   viewCommand,
@@ -27,11 +28,13 @@ test('picker options are the template choice parameters in order', () => {
     creatorOptions.map((option) => [option.flag, option.defaultValue]),
     [
       ['--frontend', 'react'],
+      ['--angular-build', 'cli'],
       ['--package-manager', 'npm'],
       ['--host', 'desktop'],
       ['--linux-gtk', '3'],
       ['--desktop-server', 'native'],
       ['--view-models', 'reactiveui'],
+      ['--editor', 'none'],
     ],
   );
   assert.ok(
@@ -41,6 +44,33 @@ test('picker options are the template choice parameters in order', () => {
   assert.deepEqual(
     creatorOptions[0].choices.map((choice) => choice.value),
     ['react', 'vue', 'svelte', 'sveltekit', 'angular'],
+  );
+});
+
+test('--angular-build applies to Angular only and --editor none is left out, as in Runic.Create', () => {
+  const angularBuild = creatorOptions.find(
+    (option) => option.symbol === 'angularBuild',
+  );
+  assert.equal(optionApplies(angularBuild, defaultSelection()), false);
+  assert.equal(
+    optionApplies(angularBuild, { ...defaultSelection(), frontend: 'angular' }),
+    true,
+  );
+  assert.equal(
+    creatorCommands('1.2.3', 'MyApp', {
+      ...defaultSelection(),
+      frontend: 'angular',
+      angularBuild: 'vite',
+      editor: 'vscode',
+    }).creator,
+    'dnx Runic.Create@1.2.3 -- MyApp --frontend angular --angular-build vite --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui --editor vscode',
+  );
+  assert.equal(
+    creatorCommands('1.2.3', 'MyApp', {
+      ...defaultSelection(),
+      frontend: 'angular',
+    }).create,
+    'dotnet new runic-app --name MyApp --frontend angular --angular-build cli --package-manager npm --host desktop --linux-gtk 3 --desktop-server native --view-models reactiveui',
   );
 });
 

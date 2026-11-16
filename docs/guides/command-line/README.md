@@ -344,8 +344,8 @@ translates them with a [Translations](../translations/README.md) catalog. It
 ships English and German text for every framework key, including the prompt
 text that Command Line `0.7.0-preview.1` added and the response-file text of
 `0.9.0`, and it looks up your own command descriptions in your catalog.
-The adapter follows each Command Line minor in lockstep: Translations `0.11.0`
-depends on Command Line `[0.13.0, 0.14.0-0.0)`, Translations `0.10.0` on
+The adapter follows each Command Line minor in lockstep: Translations `0.12.0`
+and `0.11.0` depend on Command Line `[0.13.0, 0.14.0-0.0)`, Translations `0.10.0` on
 `[0.12.0, 0.13.0-0.0)`, and Translations `0.9.1` on `[0.9.1, 0.10)`. Command Line `0.10` and `0.11` have no adapter, and a
 mismatched pair fails restore with `NU1608`. Since `0.12.0` the English and
 German framework text (the `runic-command-line` catalog) ships with
@@ -468,7 +468,7 @@ error; an override file in `translations/overrides/runic-command-line/` adds
 that locale.
 
 The
-[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/packages/dotnet/Runic.Translations.CommandLine/README.md)
+[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/packages/dotnet/Runic.Translations.CommandLine/README.md)
 describes the resolver in full.
 
 ## New in 0.13.0

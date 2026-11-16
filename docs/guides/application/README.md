@@ -547,3 +547,66 @@ The
 list everything to check, and the
 [migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/migration-1.0.md#from-018-to-019)
 collects them.
+
+## Upgrading from 0.19 to 0.20
+
+Update every Runic NuGet and npm package to `0.20.0` together
+(`Runic.Application.Views.CsWebUi` to `0.20.0-preview.1`) and rebuild, so the
+generated clients and Bridges regenerate. No application API was removed, and
+the wire protocol is unchanged: the new Views protocol features
+(`trace-context/1`, `handler-timing/1`) are negotiated, so a 0.19 page and a
+0.20 host connect. Check these if they apply:
+
+- **Runic Translations 0.12; Command Line stays at 0.13.**
+  `Runic.Application.Views.Translations` requires Translations
+  `[0.12.0, 0.13.0)`, so move every Translations package, NuGet and npm, to
+  `0.12.0` (see [Upgrading to 0.12.0](../translations/README.md#upgrading-to-0120)).
+  With the Translations Vite plugin 0.12, an edited message updates in place
+  under `dotnet runic dev`, and Runic Inspect marks the page's messages and
+  edits them; an earlier plugin reloads the page and offers no editing.
+- **Bridge warnings fail a build that treats warnings as errors.** The Bridge
+  analyzers now report `RUNICBRIDGE013`, `028`, `031`, `032`, `034`, `039` and
+  `053` as compiler warnings, and the MSBuild warnings of the generator and the
+  Views build targets (`015`, `019`, `020`, `029`, `030`, `033`) are errors
+  too under `TreatWarningsAsErrors`. Fix the declaration, or keep it a warning
+  with `WarningsNotAsErrors` (or hide it with `NoWarn`).
+- **WebKit's remote inspector opens only in Development on Linux.** Outside
+  Development the GTK 3 and GTK 4 hosts remove `WEBKIT_INSPECTOR_SERVER` and
+  `WEBKIT_INSPECTOR_HTTP_SERVER` from the process's environment before their
+  first web view. To inspect a build remotely, run it with
+  `DOTNET_ENVIRONMENT=Development`; see
+  [debugging](guides/debugging.md#the-browsers-developer-tools-per-engine).
+- **Generated clients are two files**: `<view>.ts` and `<view>.contract.d.ts`
+  with a declaration map, so Go to Definition opens the C#. Imports and the
+  built JavaScript are unchanged; commit the new files of a committed generated
+  directory, and a library that emits declarations with `tsc` copies the
+  `.contract.d.ts` files beside them.
+- **Bun bundles the development build of `@runic-artifex/views` by default.**
+  `vite build`, `ng build` and `bun build --production` bundle the production
+  build; pass `--production` to `bun build`, or set `NODE_ENV=production` for a
+  `Bun.build` script, when you build a release page. The Views MSBuild targets
+  run an optimized build's frontend build with `NODE_ENV=production`.
+- **`dotnet runic doctor --format json` gives each check a `helpUri`.** A
+  validator that holds an earlier copy of the
+  `runic.application.tool.doctor/1` schema rejects 0.20's payload; update the
+  copy.
+
+New in `0.20.0`, for development only and absent from production builds: the
+development source map from each Bridge member to its C#, Go to Definition from
+generated clients to the C# handlers, Bridge calls in the browser's Performance
+panel and in the dock, Runic Inspect (with **Edit** for translations), C#
+handler timing and one trace from the page to .NET, an IDE contract and
+`dotnet runic dev --no-window`, launch profiles and an optional VS Code setup
+in the template, and the Bridge analyzers while you type. See
+[debugging an application](guides/debugging.md) and
+[tracing Bridge calls](guides/tracing.md). The template's Vite frontends
+compile their catalog with the Translations Vite plugin, the Angular template
+can build with Vite (`--angular-build vite`), `@runic-artifex/angular` ships in
+the Angular Package Format, and an Angular guest can be shown in trusted
+component mode (experimental, `RUNICDESK103`).
+
+The
+[0.20.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/eng/release/notes/0.20.0.md#upgrading-from-019)
+list everything to check, and the
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/migration-1.0.md#from-019-to-020)
+collects them.

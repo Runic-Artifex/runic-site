@@ -7,8 +7,8 @@ messages. This guide shows the application locale, the translated template,
 Runic's own text in English and German, and how to test the language.
 
 The text itself comes from
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/runic-views.md)
-0.11.0 (SDK `0.18` used 0.10.0, SDK `0.17` 0.9.1). The core Runic packages don't depend on it: without a catalog, nothing
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/runic-views.md)
+0.12.0 (SDK `0.19` used 0.11.0, SDK `0.18` 0.10.0, SDK `0.17` 0.9.1). The core Runic packages don't depend on it: without a catalog, nothing
 changes, and Runic's own text stays English.
 
 ## Start from the template

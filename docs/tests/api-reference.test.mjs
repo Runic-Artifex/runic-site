@@ -130,7 +130,9 @@ test('API inputs and rendered pages stay within their size budgets', () => {
       assert.ok(bytes.length <= 256 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 9.75 MiB since 0.19.0, which needs about 9.57 MiB; 9.5 MiB since 0.18.0,
+  // 10 MiB since 0.20.0, whose Bridge analyzers, development source map,
+  // handler timing, trace context and Angular component mode need about
+  // 9.80 MiB; 9.75 MiB since 0.19.0, which needed about 9.57 MiB; 9.5 MiB since 0.18.0,
   // which needs about 9.38 MiB; 9.25 MiB since 0.17.0,
   // which needs about 8.96 MiB; 8.75 MiB since the
   // about 300 functions, constants and type aliases of the
@@ -138,7 +140,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // since 0.16.0, 6 MiB since 0.15.0, 5.75 MiB since 0.14.0, 5.5 MiB since
   // 0.13.0 and 5.25 MiB since the platform services of 0.11.0.
   assert.ok(
-    compressed <= 9.75 * 1024 * 1024,
+    compressed <= 10 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });

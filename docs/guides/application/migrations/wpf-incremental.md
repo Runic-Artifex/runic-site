@@ -8,7 +8,7 @@ Application SDK `0.12.0` and independently versioned Translations
 ## 1. Start with independent products
 
 Localization can move one screen at a time. Follow the
-[Translations WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
+[Translations WPF quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/packages/dotnet/Runic.Translations.Wpf/README.md#wpf-quick-start)
 to add `Runic.Translations.Wpf` and build integration, author an RMF2 catalog,
 and supply a `TranslationSource` over the generated `text.Messages` surface.
 `{rt:Message}` binds plain messages; `TranslationProperties.RichMessage` renders
