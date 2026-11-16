@@ -1,0 +1,18 @@
+version: 2
+
+# Security updates only. Both projects are managed by Bun, and Dependabot's
+# default npm updater cannot update bun.lock, so it needs the bun ecosystem
+# configured here. A pull request limit of 0 turns off version updates;
+# security updates are not affected by this limit.
+updates:
+  - package-ecosystem: "bun"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
+
+  - package-ecosystem: "bun"
+    directory: "/docs"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 0
