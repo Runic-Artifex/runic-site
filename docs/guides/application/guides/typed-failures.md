@@ -132,7 +132,7 @@ The command resolves a `BridgeOutcome`, `{ ok: true, value }` with the new
 state or `{ ok: false, failure }`, and its operation carries the failure type:
 
 <!-- prettier-ignore -->
-```ts docs-test=source:examples/notes-view-first/Frontend/src/generated/editor.ts
+```ts docs-test=source:examples/notes-view-first/Frontend/src/generated/editor.contract.d.ts
   /** Saves the note. A missing title, or the title of another saved note, is a declared failure. */
   save(): Promise<BridgeOutcome<EditorState, SaveFailure>>;
   // ...

@@ -289,8 +289,8 @@ controllers in [Framework bindings](#framework-bindings).
 | `@runic-artifex/views/generated/mock` | Generated `*.mock.ts` files: `mockTypedView` and its spec types |
 | `@runic-artifex/views/experimental` | Experimental APIs ([docs/experimental.md](../../../docs/experimental.md#npm-packages)): [hosted regions](#hosted-regions-experimental), `onBridgeDraining` |
 
-Every entry has `types`, `import` and `default` conditions; the package is ESM
-only. Application code imports the root entry and `/mock`. The `/experimental`
+Every entry has `types`, `development`, `import` and `default` conditions (see
+[Development build](#development-build)); the package is ESM only. Application code imports the root entry and `/mock`. The `/experimental`
 entry holds APIs that may change in a minor release; importing it is the opt-in.
 The `/experimental` entry of 0.9 was removed in 0.10, when its APIs graduated to
 the root entry, and 0.18 added it again for hosted regions. The
@@ -306,6 +306,54 @@ collection runtimes to `connectView` only when its ViewModel has them, and
 imports the decoders as a namespace, so a bundler leaves out the protocol code
 and decoders a View does not use. `bun run size` in this package prints the
 minified and gzip size of the checked-in example clients.
+
+### Development build
+
+The package has two builds of every entry, with one set of type declarations
+(since 0.20). The **development build** (`dist/development/`, the `development`
+export condition) has the development tools that would otherwise run on every
+page: [Bridge-call reports and async stack tagging](#bridge-calls-in-the-browsers-developer-tools),
+with the C# handler timing and trace context that a followed call asks for and
+carries (the Views protocol features `handler-timing/1` and `trace-context/1`),
+and the Runic Translations [text channel](#translated-text) that updates an
+edited message in place. The **production build** (`dist/`, the `import` and
+`default` conditions) leaves them out: a production bundle contains no
+call-reporting code, tags no call, creates no global for them, and its `hello`
+lists neither feature, so no request carries their members. Everything
+else, including the development state inspector that Runic Inspect reads, is
+the same in both.
+
+> [!IMPORTANT]
+> **Bun bundles the development build by default.** `bun build` and `Bun.build`
+> resolve the `development` condition unless the build runs with `--production`
+> or `NODE_ENV=production`. Build a release page with `bun build --production`,
+> or with `NODE_ENV=production` for a `Bun.build` script. Otherwise the page
+> ships the development tools (they stay idle without a reader, but cost the
+> bundle size and a property read per call). The Views MSBuild targets run the
+> frontend build of an optimized build (`dotnet build -c Release`,
+> `dotnet publish`) with `NODE_ENV=production` unless the environment sets
+> `NODE_ENV`, so a Bun-built frontend of a Runic application gets the production
+> build there and the development build in Debug.
+
+| Tool | Resolves the development build |
+| --- | --- |
+| Vite | In `vite dev` and Vitest. Vite adds `development` unless `NODE_ENV` is `production`, which `vite build` sets when it is unset: a `vite build` with `NODE_ENV=development` (or `test`) bundles the development build, as it bundles React's. |
+| Angular CLI | In `ng serve` and any build without script optimization (`"optimization": false`); `ng build` with the default production configuration resolves the production build. |
+| Bun | **`bun build` and `Bun.build`, unless `--production` or `NODE_ENV=production`**: pass `--production` (or set `NODE_ENV=production`) for a release build. The Bun runtime (`bun run`, `bun test`) does not; opt in with `bun --conditions development …`. |
+| Node.js | With `node --conditions=development`. |
+| esbuild | With `--conditions=development` (`conditions: ["development"]`). |
+| Rollup | With `exportConditions: ["development"]` in `@rollup/plugin-node-resolve`. |
+| webpack 5 | In `mode: "development"`; `mode: "production"` resolves the production build. |
+
+A framework binding (`@runic-artifex/react`, `/vue`, `/svelte`, `/sveltekit`,
+`/angular`, `@runic-artifex/views-effect`, `@runic-artifex/views-translations`)
+imports this package by name, so the application's bundler resolves the same
+build for the binding as for the generated clients. A page that loads both
+builds, for example through a library that bundled one of them, still has one
+runtime: the builds share their state through the
+[shared globals](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/application/README.md#shared-globals)
+like any two copies of the package, and only the development build reports
+calls.
 
 ## Incremental collections
 
@@ -1365,6 +1413,12 @@ The [CommunityToolkit Notes example](https://github.com/Runic-Artifex/runic-sdk/
 tests its frontend this way with `bun test`; any runner that loads ES modules,
 such as Vitest, works the same.
 
+Vitest resolves the [development build](#development-build), like `vite dev`;
+`node --test` and `bun test` resolve the production build unless they run with
+`--conditions development` (`bun --conditions development test`). A page test
+behaves the same with either: the development tools act only while a reader of
+the Bridge-call channel or the Translations text channel is on the page.
+
 ### Typing in tests
 
 With the default mock, replies arrive before the next key, so a test that types
@@ -1577,6 +1631,111 @@ View is expected around every navigation, so its `released` rejection reaches
 the caller but is not reported as a diagnostic; `onBridgeConnection` reports a
 lost host.
 
+### Bridge calls in the browser's developer tools
+
+During development (since 0.20), each call a generated client makes can be followed in the browser. It needs a
+reader of the development **Bridge-call channel**; the development client of
+[`@runic-artifex/vite-plugin-runic`](../vite-plugin-runic/README.md) is one, so under `vite dev` and
+`dotnet runic dev` it is on without code in the application. While a reader listens:
+
+- **Every engine** (WebView2, WKWebView, WebKitGTK, installed browsers): this package reports each call to the reader,
+  which the development tools build on.
+- **Async stacks** (V8: Chrome, Edge, WebView2): each call runs in a `console.createTask` task, so a breakpoint in what
+  runs after the reply, such as a state subscriber or the code after `await editor.save()`, shows a
+  `Runic command EditorViewModel.save` segment in the call stack that leads to the click handler that made the call,
+  even though the reply arrived on a transport callback.
+- **Performance panel** (Chromium engines): the Vite development client draws each settled call on a **Bridge calls**
+  track in a **Runic** track group of a Performance recording (turn on "Show custom tracks" in the recording
+  settings). An entry is named `<C# view model>.<member> #<id>`, such as `EditorViewModel.save #3`, spans the call
+  until the client's state includes its effects, has the panel's `primary` colour when it succeeded, `error` when it
+  failed and `tertiary` when nothing ran for it (`cancelled`), and lists the request kind, route, View contract, id,
+  outcome and the reply's revision. WebKit and Gecko have no custom tracks; they keep at most a plain measure.
+- **C# handler timing** (every engine, drawn in Chromium; [development build](#development-build) only): a .NET host
+  in Development (`dotnet runic dev`) names the C# handler of each call and how long it ran (Views protocol feature
+  `handler-timing/1`). The Vite client adds it to the call's entry and draws it on a **C# handlers** track below the
+  calls.
+- **One trace with .NET** (every engine; [development build](#development-build) only): when the Vite development
+  server exports traces over OTLP, the Vite client gives each call a W3C trace context, which the call's requests carry to .NET (`trace-context/1`). The .NET
+  `runic.bridge.*` span and the ViewModel's own spans then belong to the page's span for the call, which the
+  development server exports. [Tracing Bridge calls](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/tracing.md)
+  sets it up with a local viewer.
+
+The channel is `globalThis[Symbol.for("runic.views.calls")]` (one per [Runic instance](#runic-instances), in its
+slots; see the [shared globals](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/application/README.md#shared-globals)):
+`{ listeners, requested, devtools?, sequence?, trace? }`. A reader creates it if absent, adds a function to the
+`listeners` `Set` and sets `requested: true`. `devtools: false` keeps the reports without developer tools integration:
+no async stack tasks, and the Vite client draws no track. `trace`, a function that returns a `BridgeCallTrace`
+(`{ traceparent, tracestate? }`), is set by a reader that exports traces: each call takes its trace context from it, and
+without it no trace context is created or sent. Each call is reported twice, as a `BridgeCallEvent` (exported as a
+type):
+
+| Field | Meaning |
+| --- | --- |
+| `phase` | `start`, delivered synchronously in the caller's stack (a listener can read the DOM event that caused it); `end`, once the call settled. |
+| `id` | A client-local number, increasing per channel. It is not sent to .NET: correlate with .NET through `revision`. |
+| `kind` | `command` (also with a declared failure), `set`, `write` (checked field), `can`, `region`, `operation` (start or recovery of a long-running command, not its later status), `query` (a query collection's `query-set`, `query-rows` or `query-index`). |
+| `request` | The wire request kind, such as `command`, `set`, `start`, `query-rows`. |
+| `route`, `contract`, `member` | The View route, its contract (`{C# view model}:{fingerprint}`) and the member's wire name. |
+| `start`, `end`, `duration` | `performance.now()` milliseconds; `end` and `duration` on `end` only. |
+| `outcome` | `ok`, `error` (rejected, or a command answered with its declared failure) or `cancelled` (nothing ran for it, or its answer no longer applies). |
+| `reason` | Refines the outcome: `released` for `ok` (the call ran, and .NET released its View, as in a navigation); `superseded` (nothing ran), `released` (the View was released before the call) or `aborted` for `cancelled`; the reply's reason or the `BridgeError` kind, such as `domain-failed` or `failed`, for `error`. |
+| `revision` | The reply's revision: the frames with it carry the call's effects. |
+| `error` | The error the call rejected with. |
+| `trace` | The call's `BridgeCallTrace`, on both events, when the reader's `trace` gave one. |
+| `handler` | On `end`, a `BridgeCallHandler` when a .NET host in Development named the call's handler: `name` (such as `EditorViewModel.Save`), `duration` (milliseconds, measured in .NET), and `start` and `end` on the page's clock, centred between sending the request and receiving its reply. |
+
+While a reader listens, the call's requests ask for the handler's timing and carry its trace context, but only on a
+connection whose .NET host implements the features (a 0.19 host gets the requests it always got), and only a host in
+Development answers with the timing. A listener ignores phases and fields it does not know. A listener that throws is reported with
+`console.error` and does not affect the call. Without a reader, a call costs one property read: no event, timestamp
+or task is created. Only the [development build](#development-build) of this package reports calls, which `vite dev`
+resolves: a production bundle contains no call-reporting code and does not read the channel, even when a reader set
+it.
+
+Without the Vite plugin, for example in a page served by `dotnet run` whose frontend was bundled with the development
+build, a reader attached before the first call can draw the track itself:
+
+```ts
+import type { BridgeCallEvent } from "@runic-artifex/views";
+
+const channel = ((globalThis as any)[Symbol.for("runic.views.calls")] ??= { listeners: new Set() });
+channel.listeners.add((event: BridgeCallEvent) => {
+  if (event.phase !== "end") return;
+  performance.measure(`${event.member} #${event.id}`, {
+    start: event.start, end: event.end,
+    detail: { devtools: { dataType: "track-entry", track: "Bridge calls", trackGroup: "Runic" } },
+  });
+});
+channel.requested = true;
+```
+
+### Runic Inspect
+
+Under `vite dev` and `dotnet runic dev`, press **Alt+Shift+X** in the page to
+turn on **Runic Inspect**, the select mode of the
+[`@runic-artifex/vite-plugin-runic`](../vite-plugin-runic/README.md#runic-inspect)
+development client, and click an element: an overview shows its framework
+component, the ViewModel members it binds with their current values and C#
+members, the commands it calls with their C# handlers, its recent Bridge
+calls with their timing, the texts its ViewModel sent as text references, and
+the messages of generated `m.*()` calls it shows with their `.rmf2` lines, each
+with an "open in editor" link. Message keys need Runic Translations' Vite plugin
+0.12, which marks message text only while select mode is on; `configureTranslatedText`
+follows its text-change channel, so the page renders again with and without the
+markers. **Edit** next to a message edits its MF2 source in every locale and
+saves it to the `.rmf2`/`.mf2` file; the page shows the new text in place. The
+selecting click does not reach the
+page's handlers. `globalThis[Symbol.for("runic.vite.inspect")].describe(element)`
+returns the same overview as data, for agents and tests.
+
+It is built on this package's development channels and needs no code in the
+application: the Bridge-call channel above (an element's commands and setters
+are learned from the calls it makes; a button's command is also found in its
+component's source before its first use), the state inspector
+(`runic.views.inspector`) for the values and text references, and the
+development source map for the C# locations. It
+works in every engine, and production builds contain none of it.
+
 ## Translated text
 
 Text that a ViewModel produces as a Runic Translations text reference, such as a
@@ -1631,7 +1790,15 @@ packages wrap this as `useText` (React, Vue, Svelte), `injectText` and the
 `runicText` pipe (Angular) and `texts` (Effect). A template that calls the
 page's own `m.*()` renders again on a switch when the locale resolver reads
 the framework's text locale: `useTextLocale` (React, Vue, Svelte),
-`textLocaleSignal` (Angular) or the `textLocales()` stream (Effect). The mock bridge's
+`textLocaleSignal` (Angular) or the `textLocales()` stream (Effect). In `vite dev`
+with the Translations Vite plugin 0.12.0 or later, an edited message updates in
+place: `configureTranslatedText` follows the plugin's text-change channel
+(`Symbol.for("runic.translations.text")`, which only the [development build](#development-build) creates or reads)
+and renders the text
+again as a switch does, with the page's state kept; an added, removed or renamed
+message, changed inputs or markup still reload the page
+([Edited messages in `vite dev`](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#translated-text)).
+The mock bridge's
 `setWindowLocale(locale)` pushes a locale in page tests. Every `hello` also
 reports the browser's `navigator.languages` (`client-languages/1`, a .NET host
 of 0.17 or later), so the application can choose the window's language from
@@ -1829,6 +1996,11 @@ const mount: RunicComponentMount = ({ container, instance }) => {
 };
 export default mount;
 ```
+
+An Angular guest's entry exports `runicComponentMount(App)` from
+`@runic-artifex/angular/experimental`, which starts an Angular application per
+element and keeps Angular's component styles in the shadow root
+([Angular components](../angular/README.md#components-experimental)).
 
 Each element has an open shadow root with the bundle's CSS as constructable
 stylesheets, and its own instance on the Bridge it is connected with

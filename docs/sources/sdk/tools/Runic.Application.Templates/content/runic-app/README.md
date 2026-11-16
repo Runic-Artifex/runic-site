@@ -40,6 +40,120 @@ the frontend's lock file; a restore that would resolve a different package
 fails until you restore again on purpose, for example with
 `dotnet restore --force-evaluate` after changing a package reference.
 
+## The Vite DevTools dock
+
+<!--#if (angularCli) -->
+The Angular CLI runs no Vite plugins, so this project has no Vite DevTools
+dock. A project created with `--angular-build vite` builds with Vite and has
+it on by default: its Runic panel lists each Bridge call with the C# handler
+that ran and opens it in your editor. Here, Views failures with their .NET
+stack appear in the `ng serve` output (see `Frontend/proxy.conf.mjs` below),
+and the browser's own developer tools (F12, or right-click ▸ Inspect, in
+Development) work as with any page.
+<!--#else -->
+Under `dotnet runic dev` the page shows the Vite DevTools dock, a small bar at
+the edge of the window (`DevTools()` in `Frontend/vite.config.ts`). Its
+**Runic** panel lists each call the page makes to the .NET Window, with the C#
+that ran for it and how long it took:
+
+<!--#if (viewModels == "toolkit") -->
+```text
+command CounterViewModel.increment → Increment() 4 ms
+```
+
+The row's **Open** button opens that `[RelayCommand]` method in your editor.
+<!--#else -->
+```text
+command CounterViewModel.increment → IncrementCommand 4 ms
+```
+
+The row's **Open** button opens the line that creates that command in your
+editor.
+<!--#endif -->
+The editor is the one `LAUNCH_EDITOR` names, else a running VS Code, Rider or
+other editor that Vite recognizes. A failed call shows its .NET stack with a
+button for each frame in your ViewModels. The panel also shows the
+connection, each View's state and the last failure. The first time you open the dock it asks for the one-time code
+that Vite DevTools prints in the `dotnet runic dev` output. The dock is not
+the browser's own developer tools (F12, or right-click ▸ Inspect, in
+Development), which work as with any page.
+
+The dock is for development only: `vite build`, and so `dotnet build`,
+`dotnet publish` and the packaged application, leave it out. To turn it off,
+delete the `DevTools(),` line from `Frontend/vite.config.ts`, and if you like
+`@vitejs/devtools` from the `devDependencies` of `Frontend/package.json`.
+<!--#endif -->
+
+## Debug it in your IDE
+
+`Properties/launchSettings.json` has the project's launch profiles. Visual
+Studio and Rider list them next to their Start button, and `dotnet run` uses
+the first one:
+
+| Profile | What it starts |
+| --- | --- |
+| `RunicWindowApp` | The Window with `DOTNET_ENVIRONMENT=Development`: the browser's developer tools on the page (F12 or Inspect) and detailed Bridge errors. |
+<!--#if (desktopHost) -->
+| `RunicWindowApp (WebView2 script debugging)` | Windows: the same, with WebView2's DevTools Protocol on port 9222 (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, which WebView2 adds to Runic Desktop's own browser arguments), and in Visual Studio its JavaScript debugger on the page together with the .NET debugger (`jsWebView2Debugging`). WebView2 ignores the variable while the Window runs elevated (Runtime 150 and later), for example under an IDE started as administrator; start the IDE without elevation. |
+<!--#endif -->
+
+To debug the C# code while the page comes live from the
+__DEVELOPMENT_SERVER_NAME__ development server:
+
+1. Run `dotnet runic dev --no-window` in a terminal. It serves only the
+   frontend and prints `[dev] Ready` when the page can load.
+2. Start the `RunicWindowApp` profile with the debugger (F5). The IDE's build
+   keeps the development page that `dev` wrote, so frontend edits appear in
+   the Window while you debug. Apply C# edits with the IDE's Hot Reload, and
+   restart the Window after a change Hot Reload cannot apply, such as a new
+   ViewModel member.
+
+Without step 1, F5 builds the production frontend and the Window shows that.
+In Rider, you can add `dotnet runic dev --no-window` to the run configuration's
+"Before launch" list as an external tool.
+
+To keep `dotnet runic dev` starting the Window instead, attach the IDE's
+debugger to the process that `[dev] Window started: process <pid>` names. That
+debugger ends when `dotnet watch` restarts the Window after a C# edit.
+
+<!--#if (editor == "vscode") -->
+### VS Code
+
+`.vscode/` (`--editor vscode`) has tasks and debug configurations for the C#
+extension (`ms-dotnettools.csharp`), which `extensions.json` recommends; C# Dev
+Kit is not needed. Choose a configuration in Run and Debug:
+
+| Configuration | What it does |
+| --- | --- |
+| `Window` | Runs the `runic: dev --no-window` task until `[dev] Ready`, builds, and starts the Window under the debugger: the steps above. |
+| `Attach to the Window (dotnet runic dev)` | Runs the `runic: dev` task and attaches to the Window process you pick, the one `[dev] Window started: process <pid>` names. |
+<!--#if (desktopHost) -->
+| `Window + WebView2 (Windows)` | Windows: starts the Window with WebView2's DevTools Protocol on port 9222 and attaches VS Code's JavaScript debugger to the page (`msedge` with `useWebView`), so breakpoints in `Frontend/src` stop too. Elevated Windows get no port, as for the launch profile. |
+<!--#endif -->
+
+The tasks (Terminal > Run Task) are `runic: dev`, `runic: dev --no-window`,
+`build` and `runic: doctor`. Failures of `dotnet runic dev` (its `RAPPDEV` codes)
+and build errors appear in the Problems panel. The `dev` tasks keep running
+after a debug session ends, so the next F5 starts faster; stop them with
+Terminal > Terminate Task. The launch configurations start the build output in
+`bin/Debug/`, which on macOS is not the development bundle that `dotnet run`
+and `dotnet runic dev` start. VS Code builds from other vendors, such as
+VSCodium, cannot run Microsoft's .NET debugger; use netcoredbg there.
+
+<!--#else -->
+`dotnet new runic-app --editor vscode` adds VS Code tasks and debug
+configurations for these steps to a new project.
+
+<!--#endif -->
+The [IDE contract](https://github.com/Runic-Artifex/runic-sdk/blob/v__RUNIC_NUGET_VERSION__/tools/dotnet-runic/README.md#ide-contract)
+describes the lines and the `obj/runic/dev-session.json` file that tasks and
+extensions read.
+<!--#if (desktopHost) -->
+On Linux and macOS the page's engine has its own inspector in Development
+(WebKit's on Linux, Safari's Web Inspector on macOS) but no DevTools Protocol
+endpoint, so IDE JavaScript debuggers attach only on Windows.
+<!--#endif -->
+
 ## What opens
 
 `RunAsync` in `Program.cs` opens `WorkspaceWindow` with
@@ -94,6 +208,8 @@ hash, and the browser enforces both policies. The policy in `Program.cs` also
 allows the style attribute of SvelteKit's route announcer by its hash
 (`style-src-attr`); update that hash when an update of `@sveltejs/kit` changes
 the announcer.
+<!--#elif (angularVite) -->
+The policy allows inline styles, which Angular adds for component styles.
 <!--#elif (frontend == "angular") -->
 The policy allows inline styles, which Angular adds for component styles, and
 `angular.json` turns off critical-CSS inlining, which would need an inline
@@ -115,7 +231,7 @@ the template's default Runic Desktop host (create the project without
 The page names no host: `Frontend/src/app.html`, SvelteKit's page template,
 loads `webui.js` and `runic-views.js`, which the host package copies into
 `www/` from its own Views client.
-<!--#elif (frontend == "angular") -->
+<!--#elif (angularCli) -->
 The page names no host: `Frontend/src/index.html` loads `webui.js` and
 `runic-views.js`, which the host package copies into `www/` from its own
 Views client.
@@ -155,6 +271,55 @@ clipboard on the default Runic Desktop host (create the project without
 [Runic.Application.Views.Desktop guide](https://github.com/Runic-Artifex/runic-sdk/blob/v__RUNIC_NUGET_VERSION__/packages/dotnet/Runic.Application.Views.Desktop/README.md).
 <!--#endif -->
 
+<!--#if (angularVite) -->
+## The Angular build
+
+Vite builds, serves and tests this Angular frontend, through the Analog
+Angular plugin (`@analogjs/vite-plugin-angular`), with the Runic Vite plugin
+the other frontends use. The project was created with `--angular-build vite`;
+the template's default is the Angular CLI. What Vite adds:
+
+<!--#if (translations) -->
+- **The Translations development loop**: `runicTranslations()` compiles the
+  catalog, and a message you edit, add or remove under `dotnet runic dev`
+  reaches the page without a build. See [Translate it](#translate-it).
+<!--#else -->
+- **The Translations development loop**: with the
+  [Translations Vite plugin](https://github.com/Runic-Artifex/runic-translations-sdk/tree/v0.12.0/packages/web/vite-plugin-runic-translations)
+  (`dotnet new runic-app --frontend angular --angular-build vite --translations`
+  sets it up), a message you edit under `dotnet runic dev` reaches the page
+  without a build.
+<!--#endif -->
+- **The Vite DevTools dock**: `runic()` adds the Runic development client to
+  the page while Vite serves it, and `DevTools()` the dock with its Runic
+  panel ([The Vite DevTools dock](#the-vite-devtools-dock)).
+- **The component build target**: `runic({ component: { entry: "src/component.ts" } })`
+  also builds the page as a component for trusted component mode
+  ([Component build target](https://github.com/Runic-Artifex/runic-sdk/blob/v__RUNIC_NUGET_VERSION__/packages/web/vite-plugin-runic/README.md#component-build-target)).
+  The Angular CLI cannot build one. A component touches no document
+  stylesheet, so its Angular components must keep their styles out of the
+  document's head, for example with `ViewEncapsulation.ShadowDom`.
+
+`angular({ liveReload: true })` updates an edited component template in place;
+other edits reload the page, which shows the state of the .NET Window again.
+`vite build` compiles the components ahead of time but checks no types, so the
+`build` and `typecheck` scripts run `ngc --noEmit` with `tsconfig.app.json`,
+templates included (`strictTemplates`). The frontend test runs on Vitest with
+the same plugin instead of `ng test`. The Analog plugin is a third-party
+package that uses the Angular compiler's internal API: update Angular and
+`@analogjs/vite-plugin-angular` together, to versions that support each other.
+
+<!--#elif (angularCli) -->
+## The Angular build
+
+The Angular CLI builds, serves and tests this Angular frontend (`ng build`,
+`ng serve`, `ng test`). It runs no Vite plugins, so `proxy.conf.mjs` and
+`src/main.ts` connect the Runic development tools instead. A project created
+with `--angular-build vite` builds with Vite and the Analog Angular plugin
+instead, and adds the Translations development loop, the Vite DevTools dock
+and the component build target.
+
+<!--#endif -->
 ## Project layout
 
 | Path | Purpose |
@@ -173,7 +338,15 @@ clipboard on the default Runic Desktop host (create the project without
 | `ApplicationIdentity.cs` | The application ID and name from the project file. |
 <!--#endif -->
 <!--#if (translations) -->
-| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The build generates `AppText` for C# and the page's ESM in `Frontend/.runic/translations`. See [Translate it](#translate-it). |
+<!--#if (translationsVitePlugin) -->
+| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The .NET build generates `AppText` for C#, and `runicTranslations()` in `Frontend/vite.config.ts` compiles the page's modules into `Frontend/.runic/translations`. See [Translate it](#translate-it). |
+<!--#else -->
+| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The build generates `AppText` for C# and the page's ESM in `Frontend/.runic/translations`. See [Translate it](#translate-it). |
+<!--#endif -->
+<!--#endif -->
+| `Properties/launchSettings.json` | Launch profiles for Visual Studio, Rider and `dotnet run`. See [Debug it in your IDE](#debug-it-in-your-ide). |
+<!--#if (editor == "vscode") -->
+| `.vscode/` | VS Code tasks for `dotnet runic dev`, debug configurations and the recommended extensions. See [VS Code](#vs-code). |
 <!--#endif -->
 | `icons/` | The application's placeholder icon: `icon.svg`, `icon.png` (512 px) and `icon.ico` (16 to 256 px). |
 <!--#if (packaging) -->
@@ -193,14 +366,18 @@ clipboard on the default Runic Desktop host (create the project without
 | `Frontend/src/App.tsx`, `Frontend/src/pages` | Connect generated clients with `useView` from `@runic-artifex/react` and render the page that `WorkspaceViewModel.Main` selects. |
 <!--#endif -->
 <!--#if (frontend == "sveltekit") -->
-| `Frontend/vite.config.ts` | Configures SvelteKit with `runicAdapter()` from `@runic-artifex/sveltekit`, which prerenders the page into `Frontend/dist`, the folder the build copies to `www/`. SvelteKit writes relative URLs, so the page runs below any path. `runic({ html: false })` from `@runic-artifex/vite-plugin-runic` serves the Runic development client that `src/hooks.client.ts` loads, and lets `dotnet runic dev` confirm that the development server on its port is the one it started. To add its Runic DevTools dock, install `@vitejs/devtools` and register `DevTools()`. |
+| `Frontend/vite.config.ts` | Configures SvelteKit with `runicAdapter()` from `@runic-artifex/sveltekit`, which prerenders the page into `Frontend/dist`, the folder the build copies to `www/`. SvelteKit writes relative URLs, so the page runs below any path. `runic({ html: false })` from `@runic-artifex/vite-plugin-runic` serves the Runic development client that `src/hooks.client.ts` loads, which also loads the Vite DevTools dock that `DevTools()` adds ([The Vite DevTools dock](#the-vite-devtools-dock)), and lets `dotnet runic dev` confirm that the development server on its port is the one it started. |
+<!--#elif (angularVite) -->
+| `Frontend/vite.config.ts` | Builds and serves the page with Vite: `angular()` from `@analogjs/vite-plugin-angular` compiles the components ahead of time, and `runic()` from `@runic-artifex/vite-plugin-runic` adds the Runic development client and lets `dotnet runic dev` confirm that the development server on its port is the one it started, and `DevTools()` the Vite DevTools dock. See [The Angular build](#the-angular-build). |
 <!--#elif (frontend == "angular") -->
 | `Frontend/proxy.conf.mjs` | The development server's proxy configuration (`proxyConfig` in `angular.json`). `runicDevSessionProxy()` from `@runic-artifex/vite-plugin-runic` lets `dotnet runic dev` confirm that the development server on its port is the one it started, and receives the reports of the Runic development client, which `src/main.ts` loads under `ng serve` only: Views failures, with their exception type, message and stack, appear in the `ng serve` terminal. Add your own proxy entries next to it. |
 <!--#else -->
-| `Frontend/vite.config.ts` | Adds `runic()` from `@runic-artifex/vite-plugin-runic` for Runic development diagnostics, and so that `dotnet runic dev` can confirm that the development server on its port is the one it started. To add its Runic DevTools dock, install `@vitejs/devtools` and register `DevTools()`. |
+| `Frontend/vite.config.ts` | Adds `runic()` from `@runic-artifex/vite-plugin-runic` for Runic development diagnostics, and so that `dotnet runic dev` can confirm that the development server on its port is the one it started, and `DevTools()` from `@vitejs/devtools` for the Vite DevTools dock ([The Vite DevTools dock](#the-vite-devtools-dock)). |
 <!--#endif -->
 | `Frontend/src/generated` | Typed clients generated from the ViewModels, and a typed mock for each (`*.mock.ts`). They import the shared `@runic-artifex/views` runtime. |
-<!--#if (frontend == "angular") -->
+<!--#if (angularVite) -->
+| `Frontend/src/app/app.spec.ts`, `Frontend/vitest.config.ts` | A frontend test: Vitest runs the page against the generated mocks, with the Vite configuration; `src/test-setup.ts` starts Angular's test environment. See [Test it](#test-it). |
+<!--#elif (frontend == "angular") -->
 | `Frontend/src/app/app.spec.ts` | A frontend test: `ng test` runs the page with Vitest against the generated mocks. See [Test it](#test-it). |
 <!--#elif (frontend == "sveltekit") -->
 | `Frontend/src/routes/page.test.ts`, `Frontend/vitest.config.ts` | A frontend test: Vitest runs the page against the generated mocks, with the Vite configuration and Svelte's browser build. See [Test it](#test-it). |
@@ -220,11 +397,18 @@ The generated clients are not committed: `.gitignore` excludes
 `Frontend/src/generated`, and `dotnet build` or `dotnet runic dev` writes
 them again. Until the first build, your editor and
 `__PACKAGE_MANAGER_NAME__ run typecheck` report the missing modules.
-<!--#if (translations) -->
+<!--#if (translationsVitePlugin) -->
+The page's Runic Translations modules and their types are not committed either:
+`.gitignore` excludes `Frontend/.runic`, which the Translations Vite plugin
+writes from the catalog whenever Vite runs (`dotnet build`, `dotnet runic dev`,
+the frontend's `build` script and its test). The `build` script runs
+`vite build` before the type check, so they exist when the check runs on a
+clean checkout.
+<!--#elif (translations) -->
 The page's Runic Translations modules are not committed either: `.gitignore`
 excludes `Frontend/.runic`, and `dotnet build` writes them from the catalog, so
 build once before the type check or the frontend test.
-<!--#elif (frontend != "angular") -->
+<!--#elif (!angularCli) -->
 The frontend's `build` script runs `vite build` before the type check, so
 modules that a Vite plugin generates exist when the check runs on a clean
 checkout.
@@ -256,16 +440,32 @@ the page and C# share; `dotnet build` checks every translation on both sides.
   across starts, save it and pass it to `StartLanguageAsync`.
 - **Try a language** without changing your system: `RUNIC_LOCALE=de dotnet runic dev`.
 
+<!--#if (translationsVitePlugin) -->
+To add a language, add it to `locales` in `runic.json`, then copy `en.rmf2`
+to `<locale>.rmf2` and translate it. The page imports the catalog as
+`virtual:runic-translations/app` from the
+[Translations Vite plugin](https://github.com/Runic-Artifex/runic-translations-sdk/tree/v0.12.0/packages/web/vite-plugin-runic-translations),
+`runicTranslations()` in `Frontend/vite.config.ts`. It compiles the catalog
+with the `dotnet-runic-translations` tool of `.config/dotnet-tools.json`
+(`dotnet tool restore` installs it), the release that generates `AppText`, so
+the page and C# read the same catalog. Under `dotnet runic dev` the Vite
+development server compiles a message you edit, add or remove again, and the
+page shows it without a build (for now by reloading). C# reads the change,
+and the application offers a new language, after the next build or a restart
+of `dotnet runic dev`.
+<!--#else -->
 To add a language, add it to `locales` in `runic.json`, then copy `en.rmf2`
 to `<locale>.rmf2` and translate it; the page's language list shows it after
 the next build. The page imports the catalog from `Frontend/.runic/translations`,
 which the .NET build writes with the `dotnet-runic-translations` tool of
-`.config/dotnet-tools.json` (`dotnet tool restore` installs it), rather than
-through the Translations Vite plugin: after you edit a message, build again
-(`dotnet build`, or restart `dotnet runic dev`) to update the page; `vite dev`
-does not reload messages. Native text such as menus, a tray icon and dialogs
+`.config/dotnet-tools.json` (`dotnet tool restore` installs it). The Angular
+CLI runs no Vite plugins, so after you edit a message, build again
+(`dotnet build`, or restart `dotnet runic dev`) to update the page; `ng serve`
+does not reload messages.
+<!--#endif -->
+Native text such as menus, a tray icon and dialogs
 formats from the same catalog in C#: `new AppText(translations).Messages`.
-See [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.11.0/docs/guides/translations/runic-views.md).
+See [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/docs/guides/translations/runic-views.md).
 
 <!--#endif -->
 ## Test it

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.19.0",
+  "version": "0.20.0",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "b407196c31a626627bb86452d09460cb4cc4bc7f",
@@ -99,7 +99,7 @@
     },
     {
       "name": "Runic.Application.Views.CsWebUi",
-      "version": "0.19.0-preview.1",
+      "version": "0.20.0-preview.1",
       "project": "packages/dotnet/Runic.Application.Views.CsWebUi/Runic.Application.Views.CsWebUi.csproj"
     },
     {
@@ -305,6 +305,8 @@
       ],
       "paths": [
         "packages/dotnet/Runic.Application.Views",
+        "packages/dotnet/Runic.Application.Views.Analyzers",
+        "packages/dotnet/Runic.Application.Views.Analyzers.CodeFixes",
         "packages/dotnet/Runic.Application.Testing",
         "packages/dotnet/Runic.Application.Views.ReactiveUI",
         "packages/dotnet/Runic.Application.Views.ReactiveUI.Reactive",
@@ -320,6 +322,7 @@
         "tests/dotnet/Runic.Application.Testing.Tests",
         "tests/dotnet/Runic.Application.Logging.Tests",
         "tests/dotnet/Runic.Application.Views.Desktop.Tests",
+        "tests/dotnet/Runic.Application.Views.Analyzers.Tests",
         "tests/native/Runic.Application.HostedWindows.Smoke",
         "tests/benchmarks/Runic.Application.Views.Benchmarks",
         "tests/benchmarks/host-scripts",
@@ -461,7 +464,9 @@
         "examples/NuGet.config",
         "tests/fixtures/application/dynamicdata",
         "tests/fixtures/application/dynamicdata-reactive",
-        "tests/fixtures/application/dev-live-assets"
+        "tests/fixtures/application/dev-live-assets",
+        "tools/Runic.Application.Templates/content/runic-app/Properties/launchSettings.json",
+        "tools/Runic.Application.Templates/content/runic-app/.vscode/launch.json"
       ]
     },
     "platform": {

@@ -173,24 +173,46 @@ export function isEnabled(
 /** Options that only Runic Desktop uses: its GTK version and its server. */
 const desktopOptions = new Set(['linuxGtk', 'desktopServer']);
 
+/** Options that only an Angular frontend uses: what builds it. */
+const angularOptions = new Set(['angularBuild']);
+
 /**
  * Whether an option applies to the selection. Like Runic.Create, the creator
  * neither shows nor passes `--linux-gtk` or `--desktop-server` unless the host
- * is Runic Desktop.
+ * is Runic Desktop, nor `--angular-build` unless the frontend is Angular.
  */
 export function optionApplies(
   option: CreatorOption,
   selection: CreatorSelection,
 ): boolean {
+  if (desktopOptions.has(option.symbol))
+    return (selection.host ?? 'desktop') === 'desktop';
+  if (angularOptions.has(option.symbol))
+    return selection.frontend === 'angular';
+  return true;
+}
+
+/**
+ * Whether the commands print an option. Like Runic.Create (CreatePlan.cs), a
+ * choice whose default is `none`, such as `--editor`, adds nothing then, so
+ * the commands leave it out.
+ */
+function optionPrinted(
+  option: CreatorOption,
+  selection: CreatorSelection,
+): boolean {
   return (
-    !desktopOptions.has(option.symbol) ||
-    (selection.host ?? 'desktop') === 'desktop'
+    optionApplies(option, selection) &&
+    !(
+      option.defaultValue === 'none' &&
+      choiceFor(option, selection).value === 'none'
+    )
   );
 }
 
 /**
- * Adds the template's Boolean parameters that the selection leaves out, such
- * as `tests`, at their defaults, its computed symbols, such as `desktopHost`,
+ * Adds the template's Boolean and choice parameters that the selection leaves
+ * out, such as `tests` or `angularBuild`, at their defaults, its computed symbols, such as `desktopHost`,
  * as `true` or `false`, and its `switch` generated symbols, such as
  * `nixHost`, in declaration order like the template engine.
  */
@@ -205,6 +227,12 @@ export function templateSymbols(
       !(name in result)
     )
       result[name] = symbol.defaultValue ?? 'false';
+    else if (
+      symbol.type === 'parameter' &&
+      symbol.datatype === 'choice' &&
+      !(name in result)
+    )
+      result[name] = symbol.defaultValue ?? symbol.choices![0].choice;
     else if (symbol.type === 'computed')
       result[name] = String(evaluate(symbol.value ?? '', result));
     else if (symbol.type === 'generated' && symbol.generator === 'switch') {
@@ -301,7 +329,7 @@ function format(argumentsList: readonly string[]): string {
 function optionArguments(selection: CreatorSelection): string[] {
   return [
     ...creatorOptions
-      .filter((option) => optionApplies(option, selection))
+      .filter((option) => optionPrinted(option, selection))
       .flatMap((option) => [option.flag, choiceFor(option, selection).value]),
     ...creatorToggles
       .filter((toggle) => isEnabled(toggle, selection))

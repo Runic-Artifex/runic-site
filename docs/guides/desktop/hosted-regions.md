@@ -30,7 +30,7 @@ and the
 on Linux (GTK 3 and WebKitGTK 4.1) and, as the elevated pair, on Windows x64
 (WebView2). Automation checks that the guest's controls inside a region appear
 in the accessibility tree. **Assistive-technology behaviour of hosted regions
-(NVDA, Narrator, VoiceOver) was not checked manually for 0.18.0 or 0.19.0**: nothing yet
+(NVDA, Narrator, VoiceOver) was not checked manually for 0.18.0, 0.19.0 or 0.20.0**: nothing yet
 confirms how a screen reader reads a guest's page inside a region.
 
 ## Show a guest's Window in a region
@@ -357,7 +357,9 @@ On Windows, `RUNIC_DESKTOP_REGION_TRACE=1` makes WebView2 write each region
 frame's creation, navigation and process failure to standard error as
 `REGION TRACE webview2: …`. It is a diagnostic aid, not an interface.
 
-## Known issues in 0.19.0
+## Known issues in 0.20.0
+
+The known issues of 0.19.0 are unchanged in 0.20.0.
 
 - Assistive-technology behaviour of hosted regions (NVDA, Narrator, VoiceOver)
   was not checked manually. Automated checks cover layout, focus and Tab order,

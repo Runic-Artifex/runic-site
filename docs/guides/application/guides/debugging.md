@@ -91,15 +91,14 @@ Problems panel. VS Code builds from other vendors, such as VSCodium, cannot run
 Microsoft's .NET debugger; use netcoredbg there.
 
 **The Runic extension for VS Code** (`runic-artifex.runic`, from
-[runic-editors](https://github.com/Runic-Artifex/runic-editors/blob/main/vscode/README.md))
+[runic-editors](https://github.com/Runic-Artifex/runic-editors/blob/v0.20.0/vscode/README.md))
 adds a Dev Session view that follows `dotnet runic dev`, F5 of the Window
 without a `launch.json`, doctor results, and a ViewModels tree that opens the
-C# members. It is merged but **not published for 0.20**: there is no release or
-marketplace entry yet. To try it, download the `vscode-vsix` artifact of a
-successful CI run of runic-editors' `main` and install it:
+C# members. It is not on an extension marketplace: install `runic.vsix` from
+the [runic-editors 0.20.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.20.0):
 
 ```sh docs-test=skip:sdk-guide-excerpt
-gh run download --repo Runic-Artifex/runic-editors --name vscode-vsix
+gh release download v0.20.0 --repo Runic-Artifex/runic-editors --pattern runic.vsix
 code --install-extension runic.vsix
 ```
 
