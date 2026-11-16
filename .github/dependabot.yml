@@ -5,14 +5,14 @@ version: 2
 # configured here. A pull request limit of 0 turns off version updates;
 # security updates are not affected by this limit.
 updates:
-  - package-ecosystem: "bun"
-    directory: "/"
+  - package-ecosystem: 'bun'
+    directory: '/'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 0
 
-  - package-ecosystem: "bun"
-    directory: "/docs"
+  - package-ecosystem: 'bun'
+    directory: '/docs'
     schedule:
-      interval: "weekly"
+      interval: 'weekly'
     open-pull-requests-limit: 0
