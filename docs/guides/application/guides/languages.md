@@ -41,8 +41,49 @@ async Task<int> RunAsync(IRunicWindowHost host)
 Try another language without changing your system with
 `RUNIC_LOCALE=de dotnet runic dev`. To add a language, add it to `locales` in
 `Frontend/translations/runic.json`, copy `en.rmf2` to `<locale>.rmf2` and
-translate it. The page imports the catalog that the .NET build writes to
-`Frontend/.runic/translations`, so build again after you edit a message.
+translate it.
+
+Since SDK `0.20.0`, a React, Vue, Svelte or SvelteKit page, and Angular built
+with Vite (`--angular-build vite`), compiles the catalog itself with
+`runicTranslations()` from `@runic-artifex/vite-plugin-runic-translations` and
+imports it as `virtual:runic-translations/app`. The plugin runs the project's
+`dotnet-runic-translations` tool, so the page and C# read the same catalog.
+Under `dotnet runic dev`, an edited, added or removed message reaches the page
+without a build: the page reloads, and with the plugin 0.12 or later an edited
+message's text updates in place, keeping the page's state, language and
+connection. `dotnet build` and `dotnet publish` produce the same page as
+before. Angular built with the Angular CLI runs no Vite plugins: its page
+imports the catalog that the .NET build writes to `Frontend/.runic/translations`,
+so build again after you edit a message. Applications created from an earlier
+template keep working; to move one to the plugin, add the plugin to
+`devDependencies` and `runicTranslations()` to the Vite plugins, import
+`virtual:runic-translations/app`, `/runtime` and `/transport` instead of the
+files in `.runic/translations`, reference
+`../.runic/translations/virtual.d.ts` from `src/translations.ts`, and remove
+`RunicTranslationsEmitEsm` and `RunicApplicationFrontendTranslations` from the
+project file.
+
+### Edit a translation on the page
+
+Since SDK `0.20.0`, select a text with Runic Inspect (**Alt+Shift+X**, then
+click it) and press **Edit** next to one of its messages. The panel shows the
+message's MF2 source in every locale, its inputs, variants and markup. Save
+(Ctrl+Enter) writes only that entry of the `.rmf2` or `.mf2` file, keeping its
+comments and formatting, and the page shows the new text in place. A text that
+does not compile shows its `RTR` diagnostics and writes nothing; a file that
+changed since it was read offers **Reapply my text** or **Use the file's
+text**. Editing needs the Translations Vite plugin 0.12 or later in project
+mode; with an earlier plugin, Runic Inspect lists messages without **Edit**.
+
+The page's editing and source data are loopback-only by default. To use them
+from another machine, such as a laptop on your Tailscale network, name it with
+`runic({ allow })` in `vite.config.ts` or the `RUNIC_DEV_ALLOW` variable
+(addresses, CIDR networks or host names); Runic Translations' editing API
+reads the same variable. Opening a file in the editor always stays
+loopback-only, because it launches the editor on the development machine. See
+[edit a translation on the page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/web/vite-plugin-runic/README.md#edit-a-translation-on-the-page),
+[Runic Inspect from another machine](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/web/vite-plugin-runic/README.md#runic-inspect-from-another-machine)
+and [debugging](debugging.md#runic-inspect).
 
 ## One locale for the application
 
@@ -51,7 +92,7 @@ language for every Window. Windows that set none of their own switch with it,
 and Windows opened later start in it. `Follow` binds anything with a
 `SetLocaleAsync(locale, cancellationToken)`, such as a Runic Translations
 `TranslationContext`, so the C# catalog switches first. The
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/examples/multi-window/README.md)
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/multi-window/README.md)
 registers its catalog that way:
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
@@ -147,7 +188,7 @@ export function startTranslations(initialLocale = navigator.language): () => voi
 }
 ```
 
-[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
+[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
 in the Views README has the table for each framework, references of several
 catalogs and server rendering.
 
@@ -205,7 +246,7 @@ const resolveReference = transport.createReferenceResolver([{ transport, message
 - **CS-WebUI** windows keep WebUI's own English error pages.
 
 The
-[Runic.Application.Views.Translations README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.19.0/packages/dotnet/Runic.Application.Views.Translations/README.md)
+[Runic.Application.Views.Translations README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views.Translations/README.md)
 covers your own validation texts, the standard macOS menus, use without
 dependency injection, and the keys.
 

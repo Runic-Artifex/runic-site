@@ -150,8 +150,12 @@ const queries = {
 // appearance, shared clients and hosted applications), which need about
 // 725 KiB raw and 184 KiB gzipped, and from 192 KiB gzipped with the 0.19.0
 // API types and guides (side panel, close drain, window placement and the
-// hosted region appearance), which need about 193 KiB gzipped.
-const budget = { raw: 768 * 1024, gzip: 200 * 1024 };
+// hosted region appearance), which need about 193 KiB gzipped, and from
+// 768 KiB raw with the 0.20.0 debugging and tracing guides (IDE debugging,
+// the browser's developer tools per engine, the dock, Runic Inspect and OTLP
+// traces) and the 0.20.0 additions to the getting-started, languages and
+// hosted-region guides, which need about 775 KiB raw and 195 KiB gzipped.
+const budget = { raw: 800 * 1024, gzip: 200 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {
