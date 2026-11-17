@@ -139,6 +139,25 @@ Since 0.11, `dev` takes these options of `dotnet run` and `dotnet build`:
 | `-e`, `--environment NAME=VALUE` | Sets an environment variable for the Window process, as `dotnet run -e` does; repeat it for several. It wins over the defaults in the table below, so `-e DOTNET_ENVIRONMENT=Staging` runs the Window in `Staging`. The variables `dev` uses to describe the development server (`RUNIC_APPLICATION_*` below) are refused with `RAPPDEV1012`, and a value without `=` with `RAPPDEV1011`. `--dry-run` prints the names, never the values. |
 | `-v`, `--verbosity <level>` | Passes the MSBuild verbosity (`q[uiet]`, `m[inimal]`, `n[ormal]`, `d[etailed]` or `diag[nostic]`) to the restore, the build and `dotnet watch`. |
 
+Since 0.21, on Linux (see [Debug the page's JavaScript on Linux](#debug-the-pages-javascript-on-linux-preview)):
+
+| Option | Effect |
+| --- | --- |
+| `--no-debug-endpoint` | Opens neither WebKit's remote inspector for the Window nor Runic's CDP adapter on port 9222. |
+| `--webkit-inspector` | Opens WebKit's own Web Inspector over HTTP for a browser instead of the CDP adapter, on WebKitGTK 2.54.3 or later; on an older WebKitGTK, `dev` opens the `inspector://` server and the adapter as usual and says why. |
+
+Since 0.21, on every operating system (see [Debug the page in Chrome](#debug-the-page-in-chrome---browser)):
+
+| Option | Effect |
+| --- | --- |
+| `--browser` | Serves the Window to a browser instead of opening it (serve-only mode), at `http://127.0.0.1:9224/`, so the JavaScript debugger of your IDE's Chrome or Edge can open its pages. Cannot be combined with `--no-window` or `--webkit-inspector`. |
+
+Since 0.21, on Windows (see [The Runic DevTools extension](#the-runic-devtools-extension)):
+
+| Option | Effect |
+| --- | --- |
+| `--no-devtools-extension` | Does not add the Runic DevTools extension to the Window's `RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS`, so its WebView2 does not load it. |
+
 `dev` passes these variables to the Window process:
 
 | Variable | Value |
@@ -148,6 +167,8 @@ Since 0.11, `dev` takes these options of `dotnet run` and `dotnet build`:
 | `DOTNET_WATCH_RESTART_ON_RUDE_EDIT` | `1` |
 | `RUNIC_APPLICATION_DEVELOPMENT_ASSETS` | Without a development server, the absolute frontend output directory; cleared while one runs. An internal contract with the Runic Desktop host, which reads it only in a `Development` environment. |
 | `RUNIC_APPLICATION_VITE_*`, `RUNIC_APPLICATION_FRONTEND_*`, `RUNIC_APPLICATION_DEV_PROJECT` | The development server's address, entry and compiler integration while one runs; cleared otherwise. Internal. |
+| `RUNIC_APPLICATION_SERVE_ONLY` | `1` with `--browser`, over a value from `-e` or the environment; otherwise as you set it. |
+| `RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS` | On Windows, in a `Development` environment, with a development server and without `--browser` or `--no-devtools-extension`: your value from `-e` or the environment, with the [Runic DevTools extension](#the-runic-devtools-extension)'s folder appended after a `;` unless it is listed already. Otherwise as you set it. |
 
 `doctor` checks the Views Window opt-in, the .NET SDK, the declared JavaScript
 runtime and package manager, the matching lock file, the configured
@@ -596,6 +617,226 @@ the Window showed the page from the Vite server and a frontend edit live.
 The C# Dev Kit `dotnet` configuration, Rider, Visual Studio and Windows
 (WebView2) are not yet verified by hand.
 
+## Debug the page's JavaScript on Linux (preview)
+
+Since 0.21, `dotnet runic dev` on Linux serves the Window's WebKitGTK pages to
+JavaScript debuggers on port 9222, as WebView2 does on Windows (D066.39). VS
+Code's JavaScript debugger attaches with an attach configuration on that port,
+such as the template's `Attach to the page (JavaScript)` (`"type": "msedge"` with
+`"useWebView": true`, or `"type": "chrome"`), and `webRoot` set to the frontend
+directory: breakpoints in the frontend's sources through the development
+server's source maps, stepping, conditions, logpoints, exceptions, the console,
+the page's variables and hover all work, also after a reload or an HMR update.
+Breakpoints and logpoints also hit code that runs while the page loads, in a
+module that loads after thousands of others too: as Chromium does, the adapter
+stops each script with a source map before it runs until the debugger has its
+source map. When `dotnet watch` restarts the Window after a C# edit, the debugger stays
+attached and continues on the new Window's page with its breakpoints.
+
+How it works: `dev` starts the Window with `WEBKIT_INSPECTOR_SERVER` on a free
+loopback port (9223 with `--no-window`, which the template's
+`Window with JavaScript debugging (Linux)` configuration sets), the server
+WebKitGTK's own remote inspector clients use. Runic's CDP adapter in `dev`
+translates between the Chrome DevTools Protocol and the WebKit Inspector
+Protocol, and connects to WebKit only while a debugger is attached; in between,
+GNOME Web can open the `inspector://` address that the `[dev] Debugging:` line
+names. The session file lists both under `debugEndpoints`.
+
+- **Security.** The endpoint can script the Window's page and its Bridge, so
+  it admits only debuggers of the user who runs `dev`:
+  - It listens on 127.0.0.1 only. It refuses (403) a request whose `Host` is
+    not an IP address or `localhost`, and any request with an `Origin`, so a
+    web page in a browser cannot reach it. Its WebSocket paths carry a random
+    secret that only `/json/version` and `/json/list` reveal.
+  - Other users on the same machine can reach loopback ports too. So `dev`
+    looks up the owner of each connection's other end in `/proc/net/tcp`,
+    closes it when that is another user, and says so in a `[dev]` line. The
+    adapter talks to WebKit's inspector port only when its listener belongs
+    to you. If another user holds 9222, `dev` warns that an attach
+    configuration with that port would reach their process.
+  - WebKit's own `inspector://` port is WebKit's, so `dev` cannot filter it.
+    Other local users can connect to it and script the Window, also while a
+    debugger is attached: WebKit serves one client and lets a new one take
+    its place (WebKitGTK 2.54). The adapter survives that (see "Another
+    client of WebKit's inspector" below), but the Window can crash when a
+    replaced client of WebKit's own, such as GNOME Web's `inspector://` page,
+    sends again. On a machine that you share with other users, run `dev` with
+    `--no-debug-endpoint`.
+  - It runs only under `dotnet runic dev` and adds nothing to the application.
+- **Not supported.** Setting a variable to an object or a `const` (WebKit has no
+  `setVariableValue`; a primitive is assigned in the frame), restarting a frame,
+  and the Elements, Network and other panels of a Chrome DevTools window on this
+  endpoint. Rider's JavaScript debugger attaches to such ports too; it is not
+  verified yet. On macOS, WKWebView offers Safari's Web Inspector only.
+- **WebKit's own inspector.** WebKit serves either its socket for the adapter or
+  its Web Inspector over HTTP (`WEBKIT_INSPECTOR_HTTP_SERVER`), never both.
+  `--webkit-inspector` opens the HTTP one instead of the adapter, for any browser,
+  on WebKitGTK 2.54.3 or later; older WebKitGTK lets any web page reach it
+  (WebKit bug 330602, also fixed in 2.56; the 2.55 development releases count
+  as unfixed). A `WEBKIT_INSPECTOR_SERVER` or `WEBKIT_INSPECTOR_HTTP_SERVER`
+  that you set with `-e` or in `dev`'s environment is used as it is. `dev`
+  warns when such an HTTP inspector runs on a WebKitGTK without that fix, and
+  when either address is not loopback. Under `--no-window` the version check
+  uses the WebKitGTK that `dev` loads, which can differ from the Window's.
+- **Another client of WebKit's inspector.** WebKit's `inspector://` server has
+  one client slot, and a client that sets up takes it from the one that holds it
+  without telling that one (WebKitGTK 2.54). When that happens while a debugger is
+  attached, `dev` prints `[dev] Debugging: another client took over the Window's
+  WebKit inspector …`, the debugger's session ends as in Chrome when another
+  DevTools takes the page over (`Inspector.detached`, then
+  `Target.detachedFromTarget`), and `dev` sends nothing more to WebKit until a
+  debugger attaches again, which takes the inspector back. `dev` notices a new
+  connection to the inspector port in Linux's TCP tables and then checks whether
+  the Window still answers the adapter, so a Window stopped at a .NET breakpoint
+  does not count. Each time the adapter attaches to a page it claims the slot in
+  the same message, so a client that took the slot and left cannot make WebKit
+  crash the Window through the adapter. A client that connects and waits several
+  seconds before it sets up can go unnoticed; the session then stops answering
+  instead of ending. WebKit's own clients are not protected: after the adapter
+  took the slot from GNOME Web's `inspector://` page and released it, that page's
+  next attach can crash the Window.
+- **Port 9222 taken.** `dev` uses another free port and says which; change the
+  attach configuration's `port`. When another user holds 9222, or the
+  inspector port 9223 under `--no-window`, the `[dev]` line is a warning.
+  Under `--no-window`, which the IDE's compound starts with an attach
+  configuration on 9222, `dev` does not move: it stops with `RAPPDEV1017` and
+  names what holds the port, often another `dev` session. `--no-debug-endpoint`
+  opens nothing.
+- **Reporting a problem.** `RUNIC_DEV_CDP_TRACE=<file>` writes the adapter's
+  traffic, which contains the page's data, to that file. `dev` creates the
+  file readable by you only. JSON strings longer than 4096 characters, such as
+  script sources and inline source maps, keep only their first 200 characters;
+  `RUNIC_DEV_CDP_TRACE_SOURCES=1` keeps them whole, which on a page with
+  thousands of modules writes hundreds of megabytes in minutes.
+
+## Debug the page in Chrome (`--browser`)
+
+Since 0.21, `dotnet runic dev --browser` serves the Window to a browser instead
+of opening it, so your IDE's JavaScript debugger can open its pages in Chrome or
+Edge on every operating system (D066.38). On macOS, where WKWebView offers only
+Safari's Web Inspector, it is the way to stop on breakpoints in the frontend's
+sources from the IDE. The page runs on Chromium, not on the Window's engine
+(WebKit on Linux and macOS, WebView2 on Windows), so check engine-specific
+behaviour in the Window itself.
+
+`dev` starts the Window with `RUNIC_APPLICATION_SERVE_ONLY=1` (the
+[serve-only mode](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+of Runic Desktop and CS-WebUI) and opens no native window. Everything else is
+as without `--browser`: the development server or watcher, the build, `dotnet
+watch` restarting the Window after C# edits. The page reaches its Bridge
+directly, through the Window's own loopback server, as in the Window. Native
+window features are unavailable: platform services such as file dialogs, menus
+and the window's own commands report `OwnerUnavailable`, a Window with
+`GuardClose` opens unguarded, and there is no side panel.
+
+The Window's own address changes with every start and carries its server's
+credential, so `dev` does not print it. Instead it listens on
+`http://127.0.0.1:9224/` (another free port when 9224 is taken; the line says
+which) and sends a browser that opens that address to the Window's first page;
+`/windows/2` and so on are the Windows the application opens after it. Until the
+Window serves, and while `dotnet watch` restarts it, the address shows a page
+that reloads itself every second. The Window admits one browser, the first that
+connects, so open the address once; after `dotnet watch` restarts the Window,
+open it again (or reload it) in the same tab.
+
+```text
+[dev] Browser: the Window serves without a native window (--browser). Open http://127.0.0.1:9224/ in Chrome or Edge, …
+[dev] Browser: Window serves at http://127.0.0.1:9224/
+[dev] Ready
+```
+
+A VS Code launch configuration (the `runic-app` template's `Window in Chrome`)
+runs `dev --browser` as a background task that ends at `[dev] Ready` and opens
+the address with VS Code's JavaScript debugger, with `webRoot` set to the
+frontend directory for the development server's source maps:
+
+```jsonc
+// .vscode/launch.json; the task is the IDE contract's "runic: dev" task with "args": ["runic", "dev", "--browser"]
+{
+  "name": "Window in Chrome",
+  "type": "chrome",                 // "msedge" for Edge
+  "request": "launch",
+  "preLaunchTask": "runic: dev --browser",
+  "url": "http://127.0.0.1:9224/",
+  "webRoot": "${workspaceFolder}/Frontend"
+}
+```
+
+Breakpoints in the frontend's sources, stepping, conditions, logpoints,
+exceptions, the console, the page's variables, reloads and HMR updates work as
+in any Chrome page. Other IDEs open the same address from their own JavaScript
+debug configuration, such as Rider's "JavaScript Debug" with that URL.
+
+- **Security.** The address listens on 127.0.0.1 only and redirects only a
+  navigation that the browser starts itself, such as one from its address bar,
+  its command line or a debugger: it refuses (403) a request whose `Host` is not
+  an IP address or `localhost`, any request with an `Origin`, and a
+  `Sec-Fetch-Site` other than `none` or `same-origin`, so a web page in a browser
+  cannot send it to the Window and take its one client slot. The redirect is not
+  cached and sends no referrer.
+- **Other users on the machine.** Loopback ports admit every local account, and
+  the redirect hands out the Window's credentialed address. On Linux, `dev`
+  looks up the owner of each connection's other end in `/proc/net/tcp`, as for
+  the CDP adapter, answers 403 when that is another user, and says so once per
+  user in a `[dev] Warning:` line. macOS and Windows offer no unprivileged way
+  to tell a loopback connection's user, so there another local user's process
+  can follow the redirect and take the Window's one client slot first. On a
+  machine that you share with other users, use `--browser` on Linux only.
+- **Standard input.** A serve-only Window stops serving at a line on its
+  standard input, so `dev` gives it an empty pipe instead of the terminal.
+- **The .NET debugger.** Attach it to the process that
+  `[dev] Window started: process <pid>` names, as without `--browser`;
+  `--no-window` and `--browser` do not combine, because the IDE could not tell
+  `dev` the Window's address.
+- **Not debugging endpoints.** `--browser` lists no `debugEndpoints` and opens
+  neither WebView2's nor WebKit's: the debugger owns the browser it launched.
+
+## The Runic DevTools extension
+
+Since 0.21 the tool ships an unpacked Chrome DevTools extension (Manifest V3) in
+its `devtools-extension` folder, beside its assembly:
+`tools/net10.0/any/devtools-extension` in the package, so
+`~/.nuget/packages/dotnet-runic/<version>/tools/net10.0/any/devtools-extension`
+for a local tool. It adds a **Runic** panel (the page's Views with their state
+and C# ViewModels, and the recent Bridge calls with timing, outcome and C#
+handler) and a **Runic** pane in the Elements panel (the selected element's
+bindings and commands, as Runic Inspect shows them). It reads Runic Inspect's
+development API on the page (`snapshot()` and `describe($0)` on
+`globalThis[Symbol.for("runic.vite.inspect")]`), so it works on pages that
+vite-plugin-runic 0.21 or later serves under `vite dev` or `dev`, and asks for
+no permissions besides DevTools.
+
+`dev` prints `[dev] DevTools extension: <folder>` when the page has a
+development server, and writes the folder to the [session file](#session-file)
+as `devtoolsExtension`, with its fixed id `cddbfcinbkaindmfgcfdgapddkjeadgh` as
+`devtoolsExtensionId` (the manifest's public `key` fixes it; there is no private
+key). The build stamps the manifest with the package version: `X.Y.Z`, or
+`X.Y.Z.N` for a prerelease `X.Y.Z-label.N` (a Chrome manifest version has only
+numbers), with the full version as `version_name`. Load it in Chrome or Edge with **Load unpacked** on
+`chrome://extensions` (Developer mode), or start Chromium or Chrome for Testing
+with `--load-extension=<folder>`; branded Chrome ignores that switch since
+Chrome 137. There is no Chrome Web Store listing.
+
+- **The Window on Windows.** `dev` loads the extension into the Window's
+  WebView2: in `Development` it appends the folder to the Window's
+  `RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS`, after the folders you set there, once,
+  and prints `[dev] DevTools extension: the Window's WebView2 loads it …`. Open
+  the Window's DevTools and choose the **Runic** panel.
+  `--no-devtools-extension` leaves it out. With `--no-window`, the session
+  file's `window.environment` has the variable for the IDE's launch. Outside
+  `Development` `dev` sets nothing and the host loads no extensions.
+- **The IDE's Chrome (`--browser`).** `dev` prints a second line with the
+  folder: load it once with **Load unpacked** in the Chrome window that the
+  launch opens (VS Code's JavaScript debugger keeps that browser profile between
+  launches by default). The template's `Window in Chrome` configuration starts
+  branded Chrome and passes no `--load-extension`, because Chrome ignores it
+  and `launch.json` cannot read the session file. With Chromium or Chrome for
+  Testing as `runtimeExecutable`, add
+  `"runtimeArgs": ["--load-extension=<folder>"]` with the printed folder, and
+  update it after a tool update.
+[The Runic DevTools extension](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/debugging.md#the-runic-devtools-extension)
+in the debugging guide has the steps and what each pane shows.
+
 ## IDE contract
 
 Since 0.20, `dev` gives IDEs, tasks and extensions stable lines to wait on and a
@@ -605,13 +846,21 @@ contract: they keep their form within `runic.application.tool.dev-session/1`.
 | Line (standard output) | When |
 | --- | --- |
 | `[dev] Window started: process <pid>` | Each time a Window process starts: the first start, a restart by `dotnet watch` after a C# edit, and a restart by `dev` itself. `<pid>` is the application's own process, the one to attach a .NET debugger to, not `dotnet watch` or `dotnet run`. |
-| `[dev] Ready` | After each `Window started` line: the frontend (its development server, or its watcher or initial build) and the Window process can be used. |
+| `[dev] Ready` | After each `Window started` line: the frontend (its development server, or its watcher or initial build) and the Window process can be used. With `--browser`, `Ready` waits for the Window's first page instead: it follows the first `Browser` line of each Window process, which can come before `Window started`, so a browser that an IDE opens at `Ready` finds the page. |
+| `[dev] Browser: Window serves at <url>` | With `--browser` (since 0.21), each time the Window process serves a Window: the first at `dev`'s root address, later ones at `/windows/<n>` ([Debug the page in Chrome](#debug-the-page-in-chrome---browser)). One form for every Window; match it with `^\[dev\] Browser: Window serves at (?<url>http://\S+)$`. Other `[dev] Browser:` lines are human text. |
 | `[dev] Window exited: process <pid>` | When that process exits, for example before `dotnet watch` restarts it. A debugger attached to it has ended. |
+| `[dev] Evaluating` (line prefix) | Once, when `dev` starts evaluating the project, before it builds or starts anything: `[dev] Evaluating Views Window project...`, and `[dev] Evaluating Views Window project completed in <time>.` when that is done. Since 0.21 in the contract. |
+| `[dev] Reloading` (line prefix) | Each time `dev` itself restarts the Window process, for example after a frontend compiler change that hot reload cannot apply: `[dev] Reloading the Runic Views Window application.`, after the old process stopped and before the new one starts. `Window started` and `Ready` follow. Since 0.21 in the contract. |
 
-`dev` writes the [session file](#session-file) before it prints each of these
-lines, so a reader that reacts to a line finds the same state there: after
+The two prefix lines are where a background task's `beginsPattern` starts a new
+build cycle, as the template's `.vscode/tasks.json` below does; the text after
+the prefix is not part of the contract.
+
+`dev` writes the [session file](#session-file) before it prints each of the
+first three lines, so a reader that reacts to a line finds the same state there: after
 `Window started`, the file's `window.processId`; after `Ready`, `"state": "ready"`;
-after `Window exited`, no Window process and `"state": "starting"`. In 0.20.0
+after `Window exited`, no Window process and `"state": "starting"`; after a
+`Browser` line, its address in `browser.windows`. In 0.20.0
 previews, `dev` printed the line first.
 
 `dev` finds the Window process below the `dotnet watch` or `dotnet run`
@@ -725,27 +974,45 @@ same project write the same file; the later one wins. `--dry-run` writes none.
     "starts": 1,                    // how many Window processes have started in this session
     "environment": {                // what a Window that the IDE starts needs, as dev would set it
       "DOTNET_ENVIRONMENT": "Development"
-      // and RUNIC_APPLICATION_DEVELOPMENT_ASSETS without a development server, for Runic Desktop
+      // and RUNIC_APPLICATION_DEVELOPMENT_ASSETS without a development server, for Runic Desktop; on Windows since 0.21,
+      // RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS with the Runic DevTools extension unless --no-devtools-extension
     }
   },
+  // With --browser (since 0.21): dev's address for a browser, and the Windows the running Window process serves,
+  // each at its address there (not the Windows' own addresses, which carry their credential); null without --browser.
+  "browser": {
+    "url": "http://127.0.0.1:9224/",
+    "windows": [
+      { "url": "http://127.0.0.1:9224/", "type": "App.MainWindow" } // type: the Window's class, null until the host names it
+    ]
+  },
   "debugEndpoints": [
-    // Debugging endpoints of the page's engine that the Window's environment enables. dev enables none itself; on
-    // Windows, -e WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222 (or the variable in dev's own
-    // environment) lists WebView2's Chrome DevTools Protocol endpoint.
+    // Debugging endpoints of the page's engine; none with --browser. On Windows, -e WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222
+    // (or the variable in dev's own environment) lists WebView2's Chrome DevTools Protocol endpoint:
     { "engine": "webview2", "protocol": "cdp", "url": "http://127.0.0.1:9222/" }
+    // On Linux since 0.21, dev's CDP adapter for the WebKitGTK Window and WebKit's inspector:// server
+    // ("protocol": "webkit-inspector" for WebKit's HTTP inspector with --webkit-inspector):
+    // { "engine": "webkitgtk", "protocol": "cdp", "url": "http://127.0.0.1:9222/" },
+    // { "engine": "webkitgtk", "protocol": "webkit-remote-inspector", "url": "inspector://127.0.0.1:41653" }
   ],
   "unavailableDebugEndpoints": [
     // Endpoints the environment asks for but the engine does not open, with the reason. Since 0.20, an elevated dev
     // (run as administrator, so its Window runs elevated too) lists WebView2's here with "reason": "elevated" instead of
     // in debugEndpoints, and prints a [dev] Debugging: hint.
-  ]
+  ],
+  // The unpacked Runic DevTools extension beside this tool, for Load unpacked or a browser's --load-extension;
+  // null when the tool has none. Since 0.21.
+  "devtoolsExtension": "/home/me/.nuget/packages/dotnet-runic/0.21.0/tools/net10.0/any/devtools-extension",
+  "devtoolsExtensionId": "cddbfcinbkaindmfgcfdgapddkjeadgh" // its fixed id, null without the extension; since 0.21
 }
 ```
 
 Paths are absolute. Later versions of the schema only add properties, so a
 reader ignores properties it doesn't know; a change that removes or changes one
 gets a new schema name. 0.20 added `processStartedAt`, `sourceMap` and
-`unavailableDebugEndpoints` within `runic.application.tool.dev-session/1`.
+`unavailableDebugEndpoints` within `runic.application.tool.dev-session/1`; 0.21
+added the `webkitgtk` endpoints, `devtoolsExtension`, `devtoolsExtensionId`, `browser` and, with
+`--no-window` on Linux, `WEBKIT_INSPECTOR_SERVER` in `window.environment`.
 
 WebView2 Runtime 150 and later ignores `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
 (and its other `WEBVIEW2_*` variables and current-user policy overrides) in an

@@ -18,7 +18,7 @@ connect a click in the page to the C# that runs for it.
 | Stop on a breakpoint in the frontend's sources from your IDE                     | [JavaScript debuggers](#javascript-debuggers-in-your-ide)                  |
 | See each Bridge call with the C# that ran, and open it in the editor             | [The dock](#the-dock)                                                      |
 | Click an element and see its commands, state and texts                           | [Runic Inspect](#runic-inspect)                                            |
-| See the same in Chrome's or Edge's developer tools                               | [The Runic DevTools extension](#the-runic-devtools-extension)              |
+| See the same in the developer tools of Chrome, Edge or the Windows Window        | [The Runic DevTools extension](#the-runic-devtools-extension)              |
 | See a component's View and field state in React DevTools or Vue DevTools         | [Framework DevTools](#react-devtools-and-vue-devtools)                     |
 | See View clients and states readably in the console                              | [Custom object formatters](#custom-object-formatters)                      |
 | Time C# handlers, or follow a click into the ViewModel's HTTP and database calls | [Performance panel and traces](#performance-panel-async-stacks-and-traces) |
@@ -197,7 +197,8 @@ are not changed. To debug a release build's page that way, run it with
   window loads unpacked browser extensions, such as React Developer Tools,
   Vue.js devtools or the [Runic DevTools extension](#the-runic-devtools-extension),
   so their panels appear in its DevTools window and their hooks run in the
-  page. List the extension folders (each holds a `manifest.json`) in
+  page. `dotnet runic dev` adds the Runic DevTools extension itself
+  (`--no-devtools-extension` leaves it out). List other extension folders (each holds a `manifest.json`) in
   `DesktopHostOptions.DevToolsExtensions`, or for one session in
   `RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS`, separated by `;`:
 
@@ -483,14 +484,28 @@ tool's folder.
 `dotnet runic dev` prints `[dev] DevTools extension: <folder>` when the page
 has a development server, and the session file has the folder as
 `devtoolsExtension`. It is the `devtools-extension` folder beside the tool, and
-it changes with the tool's version. To load it in Chrome or Edge, open
-`chrome://extensions` (`edge://extensions`), turn on **Developer mode**,
-choose **Load unpacked** and select that folder, then reopen the page's
-developer tools. After a tool update, load the new folder and remove the old
-entry. In a WebView2 window in Development, list the folder in
-[`RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS`](#the-browsers-developer-tools-per-engine).
-WKWebView and WebKitGTK load no extensions: use Runic Inspect and the dock
-there.
+it changes with the tool's version.
+
+- **In the Window on Windows**, `dotnet runic dev` loads it by default: in
+  Development it appends the folder to the Window's
+  [`RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS`](#the-browsers-developer-tools-per-engine),
+  after any folders you list there, unless it is listed already. Open the
+  Window's DevTools (F12, or **Open DevTools** in its system menu) and choose
+  the **Runic** panel. `dotnet runic dev --no-devtools-extension` leaves it
+  out; with `--no-window`, the session file's `window.environment` carries the
+  variable for your IDE's launch. Outside Development `dev` sets nothing and the
+  host ignores the list.
+- **In Chrome or Edge**, open `chrome://extensions` (`edge://extensions`), turn
+  on **Developer mode**, choose **Load unpacked** and select that folder, then
+  reopen the page's developer tools. After a tool update, load the new folder
+  and remove the old entry. `dotnet runic dev --browser` prints the folder and
+  this hint: load it once in the Chrome window that the IDE's launch opens,
+  which keeps its profile between launches. Branded Chrome ignores
+  `--load-extension`, so the template's `Window in Chrome` configuration passes
+  none; with Chromium or Chrome for Testing as `runtimeExecutable`, add
+  `"runtimeArgs": ["--load-extension=<folder>"]`.
+- **WKWebView and WebKitGTK** load no extensions: use Runic Inspect and the
+  dock there.
 
 Its ID is always `cddbfcinbkaindmfgcfdgapddkjeadgh` (the manifest's public
 `key` fixes it, whatever folder you load), so an allowlist can name it; the

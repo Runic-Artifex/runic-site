@@ -886,7 +886,7 @@ region and outputs the `NavigationOutcome` of `RemoveAsync`. In a test,
 
 ```csharp docs-test=readme:packages/dotnet/Runic.Application.Testing/README.md
 var tabs = (await host.Root.SnapshotAsync()).Regions(vm => vm.Documents);
-// tabs.Keys, tabs.Regions[i].Content (a PageReference or null), tabs.Selected
+// tabs.Keys, tabs.Regions[i].Content (a PageReference or null), tabs.SelectedIndex
 var closed = await host.Root.CloseRegionAsync(vm => vm.Documents, tabs.Keys[0]);
 // closed.RegionOutcome: Committed, or Rejected with Guard when a page refused
 ```

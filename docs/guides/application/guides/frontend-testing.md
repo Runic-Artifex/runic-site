@@ -10,7 +10,7 @@ shows.
 > Since SDK `0.14.0`, every `runic-app` frontend has such a test. Every code
 > block is an excerpt of the `runic-app` template, of the
 > [Notes example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.21.0/examples/notes-view-first)
-> or of a package README, at SDK `0.20.0`.
+> or of a package README, at SDK `0.21.0`.
 
 ## The template's test
 

@@ -1,8 +1,8 @@
 # Migrating Svelte translation imports
 
 Runic Translations now owns its Svelte integrations independently of the SDK.
-Use the published Translations `0.12.0` package family; its version does
-not need to match Application SDK `0.20.0`. Existing applications can
+Use the published Translations `0.13.0` package family; its version does
+not need to match Application SDK `0.21.0`. Existing applications can
 keep their current SDK release while migrating localization. See the
 [Translations SvelteKit quick start](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/quickstart-sveltekit.md).
 

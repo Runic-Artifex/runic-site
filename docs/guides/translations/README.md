@@ -344,8 +344,9 @@ Each quick start starts from an empty folder and ends with a running app:
 - **Runic Views**:
   [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/runic-views.md)
   connects the page, ViewModels and native text to one catalog. It needs
-  Runic SDK `0.17` or later; SDK `0.20` needs Translations `0.12`, SDK `0.19`
-  Translations `0.11`, and SDK `0.18` Translations `0.10`.
+  Runic SDK `0.17` or later; SDK `0.21` needs Translations `0.13`, SDK `0.20`
+  Translations `0.12`, SDK `0.19` Translations `0.11`, and SDK `0.18`
+  Translations `0.10`.
 - **Framework text**:
   [Framework text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/framework-text.md)
   covers both framework catalogs (`runic-command-line` and Runic SDK's
@@ -383,7 +384,7 @@ unchanged. `Runic.Application.Views.Translations` `0.21.0` needs Translations
 [runic-editors 0.21.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.21.0).
 
 The
-[0.13.0 release notes](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/eng/release/notes/0.13.0.md)
+[0.13.0 release notes](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/eng/release/notes/0.13.0.md#upgrading-from-012)
 list every change.
 
 ### Upgrading to 0.12.0

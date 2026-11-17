@@ -261,7 +261,7 @@ takes a file the user picked in the page:
 private async Task AttachAsync(RunicUpload file, CancellationToken cancellationToken)
 {
     // Everything about an upload comes from the page: check what you read before you use it.
-    await file.SaveAsAsync(Path.Combine(_attachments, Guid.NewGuid().ToString("N")), cancellationToken: cancellationToken);
+    await file.SaveToFileAsync(Path.Combine(_attachments, Guid.NewGuid().ToString("N")), cancellationToken: cancellationToken);
     Attachments.Add(new Attachment(file.FileName, file.Length));
 }
 ```
@@ -278,11 +278,12 @@ await client.attach(ref);
 ```
 
 - The command reads the file with `OpenReadAsync` or moves it with
-  `SaveAsAsync`. `FileName`, `ContentType` and the content are untrusted.
+  `SaveToFileAsync`. `FileName`, `ContentType` and the content are untrusted.
 - An upload works only on the connection that sent it, only once, for at most
   10 minutes, and is dropped after 30 seconds without data.
-- `MaximumUploadBytes` (256 MiB) and `MaximumWindowUploadBytes` (1 GiB) on
-  `RunicWindowOptions` and the host options limit uploads.
+- `MaximumUploadBytes` (256 MiB per upload) and `MaximumPendingUploadBytes`
+  (1 GiB of unclaimed uploads per Window) on `RunicWindowOptions` and the host
+  options limit uploads.
 
 On CS-WebUI, each Window serves blobs and uploads from a loopback endpoint of
 its own, on another origin than the page. A page `Content-Security-Policy` must

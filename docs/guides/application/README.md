@@ -333,7 +333,8 @@ as in `0.15`. Check these if they apply:
   (`field-flush/1`), so a guard can run up to 1 second later. In tests, set
   `InMemoryBridgeTransport.FieldFlush`.
 - **Recent documents on Windows and Linux.**
-  `DesktopHost.NoteRecentDocumentAsync` and `ClearRecentDocumentsAsync`, which
+  `DesktopHost.NoteRecentDocumentAsync` (`AddRecentDocumentAsync` since 0.21)
+  and `ClearRecentDocumentsAsync`, which
   did nothing outside macOS, now add to and clear Explorer's Recent items and
   Jump List and `recently-used.xbel`. Guard a call you don't want there. See
   [recent documents](../desktop-services.md#recent-documents).
@@ -678,16 +679,24 @@ review, so code that uses one of them needs an edit. Check these if they apply:
   suite that keeps one Bridge.
 - **Linux capabilities count as elevated** for a hosted guest
   (`RUNICDESK103`); see [hosted applications](../desktop/hosted-applications.md#security).
+- **SvelteKit security updates.** New SvelteKit apps get
+  `@sveltejs/adapter-static` 4.0.1
+  ([GHSA-jf9x-2fg2-hx4w](https://github.com/advisories/GHSA-jf9x-2fg2-hx4w))
+  and `@sveltejs/kit` 3.1.1
+  ([GHSA-mw6w-2fmv-pvw3](https://github.com/advisories/GHSA-mw6w-2fmv-pvw3)).
+  The template's static output is not affected; move an existing app to them
+  to keep `npm audit` quiet.
 
 New in `0.21.0`, for development only: JavaScript debuggers on Linux through
 `dotnet runic dev`'s CDP adapter (preview), `dotnet runic dev --browser` and
 the `Window in Chrome` configuration, WebView2's Open DevTools and DevTools
-extensions, the Runic DevTools extension for Chrome and Edge, Runic state in
+extensions, the Runic DevTools extension (which `dotnet runic dev` loads into
+the Window's WebView2 on Windows, and Chrome and Edge load unpacked), Runic state in
 React DevTools and Vue DevTools, and custom object formatters; see
 [debugging an application](guides/debugging.md). Also new:
 `NavigationSelectionPath.ToJson()` and `FromJson`, and
 `injectTextLocale()` and the field types in `@runic-artifex/angular`.
 
 The
-[0.21.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/eng/release/notes/0.21.0.md)
+[0.21.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/eng/release/notes/0.21.0.md#upgrading-from-020)
 list every change.
