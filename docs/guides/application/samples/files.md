@@ -184,7 +184,7 @@ another Window has it open. The `platform.files.openDocument` capability
 reports whether the Window's dialogs return documents. For a recent-files list,
 store the bytes of the lease's `CreateBookmarkAsync` and reopen the document
 with `IDesktopFileBookmarks.OpenDocumentAsync`; see
-[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Platform/README.md#document-apps).
+[document apps](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Platform/README.md#document-apps).
 
 ## When atomic save is unavailable
 
@@ -211,7 +211,7 @@ through it, and an unsandboxed application on GTK 3 can choose GTK's own file ch
 `LinuxPlatformProvider.CreateGtkNativeFileDialogs(owner)`. That was a
 lower-level provider API that you composed yourself, with no automatic fallback.
 The
-[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
+[portal provider README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Platform.Linux.Portal/README.md)
 describes both mechanisms.
 
 When the save is unavailable, `BeginWriteAsync` returns
@@ -261,7 +261,7 @@ takes a file the user picked in the page:
 private async Task AttachAsync(RunicUpload file, CancellationToken cancellationToken)
 {
     // Everything about an upload comes from the page: check what you read before you use it.
-    await file.SaveAsAsync(Path.Combine(_attachments, Guid.NewGuid().ToString("N")), cancellationToken: cancellationToken);
+    await file.SaveToFileAsync(Path.Combine(_attachments, Guid.NewGuid().ToString("N")), cancellationToken: cancellationToken);
     Attachments.Add(new Attachment(file.FileName, file.Length));
 }
 ```
@@ -278,11 +278,12 @@ await client.attach(ref);
 ```
 
 - The command reads the file with `OpenReadAsync` or moves it with
-  `SaveAsAsync`. `FileName`, `ContentType` and the content are untrusted.
+  `SaveToFileAsync`. `FileName`, `ContentType` and the content are untrusted.
 - An upload works only on the connection that sent it, only once, for at most
   10 minutes, and is dropped after 30 seconds without data.
-- `MaximumUploadBytes` (256 MiB) and `MaximumWindowUploadBytes` (1 GiB) on
-  `RunicWindowOptions` and the host options limit uploads.
+- `MaximumUploadBytes` (256 MiB per upload) and `MaximumPendingUploadBytes`
+  (1 GiB of unclaimed uploads per Window) on `RunicWindowOptions` and the host
+  options limit uploads.
 
 On CS-WebUI, each Window serves blobs and uploads from a loopback endpoint of
 its own, on another origin than the page. A page `Content-Security-Policy` must
@@ -296,9 +297,9 @@ the page, `mockBlob()` makes a blob whose URL loads in a test, and the mock
 Bridge's `uploads` keeps what the page uploaded.
 
 The
-[attachments example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.20.0/examples/attachments)
+[attachments example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.21.0/examples/attachments)
 shows an avatar and attachment uploads, and the
-[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views/README.md#blobs-and-uploads)
+[Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views/README.md#blobs-and-uploads)
 lists each host's endpoint.
 
 ## Next steps
@@ -310,5 +311,5 @@ lists each host's endpoint.
 - [Desktop preferences, notifications, file handoff, and clipboard](../../desktop-services.md)
   covers the providers behind these services.
 - The
-  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
+  [Runic.Application.Views.Desktop README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views.Desktop/README.md)
   lists every per-Window service and owner.

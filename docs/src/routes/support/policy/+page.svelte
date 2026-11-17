@@ -64,7 +64,7 @@
           >0.9.1</code
         >) only fixes or adds, and only the latest minor gets fixes. Releases
         from 0.9.0 on carry no <code>-preview.N</code>
-        suffix; GitHub still marks them as prereleases. 0.20.0 is the current minor
+        suffix; GitHub still marks them as prereleases. 0.21.0 is the current minor
         release. Views protocol 4, introduced in 0.13.0, is the protocol that 1.0
         keeps, and later releases add only features negotiated in its
         <code>hello</code>. The release candidates <code>1.0.0-rc.N</code> start
@@ -246,7 +246,12 @@
           <code>RUNICDESK104</code>. 0.20.0 adds
           <code>runicComponentMount</code> to
           <code>@runic-artifex/angular/experimental</code> for Angular guests in
-          trusted component mode (<code>RUNICDESK103</code>).
+          trusted component mode (<code>RUNICDESK103</code>). 0.21.0 moves the
+          rest of trusted component mode from
+          <code>@runic-artifex/views/component</code>
+          and the root <code>runic()</code> to
+          <code>@runic-artifex/views/experimental</code> and
+          <code>@runic-artifex/vite-plugin-runic/experimental</code>.
         </li>
         <li>
           <strong>Preview:</strong>

@@ -332,7 +332,7 @@ internal static class WindowCommands
 ```
 
 Capture values such as `settings`, not the command's scoped services.
-See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
+See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
 and
 [start a UI host on the main thread](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.13.0/packages/dotnet/Runic.CommandLine/README.md#start-a-ui-host-on-the-main-thread).
 
@@ -468,7 +468,7 @@ error; an override file in `translations/overrides/runic-command-line/` adds
 that locale.
 
 The
-[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.12.0/packages/dotnet/Runic.Translations.CommandLine/README.md)
+[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/packages/dotnet/Runic.Translations.CommandLine/README.md)
 describes the resolver in full.
 
 ## New in 0.13.0

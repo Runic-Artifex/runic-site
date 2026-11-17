@@ -16,7 +16,7 @@ other processes. A region shows the guest in one of two ways:
   only for applications of the same vendor.
 
 **Experimental since SDK `0.18.0`**, as hosted applications are: suppress
-[`RUNICDESK103`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/experimental.md#RUNICDESK103).
+[`RUNICDESK103`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/experimental.md#RUNICDESK103).
 The page element is in `@runic-artifex/views/experimental`, and React, Vue,
 Svelte and Angular wrap it as `RunicHostedRegion` in their `./experimental`
 entries. Host and guest both need 0.18: a guest of 0.17 cannot be shown in a
@@ -24,9 +24,9 @@ region. From SDK `0.19.0` a host can also give a region's window an
 [appearance of its own](#design-and-appearance), which needs a guest of 0.19.
 
 **Checked with**: Runic CI runs the
-[hosted region example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/hosted-region/README.md)
+[hosted region example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/examples/hosted-region/README.md)
 and the
-[hosted components example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/hosted-components/README.md)
+[hosted components example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/examples/hosted-components/README.md)
 on Linux (GTK 3 and WebKitGTK 4.1) and, as the elevated pair, on Windows x64
 (WebView2). Automation checks that the guest's controls inside a region appear
 in the accessibility tree. **Assistive-technology behaviour of hosted regions
@@ -122,7 +122,7 @@ What the guest should know:
   `RunicTestHostOptions.EmbedWindow` chooses the windows, and
   `AttachRegionAsync(embedder)` returns the one-time frame address to load in a
   test page. The hosted region example's
-  [check tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/hosted-region/Check/Tests/HostedCheckTests.cs)
+  [check tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/examples/hosted-region/Check/Tests/HostedCheckTests.cs)
   attach a region and play the host's departures without a browser.
 
 ### The page's Content-Security-Policy
@@ -175,10 +175,14 @@ Guest = RunicGuestOptions.FromStandardInput() with
 ```
 
 It also needs a **component build**: the `component` target of
-`@runic-artifex/vite-plugin-runic` (`runic({ component: { entry, name } })`)
-builds an ES module that defines the guest's element, next to its page, and a
-mount function typed `RunicComponentMount` from
-`@runic-artifex/views/component` renders the guest's view into the element.
+`@runic-artifex/vite-plugin-runic/experimental`
+(`runic({ component: { entry, name } })`) builds an ES module that defines the
+guest's element, next to its page, and a mount function typed
+`RunicComponentMount` from `@runic-artifex/views/experimental` renders the
+guest's view into the element. Since SDK `0.21.0` the npm side of trusted
+component mode is exported only from `./experimental`, like every
+experimental npm API before 1.0: 0.21 removed `@runic-artifex/views/component`
+without an alias, and the root entry's `runic()` throws for `component`.
 Build the component with `vite build`; the development server serves the page
 only. A guest without the build refuses a component attach
 (`embedding-unsupported`).
@@ -193,9 +197,9 @@ Angular application and renders the standalone component in its shadow root,
 whose constructable stylesheets take the component's styles instead of
 `<style>` elements in `document.head`, so the host page's policy needs no
 `'unsafe-inline'` styles. Removing the element destroys its application. See
-[Angular components](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/web/angular/README.md#components-experimental);
+[Angular components](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/web/angular/README.md#components-experimental);
 the
-[hosted components example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/hosted-components/README.md)'s
+[hosted components example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/examples/hosted-components/README.md)'s
 widget has an Angular frontend (`-p:WidgetFrontend=Angular`).
 
 The host's policy decides `EmbedComponent` where the guest allows it:
@@ -236,7 +240,7 @@ of its own (`region-appearance/1`, part of `RUNICDESK103`). The case is an
 installer whose wizard step shows a check tool, where both offer the same
 design menu: Light, Dark, High contrast and System. The installer's menu
 decides for both, because to the user they are one window. The
-[hosted region example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/examples/hosted-region/README.md#design) has
+[hosted region example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/examples/hosted-region/README.md#design) has
 such a menu.
 
 The host maps each design to a `RunicHostedAppearance`. Each member that is set
@@ -357,9 +361,9 @@ On Windows, `RUNIC_DESKTOP_REGION_TRACE=1` makes WebView2 write each region
 frame's creation, navigation and process failure to standard error as
 `REGION TRACE webview2: …`. It is a diagnostic aid, not an interface.
 
-## Known issues in 0.20.0
+## Known issues in 0.21.0
 
-The known issues of 0.19.0 are unchanged in 0.20.0.
+The known issues of 0.19.0 are unchanged in 0.20.0 and 0.21.0.
 
 - Assistive-technology behaviour of hosted regions (NVDA, Narrator, VoiceOver)
   was not checked manually. Automated checks cover layout, focus and Tab order,
@@ -377,13 +381,13 @@ The known issues of 0.19.0 are unchanged in 0.20.0.
 ## More
 
 The SDK's
-[hosted regions guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/hosted-regions.md)
+[hosted regions guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/hosted-regions.md)
 covers both modes in full, and the
-[0.18.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/eng/release/notes/0.18.0.md#region-mode-866-experimental)
+[0.18.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/eng/release/notes/0.18.0.md#region-mode-866-experimental)
 list what each part added, and the
-[0.19.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/eng/release/notes/0.19.0.md#an-appearance-override-per-hosted-region-917-experimental)
+[0.19.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/eng/release/notes/0.19.0.md#an-appearance-override-per-hosted-region-917-experimental)
 the appearance override. The security guide describes
-[hosted windows in a region](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/security.md#hosted-windows-in-a-region),
-[components in a host page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/security.md#components-in-a-host-page)
+[hosted windows in a region](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/security.md#hosted-windows-in-a-region),
+[components in a host page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/security.md#components-in-a-host-page)
 and
-[elevated hosts and guests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/security.md#elevated-hosts-and-guests).
+[elevated hosts and guests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/security.md#elevated-hosts-and-guests).

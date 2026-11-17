@@ -9,8 +9,8 @@ traces in a local viewer. The [debugging guide](debugging.md) covers the other
 development tools.
 
 > Adapted from the SDK's
-> [tracing guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/docs/tracing.md)
-> at SDK `0.20.0`.
+> [tracing guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/tracing.md)
+> at SDK `0.21.0`.
 
 Everything here is for development. The page side is in the development build
 of `@runic-artifex/views`, which `vite dev` resolves; a production build
@@ -40,7 +40,7 @@ the request and receiving its reply, which assumes both took equally long on
 the way. The custom tracks are Chromium's (installed Chrome or Edge, and
 WebView2); other engines get the same call reports in the development client,
 and the dock lists them, without the Performance track. The
-[Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/specs/application/README.md#handler-timing)
+[Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/specs/application/README.md#handler-timing)
 describes the `handler-timing/1` feature.
 
 ## One trace from the page to .NET
@@ -52,7 +52,7 @@ container and shows traces, logs and metrics without further setup:
 
 ```sh docs-test=skip:sdk-guide-excerpt
 podman run --rm -d --name aspire-dashboard \
-  -p 18888:18888 -p 4317:18889 -p 4318:18890 \
+  -p 127.0.0.1:18888:18888 -p 127.0.0.1:4317:18889 -p 127.0.0.1:4318:18890 \
   -e ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true \
   mcr.microsoft.com/dotnet/aspire-dashboard:13
 ```
@@ -60,10 +60,11 @@ podman run --rm -d --name aspire-dashboard \
 `docker run` takes the same arguments. The dashboard is at
 `http://localhost:18888`; it receives OTLP/gRPC on port 4317 and OTLP/HTTP on
 port 4318. `ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS` turns off the
-dashboard's sign-in and OTLP API key, which is fine on your own machine only:
-the ports are published on every interface. Publish them as
-`-p 127.0.0.1:18888:18888` and so on to keep them local. Stop the dashboard
-with `podman stop aspire-dashboard`; it keeps telemetry in memory only.
+dashboard's sign-in and OTLP API key, so the ports are published on loopback
+only: other users of this machine can still reach them, other machines cannot.
+Publish them on every interface (`-p 18888:18888`) only on a network you
+trust, since anyone who reaches the ports reads your traces and can send spans
+of their own. Stop the dashboard with `podman stop aspire-dashboard`; it keeps telemetry in memory only.
 
 `dotnet runic dev` starts no container or viewer of its own: start the viewer
 you want, once, and leave it running.
@@ -152,16 +153,21 @@ pages still get the C# handler timing.
 
 - `trace-context/1`: the request of a call carries `trace: { traceparent }`.
   The .NET host reads it only while its `ActivitySource` has a listener, and
-  makes it the parent of the call's `runic.bridge.*` span. The ViewModel's
-  spans follow, because Runic runs model turns in the `ExecutionContext` of the
+  makes it the parent of the call's `runic.bridge.*` span. This holds outside
+  Development too, as for any W3C trace context a server receives: a page can
+  choose the trace and parent IDs of the Bridge spans in your telemetry. The
+  values are bounded (256 characters for `traceparent`, 512 for `tracestate`),
+  one that does not parse is ignored, and handler timing stays
+  Development-only. Treat trace IDs from the page as untrusted, as you would
+  those of an incoming HTTP request. The ViewModel's spans follow, because Runic runs model turns in the `ExecutionContext` of the
   request that queued them.
 - The page's span is a client span from the call's start (the click) to the
   moment the page reached the reply's revision. The .NET span is a server span
   inside it.
 - The
-  [Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/specs/application/README.md#trace-context)
+  [Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/specs/application/README.md#trace-context)
   describes the feature, and the
-  [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.20.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
+  [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
   lists the spans and their tags.
 
 ## Troubleshooting
