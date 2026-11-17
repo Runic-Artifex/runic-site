@@ -4,7 +4,7 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@sveltejs/adapter-static": "4.0.1",
-    "@sveltejs/kit": "3.0.0",
+    "@sveltejs/kit": "3.1.1",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "@types/node": "24.13.3",
     "eslint": "10.8.1",
