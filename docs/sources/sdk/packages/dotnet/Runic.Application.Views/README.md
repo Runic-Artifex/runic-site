@@ -946,7 +946,7 @@ casts `IRunicWindow.Host` to a host's type:
 | `SetColorSchemeAsync(scheme)` | Switches it between light and dark; the page's `prefers-color-scheme` follows. |
 | `IsActive`, `IsMinimized`, `IsVisible`, `Activity` | Whether it has the keyboard focus, is minimized and is shown, with `ActivityChanged` and `PropertyChanged`. |
 | `Features` | What the host can do now. |
-| `OpenSidePanelAsync(options)`, `SidePanel` | Opens another page of the Window beside its page, growing the Window; [experimental](#a-side-panel-beside-the-windows-page). |
+| `OpenSidePanelAsync(options)`, `SidePanel` | Opens another page of the Window beside its page, growing the Window; see [a side panel beside the Window's page](#a-side-panel-beside-the-windows-page). |
 
 With CommunityToolkit.Mvvm, a ViewModel that polls less while the user works
 elsewhere and hides to the status area:
@@ -1101,8 +1101,7 @@ A custom Runic Desktop window host supports them by implementing
 
 #### A side panel beside the Window's page
 
-`OpenSidePanelAsync` (0.19, experimental under
-[`RUNICDESK104`](../../../docs/experimental.md#RUNICDESK104)) opens another
+`OpenSidePanelAsync` (0.19, stable since 0.22) opens another
 page of the Window beside its page, in a strip on one edge by which the Window
 grows, so the page keeps its size and its place on the screen. The panel's page
 is a second connection of the same Window: it binds to the same ViewModel tree,
@@ -1223,10 +1222,9 @@ unacknowledged close is logged at Debug as event 1026.
 
 ### Closing after the Window's work has drained
 
-> Experimental (0.19, [`RUNICDESK105`](../../../docs/experimental.md#RUNICDESK105)):
-> `RunicCloseDrain`, `RunicWindowOptions.CloseDrain`, `RunicOperationClose`,
-> `IRunicWindowContext.DrainOnClose` and `RunicWindowCloseResult.RemainingDurableWork`.
-> `AcceptedWorkScope.WaitForAcceptedAsync` is stable.
+> New in 0.19 and stable since 0.22: `RunicCloseDrain`, `RunicWindowOptions.CloseDrain`,
+> `RunicOperationClose`, `IRunicWindowContext.DrainOnClose` and
+> `RunicWindowCloseResult.RemainingDurableWork` were experimental under `RUNICDESK105` in 0.19 to 0.21.
 
 An application whose Window runs durable work, such as a change to an external
 system that must not stop halfway, can keep the window open after the user
@@ -2157,8 +2155,8 @@ own code, while you type and in the build, so `#pragma warning disable` and
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#errors-and-warnings-while-you-type)
 lists them.
 
-`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039` and `053` are warnings; the ones the generator
-reports itself (`020`, and the analyzer's when analyzers are off) repeat on builds that reuse the cached generation. Every other
+`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039`, `053` and `072` are warnings; the ones the generator
+reports itself (`020`, `072`, and the analyzer's when analyzers are off) repeat on builds that reuse the cached generation. Every other
 code fails the build. The
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 lists every code with its severity, what reports it, its cause and its fix.
@@ -2419,7 +2417,8 @@ Views client, which the host package copies into `www/`:
 `Runic.Application.Views.Desktop` (and so `Runic.Application.Views.Wpf`) copies
 `runic-desktop-views.js`, `Runic.Application.Views.CsWebUi` copies
 `runic-cswebui.js`. Both are also copied under those names, so a page that loads
-one of them directly keeps working. Neither `index.html` nor the Vite
+one of them directly keeps working; that copy is deprecated since 0.22 and removed
+in 0.23, and such a page logs a console warning. Load `runic-views.js` instead. Neither `index.html` nor the Vite
 configuration names a host, so the same `dist/` runs on every host, and
 switching hosts changes the host package and `Program.cs`, not the frontend.
 `runic({ desktop: true })` from `@runic-artifex/vite-plugin-runic` is not needed
@@ -2435,8 +2434,8 @@ dotnet run -p:RunicApplicationHost=desktop
 
 Without it, such a project copies no `www/runic-views.js`, and gets warning
 `RUNICBRIDGE019` when a copied page loads `runic-views.js`. A page that loads
-`runic-cswebui.js` or `runic-desktop-views.js` itself builds without the
-warning. The frontend build receives the host as the `RUNIC_APPLICATION_HOST`
+the deprecated `runic-cswebui.js` or `runic-desktop-views.js` itself builds
+without the warning. The frontend build receives the host as the `RUNIC_APPLICATION_HOST`
 environment variable and is part of its build state, so a Vite configuration
 that still needs a host-specific build can read it and is rebuilt when it
 changes. A frontend that a referenced project builds, such as the model project
@@ -3503,27 +3502,27 @@ tests, `RunicViewState.IsValidating(vm => vm.UserName)` and
 Text that a ViewModel produces, such as a status line or a validation
 message, can follow the window's language without a call per string. The
 ViewModel produces a text reference of
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/transport.md)
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/transport.md)
 (a message key, typed arguments and a fallback text) instead of a sentence, and
 the page formats it with its Translations runtime (the `translation-text/1`
 feature). When the language changes, the page formats the references it has
 again.
 
-The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/runic-views.md)
+The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-views.md)
 walks through one catalog for the page and C#, the application's language,
 native text and tests, step by step. This section is the reference. It needs
-Runic Translations 0.13.0 or later. `dotnet new runic-app --translations` starts
+Runic Translations 0.14.0 or later. `dotnet new runic-app --translations` starts
 an application with all of it, and the
 [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
 shows it in English, German and Arabic.
 
 **One catalog.** Keep the catalog with the frontend and name its `runic.json`
 in the .NET project, which then gets the generated C# API for every message
-([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
+([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
 
 ```xml
-<PackageReference Include="Runic.Translations" Version="0.13.0" />
-<PackageReference Include="Runic.Translations.Build" Version="0.13.0" PrivateAssets="all" />
+<PackageReference Include="Runic.Translations" Version="0.14.0" />
+<PackageReference Include="Runic.Translations.Build" Version="0.14.0" PrivateAssets="all" />
 <RunicTranslationProject Include="Frontend/translations/runic.json" />
 ```
 
@@ -3933,7 +3932,7 @@ validation text, resolve them by catalog with the generated transport's
 one of a catalog the page does not list shows its fallback text. One written
 against another release of a catalog is checked key by key: it translates while
 its key and arguments still match, and shows its fallback text otherwise
-([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/transport.md)):
+([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/transport.md)):
 
 ```ts
 import * as appTransport from "virtual:runic-translations/app/transport";
@@ -3954,7 +3953,7 @@ configureTranslatedText({
 With the Vite plugin's `dependencies: "auto"`, the page's copy of a library
 catalog is regenerated with the application's `overrides`, so a reference
 resolves to the same text as in C#
-([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/libraries.md)).
+([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/libraries.md)).
 
 **Right-to-left text.** Since Runic Translations 0.9, a catalog that declares a
 right-to-left locale, such as `ar` or `he`, isolates the placeholders of its
@@ -3965,7 +3964,7 @@ them correctly; compare such text in tests after the runtime's
 in `runic.json` turns it on or off. The runtime's `localeDirection`, passed as
 `direction`, gives `syncDocumentLocale` and `textDirection()` the direction of
 each locale; see
-[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/bidi.md).
+[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/bidi.md).
 
 `syncDocumentLocale()` sets `lang` and `dir` on `<html>` (direction from the
 runtime's `direction`, such as `localeDirection`, else the locale's script) and
@@ -4888,7 +4887,7 @@ trace id; correlate them with the host's spans by time and route.
 | 1052 | `WindowCloseGuardFailed` | Error | A guarded Window's `CanCloseAsync` throws; the window stays open. A departure guard that throws is logged by the navigator as 1060 instead. | `Window`, `ErrorType` |
 | 1053 | `WindowCloseGuardUnavailable` | Warning | A Window with `GuardClose` opens on a presentation that cannot keep its window open, such as CS-WebUI or a browser, so a user close does not ask `CanCloseAsync`. | `Window`, `Presentation` |
 | 1054 | `WindowFileDropFailed` | Error | `IRunicFileDropTarget.OnFilesDroppedAsync` of a Window's root ViewModel threw for a drop of files; later drops still arrive. | `ViewModel`, `FileCount`, `ErrorType` |
-| 1055 | `WindowCloseDrainUnavailable` | Warning | A Window with a close drain (`RunicWindowOptions.CloseDrain`, `RunicDesktopHostOptions.CloseDrain`) opens on a presentation that cannot keep its window open, such as an installed browser, serve-only mode or CS-WebUI: the window closes at once, and the Window's scope still waits for durable work. Experimental (`RUNICDESK105`). | `Window`, `Presentation` |
+| 1055 | `WindowCloseDrainUnavailable` | Warning | A Window with a close drain (`RunicWindowOptions.CloseDrain`, `RunicDesktopHostOptions.CloseDrain`) opens on a presentation that cannot keep its window open, such as an installed browser, serve-only mode or CS-WebUI: the window closes at once, and the Window's scope still waits for durable work. | `Window`, `Presentation` |
 | 1090 | `ReactiveSchedulerKept` | Information | A Runic Desktop, CS-WebUI or test-host window opens while ReactiveUI's main-thread scheduler is one set before `AddRunicReactiveModelContext()`, so Runic's was not installed. Once per scheduler type; a UI dispatcher's scheduler, such as WPF's, is not logged. | `Scheduler` |
 | 1091 | `ReactiveSchedulerReplaced` | Warning | Such a window opens after another scheduler replaced the installed one, for example a later `RxAppBuilder` `BuildApp()` with `WithPlatformServices()`. Call `WithRunicModelContext()` on that builder. Once per scheduler type; a UI dispatcher's scheduler is not logged. | `Scheduler` |
 | 1100 | `HotReloadRestartRequired` | Error | A Hot Reload edit changed a generated Bridge contract; restart the application. The `RUNIC_IDE_CONTRACT_RESTART_REQUIRED` line also goes to standard error. | `Mismatch` |
@@ -4957,6 +4956,7 @@ trace id; correlate them with the host's spans by time and route.
 | 2102 | `CsWebUiMenuCommandFailed` | Error | A menu bar command of a CS-WebUI Window's root ViewModel (`IRunicMenuCommandSource`, `RunicCsWebUiHostOptions.MenuBar`) threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |
 | 2103 | `CsWebUiBlobEndpointPortsHeld` | Warning | Another process held, or answered on, one loopback address of `localhost` (`Address`) on `Count` of the `Tried` ports a CS-WebUI Window's blob endpoint tried, so the endpoint gave up `Host`. On Windows, where http.sys refuses to listen on a port that another socket holds, `Address` is `localhost` when no single address shows which socket holds it. Its URLs then fall back to `127.0.0.1`, whose loads the page makes cross-site and the endpoint refuses; on Windows, which has no fallback, the Window opens without blobs and uploads (event 1207). | `Address`, `Count`, `Tried`, `Host` |
 | 2104 | `CsWebUiBlobEndpointPortsReserved` | Warning | On Windows, URL reservations of http.sys (`Reservations`, the reserved URL prefixes) named `Count` of the `Tried` ports a CS-WebUI Window's blob endpoint tried for `Host`, so the endpoint gave up `Host`. A reservation lets the users that its access list names register URLs under the endpoint's, so the endpoint does not use a port that one names, whatever its host or path. The Window then opens without blobs and uploads (event 1207). | `Reservations`, `Count`, `Tried`, `Host` |
+| 2105 | `CsWebUiBlobEndpointAcceptFailed` | Warning | Outside Windows, a CS-WebUI Window's blob endpoint (its loopback server or the relay on the other loopback address) could not accept a connection, as when the process has run out of file descriptors (`Error`, the socket error). It accepts again after 100 ms, growing to 1 s while the failures last, so its blobs and uploads resume once the condition clears. Once per run of failures. | `Error` |
 | 3000 | `WindowCloseCancellationCallbackFailed` | Error | A Runic Desktop close-cancellation callback throws. | `ErrorType` |
 | 3001 | `WindowCloseConfirmationFailed` | Error | A Runic Desktop close confirmation throws; the Window stays open. | `ErrorType` |
 | 3002 | `DesktopConfigurationInvalid` | Error | `DesktopHost.Validate` finds a check that fails the window request. | `Code`, `Option`, `DiagnosticMessage`, `Remediation` |
@@ -5345,7 +5345,7 @@ keep its Window open. Called from accepted work of the scope, it does not wait
 for that work, as `DrainAsync` does not. Its token stops only the wait.
 
 A Window's close waits for a scope that its context registered with
-`IRunicWindowContext.DrainOnClose(scope)` (0.19, experimental), within the
+`IRunicWindowContext.DrainOnClose(scope)` (0.19), within the
 close's timeout or [close drain](#closing-after-the-windows-work-has-drained),
 and never cancels its work. This replaces draining the scope inside a close
 guard, which closed its admission before a later guard could still keep the

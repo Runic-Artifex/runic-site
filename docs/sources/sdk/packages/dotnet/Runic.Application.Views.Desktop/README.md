@@ -160,8 +160,7 @@ The same Window and `async host => ...` body run on CS-WebUI with
   close and logs event 1053 `WindowCloseGuardUnavailable`; `RequestCloseAsync`
   still asks `CanCloseAsync` there.
 - A Window with a close drain (`RunicWindowOptions.CloseDrain`, or
-  `RunicDesktopHostOptions.CloseDrain` for every Window; experimental,
-  `RUNICDESK105`) keeps its embedded window open after the user's close,
+  `RunicDesktopHostOptions.CloseDrain` for every Window) keeps its embedded window open after the user's close,
   `RequestCloseAsync` or a quit was approved, until its operations, awaited
   commands and drained scopes have ended (see
   [Closing after the Window's work has drained](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#closing-after-the-windows-work-has-drained)).
@@ -606,7 +605,8 @@ CS-WebUI, whose package copies its own client as `runic-views.js`. A project
 that references both hosts sets `RunicApplicationHost` (`desktop` or
 `cswebui`); see
 [the host of a page](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#the-host-of-a-page).
-Pages that load `runic-desktop-views.js` keep working. `runic({ desktop: true })`
+Pages that load `runic-desktop-views.js` keep working in 0.22 but log a console
+warning: that copy is deprecated and removed in 0.23. `runic({ desktop: true })`
 is not needed for a Views page. The adapter uses the same host-neutral client
 contract as the CS-WebUI adapter, and its build defaults match
 `Runic.Application.Views.CsWebUi`, so `AddRunicViews()` is generated in
@@ -1328,6 +1328,23 @@ is navigated through its WebView instead. Neither runs page script. Outside `Dev
 2007 report it. The
 [dotnet-runic README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/dotnet-runic/README.md)
 describes the frontend modes.
+
+With a Vite or Angular development server, `dotnet runic dev` writes a
+development document into `www/` that loads the page's modules from the server,
+and sets `RUNIC_APPLICATION_VITE_DEV_SERVER` (or
+`RUNIC_APPLICATION_FRONTEND_DEV_SERVER`) to `http://127.0.0.1:<port>/`. In a
+`Development` environment, when `RunicDesktopHostOptions.SurfaceOptions` is not
+set and the window serves its build folder rather than the embedded frontend
+archive, a window then forwards a `GET` or `HEAD` that neither `www/` nor its
+`Resources` answer to the server, such as an `<img src="brand/logo.svg">` the
+page builds at run time (#1085). A root-relative path outside every window's
+own path, such as the Vite DevTools dock's `/__devtools-assets/`, redirects to
+the same path on the server (#1086). Paths whose first segment starts with
+`__` or `@` (the server's own endpoints, such as `/__runic/` or
+`/__open-in-editor`) are not forwarded, except the dock's at the root. The
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/security.md#development-server)
+lists what a window admits and checks. Outside `Development` the host ignores
+the variables, and CS-WebUI windows redirect such paths to the server instead.
 
 Set `RUNIC_APPLICATION_SERVE_ONLY=1` to drive the unchanged application from a
 browser test, with the same contract as on
