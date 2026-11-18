@@ -342,7 +342,7 @@ test('uses the canonical Runic Translations identifiers', async () => {
   assert.match(html, /Runic\.Translations\.\*/);
   assert.match(html, /runic-translations-sdk/);
   assert.match(stripMarkup(html), /released independently from the Runic SDK/);
-  assert.ok(html.includes('runic-translations-sdk/releases/tag/v0.13.0'));
+  assert.ok(html.includes('runic-translations-sdk/releases/tag/v0.14.0'));
   assert.doesNotMatch(html, /releases\/tag\/v0\.9\.0/);
   assert.doesNotMatch(html, /independent preview is not yet published/);
 });

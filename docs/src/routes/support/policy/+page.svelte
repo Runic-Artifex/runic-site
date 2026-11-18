@@ -64,7 +64,7 @@
           >0.9.1</code
         >) only fixes or adds, and only the latest minor gets fixes. Releases
         from 0.9.0 on carry no <code>-preview.N</code>
-        suffix; GitHub still marks them as prereleases. 0.21.0 is the current minor
+        suffix; GitHub still marks them as prereleases. 0.22.0 is the current minor
         release. Views protocol 4, introduced in 0.13.0, is the protocol that 1.0
         keeps, and later releases add only features negotiated in its
         <code>hello</code>. The release candidates <code>1.0.0-rc.N</code> start
@@ -251,7 +251,12 @@
           <code>@runic-artifex/views/component</code>
           and the root <code>runic()</code> to
           <code>@runic-artifex/views/experimental</code> and
-          <code>@runic-artifex/vite-plugin-runic/experimental</code>.
+          <code>@runic-artifex/vite-plugin-runic/experimental</code>. 0.22.0
+          graduates the side panel and the close drain, whose IDs
+          <code>RUNICDESK104</code> and <code>RUNICDESK105</code> are retired:
+          <code>onBridgeDraining</code> is a root export of
+          <code>@runic-artifex/views</code>, and the
+          <code>./experimental</code> re-export is deprecated until 0.23.
         </li>
         <li>
           <strong>Preview:</strong>

@@ -20,7 +20,7 @@ that a native WPF View can bind to, so the user can switch between the two
 without losing a draft.
 
 The
-[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.21.0/examples/wpf-hybrid-editor)
+[hybrid editor example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.22.0/examples/wpf-hybrid-editor)
 is the complete application this guide quotes. Its notes list and dialogs are
 WPF; its editor page can switch between WPF controls and a web View.
 
@@ -149,15 +149,17 @@ The frontend's `index.html` loads two classic scripts before its module:
 
 ```html docs-test=source:examples/wpf-hybrid-editor/Frontend/index.html
 <script src="webui.js"></script>
-<script src="runic-desktop-views.js"></script>
+<script src="runic-views.js"></script>
 <script type="module" src="app.js"></script>
 ```
 
 - `webui.js` is served by the Runic Desktop surface that hosts the page. It
   connects the page to .NET; there is no file to copy.
-- `runic-desktop-views.js` is the Views client for Runic Desktop. The
+- `runic-views.js` is the Views client of the host. The
   `Runic.Application.Views.Desktop` package, which the WPF adapter depends on,
-  copies it to `www/` on build and publish.
+  copies it to `www/` on build and publish. Until 0.23 it also copies it as
+  `runic-desktop-views.js`; since SDK `0.22.0` a page that loads that copy logs
+  a console warning, and 0.23 removes it.
 - `app.js` is your bundled frontend. It calls the generated `connect…()`
   function, here `connectEditor()`.
 
@@ -181,7 +183,7 @@ application copies the model project's `dist` to its own `www/`.
 `<RunicApplicationFrontendDelivery>Embedded</RunicApplicationFrontendDelivery>`
 packs the frontend into the application assembly instead of `www/`, and a host
 without `ContentRoot` serves it from there. The
-[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views/README.md)
+[Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md)
 change the frontend folder, the package manager and the build command.
 
 ## Place a `RunicViewHost`
@@ -254,7 +256,7 @@ window. Since SDK `0.11.0` they also announce messages to the screen reader
 through UI Automation, show context menus and message boxes, drag files out,
 read and write clipboard formats beyond text, and set a badge and progress on
 the taskbar button. The
-[Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views.Wpf/README.md#platform-services-for-a-wpf-window)
+[Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views.Wpf/README.md#platform-services-for-a-wpf-window)
 describes each.
 
 ## Guard the window's close
@@ -287,7 +289,7 @@ changes in this window?", register a guard from
 `WindowCloseConfirmation.OncePerClose`; both are new in SDK `0.11.0`. A close
 then asks it once, however many regions it clears. See the Runic.Navigation.Wpf
 README,
-["Asking once per window close"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Navigation.Wpf/README.md#asking-once-per-window-close).
+["Asking once per window close"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Navigation.Wpf/README.md#asking-once-per-window-close).
 
 The guard belongs to the window, not to the loaded host. A host on an
 unselected tab is unloaded and its View discarded, but the window keeps
@@ -310,9 +312,9 @@ selects among them with a `NavigationSelection` bound through
 `NavigationSelector.Selection`, closing the window retires the page and asks
 every page of every tab, whichever is selected. See the Runic.Navigation.Wpf
 README,
-["Tabs with their own stacks"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-with-their-own-stacks)
+["Tabs with their own stacks"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-with-their-own-stacks)
 and
-["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
+["Tabs and other hosts that unload"](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Navigation.Wpf/README.md#tabs-and-other-hosts-that-unload).
 
 ## Start windows in code, not with `StartupUri`
 
@@ -357,7 +359,7 @@ Translations `0.6.0-preview.7` and later have `CreateManager`.
 `ServiceProvider.Dispose()` in `OnExit` starts the navigator's shutdown but
 doesn't wait for it. When owned cleanup must finish, dispose the provider
 asynchronously after `app.Run()` returns in a custom `Main`, as the
-[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
+[Runic.Navigation.Wpf guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Navigation.Wpf/README.md#disposal-at-exit)
 shows. Never block the dispatcher on `DisposeAsync` while it runs.
 
 ## Limits
@@ -382,5 +384,5 @@ shows. Never block the dispatcher on `DisposeAsync` while it runs.
 - [Pages and navigation](../guides/pages-and-navigation.md) explains regions,
   guards and dialog results.
 - The
-  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views.Wpf/README.md)
+  [Runic.Application.Views.Wpf README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views.Wpf/README.md)
   lists every `RunicViewHost` property and the lower-level API.
