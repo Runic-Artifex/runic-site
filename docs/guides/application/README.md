@@ -798,4 +798,6 @@ stops after a reload or restart.
 
 The
 [0.22.0 release notes](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/eng/release/notes/0.22.0.md#upgrading-from-021)
-list every change.
+list every change, and the
+[migration guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/migration-1.0.md#from-021-to-022)
+collects them.
