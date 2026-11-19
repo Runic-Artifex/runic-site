@@ -448,6 +448,19 @@ browser can take up to about 16 seconds more (close, kill, output and profile cl
 so with the defaults a window that never connects fails after at most about 46 seconds
 instead of 15. A page that was requested, a browser that exited and embedded WebViews
 are not relaunched.
+A browser can restart itself at launch: the process Runic started exits and a new copy
+opens the window. Edge does this when its environment carries a Windows compatibility
+layer (`__COMPAT_LAYER`, which Explorer sets for some starts) and to drop elevation. On
+Windows, Runic removes `__COMPAT_LAYER` from the browser's environment (not from the
+application's) and passes Edge `--edge-skip-compat-layer-relaunch`, also beside the
+application's own `BrowserArguments`. When the started process still exits before the
+page's first request, the window keeps waiting for the copy until `ConnectionTimeout`;
+the launch code stays single-use and is withdrawn at the deadline. A copy that never
+connects fails with `presentation-browser-handed-off`, which, like a connection timeout,
+opens no fallback. Runic does not own the copy's process: `ProcessId` is 0, and the
+window counts as closed once its page has been disconnected for 5 seconds, not when a
+process exits. Closing such a window from the application ends its page's connection
+but cannot close the browser's window.
 The page's Bridge sends its token check as soon as its WebSocket opens. A WebSocket
 that sends none is closed after 10 seconds, or after 2 seconds when a newer WebSocket
 needs the only connection, and the page's Bridge reconnects. Each close logs event
@@ -578,8 +591,8 @@ process earlier, whatever the application does, so keep its limits above
 | A second Ctrl+C | at once |
 
 On macOS a quit's reply to the system waits until the application returned, so a
-logout waits for the drain too. The close drain is experimental
-(`RUNICDESK105`).
+logout waits for the drain too. The close drain is stable since 0.22; it was
+experimental under `RUNICDESK105` in 0.19 to 0.21.
 
 `DesktopWindow.NativeHandle` is the top-level window of an open embedded window,
 or zero for an installed browser or a closed window. Its kind depends on the
@@ -935,6 +948,24 @@ extension. A folder it rejects is
 reported to `DiagnosticSink` as `devtools-extension-failed`. Hosted windows load
 none. See the [debugging guide](../../../docs/debugging.md#the-browsers-developer-tools-per-engine).
 
+### An installed browser's DevTools Protocol endpoint
+
+Since 0.22, in Development, a window shown in an installed Chromium browser
+(Chrome, Edge and the others; CS-WebUI) opens that browser's Chrome DevTools
+Protocol endpoint on 127.0.0.1 when `RUNIC_WEBUI_REMOTE_DEBUGGING_PORT` asks for
+it: `0` for a free port, or a fixed one. `dotnet runic dev --debug-endpoint` and
+the template's CS-WebUI script-debugging profile set it, and an IDE's JavaScript
+debugger attaches to the port (Visual Studio's Attach to Process). Any local
+process can attach to it too. A fixed port is held until the browser starts,
+and is reported only after `/json/version` answers on 127.0.0.1 and, on Linux,
+no other user listens there. A taken one becomes a free port, with a warning
+(event 3043); one that cannot be confirmed is not reported (event 3042).
+Outside Development, with `DevTools = false` in the window's `WebContent`
+policy, or when the window's `BrowserArguments` name `--remote-debugging-port`
+themselves, Runic adds no port. The Development port goes beside Runic's Chromium
+defaults, which other custom arguments replace. See the
+[debugging guide](../../../docs/debugging.md#cs-webui-pages-in-a-javascript-debugger).
+
 ### Printing
 
 Runic has no printing API: the page prints itself with `window.print()`, and an
@@ -1215,12 +1246,11 @@ manager decides on Linux, so `StateChanged` reports the result. They need
 `DesktopWindow.OpenSidePanelAsync` shows a page of the window's surface beside
 the window's page, in a strip on one edge by which the window grows. The page
 keeps its size and its place on the screen: its viewport, media queries and
-`position: fixed` elements do not change. Experimental under
-[`RUNICDESK104`](../../../docs/experimental.md#RUNICDESK104); 0.19 shows it on
-Windows (WebView2), macOS (WKWebView) and Linux (WebKitGTK, GTK 3 and GTK 4).
+`position: fixed` elements do not change. It shows on Windows (WebView2), macOS
+(WKWebView) and Linux (WebKitGTK, GTK 3 and GTK 4). New in 0.19 and stable since
+0.22; it was experimental under `RUNICDESK104` in 0.19 to 0.21.
 
 ```csharp
-#pragma warning disable RUNICDESK104 // The side panel is experimental.
 var result = await window.OpenSidePanelAsync(new DesktopSidePanelOptions
 {
     Edge = DesktopWindowEdge.End, // the right edge of a left-to-right window
@@ -1231,7 +1261,6 @@ if (result is DesktopSidePanelResult.Refused { Reason: var reason })
 {
     // Show the content in an overlay of the page instead.
 }
-#pragma warning restore RUNICDESK104
 ```
 
 - **One step, exact bounds.** The window loads the panel's page in a hidden view
@@ -2295,17 +2324,16 @@ describes the window owner the platform services receive for a window.
 | Property | Default | Effect |
 | --- | --- | --- |
 | `RunicDesktopMinimalHost` | `false` | With `Runic.Desktop.Kestrel`, `true` builds each surface's listener from an empty ASP.NET Core builder with Kestrel core and sockets only, and NativeAOT trims the default builder path; see the [size and tuning guide](https://docs.runic-artifex.eu/guides/desktop/size-and-tuning/). Any value other than `true` or `false` fails the build with [`RUNICDESK001`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk001). |
-| `RunicDesktopServer` | the referenced server | The presentation server: `Kestrel` (`Runic.Desktop.Kestrel`), `Native` (`Runic.Desktop.NativeServer`, the default when both are referenced) or `None` for an executable that opens no window. An executable without a server package fails with [`RUNICDESK004`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk004); another value fails with [`RUNICDESK003`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk003). |
+| `RunicDesktopServer` | the referenced server | The presentation server: `Kestrel` (`Runic.Desktop.Kestrel`), `Native` (`Runic.Desktop.NativeServer`, the default when both are referenced) or `None` for an executable that opens no window: then a trimmed or NativeAOT build keeps neither server, also when a server package is referenced, and a window fails with `presentation-server-unavailable`. An executable without a server package fails with [`RUNICDESK004`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk004); another value fails with [`RUNICDESK003`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicdesk003). |
 
 ## Experimental APIs
 
-The [side panel](#side-panel) is experimental under `RUNICDESK104` (0.19, for one
-minor), the [close drain](#closing-after-the-work-has-drained) (`CloseDrainAsync`,
-`DesktopCloseDrainContext`, `DesktopCloseReason`, `ShutdownDrainTimeout` and
-`ShutdownStarting`) under `RUNICDESK105` (0.19, for one minor), and `DesktopWindowHostOptions.EphemeralDataStore` with
-`IDesktopEphemeralDataStoreWindowHost` under `RUNICDESK103` (hosted windows). The
-former IDs are retired, so remove their suppressions: `RUNICDESK100` (custom window hosts) graduated in 0.10.0, and
-`RUNICDESK101` (the low-level presentation transport) was split in 0.10.0:
+`DesktopWindowHostOptions.EphemeralDataStore` with
+`IDesktopEphemeralDataStoreWindowHost` is experimental under `RUNICDESK103` (hosted windows). The
+former IDs are retired, so remove their suppressions: the [side panel](#side-panel) (`RUNICDESK104`) and the
+[close drain](#closing-after-the-work-has-drained) (`RUNICDESK105`: `CloseDrainAsync`, `DesktopCloseDrainContext`,
+`DesktopCloseReason`, `ShutdownDrainTimeout` and `ShutdownStarting`) graduated in 0.22.0, `RUNICDESK100` (custom
+window hosts) graduated in 0.10.0, and `RUNICDESK101` (the low-level presentation transport) was split in 0.10.0:
 `ExecuteJavaScriptAsync`, `ConnectionCount` and `SubscribeConnectionEvents`, with
 `DesktopConnectionEvent` and `DesktopConnectionEventKind`, are stable, and the
 rest is internal to Runic Desktop and Runic Windows and Views. See

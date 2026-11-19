@@ -3,18 +3,19 @@
 A Runic application has two halves to debug: the .NET Window with its
 ViewModels, and the page that renders them in a web engine. This guide shows
 how to debug both under `dotnet runic dev`, from your IDE's .NET debugger to
-the browser's developer tools, and how the development tools of SDK `0.21.0`
+the browser's developer tools, and how the development tools of SDK `0.22.0`
 connect a click in the page to the C# that runs for it.
 
 > Adapted from the SDK's
-> [debugging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/debugging.md)
-> at SDK `0.21.0`. Each section links the README that describes its tool in
+> [debugging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/debugging.md)
+> at SDK `0.22.0`. Each section links the README that describes its tool in
 > full.
 
 | You want to…                                                                     | Use                                                                        |
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | Stop on a breakpoint in a ViewModel                                              | [Your IDE's .NET debugger](#the-net-debugger-in-your-ide)                  |
 | Inspect the page's DOM, console, network and scripts                             | [The browser's developer tools](#the-browsers-developer-tools-per-engine)  |
+| Stop on C# and `Frontend/src` breakpoints in one Visual Studio session           | [Runic DevKit's Debug the Window](#visual-studio)                          |
 | Stop on a breakpoint in the frontend's sources from your IDE                     | [JavaScript debuggers](#javascript-debuggers-in-your-ide)                  |
 | See each Bridge call with the C# that ran, and open it in the editor             | [The dock](#the-dock)                                                      |
 | Click an element and see its commands, state and texts                           | [Runic Inspect](#runic-inspect)                                            |
@@ -54,29 +55,118 @@ To keep `dev` starting the Window, attach to the process that
 `[dev] Window started: process <pid>` names instead (`--no-dotnet-watch` keeps
 it from restarting).
 
-[Debug the Window in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/tools/dotnet-runic/README.md#debug-the-window-in-your-ide)
+[Debug the Window in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tools/dotnet-runic/README.md#debug-the-window-in-your-ide)
 has the details and the snippets for a project that did not come from the
 template.
 
-### Visual Studio and Rider
+### Visual Studio
 
 Projects from `dotnet new runic-app` have `Properties/launchSettings.json`.
-Visual Studio and Rider list its profiles next to the Start button:
+Visual Studio lists its profiles next to the Start button:
 
 - **`<Project>`** starts the Window with `DOTNET_ENVIRONMENT=Development`: the
   browser's developer tools on the page and detailed Bridge errors.
   `dotnet run` uses it too.
-- **`<Project> (WebView2 script debugging)`** (Runic Desktop) also opens
-  WebView2's DevTools Protocol endpoint on port 9222 on Windows, and in Visual
-  Studio attaches its JavaScript debugger to the page beside the .NET debugger
-  (`jsWebView2Debugging`).
+- **`<Project> (CS-WebUI script debugging)`** (CS-WebUI, since 0.22) also
+  opens the DevTools Protocol endpoint of the Window's Chrome or Edge on
+  `http://127.0.0.1:9225/`. Any local process can attach to it while the
+  Window runs
+  ([CS-WebUI pages in a JavaScript debugger](#cs-webui-pages-in-a-javascript-debugger)).
 
-Run `dotnet runic dev --no-window` in a terminal (Visual Studio's Developer
-PowerShell, or Rider's terminal) and press F5. In Rider you can add
-`dotnet runic dev --no-window` to the run configuration's "Before launch" list
-as an external tool. Without `dev`, F5 builds the production frontend and the
-Window shows that. See the template README's
-[Debug it in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/tools/Runic.Application.Templates/content/runic-app/README.md#debug-it-in-your-ide).
+**Runic DevKit for Visual Studio** (preview, Visual Studio 2026 on Windows x64;
+see its
+[README](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/visualstudio/README.md))
+adds the `dotnet runic dev` loop to Visual Studio. Install it from the Visual
+Studio Marketplace: in **Extensions → Manage Extensions**, search for **Runic
+DevKit**, or open
+[runic-artifex.runic-devkit-vs](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit-vs),
+and restart Visual Studio. `runic-devkit-vs.vsix` is also on the
+[runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0).
+Its commands
+are in **Tools → Runic** and in the Runic tool window (**View → Other Windows →
+Runic**):
+
+- **Debug the Window** debugs the C# code and the page in one session, with
+  breakpoints in `Frontend/src` and in your ViewModels. It starts
+  `dotnet runic dev --no-window` if it does not run yet, waits for
+  `[dev] Ready`, builds the project, and starts the Window under the .NET
+  debugger with the session file's `window.environment` and a DevTools Protocol
+  port: a free loopback port for WebView2 (Runic Desktop), 9225 for CS-WebUI.
+  When the page answers on that port, it attaches Visual Studio's JavaScript
+  debugger over the "JavaScript and TypeScript (Chrome DevTools/V8 Inspector)"
+  connection. If the page does not appear within three minutes of the Window
+  running, the .NET debugger stays attached and the **Runic SDK** Output pane
+  says why.
+- **Attach to the Page (JavaScript)** attaches the JavaScript debugger alone to
+  a page that already runs with an endpoint: one of the session file's
+  `debugEndpoints`, or a Window that Debug the Window started. With several, it
+  asks which one.
+- **F5 asks first.** When F5 or Ctrl+F5 starts a Runic project and no
+  `dotnet runic dev --no-window` runs for it, a message asks whether to start
+  it. F5 runs a launch profile, so it debugs only the .NET code: use Debug the
+  Window for page breakpoints.
+- **The dev session.** Start dotnet runic dev, Start dotnet runic dev
+  --no-window and Stop dotnet runic dev run `dev` with its output in the
+  **Runic SDK** Output pane and its diagnostics in the Error List. The tool
+  window's Dev Session section shows each project's `dev` state, server, pages,
+  debug endpoints and generated clients; its ViewModels section opens the C#
+  members, and Run dotnet runic doctor puts failing checks into the Error List.
+  When DevKit starts `dev` with its own Window, it passes `--debug-endpoint` to
+  `dotnet-runic` 0.22 and later, so a CS-WebUI Window opens its port; a `dev`
+  that you start in a terminal opens none.
+- **Stopping `dev`.** With `dotnet-runic` 0.22, Stop dotnet runic dev asks `dev`
+  to stop on its standard input ([below](#the-ide-contract)), so the session
+  file says `stopped` and the development pages leave `www/`; after 10 seconds
+  it ends the process tree. When a `dev` was killed, DevKit touches its
+  project's `obj/runic/dev-stopped` once, so the next F5 builds and puts the
+  production frontend back.
+
+Page breakpoints need:
+
+- Visual Studio's **JavaScript diagnostics** component
+  (`Microsoft.VisualStudio.Component.JavaScript.Diagnostics`). Since 0.22 the
+  template's `.vsconfig` names it next to the .NET desktop development
+  workload, and Visual Studio offers to install a missing one when it opens the
+  project. For another project, copy `.vsconfig` from a new one next to its
+  solution.
+- A Visual Studio that does not run as administrator: WebView2 ignores the port
+  in an elevated process.
+- `@runic-artifex/vite-plugin-runic` 0.22 or later, whose development source
+  maps have absolute `sources`
+  ([below](#the-development-servers-source-maps)). With an older plugin,
+  breakpoints in `.tsx`, `.vue` and `.svelte` files stay unbound.
+
+If Visual Studio's JavaScript debugger does not attach ("Value cannot be null.
+Parameter name: source", or the attach never finishes), close Visual Studio,
+delete the solution's `.vs` folder and open it again. DevKit stops waiting for
+an attach after 60 seconds.
+
+**The `(WebView2 script debugging)` profile is gone** (0.22). Under F5, Visual
+Studio's JavaScript adapter (`jsWebView2Debugging`) started the Window without
+the profile's environment variables, so the Window ran outside Development,
+Runic cleared `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, and the adapter stopped
+the Window after about 20 seconds. Delete that profile, the entry with
+`"jsWebView2Debugging": true`, from an existing project's
+`Properties/launchSettings.json`, keep `<Project>`, and use Debug the Window
+instead.
+
+Without the extension, run `dotnet runic dev --no-window` in the Developer
+PowerShell and press F5 for the .NET code. For the page, start the Window with
+a DevTools Protocol port and use Debug > Attach to Process with the connection
+type above
+([CS-WebUI pages](#cs-webui-pages-in-a-javascript-debugger) shows the steps).
+Without `dev`, F5 builds the production frontend and the Window shows that.
+Since 0.22, F5 also builds again after a frontend-only edit and after `dev`
+stops: the Runic Views build targets give Visual Studio's fast up-to-date check
+the frontend's files and `obj/runic/dev-stopped`. See the template README's
+[Debug it in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tools/Runic.Application.Templates/content/runic-app/README.md#debug-it-in-your-ide).
+
+### Rider
+
+Rider lists the same launch profiles next to its Run button. Run
+`dotnet runic dev --no-window` in Rider's terminal, or add it to the run
+configuration's "Before launch" list as an external tool, and debug the
+`<Project>` profile. Without `dev`, the Window shows the production frontend.
 
 ### VS Code
 
@@ -97,26 +187,38 @@ The tasks put `dev`'s failures (`RAPPDEV` codes) and build errors in the
 Problems panel. VS Code builds from other vendors, such as VSCodium, cannot run
 Microsoft's .NET debugger; use netcoredbg there.
 
-**The Runic extension for VS Code** (`runic-artifex.runic`, from
-[runic-editors](https://github.com/Runic-Artifex/runic-editors/blob/v0.21.0/vscode/README.md))
+**Runic DevKit for VS Code** (`runic-artifex.runic-devkit`, from
+[runic-editors](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/vscode/README.md))
 adds a Dev Session view that follows `dotnet runic dev`, F5 of the Window
 without a `launch.json`, doctor results, and a ViewModels tree that opens the
-C# members. Version 0.21.0 reads the development source maps of SDK 0.21 and
-0.20 apps. It is not on an extension marketplace: install `runic.vsix` from
-the [runic-editors 0.21.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.21.0):
+C# members. Install it from the VS Code Marketplace
+([runic-artifex.runic-devkit](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit),
+with the Preview label, since runic-editors 0.22.0); the template's
+`.vscode/extensions.json` names it:
 
 ```sh docs-test=skip:sdk-guide-excerpt
-gh release download v0.21.0 --repo Runic-Artifex/runic-editors --pattern runic.vsix
-code --install-extension runic.vsix
+code --install-extension runic-artifex.runic-devkit
 ```
 
-It replaces the Runic MF2 Translations extension; uninstall that one first.
+`runic-devkit.vsix` is also on the
+[runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0);
+VSCodium, Cursor and other editors that use Open VSX install it from there,
+since Runic DevKit is not on Open VSX. With `dotnet-runic` 0.22, its `dev` task passes
+`--debug-endpoint` to a `dev` with its Window, and **Stop dotnet runic dev**
+asks `dev` to stop on its standard input.
+
+Until 0.21 the extension was **Runic** (`runic-artifex.runic`, `runic.vsix`).
+Runic DevKit installs next to it and to the older Runic MF2 Translations
+extension, offers to uninstall both on activation, and then needs a window
+reload: while both are installed, both register the same commands and start a
+language server for the same files. See
+[Moving from Runic or Runic MF2 Translations](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/vscode/README.md#moving-from-runic-or-runic-mf2-translations).
 
 ### The IDE contract
 
 IDE tasks and extensions read `dotnet runic dev` through stable lines and a
 session file, described in the
-[IDE contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/tools/dotnet-runic/README.md#ide-contract):
+[IDE contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tools/dotnet-runic/README.md#ide-contract):
 
 - **Lines:** `[dev] Window started: process <pid>` (the process to attach to),
   `[dev] Ready`, `[dev] Window exited: process <pid>`, the `[dev] Evaluating`
@@ -124,6 +226,17 @@ session file, described in the
   `--browser` `[dev] Browser: Window serves at <url>`. A failure is one line in
   MSBuild's form, `<project> : error RAPPDEV1007: <message>`, which
   `$msCompile` matches.
+- **Stopping `dev`.** Ctrl+C or SIGINT/SIGTERM stops the frontend and the
+  Window, marks the session file `"stopped"`, deletes `dev-frontend` and
+  `dev-pages/`, and touches `obj/runic/dev-stopped`, which Visual Studio's fast
+  up-to-date check reads, so the next F5 builds the production frontend again.
+  An IDE that can't send Ctrl+C, such as Visual Studio on Windows, sets
+  `RUNIC_DEV_STOP_ON_INPUT=1` and redirects `dev`'s standard input (since
+  0.22): `dev` then stops the same way at a line `stop` or at the end of the
+  input. The processes `dev` starts get an input of their own, and without the
+  variable `dev` doesn't read its input. A `dev` killed by force does none of
+  this; an older `dev` ignores the variable, so keep the forced stop as the
+  fallback.
 - **Session file:** `obj/runic/dev-session.json`
   (`runic.application.tool.dev-session/1`), rewritten on each change. `state`
   is `starting`, `ready` or `stopped`. A `dev` that was killed leaves its last
@@ -131,8 +244,9 @@ session file, described in the
   `processId` runs and started at `processStartedAt` (to within a second). The
   file also lists the development server's URL, the pages, the Window's
   process and owner (`dev`, or `ide` with `--no-window`), `debugEndpoints`
-  (WebView2's DevTools Protocol endpoint when the environment opens one, and
-  on Linux `"engine": "webkitgtk", "protocol": "cdp"` for the CDP adapter),
+  (WebView2's DevTools Protocol endpoint when the environment opens one,
+  on Linux `"engine": "webkitgtk", "protocol": "cdp"` for the CDP adapter, and
+  since 0.22 `"engine": "chromium"` for a CS-WebUI Window's browser),
   `unavailableDebugEndpoints` (one that the engine will not open, with a
   `reason`), `browser` (the address that `--browser` serves the Window at),
   `devtoolsExtension` and `devtoolsExtensionId` (the
@@ -140,7 +254,7 @@ session file, described in the
   the Bridge source map that the page's tools read (format
   `runic.views.bridge-sources/1` since 0.21).
   See the
-  [session file](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/tools/dotnet-runic/README.md#session-file).
+  [session file](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tools/dotnet-runic/README.md#session-file).
 
 ## The browser's developer tools per engine
 
@@ -149,7 +263,7 @@ Inspect Element, Safari's Web Inspector) only when `DOTNET_ENVIRONMENT` (or
 else `ASPNETCORE_ENVIRONMENT`) is `Development`, which `dotnet runic dev` and
 the template's launch profiles set. `DesktopWebContentPolicy.DevTools`
 overrides it per window; see
-[links, new windows, downloads and developer tools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools).
+[links, new windows, downloads and developer tools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools).
 
 That setting covers only the tools in the window. A **remote debugging
 endpoint** that a variable in the Window process's environment asks for is the
@@ -162,22 +276,24 @@ environment before their first web view, and since 0.21 the WebView2 host
 removes `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` before it creates its WebView2
 environment, also when `DevTools` is `true`, so a release opens no such
 endpoint
-([release builds](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/security.md#release-builds)).
+([release builds](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/security.md#release-builds)).
 Arguments that the application passes in `DesktopWindowOptions.BrowserArguments`
 are not changed. To debug a release build's page that way, run it with
 `DOTNET_ENVIRONMENT=Development`.
 
-| Engine            | Where                                                              | Open                                                                                                                                                   | Debugger and automation                                                                                                        |
-| ----------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| WebView2          | Windows                                                            | F12, Ctrl+Shift+I, Inspect from the page's context menu, Open DevTools in the window's system menu (Alt+Space), or `DesktopWindow.OpenDevToolsAsync()` | A DevTools Protocol endpoint on request (below); DevTools extensions in Development (below)                                    |
-| WKWebView         | macOS 13.3 and later                                               | Safari ▸ Develop ▸ your Mac ▸ the window's page (turn on "Show features for web developers" in Safari's Advanced settings)                             | Safari's Web Inspector only; no DevTools Protocol endpoint                                                                     |
-| WebKitGTK         | Linux (GTK 3 and GTK 4)                                            | Inspect Element from the page's context menu (WebKit's Web Inspector, docked or detached)                                                              | A DevTools Protocol endpoint for JavaScript debuggers under `dotnet runic dev` (preview, below), and WebKit's remote inspector |
-| Installed browser | CS-WebUI's default, and Runic Desktop's fallback without a WebView | The browser's own F12                                                                                                                                  | The browser's own rules: Runic's policy does not apply                                                                         |
+| Engine            | Where                                                              | Open                                                                                                                                                   | Debugger and automation                                                                                                                |
+| ----------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| WebView2          | Windows                                                            | F12, Ctrl+Shift+I, Inspect from the page's context menu, Open DevTools in the window's system menu (Alt+Space), or `DesktopWindow.OpenDevToolsAsync()` | A DevTools Protocol endpoint on request (below); DevTools extensions in Development (below)                                            |
+| WKWebView         | macOS 13.3 and later                                               | Safari ▸ Develop ▸ your Mac ▸ the window's page (turn on "Show features for web developers" in Safari's Advanced settings)                             | Safari's Web Inspector only; no DevTools Protocol endpoint                                                                             |
+| WebKitGTK         | Linux (GTK 3 and GTK 4)                                            | Inspect Element from the page's context menu (WebKit's Web Inspector, docked or detached)                                                              | A DevTools Protocol endpoint for JavaScript debuggers under `dotnet runic dev` (preview, below), and WebKit's remote inspector         |
+| Installed browser | CS-WebUI's default, and Runic Desktop's fallback without a WebView | The browser's own F12                                                                                                                                  | The browser's own rules: Runic's policy does not apply; a Chromium browser's DevTools Protocol endpoint on request (since 0.22, below) |
 
 - **WebView2 endpoint.** WebView2 opens a Chrome DevTools Protocol endpoint
   when the Window starts with
   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`. The
-  template's WebView2 script debugging profile sets it, or pass it with
+  template's `Window + WebView2 (Windows)` VS Code configuration sets it, Runic
+  DevKit's Debug the Window in Visual Studio adds it with a free port, or pass
+  it with
   `dotnet runic dev -e WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`.
   `dev` then lists `http://127.0.0.1:9222/` under `debugEndpoints` in the
   session file. VS Code's JavaScript debugger (`msedge` with `useWebView`),
@@ -251,11 +367,12 @@ the page runs in a Chromium browser on every OS.
 Breakpoints in `Frontend/src` stop in your IDE through the development server's
 source maps when its JavaScript debugger reaches the page:
 
-| OS      | Route                                                                                                           | VS Code configuration                                            |
-| ------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Windows | WebView2's DevTools Protocol endpoint on port 9222 ([above](#the-browsers-developer-tools-per-engine))          | `Window + WebView2 (Windows)`, `Attach to the page (JavaScript)` |
-| Linux   | `dotnet runic dev`'s CDP adapter for WebKitGTK on port 9222 (preview, since 0.21)                               | `Window + WebKitGTK (Linux)`, `Attach to the page (JavaScript)`  |
-| Any     | The Window's page in Chrome or Edge with `dotnet runic dev --browser` (since 0.21); the only IDE route on macOS | `Window in Chrome`                                               |
+| OS      | Route                                                                                                           | VS Code configuration                                                                                                                 |
+| ------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows | WebView2's DevTools Protocol endpoint on port 9222 ([above](#the-browsers-developer-tools-per-engine))          | `Window + WebView2 (Windows)`, `Attach to the page (JavaScript)`; in Visual Studio, Runic DevKit's [Debug the Window](#visual-studio) |
+| Linux   | `dotnet runic dev`'s CDP adapter for WebKitGTK on port 9222 (preview, since 0.21)                               | `Window + WebKitGTK (Linux)`, `Attach to the page (JavaScript)`                                                                       |
+| Any     | A CS-WebUI Window's Chrome or Edge on its DevTools Protocol endpoint (since 0.22)                               | An `attach` configuration of your own ([below](#cs-webui-pages-in-a-javascript-debugger))                                             |
+| Any     | The Window's page in Chrome or Edge with `dotnet runic dev --browser` (since 0.21); the only IDE route on macOS | `Window in Chrome`                                                                                                                    |
 
 ### On Linux: the CDP adapter (preview)
 
@@ -282,9 +399,27 @@ no debugger is attached.
   adapter, on WebKitGTK 2.54.3 or later within 2.54, or 2.56 or later; WebKit
   serves either the socket or the HTTP inspector, never both.
 - **Port 9222 taken.** `dev` moves the adapter to a free port and names it;
-  change the attach configuration's `port`. Under `--no-window`, whose IDE
-  compound attaches to 9222, `dev` stops with `RAPPDEV1017` and names what
-  holds the port, often another `dev` session.
+  change the attach configuration's `port`. Since 0.22 it also names what
+  holds 9222 when it is your process (another `dev` session and its directory,
+  or the command line), and warns when the project's `.vscode/launch.json` has
+  a JavaScript attach configuration on 9222, such as the template's
+  `Attach to the page (JavaScript)`, which would debug the other program's
+  page. Under `--no-window`, whose IDE compound attaches to 9222, `dev` stops
+  with `RAPPDEV1017` and names what holds the port, often another `dev`
+  session.
+- **No answer after attaching** (0.22). When the Window's page does not answer
+  the debugger's first command within 5 seconds, as once right after WebKit's
+  Web Inspector opened in the Window, `dev` prints a `[dev] Debugging:` line,
+  sends the command once more if that is harmless, and then fails it with an
+  error instead of the attach ending in silence.
+- **Fixed in 0.22.** After a reload, a Vite page reload or a Window restart,
+  js-debug no longer leaves the page stopped at the start of a module: the
+  adapter sends its reply to `Debugger.resume`, a step, `Debugger.pause`,
+  `Page.reload` or `Page.navigate` before the events that follow it, as
+  Chromium does. After a Window restart, the debugger's commands wait until
+  its breakpoints are set on the new page. The adapter also lets WebKit
+  continue from a stop at the adapter's own breakpoint that the debugger had
+  just turned off, instead of leaving the page stopped.
 - **Not supported.** Setting a variable to an object or a `const`, restarting
   a frame, and the Elements, Network and other panels of a Chrome DevTools
   window on this endpoint. Rider's JavaScript debugger attaches to such ports
@@ -292,11 +427,14 @@ no debugger is attached.
   has run through a release.
 - **Reporting a problem.** `RUNIC_DEV_CDP_TRACE=<file>` writes the adapter's
   traffic, which contains the page's data, to a file only you can read. Script
-  sources and other long strings are cut unless
-  `RUNIC_DEV_CDP_TRACE_SOURCES=1`.
+  sources and other strings longer than 4096 characters keep only their first
+  200 characters unless `RUNIC_DEV_CDP_TRACE_SOURCES=1`, which keeps them
+  whole: on a page with about 4,000 modules, such a trace reached 723 MB in
+  five minutes. The trace never shrinks or rotates; delete it when you are
+  done.
 
 See the dotnet-runic README's
-[Debug the page's JavaScript on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/tools/dotnet-runic/README.md#debug-the-pages-javascript-on-linux-preview).
+[Debug the page's JavaScript on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tools/dotnet-runic/README.md#debug-the-pages-javascript-on-linux-preview).
 
 ### Who can reach the Linux endpoints
 
@@ -317,7 +455,7 @@ and, through it, the Bridge:
 
 **On a machine that you share with other users, run `dev` with
 `--no-debug-endpoint`**, which opens neither. See the
-[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/security.md#development-server).
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/security.md#development-server).
 
 ### The page in Chrome (`dotnet runic dev --browser`)
 
@@ -354,7 +492,102 @@ their own JavaScript debug configuration, such as Rider's "JavaScript Debug".
   `RAPPDEV1016`.
 
 See the dotnet-runic README's
-[Debug the page in Chrome](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/tools/dotnet-runic/README.md#debug-the-page-in-chrome---browser).
+[Debug the page in Chrome](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tools/dotnet-runic/README.md#debug-the-page-in-chrome---browser).
+
+### The development server's source maps
+
+Breakpoints in `Frontend/src` bind through the source maps that the frontend's
+development server sends with each module. Since 0.22, `runic()`
+(`@runic-artifex/vite-plugin-runic`) makes their `sources` absolute file
+paths, such as `/home/me/App/Frontend/src/App.tsx` or
+`C:/Users/me/App/Frontend/src/App.tsx`, where Vite 8 writes paths relative to
+each module. A JavaScript debugger then finds your files without a web root.
+Visual Studio's needs that: it attaches to the page over the DevTools Protocol
+with no web root, and with relative paths breakpoints in `.tsx`, `.vue` and
+`.svelte` files stayed unbound. VS Code's JavaScript debugger, the developer
+tools of Chrome, Edge and WebView2, and Runic Inspect read the absolute paths
+as they read Vite's.
+
+Only `vite dev` changes: `vite build` and `vite preview` keep Vite's relative
+paths, so no path of the build machine reaches a published map. The Angular
+CLI's development server (`--frontend angular` without
+`--angular-build vite`) writes maps of its own, which `runic()` does not reach;
+use a debugger configuration with a web root there, or the Vite build of the
+Angular frontend.
+
+### CS-WebUI pages in a JavaScript debugger
+
+Since 0.22, a CS-WebUI Window that runs in an installed Chrome, Edge or other
+Chromium browser can open that browser's Chrome DevTools Protocol endpoint on
+127.0.0.1, so an IDE's JavaScript debugger attaches to the page you are using:
+breakpoints, stepping, the console and the page's variables. Visual Studio
+debugs CS-WebUI pages only this way. Runic.Desktop adds
+`--remote-debugging-port` to the browser's command line only when all of these
+hold:
+
+- the Window runs in **Development** and the window's `WebContent` policy does
+  not set `DevTools = false`;
+- **`RUNIC_WEBUI_REMOTE_DEBUGGING_PORT`** asks for it: `0` for a free port, or
+  a fixed one;
+- the browser is Chromium-based and runs with its own profile directory (the
+  generated one, or `ProfilePath`); Firefox and the platform WebView fallback
+  open no endpoint;
+- the application's own browser arguments do not name
+  `--remote-debugging-port`. If they do, theirs applies as written, and Runic
+  adds no second one.
+
+Any local process can attach to the endpoint, so it opens only when you or your
+IDE ask for it: a terminal `dotnet runic dev` opens none. It also exists only in
+untrimmed builds: a trimmed or NativeAOT publish turns the
+`Runic.Desktop.WebUiRemoteDebugging` feature switch off, so the trimmer removes
+the endpoint and its HTTP client, and such a build opens no endpoint even in
+Development.
+
+| Start                                                                                                       | Port             | Where to find it                                                                                                               |
+| ----------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `dotnet runic dev` in a terminal                                                                            | None             | `[dev] Debugging:` says how to ask for one                                                                                     |
+| `dotnet runic dev --debug-endpoint` (for an IDE to pass when it starts `dev`)                               | A free one (`0`) | `[dev] Debugging:` and the session file's `debugEndpoints` (`"engine": "chromium"`), while the browser runs                    |
+| `dotnet runic dev --no-window`, then the IDE starts the Window with the session file's `window.environment` | 9225             | `debugEndpoints`, for the session; if something holds 9225, `dev` warns and lists it under `unavailableDebugEndpoints` instead |
+| The template's `<Project> (CS-WebUI script debugging)` profile                                              | 9225             | The profile, and the Window's warning if it had to use another port                                                            |
+| `dotnet runic dev -e RUNIC_WEBUI_REMOTE_DEBUGGING_PORT=<port>`                                              | Yours            | `[dev] Debugging:` and `debugEndpoints` once the Window confirms it                                                            |
+
+A fixed port is reported only once `/json/version` answers on 127.0.0.1 and,
+on Linux, no other user listens there; a taken one becomes a free port, with a
+warning. `--no-debug-endpoint` wins over `--debug-endpoint`, and `--browser`
+sets no port either.
+
+**Visual Studio.** With Runic DevKit, Debug the Window starts the Window with
+port 9225 and attaches to it, and Attach to the Page (JavaScript) attaches to a
+Window that already runs with the port ([Visual Studio](#visual-studio)).
+Without the extension, start the Window with the `(CS-WebUI script debugging)`
+profile or with `dotnet runic dev --debug-endpoint`, then use Debug > Attach to
+Process with the connection type "JavaScript and TypeScript (Chrome
+DevTools/V8 Inspector)", the endpoint as the connection target, and the
+"JavaScript and TypeScript" code type.
+
+**VS Code.** Attach js-debug to the port. Give the address as `127.0.0.1`:
+js-debug's default, `localhost`, can resolve to `[::1]`, where another user
+can listen beside the browser.
+
+```jsonc docs-test=skip:sdk-guide-excerpt
+{
+  "name": "Attach to the CS-WebUI page",
+  "type": "chrome", // or "msedge" for Edge
+  "request": "attach",
+  "address": "127.0.0.1",
+  "port": 9225, // or the port that [dev] Debugging: names
+  "webRoot": "${workspaceFolder}/Frontend",
+}
+```
+
+The gate is the environment, not the build: a Release build started in
+Development with the variable opens the port too. The variable is inherited by
+the processes the application starts, and a browser whose Window process died
+keeps the endpoint open until you close that browser window. **On a shared
+machine, run `dotnet runic dev --no-debug-endpoint`.** See
+[CS-WebUI pages in a JavaScript debugger](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/debugging.md#cs-webui-pages-in-a-javascript-debugger)
+and the
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/security.md#development-server).
 
 ## The dock
 
@@ -383,21 +616,36 @@ Its **Runic** panel shows:
 - **Failures**: a failed call shows .NET's exception with a button per stack
   frame in your ViewModels; the **Last failure** card links the same frames.
   .NET sends the detail only in Development; see
-  [failure detail in development](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views/README.md#failure-detail-in-development).
+  [failure detail in development](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#failure-detail-in-development).
 - **Connection**, each View's **state** as a tree, and **superseded
   commands**.
+
+Under `dev` the dock loads from the development server's origin, not the
+Window's. Since 0.22 the Window answers the dock's `/__devtools/embedded.js`
+with a module that imports the script from the server, so the page runs it
+once, and redirects the dock's other `/__devtools/` and `/__devtools-assets/`
+requests to the server, so the dock's connection and icon come from there. The
+same Development-only fallback forwards a `GET` or `HEAD` that neither `www/`
+nor the application's `Resources` answer, such as a file of Vite's
+`publicDir` or `<img src="brand/logo.svg">`, to the development server instead
+of answering 404 (CS-WebUI redirects it). It does not forward the server's own
+endpoints (`/__runic/`, `/__open-in-editor`, `/@fs/`, other first segments
+starting with `__` or `@`), and a trimmed or NativeAOT publish removes it
+(`Runic.Application.DevelopmentServerForwarding`). A Window that an IDE starts
+under `dotnet runic dev --no-window` does not get the server's address yet, so
+it still answers 404 for these paths.
 
 The first time a page opens the dock, it asks for the **one-time code** that
 Vite DevTools prints in the `dotnet runic dev` output. Keep that check on: it
 keeps other pages of this machine out of the dock. See
-[Bridge call timeline in the dock](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/web/vite-plugin-runic/README.md#bridge-call-timeline-in-the-dock).
+[Bridge call timeline in the dock](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/vite-plugin-runic/README.md#bridge-call-timeline-in-the-dock).
 
 The handlers and locations come from the **development source map** that each
 build writes, `obj/<Configuration>/<TargetFramework>/runic-bridge/sources.json`,
 from the assembly's portable PDB; `dev` passes its path to the development
 server. The generated clients link into it too: Go to Definition on
 `client.increment()` in a tsserver-based editor opens the C# handler. See
-[source map and open in editor](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/web/vite-plugin-runic/README.md#source-map-and-open-in-editor).
+[source map and open in editor](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/vite-plugin-runic/README.md#source-map-and-open-in-editor).
 
 ## Runic Inspect
 
@@ -458,10 +706,10 @@ editor on the development machine: such a page shows locations without links.
   machine, run it only for projects the other accounts may see.
 
 See
-[Runic Inspect](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/web/vite-plugin-runic/README.md#runic-inspect),
-[edit a translation on the page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/web/vite-plugin-runic/README.md#edit-a-translation-on-the-page),
+[Runic Inspect](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/vite-plugin-runic/README.md#runic-inspect),
+[edit a translation on the page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/vite-plugin-runic/README.md#edit-a-translation-on-the-page),
 and
-[Runic Inspect from another machine](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/web/vite-plugin-runic/README.md#runic-inspect-from-another-machine).
+[Runic Inspect from another machine](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/vite-plugin-runic/README.md#runic-inspect-from-another-machine).
 `runic({ inspect: false })` turns it off.
 
 ## The Runic DevTools extension
@@ -515,7 +763,7 @@ sends nothing anywhere: it reads the page through Runic Inspect's `snapshot()`
 and `describe($0)`, which exist only under the development client, so it shows
 data only where Runic Inspect runs (vite-plugin-runic 0.21 or later), and on a
 production build its panes say so. See
-[the Runic DevTools extension](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/debugging.md#the-runic-devtools-extension).
+[the Runic DevTools extension](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/debugging.md#the-runic-devtools-extension).
 
 ## React DevTools and Vue DevTools
 
@@ -540,7 +788,7 @@ They work wherever the framework's DevTools reach the page: an installed
 browser with the DevTools extension, a WebView2 window in Development with
 [DevTools extensions](#the-browsers-developer-tools-per-engine), and
 `vite-plugin-vue-devtools`, which runs inside the page, in every engine. See
-[React DevTools and Vue DevTools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/debugging.md#react-devtools-and-vue-devtools).
+[React DevTools and Vue DevTools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/debugging.md#react-devtools-and-vue-devtools).
 
 ## Custom object formatters
 
@@ -559,7 +807,7 @@ WebView2), **Settings** › **Preferences** › **Console** › **Enable custom
 formatters**; in Firefox, **Settings** › **Advanced settings** › **Enable
 custom formatters**. Then reopen DevTools. WebKit's Web Inspector (WKWebView,
 WebKitGTK, Safari) has no custom formatters. See
-[custom object formatters](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/debugging.md#custom-object-formatters).
+[custom object formatters](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/debugging.md#custom-object-formatters).
 
 ## Performance panel, async stacks and traces
 
@@ -587,7 +835,7 @@ Code's C# extension report them as you type, with the generator's ID, message
 and help link, instead of only after a build. Code fixes rename a command (or
 its `[RelayCommand]` method), make a setter private, or make a class public.
 The generator still checks everything at build time. See
-[errors and warnings while you type](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/diagnostics.md#errors-and-warnings-while-you-type),
+[errors and warnings while you type](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/diagnostics.md#errors-and-warnings-while-you-type),
 and [troubleshooting](../../troubleshooting.md) for which product owns a
 diagnostic ID.
 
@@ -608,7 +856,7 @@ None of this ships:
   development build unless you pass `--production` or set
   `NODE_ENV=production`; the Views MSBuild targets set `NODE_ENV=production`
   for a Release build and `dotnet publish`. See the
-  [development build](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/web/views/README.md#development-build).
+  [development build](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/views/README.md#development-build).
 - `@runic-artifex/react` and `@runic-artifex/vue` have the same two builds
   (since 0.21): only the development build labels hooks for React DevTools,
   adds the Vue DevTools inspector and imports `@vue/devtools-api`. Custom
@@ -624,8 +872,17 @@ None of this ships:
   [the browser's developer tools per engine](#the-browsers-developer-tools-per-engine).
   The Linux CDP adapter and `--browser` exist only in `dotnet runic dev`.
   Do not ship with `DOTNET_ENVIRONMENT=Development`; see the
-  [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/docs/security.md#release-builds)
+  [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/security.md#release-builds)
   and [shipping](../../desktop/shipping.md).
+- Since 0.22 a trimmed or NativeAOT publish turns off three development-only
+  feature switches, so the trimmer removes their code:
+  `Runic.Application.DevelopmentServerForwarding` (the development server
+  fallback of [the dock](#the-dock)), `Runic.Desktop.WebUiRemoteDebugging`
+  (the CS-WebUI endpoint) and
+  `Runic.Application.Views.Desktop.DevelopmentAssets` (`dev`'s live frontend
+  directory). Only the publish turns them off: a project that sets
+  `PublishAot` or `PublishTrimmed` keeps them in `dotnet build`, `dotnet run`,
+  `dotnet runic dev` and IDE debugging.
 
 ## Troubleshooting
 
@@ -635,6 +892,14 @@ None of this ships:
   Without that hint, check that `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` reaches
   the Window: set it in the launch profile, with `dotnet runic dev -e`, or in
   the environment `dev` runs in.
+- **Windows Defender Firewall asks about `node.exe` or `bun.exe` on the first
+  `dev`.** Vite 8 checks that the port is free by listening on it briefly on
+  all interfaces before it binds the `127.0.0.1` that `dev` passes. Nothing is
+  served on that short listen. Cancel or deny the prompt: the development
+  server stays on loopback.
+- **`RAPPDEV1004: Could not start 'npm ci'` on Windows.** Fixed in 0.22:
+  `dotnet runic` finds programs through `PATH` and `PATHEXT` and starts batch
+  files such as `npm.cmd` through `cmd.exe`. Update the tool.
 - **F12 does nothing.** The Window does not run in Development: start it with
   `dotnet runic dev` or a launch profile that sets
   `DOTNET_ENVIRONMENT=Development`. On macOS, use Safari's Develop menu
@@ -649,8 +914,19 @@ None of this ships:
   `WEBKIT_INSPECTOR_HTTP_SERVER` is set, or the application runs on CS-WebUI
   only. When the attach fails although the line is there, close GNOME Web's
   inspector (WebKit serves one client at a time) and check the line's port:
-  another program had 9222, and `dev` took another. Under `--no-window`, `dev`
-  stops with `RAPPDEV1017` instead.
+  another program had 9222, and `dev` took another. `dev` names that program
+  when it is yours and warns when `.vscode/launch.json` attaches to 9222: set
+  the configuration's `port` to the one `dev` names, or stop the other program
+  and restart `dev`. Under `--no-window`, `dev` stops with `RAPPDEV1017`
+  instead.
+- **The JavaScript debugger attaches on Linux but nothing loads.** `dev`
+  printed `[dev] Debugging: the Window's page did not answer …`. Close WebKit's
+  Web Inspector (Inspect Element) and any `inspector://` page, then attach
+  again. To report it, run `dev` with `RUNIC_DEV_CDP_TRACE=<file>`.
+- **Breakpoints in `.tsx`, `.vue` or `.svelte` files stay hollow in Visual
+  Studio.** Update `@runic-artifex/vite-plugin-runic` to 0.22, and check that
+  the Window loads the page from the development server (start
+  `dev --no-window` first).
 - **"Could not read source map" for `inspect-frameworks.js`.** Update
   `@runic-artifex/vite-plugin-runic` to 0.21: a doc comment in 0.20's file read
   as a source map comment.
@@ -662,6 +938,10 @@ None of this ships:
   formatters** in DevTools' settings and reopen DevTools.
 - **F5 shows the production page.** `dotnet runic dev --no-window` was not
   running when the IDE built. Start it first and wait for `[dev] Ready`.
+- **`obj/runic/dev-session.json` stays `starting` on Windows.** Fixed in 0.22:
+  `dev` retries replacing the session file and the frontend marker while
+  another process holds them open, and otherwise warns and writes them again on
+  its next change or heartbeat.
 - **The dock asks for a code.** Enter the one-time code that Vite DevTools
   printed in the `dotnet runic dev` output.
 - **No dock.** The Vite configuration does not register `DevTools()`, or the

@@ -84,16 +84,16 @@ one that just left. Update any copy of `runic-cswebui.js` that you keep
 outside `www/`: an older script receives no state, and one before `0.16` is
 only partly protected.
 
-|                                        | Runic Desktop                                                          | CS-WebUI                                                      |
-| -------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Window                                 | Native window with the embedded WebView; installed browser as fallback | Installed browser in app mode; platform WebView as fallback   |
-| File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                           | Report `OwnerUnavailable`                                     |
-| Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                 | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1          |
-| Menu bar                               | Native, in the Linux global menu, or rendered by the page              | Rendered by the page                                          |
-| Frontend                               | `www` folder, or in the assembly (`Embedded`)                          | `www` folder, or in the assembly (`Embedded`, since 0.15.0)   |
-| .NET package                           | `Runic.Application.Views.Desktop`                                      | `Runic.Application.Views.CsWebUi`                             |
-| Host script in `index.html`            | `runic-views.js` (before 0.7.0-preview.9: `runic-desktop-views.js`)    | `runic-views.js` (before 0.7.0-preview.9: `runic-cswebui.js`) |
-| Support                                | First-class                                                            | Best effort                                                   |
+|                                        | Runic Desktop                                                              | CS-WebUI                                                             |
+| -------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Window                                 | Native window with the embedded WebView; installed browser as fallback     | Installed browser in app mode; platform WebView as fallback          |
+| File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                               | Report `OwnerUnavailable`                                            |
+| Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                     | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1                 |
+| Menu bar                               | Native, in the Linux global menu, or rendered by the page                  | Rendered by the page                                                 |
+| Frontend                               | `www` folder, or in the assembly (`Embedded`)                              | `www` folder, or in the assembly (`Embedded`, since 0.15.0)          |
+| .NET package                           | `Runic.Application.Views.Desktop`                                          | `Runic.Application.Views.CsWebUi`                                    |
+| Host script in `index.html`            | `runic-views.js` (`runic-desktop-views.js` is deprecated, removed in 0.23) | `runic-views.js` (`runic-cswebui.js` is deprecated, removed in 0.23) |
+| Support                                | First-class                                                                | Best effort                                                          |
 
 ### Switching host later
 

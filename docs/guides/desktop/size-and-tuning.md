@@ -58,7 +58,7 @@ Core Kestrel (`Runic.Desktop.Kestrel`). For the SDK's first-window example on
 linux-x64, its NativeAOT executable is 9.97 instead of 12.96 MiB and serves its
 first page after about 13 instead of 21 ms, and a framework-dependent build
 needs no ASP.NET Core runtime. The
-[native server's README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Desktop.NativeServer/README.md#what-you-get)
+[native server's README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Desktop.NativeServer/README.md#what-you-get)
 has the measurements for each publish mode, and
 [the presentation server](host-selection.md#presentation-server) explains the
 choice. The measurements below predate it and use Kestrel.
@@ -89,6 +89,142 @@ not add MVC, authentication, HTTPS configuration or other ASP.NET facilities.
 It does not remove any documented Runic presentation or bridge capability.
 The default profile remains available by omitting the property or setting false.
 This property has no role in CS-WebUI, which has no ASP.NET Core dependency.
+
+## Making the executable smaller
+
+Runic already keeps a NativeAOT or trimmed publish small without a setting of
+yours, and SDK `0.22.0` made both hosts smaller:
+
+- Its packages are built for trimming and NativeAOT, so the trimmer removes the
+  Runic code an application does not reach, including the platform backends of
+  other operating systems.
+- Development-only code sits behind feature switches that a trimmed or
+  NativeAOT publish turns off: the development server fallback
+  (`Runic.Application.DevelopmentServerForwarding`), the CS-WebUI Window's
+  DevTools Protocol endpoint (`Runic.Desktop.WebUiRemoteDebugging`) and
+  `dotnet runic dev`'s live frontend directory
+  (`Runic.Application.Views.Desktop.DevelopmentAssets`). Only the publish turns
+  them off: builds and `dotnet run` keep them, also when the project sets
+  `PublishAot`.
+- **Generated Bridges cost less per ViewModel** (0.22). They share one codec
+  per wire type, one getter per property and one async command runner per
+  assembly, and describe their members in a table instead of creating
+  descriptors with a lambda per member. In the scaling suite's `aot-size`
+  fixture a ViewModel costs 8.1 KiB instead of 25.4 KiB in 0.21; the table
+  reader adds 17 to 29 KB once per bridged assembly. Generated TypeScript and
+  the wire protocol are unchanged.
+- **CS-WebUI on Linux and macOS** serves each window's blob and upload endpoint
+  from Runic's own loopback HTTP/1.1 server instead of .NET's `HttpListener`,
+  so the executable no longer carries `SslStream`, X.509 or an `HttpClient` for
+  it: the CS-WebUI size fixture on linux-x64 goes from 10,710,336 to 7,743,328
+  bytes (−28 %). Windows keeps http.sys. The new server is stricter: it answers
+  `400` to ambiguous body framing, bare CR or LF line ends, dot segments and
+  repeated `Host`, `Origin` or upload headers, limits request heads to 8 KiB
+  lines, 32 KiB and 100 fields, and holds at most 128 connections; the
+  [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/security.md)
+  lists the limits.
+- **Runic Desktop** (0.22) no longer links the CS-WebUI endpoint, the macOS
+  backend outside macOS, `HttpClient` for a hosted region's component
+  manifest, or hosted mode in an application that never creates
+  `RunicGuestOptions`. On Linux the CS-WebUI endpoint and the manifest read
+  take about 2.8 MB off a Runic Desktop executable, and the size fixture's
+  Desktop host goes from 11.79 MB to 10.75 MB with the rest. `RunicDesktopServer=None` now turns the presentation server off, as
+  documented for an executable that opens no window, also when the project
+  references `Runic.Desktop.Kestrel` (−4.6 MB in that case): a window then
+  fails with `presentation-server-unavailable`, and build warning
+  [`RUNICDESK007`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/diagnostics.md#runicdesk007)
+  reports `None` together with a referenced server package. An application
+  whose pages declare no hosted regions can leave the region host out with
+  `<RunicDesktopRegionHost>false</RunicDesktopRegionHost>`.
+- **`Runic.Application.Views` and `Runic.Navigation`** avoid the LINQ operators
+  and value-type generics that make the rest of an application's code larger:
+  about 135 KB and another 150 KB off a CS-WebUI executable on Linux.
+- **The asset archive stores identical files once** (archive schema
+  `runic.assets.archive/2`): a fixture with two entries that share three fonts
+  and a stylesheet goes from a 618,913-byte archive to 354,901 bytes. An
+  archive without duplicate content is written as before. Runic.Assets 0.21 and
+  earlier cannot read a schema-2 archive, so an application that embeds an
+  archive packed with 0.22 through `RunicAssetsEmbeddedArchive` needs 0.22 as
+  well.
+- **Runic Translations 0.14** compresses each catalog's locale data, keeps its
+  messages in one table and links no Hot Reload reflection in a trimmed
+  publish; see [Translations](../translations/README.md#upgrading-to-0140).
+
+Beyond that, four .NET settings make the executable smaller in exchange for
+something the application gives up. Runic sets none of them and the templates
+keep the defaults; each is the application's choice:
+
+```xml docs-test=skip:illustrative-project-setting
+<PropertyGroup>
+  <StackTraceSupport>false</StackTraceSupport>
+  <InvariantGlobalization>true</InvariantGlobalization>
+  <OptimizationPreference>Size</OptimizationPreference>
+  <UseSystemResourceKeys>true</UseSystemResourceKeys>
+</PropertyGroup>
+```
+
+The SDK measured each one alone on linux-x64 for the CS-WebUI reference
+application of its `tests/scaling/aot-size` suite; the savings vary by
+application, platform and .NET version:
+
+| Property                      | Saving                                          | What the application gives up                                                                                                                                                                                                                                                                      |
+| ----------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StackTraceSupport=false`     | 574 KB                                          | Stack traces have no method names, only offsets: `Exception.ToString()`, logged exceptions and crash output no longer say where an error happened.                                                                                                                                                 |
+| `InvariantGlobalization=true` | 222 KB                                          | .NET's culture-aware APIs behave like the invariant culture, and `CultureInfo` for any other culture throws `CultureNotFoundException` (unless `PredefinedCulturesOnly` is `false`). Runic Translations' own formatting of numbers, dates, plurals and lists uses its CLDR data and is unaffected. |
+| `OptimizationPreference=Size` | 213 KB                                          | The compiler optimizes for size rather than speed, so hot code can run slower. `dotnet runic size` already publishes with it.                                                                                                                                                                      |
+| `UseSystemResourceKeys=true`  | None measurable here; larger apps may save more | .NET's own exception messages become resource keys, such as `Arg_NullReferenceException`. The application's own messages and Runic's are unchanged.                                                                                                                                                |
+
+To see what takes the space inside the executable, publish with
+`-p:IlcGenerateMstatFile=true`: the NativeAOT compiler writes
+`<application>.mstat` under `obj/`, which lists the size of every type, method
+and data blob by assembly. Open it in
+[sizoscope](https://github.com/MichalStrehovsky/sizoscope), which also compares
+two builds. See
+[making the executable smaller](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/packaging.md#making-the-executable-smaller).
+
+## Development-only views and members
+
+Since SDK `0.22.0`, a view that only development needs, such as a mock-control
+or diagnostics panel, can stay out of the published executable. Mark its
+ViewModel with `[RunicDevelopmentOnly]`, or mark single state properties and
+commands of another ViewModel (on the command property or its `[RelayCommand]`
+method):
+
+```csharp docs-test=skip:illustrative-fragment
+[RunicDevelopmentOnly]
+public sealed partial class MockControlsViewModel : ObservableObject { /* ... */ }
+
+public sealed partial class OrdersViewModel : ObservableObject
+{
+    [ObservableProperty, RunicDevelopmentOnly] public partial string Diagnostics { get; set; } = "";
+
+    [RelayCommand, RunicDevelopmentOnly] private void InjectFault() { /* ... */ }
+}
+```
+
+Builds, `dotnet run`, the debugger and untrimmed publishes keep everything. A
+trimmed or NativeAOT publish turns the feature switch
+`Runic.Application.Views.DevelopmentOnlyViews` off, so the trimmer removes the
+marked ViewModel's generated Bridge (about 15 KB per ViewModel) and the code of
+marked members:
+
+- Opening or presenting a marked ViewModel throws an
+  `InvalidOperationException` that names it. Test
+  `RunicDevelopmentOnly.IsSupported` before presenting it, as your own
+  development-only code can.
+- A marked property is absent from the state and cannot be set or written; a
+  marked command and its `can…` and `is…Executing` state are absent too, and
+  calling or starting it is rejected with reason `unavailable`.
+
+The generated TypeScript is the same in every configuration and describes the
+marked members truthfully: optional state members, and commands documented as
+possibly unavailable. Marking a member changes the View's contract; marking a
+ViewModel does not. Set the MSBuild property `RunicDevelopmentOnlyViews` to
+`true` to keep the marked code in every publish (`auto`, the default, removes it
+only from trimmed and NativeAOT publishes). `[RunicDevelopmentOnly]` on an
+interaction or view request has no effect and is warning `RUNICBRIDGE072`: mark
+its ViewModel. See
+[development-only views and members](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/packaging.md#development-only-views-and-members).
 
 ## Choose tradeoffs using evidence
 

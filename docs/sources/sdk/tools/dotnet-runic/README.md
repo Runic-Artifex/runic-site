@@ -143,7 +143,7 @@ Since 0.21, on Linux (see [Debug the page's JavaScript on Linux](#debug-the-page
 
 | Option | Effect |
 | --- | --- |
-| `--no-debug-endpoint` | Opens neither WebKit's remote inspector for the Window nor Runic's CDP adapter on port 9222. |
+| `--no-debug-endpoint` | Opens neither WebKit's remote inspector for the Window nor Runic's CDP adapter on port 9222. Since 0.22, on every operating system, it also keeps a CS-WebUI Window's browser from opening its DevTools Protocol endpoint, and wins over `--debug-endpoint` ([CS-WebUI pages](#debug-a-cs-webui-pages-javascript)). |
 | `--webkit-inspector` | Opens WebKit's own Web Inspector over HTTP for a browser instead of the CDP adapter, on WebKitGTK 2.54.3 or later; on an older WebKitGTK, `dev` opens the `inspector://` server and the adapter as usual and says why. |
 
 Since 0.21, on every operating system (see [Debug the page in Chrome](#debug-the-page-in-chrome---browser)):
@@ -151,6 +151,12 @@ Since 0.21, on every operating system (see [Debug the page in Chrome](#debug-the
 | Option | Effect |
 | --- | --- |
 | `--browser` | Serves the Window to a browser instead of opening it (serve-only mode), at `http://127.0.0.1:9224/`, so the JavaScript debugger of your IDE's Chrome or Edge can open its pages. Cannot be combined with `--no-window` or `--webkit-inspector`. |
+
+Since 0.22, for CS-WebUI (see [Debug a CS-WebUI page's JavaScript](#debug-a-cs-webui-pages-javascript)):
+
+| Option | Effect |
+| --- | --- |
+| `--debug-endpoint` | Opens the DevTools Protocol endpoint of the Window's Chrome or Edge on a free loopback port, lists it in `debugEndpoints` and names it in `[dev] Debugging:`. Off by default, for an IDE to pass when it starts `dev`. `--no-debug-endpoint` wins. |
 
 Since 0.21, on Windows (see [The Runic DevTools extension](#the-runic-devtools-extension)):
 
@@ -172,8 +178,8 @@ Since 0.21, on Windows (see [The Runic DevTools extension](#the-runic-devtools-e
 
 `doctor` checks the Views Window opt-in, the .NET SDK, the declared JavaScript
 runtime and package manager, the matching lock file, the configured
-development-server inputs, and, once the project is restored, that every Runic
-package belongs to one release train. An unrestored project gets a warning that
+development-server inputs, and, once the project is restored, that the
+project's release-train packages belong to one release train. An unrestored project gets a warning that
 tells you to run `dotnet runic dev` or `dotnet restore`. The browser check
 follows the referenced host: a Runic Desktop project needs no browser, and a
 missing browser is only a warning for a CS-WebUI project because CS-WebUI falls
@@ -194,6 +200,11 @@ The JavaScript runtime passes at the certified version and warns for a newer
 release of the same major version. Node 26 is supported as well, with a
 warning, since the starters and the Runic npm packages that run in Node declare
 `engines.node` `^24.18.0 || ^26.0.0` (0.11).
+npm passes at the certified npm 12.2.0, and warns for a later npm 12 and,
+since 0.22, for npm 11.12.1 or a later npm 11: no Node release ships npm 12
+yet, and Node 24 and 26 ship npm 11 (Node 26.0.0 npm 11.12.1, Node 24.18.0
+npm 11.16.0). The starters declare the certified npm in `packageManager`; to
+use it, run `npm install --global npm@12.2.0`.
 
 Doctor checks every Views host adapter the project references, not only one.
 It reads the project's direct package and project references, with the
@@ -408,7 +419,9 @@ certified version, and warns for a newer release, Node 26 included.
 
 The package manager that the frontend's `packageManager` field or lock file
 selects (npm, pnpm or Bun): fails when it is unavailable or outside the
-supported range, and warns for another supported version.
+supported range, and warns for another supported version. The supported range
+is the certified version or a later release of its major version; for npm also
+npm 11.12.1 or a later npm 11, the npm that Node 24 and 26 ship (0.22).
 
 #### `lock-file`
 
@@ -417,8 +430,16 @@ reproducible installs need.
 
 #### `compatibility-set`
 
-Once the project is restored, fails unless every Runic package belongs to one
-release train (the compatibility set). Warns before the first restore.
+Once the project is restored, checks the packages of the release train that
+the compatibility set records: runic-sdk's own NuGet and npm packages, which
+must have the exact versions of the set, and the packages of the train's
+Runic Command Line and Runic Translations releases (`Runic.CommandLine`,
+`Runic.CommandLine.*`, `Runic.Translations`, `Runic.Translations.*`,
+`dotnet-runic-translations` and Translations' npm packages). Those release on
+their own between trains, so a version older than the train's or of another
+line (minor version before 1.0) only warns. Every other package is not
+checked, whatever its name, such as `RunicArtifex.DynamicData` and
+`RunicArtifex.ReactiveUI.Validation` (0.22). Warns before the first restore.
 
 #### `views-package-versions`
 
@@ -604,6 +625,22 @@ debug the "Window (dotnet runic dev --no-window)" launch profile.
 **Visual Studio**: start `dotnet runic dev --no-window` in the Developer
 PowerShell or a terminal, choose the "Window (dotnet runic dev --no-window)"
 profile next to the Start button, and press F5.
+[Runic DevKit for Visual Studio](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit-vs)
+(`runic-artifex.runic-devkit-vs`) does this for you: when F5 starts a Runic
+project and no `dev --no-window` runs, it asks whether to start it, and starts
+the Window once `dev` is ready. Its **Debug the Window** command also attaches
+Visual Studio's JavaScript debugger to the page over a DevTools Protocol port,
+so C# and `Frontend/src` breakpoints stop in one session. It needs Visual
+Studio's JavaScript diagnostics component, which the template's `.vsconfig`
+names. See
+[Visual Studio](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/debugging.md#visual-studio)
+in the debugging guide.
+
+**VS Code** with
+[Runic DevKit for VS Code](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit)
+(`runic-artifex.runic-devkit`): its `runic` debug type starts
+`dev --no-window`, waits for `Ready` and starts the Window under the debugger
+without the tasks above.
 
 To keep `dev` starting the Window and attach instead, use the
 [IDE contract](#ide-contract): `[dev] Window started: process <pid>` names the
@@ -695,19 +732,35 @@ names. The session file lists both under `debugEndpoints`.
   instead of ending. WebKit's own clients are not protected: after the adapter
   took the slot from GNOME Web's `inspector://` page and released it, that page's
   next attach can crash the Window.
-- **Port 9222 taken.** `dev` uses another free port and says which; change the
-  attach configuration's `port`. When another user holds 9222, or the
-  inspector port 9223 under `--no-window`, the `[dev]` line is a warning.
-  Under `--no-window`, which the IDE's compound starts with an attach
+- **Port 9222 taken.** `dev` uses another free port and says which, and names
+  what holds 9222 when it is your process, such as another `dev` session and
+  its directory. Change the attach configuration's `port` to the one `dev`
+  names; the session file lists it under `debugEndpoints`. When the project's
+  `.vscode/launch.json` (or one in a parent folder of the repository) has a
+  JavaScript attach configuration on 9222, such as the template's
+  `Attach to the page (JavaScript)`, the line is a warning that names it: as it
+  is, it would debug the other process's page. When another user holds 9222,
+  or the inspector port 9223 under `--no-window`, the `[dev]` line is a warning
+  too. Under `--no-window`, which the IDE's compound starts with an attach
   configuration on 9222, `dev` does not move: it stops with `RAPPDEV1017` and
   names what holds the port, often another `dev` session. `--no-debug-endpoint`
   opens nothing.
+- **No answer after attaching.** When the Window's page does not answer the
+  debugger's first command within 5 seconds, for example right after WebKit's
+  Web Inspector opened in the Window, `dev` prints a `[dev] Debugging:` line,
+  waits a second and sends the command again if sending it twice is harmless
+  (an `enable` or a `get…`). Without an answer then, the command fails with an
+  error that names it, and `dev` says to close WebKit's Web Inspector and any
+  `inspector://` page and attach again. A Window stopped at a .NET breakpoint
+  does not answer either.
 - **Reporting a problem.** `RUNIC_DEV_CDP_TRACE=<file>` writes the adapter's
   traffic, which contains the page's data, to that file. `dev` creates the
   file readable by you only. JSON strings longer than 4096 characters, such as
-  script sources and inline source maps, keep only their first 200 characters;
-  `RUNIC_DEV_CDP_TRACE_SOURCES=1` keeps them whole, which on a page with
-  thousands of modules writes hundreds of megabytes in minutes.
+  script sources and inline source maps, keep only their first 200 characters,
+  so a script takes a few hundred bytes of the trace instead of its whole source.
+  `RUNIC_DEV_CDP_TRACE_SOURCES=1` keeps them whole: on a page with about 4,000
+  modules, a trace with the sources reached 723 MB in five minutes. The trace
+  never shrinks or rotates; delete it when you are done.
 
 ## Debug the page in Chrome (`--browser`)
 
@@ -791,6 +844,53 @@ debug configuration, such as Rider's "JavaScript Debug" with that URL.
 - **Not debugging endpoints.** `--browser` lists no `debugEndpoints` and opens
   neither WebView2's nor WebKit's: the debugger owns the browser it launched.
 
+## Debug a CS-WebUI page's JavaScript
+
+Since 0.22, a CS-WebUI Window's installed Chrome or Edge can open its Chrome
+DevTools Protocol endpoint for a JavaScript debugger: Visual Studio's Attach to
+Process, or js-debug's `attach`. Any local process can attach to it, so `dev`
+asks for it only when an IDE does (D070.17). A terminal `dotnet runic dev`
+opens none, and says so in a `[dev] Debugging:` line.
+
+- **`--debug-endpoint`**, for an IDE to pass when it starts `dev`: `dev`
+  sets `RUNIC_WEBUI_REMOTE_DEBUGGING_PORT=0` for the Window. In Development,
+  Runic.Desktop then starts the Window's browser with `--remote-debugging-port`
+  on a free loopback port.
+  - The Window prints `RUNIC_APPLICATION_DEBUG_ENDPOINT=chromium cdp <url>`
+    when the browser listens, and `RUNIC_APPLICATION_DEBUG_ENDPOINT_CLOSED=<url>`
+    when it exits.
+  - `dev` reads those lines instead of printing them, and prints
+    `[dev] Debugging: ... <url>`.
+  - It lists the endpoint in the session file's `debugEndpoints` while that
+    browser runs, until the Window process exits.
+- **`--no-window`**: the IDE starts the Window with the session file's
+  `window.environment`, which names port 9225. Only an IDE applies that
+  environment, so this is the IDE asking too. `dev` cannot read that Window's
+  lines, so `debugEndpoints` lists `http://127.0.0.1:9225/` for the session,
+  as WebView2's port.
+  - If something holds 9225 on 127.0.0.1 or `[::1]` when `dev` starts, `dev`
+    prints a warning and lists the endpoint under `unavailableDebugEndpoints`
+    (`"reason": "port-taken"`, or on Linux `"foreign-listener"` for another
+    user). On Linux it does the same if another user starts listening on 9225
+    later.
+  - A Window that finds the port taken uses a free one and warns on its
+    standard error.
+- **Your own port**: `-e RUNIC_WEBUI_REMOTE_DEBUGGING_PORT=<port>`.
+  - With a Window that `dev` starts, `dev` lists the port the Window confirms. For
+    a fixed port, that is after `/json/version` answers on 127.0.0.1 and, on
+    Linux, no other user listens there.
+  - With `--no-window`, `dev` lists a fixed port.
+  - The `-e` variable is passed on even with `--no-debug-endpoint`.
+- **Not opened** in these cases:
+  - with `--no-debug-endpoint`, which wins over `--debug-endpoint`, or with
+    `--browser`;
+  - for a Runic Desktop project;
+  - when the Window uses Firefox or the platform WebView.
+
+On a shared machine, use `--no-debug-endpoint`. See
+[CS-WebUI pages in a JavaScript debugger](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/debugging.md#cs-webui-pages-in-a-javascript-debugger)
+and the [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/security.md#development-server).
+
 ## The Runic DevTools extension
 
 Since 0.21 the tool ships an unpacked Chrome DevTools extension (Manifest V3) in
@@ -851,6 +951,25 @@ contract: they keep their form within `runic.application.tool.dev-session/1`.
 | `[dev] Window exited: process <pid>` | When that process exits, for example before `dotnet watch` restarts it. A debugger attached to it has ended. |
 | `[dev] Evaluating` (line prefix) | Once, when `dev` starts evaluating the project, before it builds or starts anything: `[dev] Evaluating Views Window project...`, and `[dev] Evaluating Views Window project completed in <time>.` when that is done. Since 0.21 in the contract. |
 | `[dev] Reloading` (line prefix) | Each time `dev` itself restarts the Window process, for example after a frontend compiler change that hot reload cannot apply: `[dev] Reloading the Runic Views Window application.`, after the old process stopped and before the new one starts. `Window started` and `Ready` follow. Since 0.21 in the contract. |
+
+**Stopping `dev`.** Stop `dev` as a terminal does, with Ctrl+C or SIGINT/SIGTERM.
+`dev` then stops the frontend and the Window, marks the session file
+`"stopped"`, deletes `dev-frontend` and `dev-pages/`, touches `dev-stopped` and
+exits with 130. A process killed by force does none of this: a build within 30
+seconds still keeps the development pages, and the session file keeps its state.
+An IDE that can't send Ctrl+C, such as Visual Studio on Windows (a process
+without a console has none), sets `RUNIC_DEV_STOP_ON_INPUT=1` in `dev`'s
+environment and redirects its standard input (since 0.22). `dev` then reads its
+input and stops in the same way at a line `stop` (case and surrounding space
+ignored) or at the end of the input. To stop it, the IDE writes `stop` or closes
+the pipe, waits for `dev` to exit, and ends the process tree only after a
+timeout. A few seconds are usually enough; allow more while the Window closes.
+`dev` prints `[dev] Standard input asked dev to stop; stopping the application.`
+or `[dev] Standard input ended; …` on standard error. Other lines are ignored.
+The processes that `dev` starts get an empty input of their own, so none of them
+reads the request. Without the variable, `dev` doesn't read its input, and an
+interactive terminal works as before. An older `dev` ignores the variable, so
+keep the forced stop as the fallback.
 
 The two prefix lines are where a background task's `beginsPattern` starts a new
 build cycle, as the template's `.vscode/tasks.json` below does; the text after
@@ -935,7 +1054,9 @@ later process reuses, means the session stopped. Since 0.20; earlier files have
 no `processStartedAt`, and a reader then checks the process's command line or
 image name. Beside it, `dev` keeps
 `dev-frontend` and `dev-pages/` while it serves the frontend, for the build
-([Debug the Window in your IDE](#debug-the-window-in-your-ide)). Each write
+([Debug the Window in your IDE](#debug-the-window-in-your-ide)). When it ends, it
+touches `dev-stopped`, which Visual Studio's fast up-to-date check reads, so the
+next F5 builds and puts the production frontend back in `www/`. Each write
 replaces the whole file, so a reader never sees half of one. Two `dev` sessions of the
 same project write the same file; the later one wins. `--dry-run` writes none.
 
@@ -975,7 +1096,8 @@ same project write the same file; the later one wins. `--dry-run` writes none.
     "environment": {                // what a Window that the IDE starts needs, as dev would set it
       "DOTNET_ENVIRONMENT": "Development"
       // and RUNIC_APPLICATION_DEVELOPMENT_ASSETS without a development server, for Runic Desktop; on Windows since 0.21,
-      // RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS with the Runic DevTools extension unless --no-devtools-extension
+      // RUNIC_DESKTOP_DEVTOOLS_EXTENSIONS with the Runic DevTools extension unless --no-devtools-extension; since 0.22,
+      // for CS-WebUI with --no-window, RUNIC_WEBUI_REMOTE_DEBUGGING_PORT="9225" unless --no-debug-endpoint
     }
   },
   // With --browser (since 0.21): dev's address for a browser, and the Windows the running Window process serves,
@@ -994,11 +1116,15 @@ same project write the same file; the later one wins. `--dry-run` writes none.
     // ("protocol": "webkit-inspector" for WebKit's HTTP inspector with --webkit-inspector):
     // { "engine": "webkitgtk", "protocol": "cdp", "url": "http://127.0.0.1:9222/" },
     // { "engine": "webkitgtk", "protocol": "webkit-remote-inspector", "url": "inspector://127.0.0.1:41653" }
+    // Since 0.22, with --debug-endpoint, a CS-WebUI Window's Chrome or Edge while it runs (with --no-window, port 9225
+    // for the session):
+    // { "engine": "chromium", "protocol": "cdp", "url": "http://127.0.0.1:41625/" }
   ],
   "unavailableDebugEndpoints": [
     // Endpoints the environment asks for but the engine does not open, with the reason. Since 0.20, an elevated dev
     // (run as administrator, so its Window runs elevated too) lists WebView2's here with "reason": "elevated" instead of
-    // in debugEndpoints, and prints a [dev] Debugging: hint.
+    // in debugEndpoints, and prints a [dev] Debugging: hint. Since 0.22, a --no-window CS-WebUI port that something
+    // else holds: "reason": "port-taken", or on Linux "foreign-listener" for another user's listener.
   ],
   // The unpacked Runic DevTools extension beside this tool, for Load unpacked or a browser's --load-extension;
   // null when the tool has none. Since 0.21.
@@ -1012,7 +1138,8 @@ reader ignores properties it doesn't know; a change that removes or changes one
 gets a new schema name. 0.20 added `processStartedAt`, `sourceMap` and
 `unavailableDebugEndpoints` within `runic.application.tool.dev-session/1`; 0.21
 added the `webkitgtk` endpoints, `devtoolsExtension`, `devtoolsExtensionId`, `browser` and, with
-`--no-window` on Linux, `WEBKIT_INSPECTOR_SERVER` in `window.environment`.
+`--no-window` on Linux, `WEBKIT_INSPECTOR_SERVER` in `window.environment`; 0.22 added the `chromium` endpoint and
+`RUNIC_WEBUI_REMOTE_DEBUGGING_PORT` in `window.environment`.
 
 WebView2 Runtime 150 and later ignores `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`
 (and its other `WEBVIEW2_*` variables and current-user policy overrides) in an

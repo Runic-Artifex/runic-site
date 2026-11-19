@@ -332,7 +332,7 @@ internal static class WindowCommands
 ```
 
 Capture values such as `settings`, not the command's scoped services.
-See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.21.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
+See [from a command line](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views.Desktop/README.md#from-a-command-line)
 and
 [start a UI host on the main thread](https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.13.0/packages/dotnet/Runic.CommandLine/README.md#start-a-ui-host-on-the-main-thread).
 
@@ -344,8 +344,8 @@ translates them with a [Translations](../translations/README.md) catalog. It
 ships English and German text for every framework key, including the prompt
 text that Command Line `0.7.0-preview.1` added and the response-file text of
 `0.9.0`, and it looks up your own command descriptions in your catalog.
-The adapter follows each Command Line minor in lockstep: Translations `0.12.0`
-and `0.11.0` depend on Command Line `[0.13.0, 0.14.0-0.0)`, Translations `0.10.0` on
+The adapter follows each Command Line minor in lockstep: Translations `0.14.0`,
+`0.13.0`, `0.12.0` and `0.11.0` depend on Command Line `[0.13.0, 0.14.0-0.0)`, Translations `0.10.0` on
 `[0.12.0, 0.13.0-0.0)`, and Translations `0.9.1` on `[0.9.1, 0.10)`. Command Line `0.10` and `0.11` have no adapter, and a
 mismatched pair fails restore with `NU1608`. Since `0.12.0` the English and
 German framework text (the `runic-command-line` catalog) ships with
@@ -430,7 +430,16 @@ command names, option spellings, codes and `messageKey` values never change.
 
 - **Resolver.** `TranslationCommandTextResolver` looks up each key in your
   catalog and in its English and German text, and otherwise leaves Command
-  Line's English text. Your catalog can also override framework text. Since
+  Line's English text. Your catalog can also override framework text, but
+  since Translations `0.14.0` that second override path is deprecated: the
+  build reports such a message as warning `RTR0107`, the resolver writes a
+  trace warning once when it uses one, and Translations `0.15` removes it. Move
+  each such message, unchanged, to
+  `translations/overrides/runic-command-line/<locale>.rmf2`, list
+  `{ "catalog": "runic-command-line", "from": "Runic.Translations.CommandLine" }`
+  under `overrides` in `runic.json`, and register `AppTextCatalog.Overlays`
+  with a context-based resolver; see
+  [Upgrading to 0.14.0](../translations/README.md#upgrading-to-0140). Since
   Translations `0.9.1` the lookup is locale-first: for each locale of the
   requested locale's fallback chain your message comes before the built-in
   one, so the built-in German beats an override your catalog has only in
@@ -468,7 +477,7 @@ error; an override file in `translations/overrides/runic-command-line/` adds
 that locale.
 
 The
-[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/packages/dotnet/Runic.Translations.CommandLine/README.md)
+[`Runic.Translations.CommandLine` README](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/packages/dotnet/Runic.Translations.CommandLine/README.md)
 describes the resolver in full.
 
 ## New in 0.13.0

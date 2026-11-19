@@ -160,8 +160,12 @@ const queries = {
 // the Runic DevTools extension, framework DevTools, custom object formatters,
 // the development server's access rules and the 0.21 renames), which need
 // about 798 KiB raw and 203 KiB gzipped before the 0.21.0 API types; the 0.20.0
-// API types had left under 1 KiB of the gzip budget.
-const budget = { raw: 832 * 1024, gzip: 212 * 1024 };
+// API types had left under 1 KiB of the gzip budget. It grew from 832 KiB raw
+// and 212 KiB gzipped with the 0.22.0 guides (Runic DevKit for Visual Studio,
+// CS-WebUI pages in a JavaScript debugger, publish modes and their sizes, the
+// smallest executable, development-only views and Translations 0.14), which
+// need about 827 KiB raw and 213 KiB gzipped with the 0.22.0 API types.
+const budget = { raw: 864 * 1024, gzip: 224 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {

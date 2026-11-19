@@ -93,9 +93,24 @@ the first one:
 | Profile | What it starts |
 | --- | --- |
 | `RunicWindowApp` | The Window with `DOTNET_ENVIRONMENT=Development`: the browser's developer tools on the page (F12 or Inspect) and detailed Bridge errors. |
-<!--#if (desktopHost) -->
-| `RunicWindowApp (WebView2 script debugging)` | Windows: the same, with WebView2's DevTools Protocol on port 9222 (`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, which WebView2 adds to Runic Desktop's own browser arguments), and in Visual Studio its JavaScript debugger on the page together with the .NET debugger (`jsWebView2Debugging`). WebView2 ignores the variable while the Window runs elevated (Runtime 150 and later), for example under an IDE started as administrator; start the IDE without elevation. |
+<!--#if (host == "cswebui") -->
+| `RunicWindowApp (CS-WebUI script debugging)` | The same, with the DevTools Protocol of the Window's Chrome or Edge on `http://127.0.0.1:9225/` (`RUNIC_WEBUI_REMOTE_DEBUGGING_PORT`, honoured in Development only). In Visual Studio, start it, then use Runic DevKit's Attach to the Page (JavaScript), or Debug > Attach to Process with the connection type "JavaScript and TypeScript (Chrome DevTools/V8 Inspector)", target `http://127.0.0.1:9225/`, and pick the page. Firefox and the platform WebView fallback open no port. Any local process can attach to the port while the Window runs. |
 <!--#endif -->
+
+To stop at breakpoints in `Frontend/src` in Visual Studio, use **Debug the
+Window** of [Runic DevKit for Visual Studio](https://github.com/Runic-Artifex/runic-editors/blob/main/visualstudio/README.md)
+(Tools > Runic). It starts `dotnet runic dev --no-window`, starts the Window
+under the .NET debugger with a DevTools Protocol port, and attaches Visual
+Studio's JavaScript debugger to the page, so C# and page breakpoints stop in
+one session. With Runic DevKit, F5 also asks whether to start
+`dotnet runic dev --no-window` when it does not run (step 1 below). Install it
+from the Visual Studio Marketplace (Extensions > Manage Extensions, "Runic
+DevKit") or from the [runic-editors releases](https://github.com/Runic-Artifex/runic-editors/releases).
+
+`.vsconfig` names the Visual Studio components that debugging needs: the .NET
+desktop development workload and JavaScript diagnostics, the optional component
+behind Visual Studio's JavaScript debugger for WebView2 and for Chrome or Edge.
+When one is missing, Visual Studio offers to install it as it opens the project.
 
 To debug the C# code while the page comes live from the
 __DEVELOPMENT_SERVER_NAME__ development server:
@@ -123,6 +138,16 @@ from your IDE's JavaScript debugger with Chrome or Edge. The page runs on
 Chromium rather than the Window's WebView (WebKit on Linux and macOS), and native
 window features such as file dialogs and menus are unavailable there. Open the
 address again after `dotnet watch` restarts the Window.
+<!--#if (host == "cswebui") -->
+
+`dotnet runic dev --debug-endpoint`, for an IDE to pass when it starts `dev`, opens the
+DevTools Protocol of the Window's own Chrome or Edge, on a free loopback port
+that `[dev] Debugging:` and the session file's `debugEndpoints` name. A
+JavaScript debugger can then attach to the Window you are using; `--no-window`
+uses port 9225, as the profile does. Any local process can attach to that
+port, so a terminal `dotnet runic dev` opens none, and `--no-debug-endpoint`
+turns it off. In VS Code, attach with `"address": "127.0.0.1"`.
+<!--#endif -->
 
 <!--#if (editor == "vscode") -->
 ### VS Code
@@ -301,7 +326,7 @@ the template's default is the Angular CLI. What Vite adds:
   reaches the page without a build. See [Translate it](#translate-it).
 <!--#else -->
 - **The Translations development loop**: with the
-  [Translations Vite plugin](https://github.com/Runic-Artifex/runic-translations-sdk/tree/v0.13.0/packages/web/vite-plugin-runic-translations)
+  [Translations Vite plugin](https://github.com/Runic-Artifex/runic-translations-sdk/tree/v0.14.0/packages/web/vite-plugin-runic-translations)
   (`dotnet new runic-app --frontend angular --angular-build vite --translations`
   sets it up), a message you edit under `dotnet runic dev` reaches the page
   without a build.
@@ -355,12 +380,13 @@ and the component build target.
 <!--#endif -->
 <!--#if (translations) -->
 <!--#if (translationsVitePlugin) -->
-| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The .NET build generates `AppText` for C#, and `runicTranslations()` in `Frontend/vite.config.ts` compiles the page's modules into `Frontend/.runic/translations`. See [Translate it](#translate-it). |
+| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The .NET build generates `AppText` for C#, and `runicTranslations()` in `Frontend/vite.config.ts` compiles the page's modules into `Frontend/.runic/translations`. See [Translate it](#translate-it). |
 <!--#else -->
-| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The build generates `AppText` for C# and the page's ESM in `Frontend/.runic/translations`. See [Translate it](#translate-it). |
+| `Frontend/translations/` | The [Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-views.md) catalog for the page and C#: `runic.json`, `en.rmf2` and `de.rmf2`. The build generates `AppText` for C# and the page's ESM in `Frontend/.runic/translations`. See [Translate it](#translate-it). |
 <!--#endif -->
 <!--#endif -->
 | `Properties/launchSettings.json` | Launch profiles for Visual Studio, Rider and `dotnet run`. See [Debug it in your IDE](#debug-it-in-your-ide). |
+| `.vsconfig` | The Visual Studio components the launch profiles need. See [Debug it in your IDE](#debug-it-in-your-ide). |
 <!--#if (editor == "vscode") -->
 | `.vscode/` | VS Code tasks for `dotnet runic dev`, debug configurations and the recommended extensions. See [VS Code](#vs-code). |
 <!--#endif -->
@@ -460,7 +486,7 @@ the page and C# share; `dotnet build` checks every translation on both sides.
 To add a language, add it to `locales` in `runic.json`, then copy `en.rmf2`
 to `<locale>.rmf2` and translate it. The page imports the catalog as
 `virtual:runic-translations/app` from the
-[Translations Vite plugin](https://github.com/Runic-Artifex/runic-translations-sdk/tree/v0.13.0/packages/web/vite-plugin-runic-translations),
+[Translations Vite plugin](https://github.com/Runic-Artifex/runic-translations-sdk/tree/v0.14.0/packages/web/vite-plugin-runic-translations),
 `runicTranslations()` in `Frontend/vite.config.ts`. It compiles the catalog
 with the `dotnet-runic-translations` tool of `.config/dotnet-tools.json`
 (`dotnet tool restore` installs it), the release that generates `AppText`, so
@@ -481,7 +507,7 @@ does not reload messages.
 <!--#endif -->
 Native text such as menus, a tray icon and dialogs
 formats from the same catalog in C#: `new AppText(translations).Messages`.
-See [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.13.0/docs/guides/translations/runic-views.md).
+See [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-views.md).
 
 <!--#endif -->
 ## Test it
