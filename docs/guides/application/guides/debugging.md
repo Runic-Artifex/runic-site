@@ -76,11 +76,13 @@ Visual Studio lists its profiles next to the Start button:
 **Runic DevKit for Visual Studio** (preview, Visual Studio 2026 on Windows x64;
 see its
 [README](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/visualstudio/README.md))
-adds the `dotnet runic dev` loop to Visual Studio. Install
-`runic-devkit-vs.vsix` from the
-[runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0);
-the Visual Studio Marketplace listing
-(`runic-artifex.runic-devkit-vs`) follows with a final version. Its commands
+adds the `dotnet runic dev` loop to Visual Studio. Install it from the Visual
+Studio Marketplace: in **Extensions → Manage Extensions**, search for **Runic
+DevKit**, or open
+[runic-artifex.runic-devkit-vs](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit-vs),
+and restart Visual Studio. `runic-devkit-vs.vsix` is also on the
+[runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0).
+Its commands
 are in **Tools → Runic** and in the Runic tool window (**View → Other Windows →
 Runic**):
 
@@ -189,17 +191,19 @@ Microsoft's .NET debugger; use netcoredbg there.
 [runic-editors](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/vscode/README.md))
 adds a Dev Session view that follows `dotnet runic dev`, F5 of the Window
 without a `launch.json`, doctor results, and a ViewModels tree that opens the
-C# members. Since runic-editors 0.22.0 it is on the VS Code Marketplace (with
-the Preview label); the template's `.vscode/extensions.json` names it:
+C# members. Install it from the VS Code Marketplace
+([runic-artifex.runic-devkit](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit),
+with the Preview label, since runic-editors 0.22.0); the template's
+`.vscode/extensions.json` names it:
 
 ```sh docs-test=skip:sdk-guide-excerpt
 code --install-extension runic-artifex.runic-devkit
 ```
 
-VSCodium, Cursor and other editors that use Open VSX install
-`runic-devkit.vsix` from the
-[runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0)
-instead; it is not on Open VSX. With `dotnet-runic` 0.22, its `dev` task passes
+`runic-devkit.vsix` is also on the
+[runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0);
+VSCodium, Cursor and other editors that use Open VSX install it from there,
+since Runic DevKit is not on Open VSX. With `dotnet-runic` 0.22, its `dev` task passes
 `--debug-endpoint` to a `dev` with its Window, and **Stop dotnet runic dev**
 asks `dev` to stop on its standard input.
 

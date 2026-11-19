@@ -757,9 +757,14 @@ apply:
   Visual Studio ([debugging](guides/debugging.md#visual-studio)). To add the
   template's new `.vsconfig` to an existing project, copy it from a new one
   into the directory of its solution.
-- **The VS Code extension is Runic DevKit** (`runic-artifex.runic-devkit`,
-  was `runic-artifex.runic`), on the VS Code Marketplace; uninstall the former
-  one. The template's `.vscode/extensions.json` names the new ID.
+- **The editor extensions are Runic DevKit.** In VS Code it is
+  `runic-artifex.runic-devkit` (was `runic-artifex.runic`), on the VS Code
+  Marketplace; the template's `.vscode/extensions.json` names the new ID. In
+  Visual Studio 2026 it is `runic-artifex.runic-devkit-vs` (was Runic MF2
+  Translations), on the Visual Studio Marketplace (Extensions → Manage
+  Extensions, search for "Runic DevKit"). Both VSIX files are also on the
+  [runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0).
+  Uninstall the former extension.
 - **CS-WebUI's loopback server is stricter** on Linux and macOS than .NET's
   `HttpListener`: it answers `400` to ambiguous body framing, bare CR or LF line
   ends, dot segments and repeated `Host`, `Origin` or upload headers, and

@@ -377,11 +377,17 @@ refactorings:
   Message…** and translation status, and **Tools → Options → Runic DevKit**
   sets the .NET executable, the language server assembly and its trace.
 
-Install them as described in the
-[VS Code](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/vscode/README.md)
+Install them from their Marketplaces: in VS Code
+[runic-artifex.runic-devkit](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit),
+and in Visual Studio 2026
+[runic-artifex.runic-devkit-vs](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit-vs)
+(Extensions → Manage Extensions, search for "Runic DevKit"). Both VSIX files
+are also on the
+[runic-editors 0.22.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.22.0).
+The [VS Code](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/vscode/README.md)
 and
 [Visual Studio](https://github.com/Runic-Artifex/runic-editors/blob/v0.22.0/visualstudio/README.md)
-READMEs, and uninstall the former **Runic** (`runic-artifex.runic`) or **Runic
+READMEs describe them. Uninstall the former **Runic** (`runic-artifex.runic`) or **Runic
 MF2 Translations** extension: while both are installed, both start a language
 server for the same files. Keep the project's `dotnet-runic-translations` tool
 at its Translations version.
