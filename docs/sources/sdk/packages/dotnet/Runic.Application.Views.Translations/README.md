@@ -25,8 +25,8 @@ dotnet add package Runic.Application.Views.Translations
 npm install @runic-artifex/views-translations
 ```
 
-The package depends on `Runic.Translations` `[0.14.0, 0.15.0-0.0)` (before its
-1.0, a Runic Translations minor may break), `Runic.Translations.Hosting` 0.14.0 or
+The package depends on `Runic.Translations` `[0.15.1, 0.16.0-0.0)` (before its
+1.0, a Runic Translations minor may break), `Runic.Translations.Hosting` 0.15.1 or
 later, and the `Runic.Application.Views` of its release.
 
 **It has English and German only, so your language list shrinks to them.**
@@ -35,7 +35,7 @@ catalog shows its own text, so with this package it lists at most `en` and `de`.
 A language picker built from it loses your other languages, and negotiating
 against it (`LocaleNegotiation.Negotiate(DesktopLanguages.Preferred,
 translations.SupportedLocales, …)`, as the
-[runic-views guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-views.md#4-the-applications-language)
+[runic-views guide](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/runic-views.md#4-the-applications-language)
 does) picks English for a French user. Add one override file per extra
 language; see [Your other languages](#your-other-languages). The first window
 logs the languages that need one (event 1261).
@@ -71,8 +71,9 @@ await locale.SetLocaleAsync("de");
   window's language;
 - keeps `DesktopPlatformTexts.Current` in the context's locale from the first window
   on (dialog titles, "Untitled", the keyring label, Ctrl/Shift/Alt in shortcut
-  labels, the error pages of a Runic Desktop browser window; CS-WebUI's own
-  pages stay English, see
+  labels, the error pages of a Runic Desktop browser window, and, since 0.23,
+  CS-WebUI's 404 and 500 pages and connection banners; WebUI's own pages stay
+  English, see
   [Runic's own text](../Runic.Application.Views.CsWebUi/README.md#runics-own-text)).
   A switch changes them before
   `IRunicApplicationLocale.LocaleChanged` is raised. A text the platform refuses,
@@ -227,7 +228,7 @@ on the Hosting builder or the `TranslationContext` builder. Overrides apply
 locale-first: a German user sees this package's German text where you override
 only the English one. `runic-translations overrides add runic-views --locale en --key platform.untitled_file_name`
 scaffolds an override. See
-[Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/libraries.md#the-application)
+[Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/libraries.md#the-application)
 and the [consumer fixture](../../../tests/fixtures/application/views-translations-consumer/README.md),
 which CI builds against the packed package.
 
@@ -241,7 +242,7 @@ release notes.
 | --- | --- | --- |
 | `validation` | `required`, `max_length`, `min_length`, `length_between`, `range_integer`, `range_number`, `range`, `email`, `phone`, `url`, `credit_card`, `pattern`, `compare`, `file_extensions`, `base64`, `allowed_values`, `denied_values`, `enum` | `ValidationText` (input `field`, and `min`, `max`, `other`, `extensions`) |
 | `field` | `required.number`, `required.whole_number`, `required.date`, `required.time`, `required.date_time`, `not_a_number`, `not_a_whole_number`, `too_many_fraction_digits`, `out_of_range`, `not_a_boolean`, `not_a_choice`, `not_a_date`, `not_a_date_in`, `not_a_time`, `not_a_time_in`, `not_a_date_time`, `offset_out_of_range`, `no_text_form` | the page's field errors (input `text`, and `scale`; the lists `choices` and `patterns`, joined as alternatives) |
-| `platform` | one per `DesktopPlatformTexts` text, such as `untitled_file_name`, `save_file_title`, `control_key`, `access_denied_title`, `loading_title` | `PlatformTexts`, `FollowPlatformTexts` |
+| `platform` | one per `DesktopPlatformTexts` text, such as `untitled_file_name`, `save_file_title`, `control_key`, `access_denied_title`, `loading_title`, `connection_failed` | `PlatformTexts`, `FollowPlatformTexts` |
 | `menu` | one per `DesktopStandardMenuTitles` title, such as `about`, `quit`, `edit`, `select_all` (input `app` for `about`, `hide`, `quit`) | `MenuTitles`, the standard macOS menus |
 | `bridge` | `unavailable`, `timeout`, `disconnected`, `released`, `cancelled`, `rejected`, `failed` (by `BridgeError` kind); `action_unavailable`, `busy`, `invalid_input`, `item_not_found`, `protocol_mismatch`, `state_withheld` (by reason); `outcome_unknown`, `value_not_saved` | the page's `describeBridgeError` (since 0.18) |
 | `shortcut` | `enter`, `escape`, `tab`, `space`, `backspace`, `delete`, `up`, `down`, `left`, `right`, `home`, `end`, `page_up`, `page_down`; with `platform.control_key`, `shift_key` and `alt_key` | the page's `formatShortcut` (since 0.18) |

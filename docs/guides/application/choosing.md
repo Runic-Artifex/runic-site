@@ -80,20 +80,24 @@ shared with WebUI's `MultiClient` reports its pages through
 `IRunicConnections`, files reach .NET as [uploads](samples/files.md#blobs-and-uploads),
 which each window serves from a loopback endpoint of its own, and `0.16`
 pages and hosts carry a session in each request, so a page never acts for
-one that just left. Update any copy of `runic-cswebui.js` that you keep
+one that just left. Update any copy of the Views client that you keep
 outside `www/`: an older script receives no state, and one before `0.16` is
-only partly protected.
+only partly protected. Since SDK `0.23.0` the CS-WebUI host catches up with
+Runic Desktop in a `UseWebView` window on Windows and Linux: a guarded Window
+keeps the window open while its guard decides, the close drain works, and the
+window reports and restores its placement
+([closing a window](../desktop/window-close-lifecycle.md#cs-webui-preview)).
 
-|                                        | Runic Desktop                                                              | CS-WebUI                                                             |
-| -------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Window                                 | Native window with the embedded WebView; installed browser as fallback     | Installed browser in app mode; platform WebView as fallback          |
-| File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                               | Report `OwnerUnavailable`                                            |
-| Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                     | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1                 |
-| Menu bar                               | Native, in the Linux global menu, or rendered by the page                  | Rendered by the page                                                 |
-| Frontend                               | `www` folder, or in the assembly (`Embedded`)                              | `www` folder, or in the assembly (`Embedded`, since 0.15.0)          |
-| .NET package                           | `Runic.Application.Views.Desktop`                                          | `Runic.Application.Views.CsWebUi`                                    |
-| Host script in `index.html`            | `runic-views.js` (`runic-desktop-views.js` is deprecated, removed in 0.23) | `runic-views.js` (`runic-cswebui.js` is deprecated, removed in 0.23) |
-| Support                                | First-class                                                                | Best effort                                                          |
+|                                        | Runic Desktop                                                          | CS-WebUI                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Window                                 | Native window with the embedded WebView; installed browser as fallback | Installed browser in app mode; platform WebView as fallback |
+| File dialogs, clipboard, file launcher | Native, through `AddRunicPlatformServices()`                           | Report `OwnerUnavailable`                                   |
+| Linux runtime                          | GTK 3 and WebKitGTK 4.1, or GTK 4.12 and WebKitGTK 6.0                 | A Chromium-based browser, or GTK 3 and WebKitGTK 4.1        |
+| Menu bar                               | Native, in the Linux global menu, or rendered by the page              | Rendered by the page                                        |
+| Frontend                               | `www` folder, or in the assembly (`Embedded`)                          | `www` folder, or in the assembly (`Embedded`, since 0.15.0) |
+| .NET package                           | `Runic.Application.Views.Desktop`                                      | `Runic.Application.Views.CsWebUi`                           |
+| Host script in `index.html`            | `runic-views.js` (`runic-desktop-views.js` was removed in 0.23)        | `runic-views.js` (`runic-cswebui.js` was removed in 0.23)   |
+| Support                                | First-class                                                            | Best effort                                                 |
 
 ### Switching host later
 

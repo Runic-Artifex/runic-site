@@ -102,6 +102,8 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   const inputs =
     files(apiRoot).reduce((total, file) => total + statSync(file).size, 0) +
     statSync(join(docsRoot, 'sources/api-inputs.json')).size;
+  // 4.5 MiB since 0.23.0 added Runic.Spelling (preview), which with the
+  // interaction lifetime needs about 4.29 MiB (0.22.0 needed about 4.24 MiB);
   // 4.25 MiB since 0.19.0 added the side panel, the close drain, window
   // placement, per-window services and the hosted region appearance, which
   // need about 4.16 MiB; 4 MiB since 0.17.0 added the application locale, Runic's own text
@@ -111,10 +113,12 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // query collections, blobs, region collections, navigation paths and the
   // platform test fakes, about 400 public types that need about 3.53 MiB;
   // 2.75 MiB since 0.14.0 and 2.5 MiB since 0.12.0.
-  assert.ok(inputs <= 4.25 * 1024 * 1024, `inputs are ${inputs} bytes`);
+  assert.ok(inputs <= 4.5 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads. 256 KiB per page
-  // (Runic.Desktop.DesktopWindow needs about 249 KiB at 0.19.0) since 0.18.0, whose @runic-artifex/views package page with the hosted
+  // __data.json payloads that client-side navigation loads. 272 KiB per page
+  // since 0.23.0, whose Runic.Desktop.DesktopWindow page with the developer
+  // tools command, side panel drops and window icon needs about 257 KiB;
+  // 256 KiB (Runic.Desktop.DesktopWindow needs about 249 KiB at 0.19.0) since 0.18.0, whose @runic-artifex/views package page with the hosted
   // regions, component and instance APIs needs about 241 KiB; 224 KiB
   // since npm exports have pages of their own and package pages list the
   // first sentence of each summary: the @runic-artifex/views package page
@@ -127,7 +131,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 256 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 272 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
   // 10 MiB since 0.20.0, whose Bridge analyzers, development source map,

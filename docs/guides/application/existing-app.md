@@ -200,10 +200,12 @@ project that references both host packages sets `RunicApplicationHost` to
 `desktop` or `cswebui`. Before `0.7.0-preview.9`, pages loaded
 `runic-desktop-views.js` with Runic Desktop and used `runic({ desktop: true })`,
 which also loads the Desktop bootstrap, or loaded `runic-cswebui.js` with
-CS-WebUI. Since SDK `0.22.0` those host-named copies are deprecated: a page
-that loads one still works but logs a console warning, and 0.23 removes them,
-so load `runic-views.js` instead. A copy of your own under the old name gets
-build warning `RUNICBRIDGE019`; rename it to `runic-views.js`. Since SDK
+CS-WebUI. SDK `0.22.0` deprecated those host-named copies, and `0.23.0`
+removed them: a page that still loads one gets a 404 for it and no Bridge, so
+its Views never connect, and the build reports warning `RUNICBRIDGE019` naming
+the page. Load `runic-views.js` instead. A copy of your own under the old name
+is served as before but not updated by the build; rename it to
+`runic-views.js`. Since SDK
 `0.11.0`, update a copy of the script that you keep outside `www/`, because an
 older script receives no state.
 
@@ -223,7 +225,7 @@ value warns with `RUNICBRIDGE029`.
 
 To add a Window to an existing web app, for example a frontend in a monorepo
 that reuses the app's components, styles and translations, see
-[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
+[Adding a Window to an existing web app](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#adding-a-window-to-an-existing-web-app)
 in the Views README. It covers Vite `resolve.alias` and
 `resolve.dedupe`, matching TypeScript `paths`, Tailwind `@source`, and the
 `RunicApplicationFrontendInput` items that make `dotnet build` rebuild the

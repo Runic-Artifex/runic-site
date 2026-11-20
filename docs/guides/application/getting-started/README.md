@@ -117,9 +117,9 @@ guest. The Analog plugin uses the Angular compiler's internal API, so update
 Angular and the plugin together. `vite build` checks no types, so the
 template's `build` and `typecheck` scripts run `ngc --noEmit`, and its test
 runs on Vitest. See the
-[template guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tools/Runic.Application.Templates/README.md)
+[template guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/Runic.Application.Templates/README.md)
 and
-[building with the Angular CLI or Vite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/angular/README.md#building-with-the-angular-cli-or-vite).
+[building with the Angular CLI or Vite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/angular/README.md#building-with-the-angular-cli-or-vite).
 
 ### Debug in your IDE
 
@@ -137,10 +137,14 @@ configurations for the C# extension. To debug C#, run
 `dotnet runic dev --no-window`, wait for `[dev] Ready`, and press F5: the
 Window starts under the debugger and frontend edits still reach it. Since SDK
 `0.21.0`, VS Code's JavaScript debugger also stops in the frontend's sources on
-Linux (`Window + WebKitGTK (Linux)`, preview), as with WebView2 on Windows,
-and on every OS in Chrome (`Window in Chrome`, `dotnet runic dev --browser`).
-Since SDK `0.22.0`, Runic DevKit for Visual Studio debugs the C# code and the
-page in one session.
+Linux (`Window + WebKitGTK (Linux)`, out of preview since SDK `0.23.0`), as
+with WebView2 on Windows, and on every OS in Chrome (`Window in Chrome`,
+`dotnet runic dev --browser`, at an address of its own for each run since
+`0.23.0`). Since SDK `0.22.0`, Runic DevKit for Visual Studio debugs the C#
+code and the page in one session. Since SDK `0.23.0`, a Runic Desktop project
+opens the developer tools from View ▸ Developer Tools in Development on
+Windows and Linux, and frontend compile errors appear in the IDE's error
+list.
 [Debugging an application](../guides/debugging.md) covers each IDE, the
 browser's developer tools, the dock and Runic Inspect.
 
@@ -182,7 +186,7 @@ operation lifetime.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see
-  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/examples/first-window/README.md).
+  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/examples/first-window/README.md).
 
 The code blocks in these guides are checked against a pinned copy of the SDK
 template and examples by

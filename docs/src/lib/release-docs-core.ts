@@ -30,6 +30,7 @@ const productLabels: Readonly<Record<string, string>> = {
   'linux-dbus': 'Linux D-Bus',
   platform: 'Platform',
   'platform-contracts': 'Platform contracts',
+  spelling: 'Spell checking',
   svelte: 'Svelte',
   templates: 'Templates',
   'views-effect': 'Effect bindings',

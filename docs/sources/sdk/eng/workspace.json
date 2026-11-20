@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.22.0",
+  "version": "0.23.0",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "b407196c31a626627bb86452d09460cb4cc4bc7f",
@@ -99,7 +99,7 @@
     },
     {
       "name": "Runic.Application.Views.CsWebUi",
-      "version": "0.22.0-preview.1",
+      "version": "0.23.0-preview.1",
       "project": "packages/dotnet/Runic.Application.Views.CsWebUi/Runic.Application.Views.CsWebUi.csproj"
     },
     {
@@ -113,6 +113,11 @@
     {
       "name": "Runic.Application.Views.Translations",
       "project": "packages/dotnet/Runic.Application.Views.Translations/Runic.Application.Views.Translations.csproj"
+    },
+    {
+      "name": "Runic.Spelling",
+      "version": "0.23.0-preview.1",
+      "project": "packages/dotnet/Runic.Spelling/Runic.Spelling.csproj"
     },
     {
       "name": "Runic.Application.Templates",
@@ -396,6 +401,16 @@
         "tests/fixtures/application/views-translations-vite"
       ]
     },
+    "spelling": {
+      "dependsOn": [
+        "desktop"
+      ],
+      "paths": [
+        "packages/dotnet/Runic.Spelling",
+        "tests/dotnet/Runic.Spelling.Tests",
+        "eng/spelling"
+      ]
+    },
     "vite": {
       "dependsOn": [
         "application"
@@ -430,7 +445,8 @@
         "tests/fixtures/flathub",
         "eng/ci/hdiutil.sh",
         "eng/ci/packaging-probe-check.mjs",
-        "eng/ci/packaging-rpm.sh"
+        "eng/ci/packaging-rpm.sh",
+        "eng/ci/windows-icon-check.mjs"
       ]
     },
     "templates": {
@@ -518,7 +534,7 @@
         "packages/dotnet/Runic.Platform.Windows.Elevation",
         "tests/dotnet/Runic.Platform.Windows.Elevation.Tests",
         "tests/native/Runic.Elevation.Smoke",
-        "specs/platform",
+        "docs/design/platform",
         "eng/ci/macos-voiceover.sh",
         "eng/ci/macos-appearance.sh",
         "eng/ci/macos-open-probe.sh",

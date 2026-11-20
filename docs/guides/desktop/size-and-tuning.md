@@ -58,7 +58,7 @@ Core Kestrel (`Runic.Desktop.Kestrel`). For the SDK's first-window example on
 linux-x64, its NativeAOT executable is 9.97 instead of 12.96 MiB and serves its
 first page after about 13 instead of 21 ms, and a framework-dependent build
 needs no ASP.NET Core runtime. The
-[native server's README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Desktop.NativeServer/README.md#what-you-get)
+[native server's README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Desktop.NativeServer/README.md#what-you-get)
 has the measurements for each publish mode, and
 [the presentation server](host-selection.md#presentation-server) explains the
 choice. The measurements below predate it and use Kestrel.
@@ -93,7 +93,8 @@ This property has no role in CS-WebUI, which has no ASP.NET Core dependency.
 ## Making the executable smaller
 
 Runic already keeps a NativeAOT or trimmed publish small without a setting of
-yours, and SDK `0.22.0` made both hosts smaller:
+yours; SDK `0.22.0` made both hosts smaller, and `0.23.0` leaves Bridge blobs
+out where no Bridge uses them:
 
 - Its packages are built for trimming and NativeAOT, so the trimmer removes the
   Runic code an application does not reach, including the platform backends of
@@ -106,6 +107,28 @@ yours, and SDK `0.22.0` made both hosts smaller:
   (`Runic.Application.Views.Desktop.DevelopmentAssets`). Only the publish turns
   them off: builds and `dotnet run` keep them, also when the project sets
   `PublishAot`.
+- **Bridge blobs and uploads only where a Bridge uses them** (0.23). The
+  generated codecs of a member that holds a `RunicBlob` or takes a
+  `RunicUpload` mark their assembly. A trimmed or NativeAOT publish in which no
+  assembly is marked or names `RunicBlob` or `RunicUpload` in its metadata
+  turns the feature switch `Runic.Application.Views.Blobs` off: the producer
+  no longer lists `blobs/1` or grants uploads, the CS-WebUI host starts no
+  blob endpoint, Runic Desktop serves no blob exchange, and the trimmer removes
+  the Window's blob store, its upload folder and the CS-WebUI loopback blob
+  server. On linux-x64 the scaling suite's CS-WebUI fixture is 365 KB smaller
+  (7,431,440 instead of 7,796,672 bytes), its Runic Desktop fixture 163 KB and
+  its Translations fixture 353 KB. Such an application's pages get no upload
+  grant, and `client.upload` rejects with `unavailable`. Builds, `dotnet run`
+  and untrimmed publishes keep `blobs/1`; set
+  `<RunicBridgeBlobs>true</RunicBridgeBlobs>` to keep it in every publish, for
+  example when only reflection reaches a `RunicBlob`. `RunicBridgeBlobs` and
+  `RunicDevelopmentOnlyViews` take `auto` or `true`; another value, such as
+  `false`, is warning `RUNICBRIDGE075` and counts as `auto`.
+- **No ICU before the first page** (fixed in 0.23). Since 0.22.0, the
+  generated reader of the Bridges' descriptor tables parsed member ids with
+  `int.Parse(…, CultureInfo.InvariantCulture)`, which loaded ICU on the first
+  window's Bridge: about 5 MiB more memory at startup on Linux for a NativeAOT
+  application on the native server. Rebuild with 0.23.0 to regenerate it.
 - **Generated Bridges cost less per ViewModel** (0.22). They share one codec
   per wire type, one getter per property and one async command runner per
   assembly, and describe their members in a table instead of creating
@@ -121,7 +144,7 @@ yours, and SDK `0.22.0` made both hosts smaller:
   `400` to ambiguous body framing, bare CR or LF line ends, dot segments and
   repeated `Host`, `Origin` or upload headers, limits request heads to 8 KiB
   lines, 32 KiB and 100 fields, and holds at most 128 connections; the
-  [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/security.md)
+  [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/security.md)
   lists the limits.
 - **Runic Desktop** (0.22) no longer links the CS-WebUI endpoint, the macOS
   backend outside macOS, `HttpClient` for a hosted region's component
@@ -132,7 +155,7 @@ yours, and SDK `0.22.0` made both hosts smaller:
   documented for an executable that opens no window, also when the project
   references `Runic.Desktop.Kestrel` (−4.6 MB in that case): a window then
   fails with `presentation-server-unavailable`, and build warning
-  [`RUNICDESK007`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/diagnostics.md#runicdesk007)
+  [`RUNICDESK007`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/diagnostics.md#runicdesk007)
   reports `None` together with a referenced server package. An application
   whose pages declare no hosted regions can leave the region host out with
   `<RunicDesktopRegionHost>false</RunicDesktopRegionHost>`.
@@ -149,6 +172,15 @@ yours, and SDK `0.22.0` made both hosts smaller:
 - **Runic Translations 0.14** compresses each catalog's locale data, keeps its
   messages in one table and links no Hot Reload reflection in a trimmed
   publish; see [Translations](../translations/README.md#upgrading-to-0140).
+- **Runic Translations 0.15** embeds each locale as binary data and the
+  message table as DEFLATE data (RMF2 runtime ABI 5), so a NativeAOT
+  executable no longer links the JSON reader for generated data (about 34 KB)
+  and grows by about 130 bytes per message instead of 198; see
+  [Translations](../translations/README.md#upgrading-to-0151).
+
+The SDK's
+[smallest NativeAOT executable](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/packaging.md#the-smallest-nativeaot-executable)
+table lists every choice and setting above with what it saved.
 
 Beyond that, four .NET settings make the executable smaller in exchange for
 something the application gives up. Runic sets none of them and the templates
@@ -180,7 +212,7 @@ To see what takes the space inside the executable, publish with
 and data blob by assembly. Open it in
 [sizoscope](https://github.com/MichalStrehovsky/sizoscope), which also compares
 two builds. See
-[making the executable smaller](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/packaging.md#making-the-executable-smaller).
+[making the executable smaller](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/packaging.md#making-the-executable-smaller).
 
 ## Development-only views and members
 
@@ -224,7 +256,7 @@ ViewModel does not. Set the MSBuild property `RunicDevelopmentOnlyViews` to
 only from trimmed and NativeAOT publishes). `[RunicDevelopmentOnly]` on an
 interaction or view request has no effect and is warning `RUNICBRIDGE072`: mark
 its ViewModel. See
-[development-only views and members](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/docs/packaging.md#development-only-views-and-members).
+[development-only views and members](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/packaging.md#development-only-views-and-members).
 
 ## Choose tradeoffs using evidence
 

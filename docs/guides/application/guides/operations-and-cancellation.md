@@ -52,6 +52,25 @@ private async Task ImportAsync(ImportSource source, CancellationToken token)
 }
 ```
 
+Since SDK `0.23.0` an asynchronous command can take its progress as an
+`IProgress<double>` parameter instead, the usual .NET pattern. The Bridge
+binds it as CommunityToolkit binds the `CancellationToken`: the page sends
+nothing for it, and the generated client calls `import()` and `startImport()`
+without an argument:
+
+```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
+private Task ImportAsync(IProgress<double> progress, CancellationToken token) =>
+    importer.ImportAllAsync(progress, token);
+```
+
+Started as an operation, the command receives a reporter bound to that
+operation, also from a worker thread, and reports after it ended are ignored;
+through the awaited call it receives one that does nothing. Only a
+CommunityToolkit `IAsyncRelayCommand<IProgress<double>>` or a ReactiveUI
+`ReactiveCommand<IProgress<double>, TResult>` binds it: a command that also
+takes input keeps `RunicOperationProgress.Report`. .NET code that runs such a
+command itself passes `RunicOperationProgress.Current`.
+
 Pages that watch the operation receive the latest value at most every 100 ms as
 `progress` on its `running` status. `BridgeOperation.subscribe(listener)`
 follows it, and `OperationState`, `LatestOperationState` and the Angular, React,
@@ -101,7 +120,7 @@ takes the resolver's key, .NET resolves it with the named method and evaluates
 `CanExecute` with the resolved object. A key that resolves to `null` is
 rejected with reason `unresolved-key`, and the command doesn't run. Misuse is
 warning `RUNICBRIDGE027`. See
-[Commands whose parameter has no wire form](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#commands-whose-parameter-has-no-wire-form).
+[Commands whose parameter has no wire form](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#commands-whose-parameter-has-no-wire-form).
 
 Since SDK `0.11.0`, every Bridge input is limited to the Window's
 `MaximumInputBytes`, 1 MiB by default, counted in UTF-8 bytes. That now
@@ -110,13 +129,13 @@ operation starts, checked writes and interactions move from 64 KiB to the same
 limit. A larger input is rejected with reason `invalid-input`. Raise the limit
 on `RunicWindowOptions` or the host options if a page legitimately sends more;
 see
-[Bridge input limit](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#bridge-input-limit).
+[Bridge input limit](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#bridge-input-limit).
 
 The Views README walks through a complete example, a cleanup
 estimate in C# and TypeScript, in
-[Operation results and parameterised queries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#operation-results-and-parameterised-queries).
+[Operation results and parameterised queries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#operation-results-and-parameterised-queries).
 Its
-[wire types](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#wire-types)
+[wire types](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#wire-types)
 explain why a result such as a byte count shown in the UI is better a `double`
 than a `long`, which becomes a `bigint`.
 
@@ -137,7 +156,7 @@ private void OnOutput(string text)
 ```
 
 The page still sees a `string`. See
-[live logs and other growing text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#live-logs-and-other-growing-text).
+[live logs and other growing text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#live-logs-and-other-growing-text).
 
 ## Choose a policy for the action
 
@@ -195,15 +214,15 @@ command that already reported `cancelled`. Back still commits at once. A
 retained entry keeps every operation, and only `start…` operations carry the
 policy: on anything else the attribute has no effect and the generator warns
 `RUNICBRIDGE028`. The retirement logs Views event 1017. See
-[Operations and navigation entries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/README.md#operations-and-navigation-entries).
+[Operations and navigation entries](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#operations-and-navigation-entries).
 
 ## Bind operation feedback
 
 The following helpers are new in SDK `0.7.0-preview.6`.
 
-[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/views/src/operation-controller.ts)
+[`createOperationController`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/views/src/operation-controller.ts)
 and Svelte's
-[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/web/svelte/src/views/use-operation.svelte.ts)
+[`useOperation`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/svelte/src/views/use-operation.svelte.ts)
 bind Start handles to admission, pending state, status, outcome, declared failure,
 error and Cancel. Since SDK `0.13.0` they also expose the operation's
 `progress` ([report progress](#report-progress)); render other domain state
@@ -305,7 +324,7 @@ availability must finish after terminal invocation status. Call `dispose()`
 when the selection owner leaves; it drops feedback and queued intent without
 requesting cancellation of accepted work.
 
-[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
+[`AcceptedWorkScope.RunAsync`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/AcceptedWorkScope.cs)
 reserves application-owned work before invoking
 its factory. `DrainAsync` stops new admission and waits for accepted tasks;
 cancelling the caller's drain wait does not cancel those tasks. Asynchronous
@@ -334,7 +353,7 @@ public async ValueTask DisposeAsync()
 
 The editor and workspace snippets illustrate application-specific contracts.
 The package onboarding snippets are checked against the pinned release template. The
-[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/v0.22.0/tests/fixtures/application/operations-consumer/README.md)
+[external package consumer](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tests/fixtures/application/operations-consumer/README.md)
 builds from packed NuGet/npm archives and exercises operation feedback, latest
 selection, session replacement, shared-DTO exclusions and accepted-work disposal through the
 real Desktop bridge.
