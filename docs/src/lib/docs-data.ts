@@ -165,6 +165,8 @@ export const products: Product[] = [
     description:
       'Runic Desktop hosts browser and embedded-WebView presentations. Linux applications explicitly choose GTK3/WebKitGTK 4.1 or the optional GTK4/WebKitGTK 6 adapter. Windows NativeAOT embeds the WebView2 loader; the Edge WebView2 Runtime remains a prerequisite. Platform adapters add file dialogs, notifications, appearance settings, application handoff and inhibition.',
     ...releaseMetadata('desktop'),
+    // Runic.Spelling (preview) checks spelling beside the Desktop platform checkers.
+    includedReleaseProducts: ['spelling'],
     source:
       'https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Desktop',
     bestFor: [
@@ -306,11 +308,11 @@ export const products: Product[] = [
     description:
       'Runic Translations discovers one translations/runic.json project with locale-scoped MessageFormat 2 files. Its deterministic compiler generates identifier-safe message calls, locale metadata, request-local SSR support, typed C# and tree-shakable ESM while keeping its runtime ABI portable and NativeAOT-ready.',
     releaseProduct: null,
-    version: '0.14.0',
+    version: '0.15.1',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.14.0',
+      'https://github.com/Runic-Artifex/runic-translations-sdk/releases/tag/v0.15.1',
     source: 'https://github.com/Runic-Artifex/runic-translations-sdk',
     bestFor: [
       'Deterministic localization builds',
@@ -377,11 +379,11 @@ export const products: Product[] = [
         label: 'Get started with Command Line',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.13.0/README.md',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.14.0/README.md',
         label: 'Command Line repository README',
       },
       {
-        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.13.0/specs/command-line',
+        href: 'https://github.com/Runic-Artifex/runic-cli-sdk/tree/v0.14.0/specs/command-line',
         label: 'Command Line specifications',
       },
     ],
@@ -394,11 +396,11 @@ export const products: Product[] = [
     description:
       'Runic Command Line generates NativeAOT-ready commands from ordinary typed C# methods. Help, validation, completion, environment fallbacks and shared options work in standalone tools and hosted Runic applications. Add Runic.CommandLine.Spectre for styled help, progress and prompts; machine output remains structured and predictable.',
     releaseProduct: null,
-    version: '0.13.0',
+    version: '0.14.0',
     versionState: 'published',
     availability: 'independent',
     releaseNotes:
-      'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.13.0/eng/release/notes/0.13.0.md',
+      'https://github.com/Runic-Artifex/runic-cli-sdk/blob/v0.14.0/eng/release/notes/0.14.0.md',
     source: 'https://github.com/Runic-Artifex/runic-cli-sdk',
     bestFor: [
       'NativeAOT command applications',

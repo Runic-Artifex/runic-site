@@ -665,8 +665,12 @@ after a user close.
   native close request. A Window that also has
   `WindowOptions.ConfirmCloseAsync` asks its own guard first, then that
   confirmation, for both.
+- CS-WebUI's WebView window asks too on Windows (WebView2) and Linux
+  (WebKitGTK), since 0.23 (#1148), and `RequestCloseAsync` joins the user's
+  decision there.
 - A presentation that cannot keep its window open opens the Window unguarded and
-  logs event 1053 `WindowCloseGuardUnavailable` instead of failing: CS-WebUI, a
+  logs event 1053 `WindowCloseGuardUnavailable` instead of failing: a CS-WebUI
+  browser window, macOS WebView, `ShowWindow` window or serve-only mode, a
   browser window (an explicitly selected browser or the `EmbeddedThenBrowser`
   fallback), or a custom embedded-window host without the `CloseConfirmation`
   capability. A browser tab or window closes without asking the application.
@@ -674,8 +678,8 @@ after a user close.
   matters. `RequestCloseAsync` still asks there, because the application is
   the one closing.
 - A guard that agreed does not have to wait for the Window's work itself: a
-  [close drain](#closing-after-the-windows-work-has-drained) (0.19,
-  experimental) keeps the window open after every guard agreed until that work
+  [close drain](#closing-after-the-windows-work-has-drained) (since 0.19,
+  stable since 0.22) keeps the window open after every guard agreed until that work
   has ended. A guard that waits commits to nothing either:
   `AcceptedWorkScope.WaitForAcceptedAsync` waits without closing the scope's
   admission, so a later guard that keeps the Window open leaves the scope
@@ -1074,8 +1078,12 @@ _settings.WindowPlacement = _window.Placement;
   pixels on Linux), and Runic.Application.Views.Desktop converts with
   `ToRunicPlacement()` and `ToDesktopPlacement()`, so a placement saved with
   `DesktopPlatformServices.GetWindowState` passes between the two layers. In
-  WPF all four are device-independent pixels. An open side panel is not part
-  of the bounds.
+  WPF all four are device-independent pixels. On CS-WebUI (a `UseWebView`
+  window on Windows and Linux, since 0.23) they are CS-WebUI's
+  `WebUiWindowPlacement`: the outer frame in screen coordinates on Windows, and
+  GTK's window size and frame position on Linux; see
+  [Window placement](../Runic.Application.Views.CsWebUi/README.md#window-placement).
+  An open side panel is not part of the bounds.
 - **Keeping or fitting.** `X` and `Y` both `null` keep the position, and a
   `Width` or `Height` of zero or less keeps that dimension. Runic Desktop keeps
   the bounds on a monitor that exists now, as at open, so `Placement` can report
@@ -1302,7 +1310,9 @@ Where it applies:
 | Runic Desktop's embedded window (WebView2, WKWebView, WebKitGTK with GTK 3 and GTK 4), `RunicDesktopHostOptions.CloseDrain` for every Window | Yes | Drains visibly for up to `DesktopHostOptions.ShutdownDrainTimeout` (30 s), then closes; `ShutdownRequested` follows the drains |
 | A window the application opens itself (`DesktopPlatformServices.AttachWindowServices`) | With `DesktopWindowOptions.CloseDrainAsync` | As above |
 | A hosted application's Window (runic-host/1) and its regions | Yes: it reports `window-closed` after the drain, and the host keeps its window until then | Within the guest's `ShutdownDrainTimeout`; the host's stop timeout still ends it |
-| An installed browser, serve-only mode, CS-WebUI | No: the window closes at once, with `WindowCloseDrainUnavailable` (event 1055) | The Window's scope still waits for durable work |
+| CS-WebUI's `UseWebView` window on Windows (WebView2) and Linux (WebKitGTK), `RunicCsWebUiHostOptions.CloseDrain` for every Window (since 0.23) | Yes | The CS-WebUI host handles no termination signal: the process ends |
+| Serve-only mode (`RUNIC_APPLICATION_SERVE_ONLY=1`) on Runic Desktop and CS-WebUI (since 0.23) | When serving ends (a line on standard input): the server keeps serving the Window's pages until the work has ended; a closing tab is no close | Runic Desktop: a termination signal ends serving and the drain at once |
+| An installed browser; a CS-WebUI browser window, macOS WebView or `ShowWindow` window | No: the window closes at once, with `WindowCloseDrainUnavailable` (event 1055) | The Window's scope still waits for durable work |
 | WPF (`RunicViewHost`) | No: the application owns its window's `Closing` (below) | The application's own |
 | `RunicWindowTestHost` | `RunicWindowTestHostOptions.CloseDrain`, `RunicTestWindow.IsDraining` | |
 
@@ -1531,6 +1541,11 @@ document-portal paths under `/run/user/<uid>/doc`, which the application can
 open; a macOS App Sandbox grants access to dropped files while the application
 runs.
 
+Files dropped on the Window's [side panel](../../../docs/side-panel.md#dropped-files-on-the-panel)
+reach the same root ViewModel, in the same queue, with `RunicFileDrop.InSidePanel`
+set and the panel page's label in `Target`. The host sets `InSidePanel` from the
+view that received the drop, so unlike the label it can be trusted.
+
 `RunicFileDrop.Effect` is `Copy`, `Move` or `Link`, as the drag source, the
 user's modifier keys and the page agreed; mark where a drop copies, moves, links
 or is refused with `data-runic-drop-effect="copy|move|link|none"`, and treat the
@@ -1601,7 +1616,7 @@ API shapes were removed rather than deprecated. Since 0.9 the old build property
 and item names no longer apply: each fails the build with
 [RUNICBRIDGE017](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge017),
 which names the new one. Angular's `RunicViewOutlet` remains a deprecated alias,
-removed in the next major release. The old package IDs get no further releases, so replace them
+removed in 2.0. The old package IDs get no further releases, so replace them
 in `PackageReference` and `Directory.Packages.props`; namespaces are unchanged.
 
 | Before | Now |
@@ -2155,7 +2170,7 @@ own code, while you type and in the build, so `#pragma warning disable` and
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#errors-and-warnings-while-you-type)
 lists them.
 
-`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039`, `053` and `072` are warnings; the ones the generator
+`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039`, `053`, `072` and `075` are warnings; the ones the generator
 reports itself (`020`, `072`, and the analyzer's when analyzers are off) repeat on builds that reuse the cached generation. Every other
 code fails the build. The
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
@@ -2413,12 +2428,13 @@ the generated code. `RunicApplicationFrontendBootstrap` is `true` only in the bo
 ### The host of a page
 
 A page loads `webui.js`, which the host serves, and `runic-views.js`, the host's
-Views client, which the host package copies into `www/`:
+Views client, which the host package copies into `www/` under that name:
 `Runic.Application.Views.Desktop` (and so `Runic.Application.Views.Wpf`) copies
-`runic-desktop-views.js`, `Runic.Application.Views.CsWebUi` copies
-`runic-cswebui.js`. Both are also copied under those names, so a page that loads
-one of them directly keeps working; that copy is deprecated since 0.22 and removed
-in 0.23, and such a page logs a console warning. Load `runic-views.js` instead. Neither `index.html` nor the Vite
+its Desktop client, `Runic.Application.Views.CsWebUi` its CS-WebUI client.
+Since 0.23 neither is copied under a host-named file name any more
+(`runic-desktop-views.js`, `runic-cswebui.js`, deprecated in 0.22): a page that
+still loads one of those gets a 404 and no Bridge, and the build reports warning
+`RUNICBRIDGE019`. Load `runic-views.js` instead. Neither `index.html` nor the Vite
 configuration names a host, so the same `dist/` runs on every host, and
 switching hosts changes the host package and `Program.cs`, not the frontend.
 `runic({ desktop: true })` from `@runic-artifex/vite-plugin-runic` is not needed
@@ -2433,9 +2449,7 @@ dotnet run -p:RunicApplicationHost=desktop
 ```
 
 Without it, such a project copies no `www/runic-views.js`, and gets warning
-`RUNICBRIDGE019` when a copied page loads `runic-views.js`. A page that loads
-the deprecated `runic-cswebui.js` or `runic-desktop-views.js` itself builds
-without the warning. The frontend build receives the host as the `RUNIC_APPLICATION_HOST`
+`RUNICBRIDGE019` when a copied page loads `runic-views.js`. The frontend build receives the host as the `RUNIC_APPLICATION_HOST`
 environment variable and is part of its build state, so a Vite configuration
 that still needs a host-specific build can read it and is rebuilt when it
 changes. A frontend that a referenced project builds, such as the model project
@@ -2923,9 +2937,11 @@ model's turn it publishes and sends in the next turn. An input that does not fit
 [Leave confirmation in a web View](../Runic.Application.Views.ReactiveUI/README.md#leave-confirmation-in-a-web-view)
 for the table). When no page can answer it runs the fallback, or fails with
 `RunicInteractionUnhandledException` when there is none. The page's
-cancellation, its presentation closing, a timeout (by default two minutes, at
-most ten, set with the constructor's `timeout`) and the caller's token fail it
-as interactions do.
+cancellation, its presentation closing, a timeout and the caller's token fail it
+as interactions do. The constructor's `timeout` sets the lifetime: by default
+two minutes, at most 24 hours, or `Timeout.InfiniteTimeSpan` for none, as for a
+question a person answers (see
+[Interaction lifetime](../Runic.Application.Views.ReactiveUI/README.md#interaction-lifetime)).
 
 **Work that no page started.** A timer, a notification's `Activated` handler
 or other background work of a window enters the window scope explicitly, so
@@ -3011,6 +3027,35 @@ private async Task ImportAsync(ImportSource source, CancellationToken token)
     }
 }
 ```
+
+A command without input can take the progress as its parameter instead, the
+usual .NET pattern, which also suits a library method that takes an
+`IProgress<double>`. The Bridge binds the parameter as CommunityToolkit binds
+the `CancellationToken`: the page sends nothing for it, and the generated
+client calls `import()` and `startImport()` without an argument. Started as an
+operation, the command receives a reporter bound to that operation, which keeps
+reporting to it from any thread until it ends; otherwise, such as through the
+awaited `import()` call, a reporter that does nothing.
+
+```csharp
+[RelayCommand(IncludeCancelCommand = true)]
+private Task ImportAsync(IProgress<double> progress, CancellationToken token) =>
+    importer.ImportAllAsync(progress, token);
+
+// ReactiveUI
+ImportCommand = ReactiveCommand.CreateFromTask<IProgress<double>>(
+    (progress, token) => importer.ImportAllAsync(progress, token));
+```
+
+Only an asynchronous command binds it: a CommunityToolkit
+`IAsyncRelayCommand<IProgress<double>>` (a `[RelayCommand]` method that
+returns `Task`) or a ReactiveUI `ReactiveCommand<IProgress<double>, TResult>`.
+A command that also takes input keeps `RunicOperationProgress.Report`, since
+CommunityToolkit gives a command one parameter. .NET code that runs such a
+command itself passes its own reporter, or `RunicOperationProgress.Current`,
+the reporter of the operation on the current flow. A WPF button without a
+`CommandParameter` passes `null`, so a command that a WPF View binds too writes
+`progress?.Report(...)`.
 
 A result that other parts of the page show, or that must survive a reload, is
 better published as state. Publish it in a read-only property, together with the input it
@@ -3502,27 +3547,27 @@ tests, `RunicViewState.IsValidating(vm => vm.UserName)` and
 Text that a ViewModel produces, such as a status line or a validation
 message, can follow the window's language without a call per string. The
 ViewModel produces a text reference of
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/transport.md)
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/transport.md)
 (a message key, typed arguments and a fallback text) instead of a sentence, and
 the page formats it with its Translations runtime (the `translation-text/1`
 feature). When the language changes, the page formats the references it has
 again.
 
-The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-views.md)
+The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/runic-views.md)
 walks through one catalog for the page and C#, the application's language,
 native text and tests, step by step. This section is the reference. It needs
-Runic Translations 0.14.0 or later. `dotnet new runic-app --translations` starts
+Runic Translations 0.15.1 or later. `dotnet new runic-app --translations` starts
 an application with all of it, and the
 [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
 shows it in English, German and Arabic.
 
 **One catalog.** Keep the catalog with the frontend and name its `runic.json`
 in the .NET project, which then gets the generated C# API for every message
-([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
+([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
 
 ```xml
-<PackageReference Include="Runic.Translations" Version="0.14.0" />
-<PackageReference Include="Runic.Translations.Build" Version="0.14.0" PrivateAssets="all" />
+<PackageReference Include="Runic.Translations" Version="0.15.1" />
+<PackageReference Include="Runic.Translations.Build" Version="0.15.1" PrivateAssets="all" />
 <RunicTranslationProject Include="Frontend/translations/runic.json" />
 ```
 
@@ -3932,7 +3977,7 @@ validation text, resolve them by catalog with the generated transport's
 one of a catalog the page does not list shows its fallback text. One written
 against another release of a catalog is checked key by key: it translates while
 its key and arguments still match, and shows its fallback text otherwise
-([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/transport.md)):
+([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/transport.md)):
 
 ```ts
 import * as appTransport from "virtual:runic-translations/app/transport";
@@ -3953,7 +3998,7 @@ configureTranslatedText({
 With the Vite plugin's `dependencies: "auto"`, the page's copy of a library
 catalog is regenerated with the application's `overrides`, so a reference
 resolves to the same text as in C#
-([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/libraries.md)).
+([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/libraries.md)).
 
 **Right-to-left text.** Since Runic Translations 0.9, a catalog that declares a
 right-to-left locale, such as `ar` or `he`, isolates the placeholders of its
@@ -3964,7 +4009,7 @@ them correctly; compare such text in tests after the runtime's
 in `runic.json` turns it on or off. The runtime's `localeDirection`, passed as
 `direction`, gives `syncDocumentLocale` and `textDirection()` the direction of
 each locale; see
-[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.14.0/docs/guides/translations/bidi.md).
+[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/bidi.md).
 
 `syncDocumentLocale()` sets `lang` and `dir` on `<html>` (direction from the
 runtime's `direction`, such as `localeDirection`, else the locale's script) and
@@ -4188,6 +4233,13 @@ picks in the page, cross as `RunicBlob` and `RunicUpload` (Views protocol
 feature `blobs/1`, `specs/application/README.md`, "Blobs and uploads"). Their
 bytes never cross the Bridge as JSON, so neither the input limit nor JSON
 encoding applies, and a large file streams instead of being buffered.
+
+An application that uses neither leaves them out of a trimmed or NativeAOT
+publish: the generated codecs of a `RunicBlob` or `RunicUpload` member mark
+their assembly, and without a marked assembly the publish turns `blobs/1` off,
+so the executable has no blob store or blob endpoint (0.23, about 360 KB on
+CS-WebUI). `<RunicBridgeBlobs>true</RunicBridgeBlobs>` keeps them in every
+publish.
 
 **A blob for the page.** Expose a `RunicBlob` as a state property, in a DTO or
 collection row, or as a command or operation result:
@@ -4748,8 +4800,8 @@ await shell.Main.PushAsync(NavigationTarget.Create<ReportViewModel>(),
 The registry of operations is per Window: a second Window, or a second launch,
 cannot observe an operation the first Window started, and closing the Window
 waits for its operations up to the close timeout, then cancels them. An
-operation declared `[RunicOperationClose(RunicOperationClose.Durable)]` (0.19,
-experimental) is never cancelled by the close: the Window's scope stays until it
+operation declared `[RunicOperationClose(RunicOperationClose.Durable)]` (since
+0.19, stable since 0.22) is never cancelled by the close: the Window's scope stays until it
 ended (see [Closing after the Window's work has drained](#closing-after-the-windows-work-has-drained)). Work that
 must outlive a Window, or that several Windows observe, belongs to an
 application-owned service registered outside the Window's scope, as
@@ -4885,9 +4937,9 @@ trace id; correlate them with the host's spans by time and route.
 | 1050 | `WindowRegistrationMissing` | Error | `ValidateWindow` or `OpenWindowAsync` finds a Window's generated Bridge unregistered, on any host. | `Code`, `DiagnosticMessage`, `Remediation` |
 | 1051 | `WindowReleaseFailed` | Error | `IRunicWindowService` fails to release a Window it opened, after that Window closed. | `Window`, `ErrorType` |
 | 1052 | `WindowCloseGuardFailed` | Error | A guarded Window's `CanCloseAsync` throws; the window stays open. A departure guard that throws is logged by the navigator as 1060 instead. | `Window`, `ErrorType` |
-| 1053 | `WindowCloseGuardUnavailable` | Warning | A Window with `GuardClose` opens on a presentation that cannot keep its window open, such as CS-WebUI or a browser, so a user close does not ask `CanCloseAsync`. | `Window`, `Presentation` |
+| 1053 | `WindowCloseGuardUnavailable` | Warning | A Window with `GuardClose` opens on a presentation that cannot keep its window open, such as a browser, or CS-WebUI except its WebView on Windows and Linux, so a user close does not ask `CanCloseAsync`. | `Window`, `Presentation` |
 | 1054 | `WindowFileDropFailed` | Error | `IRunicFileDropTarget.OnFilesDroppedAsync` of a Window's root ViewModel threw for a drop of files; later drops still arrive. | `ViewModel`, `FileCount`, `ErrorType` |
-| 1055 | `WindowCloseDrainUnavailable` | Warning | A Window with a close drain (`RunicWindowOptions.CloseDrain`, `RunicDesktopHostOptions.CloseDrain`) opens on a presentation that cannot keep its window open, such as an installed browser, serve-only mode or CS-WebUI: the window closes at once, and the Window's scope still waits for durable work. | `Window`, `Presentation` |
+| 1055 | `WindowCloseDrainUnavailable` | Warning | A Window with a close drain (`RunicWindowOptions.CloseDrain`, `RunicDesktopHostOptions.CloseDrain`, `RunicCsWebUiHostOptions.CloseDrain`) opens on a presentation that cannot keep its window open, such as an installed browser, or a CS-WebUI browser window or macOS WebView: the window closes at once, and the Window's scope still waits for durable work. | `Window`, `Presentation` |
 | 1090 | `ReactiveSchedulerKept` | Information | A Runic Desktop, CS-WebUI or test-host window opens while ReactiveUI's main-thread scheduler is one set before `AddRunicReactiveModelContext()`, so Runic's was not installed. Once per scheduler type; a UI dispatcher's scheduler, such as WPF's, is not logged. | `Scheduler` |
 | 1091 | `ReactiveSchedulerReplaced` | Warning | Such a window opens after another scheduler replaced the installed one, for example a later `RxAppBuilder` `BuildApp()` with `WithPlatformServices()`. Call `WithRunicModelContext()` on that builder. Once per scheduler type; a UI dispatcher's scheduler is not logged. | `Scheduler` |
 | 1100 | `HotReloadRestartRequired` | Error | A Hot Reload edit changed a generated Bridge contract; restart the application. The `RUNIC_IDE_CONTRACT_RESTART_REQUIRED` line also goes to standard error. | `Mismatch` |
@@ -4952,7 +5004,7 @@ trace id; correlate them with the host's spans by time and route.
 | 2029 | `DesktopHostedPeerRefused` | Warning | An elevated hosted application (the elevated pair) refused a connection to one of its listeners from a loopback peer that does not run elevated, or whose process it cannot look up, before it read the request (`elevated-peer-refused`). At most ten a minute. | `Peer` |
 | 2030 | `DesktopHostedRegionAppearanceUnavailable` | Warning | The host gave a region window an appearance override (`RunicHostedRegionOptions.Appearance`, `RunicHostedRegion.SetAppearanceAsync`), but the guest does not implement `region-appearance/1`, such as a 0.18 guest: the window shows the desktop's appearance. Once per window. | `Name`, `Region` |
 | 2100 | `CsWebUiWindowShowFailed` | Error | CS-WebUI cannot show a window: it finds no browser, the selected browser does not exist or start, its page does not connect in time, or the WebView does not start. `OpenWindowAsync` fails with a `RunicWindowConfigurationException`. | `Window`, `Code`, `Browser`, `BrowserPath`, `DiagnosticMessage` |
-| 2101 | `CsWebUiNativeLibraryUnchecked` | Warning | CS-WebUI loads a WebUI library that the application selected through `CSWEBUI_NATIVE_LIBRARY` or `WebUiNativeLibrary.SetLibraryPath`, whose version Runic cannot check; it needs WebUI commit `efac0e24` or later and is tested with `24c7d196e` (CsWebUi 2.5.0-beta.4.9). Once per process, before the first window opens. | `Path` |
+| 2101 | `CsWebUiNativeLibraryUnchecked` | Warning | CS-WebUI loads a WebUI library that the application selected through `CSWEBUI_NATIVE_LIBRARY` or `WebUiNativeLibrary.SetLibraryPath`, whose version Runic cannot check; it needs WebUI commit `efac0e24` or later and is tested with `24c7d196e` (CsWebUi 2.5.0-beta.4.10). Once per process, before the first window opens. | `Path` |
 | 2102 | `CsWebUiMenuCommandFailed` | Error | A menu bar command of a CS-WebUI Window's root ViewModel (`IRunicMenuCommandSource`, `RunicCsWebUiHostOptions.MenuBar`) threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |
 | 2103 | `CsWebUiBlobEndpointPortsHeld` | Warning | Another process held, or answered on, one loopback address of `localhost` (`Address`) on `Count` of the `Tried` ports a CS-WebUI Window's blob endpoint tried, so the endpoint gave up `Host`. On Windows, where http.sys refuses to listen on a port that another socket holds, `Address` is `localhost` when no single address shows which socket holds it. Its URLs then fall back to `127.0.0.1`, whose loads the page makes cross-site and the endpoint refuses; on Windows, which has no fallback, the Window opens without blobs and uploads (event 1207). | `Address`, `Count`, `Tried`, `Host` |
 | 2104 | `CsWebUiBlobEndpointPortsReserved` | Warning | On Windows, URL reservations of http.sys (`Reservations`, the reserved URL prefixes) named `Count` of the `Tried` ports a CS-WebUI Window's blob endpoint tried for `Host`, so the endpoint gave up `Host`. A reservation lets the users that its access list names register URLs under the endpoint's, so the endpoint does not use a port that one names, whatever its host or path. The Window then opens without blobs and uploads (event 1207). | `Reservations`, `Count`, `Tried`, `Host` |

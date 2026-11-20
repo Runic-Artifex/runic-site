@@ -23,7 +23,7 @@ without a .NET SDK can create a project. Its arguments follow `--`, as they
 do for `dnx Runic.Create`; add `--nix` for the project's `flake.nix`:
 
 ```sh
-nix run github:Runic-Artifex/runic-sdk/v0.21.0#create -- MyApp --frontend react --nix
+nix run github:Runic-Artifex/runic-sdk/v0.22.0#create -- MyApp --frontend react --nix
 cd MyApp
 git init && git add -A
 nix develop              # the .NET SDK, Node and the package manager, from the new flake
@@ -44,7 +44,7 @@ network, and installs the template into `~/.templateengine`, as
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     runic-sdk = {
-      url = "github:Runic-Artifex/runic-sdk/v0.21.0";
+      url = "github:Runic-Artifex/runic-sdk/v0.22.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -444,6 +444,10 @@ runic-sdk.lib.buildRunicApplication pkgs {
   spellingDictionaries = with pkgs.hunspellDicts; [ de_CH en_US ];
 };
 ```
+
+An application that checks spelling itself with Runic.Spelling finds the same
+dictionaries: it reads `hunspell/` and `myspell/` of every `XDG_DATA_DIRS`
+entry ([Runic.Spelling](../packages/dotnet/Runic.Spelling/README.md#where-dictionaries-come-from)).
 
 Ship the dictionaries of the languages the application sets; a user's own,
 such as those of `environment.systemPackages` on NixOS, are found too, through

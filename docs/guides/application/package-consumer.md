@@ -95,7 +95,7 @@ explains the model context.
 Use the template's entry point before any top-level `await`:
 
 ```csharp docs-test=template:Program.cs host=desktop linuxGtk=4
-var options = new DesktopHostOptions { DiagnosticSink = ReportDiagnostic }.WithGtk4(ApplicationIdentity.Id);
+var options = new DesktopHostOptions { DiagnosticSink = ReportDiagnostic, MenuBar = menuBar }.WithGtk4(ApplicationIdentity.Id);
 ...
 return RunicDesktopHost.Run(provider, options, hostOptions, RunAsync);
 ```

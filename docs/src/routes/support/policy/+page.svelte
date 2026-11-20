@@ -64,14 +64,15 @@
           >0.9.1</code
         >) only fixes or adds, and only the latest minor gets fixes. Releases
         from 0.9.0 on carry no <code>-preview.N</code>
-        suffix; GitHub still marks them as prereleases. 0.22.0 is the current minor
+        suffix; GitHub still marks them as prereleases. 0.23.0 is the current minor
         release. Views protocol 4, introduced in 0.13.0, is the protocol that 1.0
         keeps, and later releases add only features negotiated in its
         <code>hello</code>. The release candidates <code>1.0.0-rc.N</code> start
         when Runic is ready and take only fixes, stabilization and
         documentation.
-        <code>Runic.Application.Views.CsWebUi</code> keeps a prerelease version of
-        its own while the CS-WebUI release it depends on is a prerelease.
+        <code>Runic.Application.Views.CsWebUi</code> keeps a prerelease version
+        of its own while the CS-WebUI release it depends on is a prerelease, and
+        the new <code>Runic.Spelling</code> is a preview too.
       </p>
     </Notice>
     <DocSection title="Version numbers" id="versions">
@@ -256,14 +257,16 @@
           <code>RUNICDESK104</code> and <code>RUNICDESK105</code> are retired:
           <code>onBridgeDraining</code> is a root export of
           <code>@runic-artifex/views</code>, and the
-          <code>./experimental</code> re-export is deprecated until 0.23.
+          <code>./experimental</code> re-export, deprecated in 0.22, is gone in 0.23.0.
         </li>
         <li>
           <strong>Preview:</strong>
-          <code>Runic.Application.Views.CsWebUi</code> is the only preview
-          package. It depends on the prerelease <code>CsWebUi</code>, so it
-          ships with each release on a prerelease version of its own and may
-          change in any release.
+          <code>Runic.Application.Views.CsWebUi</code> and, since 0.23.0,
+          <code>Runic.Spelling</code> are the preview packages. They ship with
+          each release on a prerelease version of their own, outside the 1.0
+          promise, and may change in any release:
+          <code>Runic.Application.Views.CsWebUi</code> because it depends on the
+          prerelease <code>CsWebUi</code>.
         </li>
       </ul>
     </DocSection>
