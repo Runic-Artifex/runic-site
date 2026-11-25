@@ -550,15 +550,37 @@ What differs:
 - A client library builds and copies no frontend by default, and an
   application that references it does not copy its frontend to its web root.
 - A client library without a View is `RUNICBRIDGE006`.
-- An application that presents the library's ViewModels needs their C#
-  Bridges, which a View declared in a referenced library does not give it. So
-  each application still declares its own Views for those ViewModels and
-  generates its own clients for them. Importing the library's clients in the
-  application instead is tracked in
-  [runic-sdk#1318](https://github.com/Runic-Artifex/runic-sdk/issues/1318).
+- An application maps the library next to its project reference and deletes
+  its own Views of those ViewModels (`RUNICBRIDGE080` reports one it keeps):
+
+```xml docs-test=skip:illustrative-project-setting
+<ItemGroup>
+  <ProjectReference Include="../SharedUi/SharedUi.csproj" />
+  <RunicApplicationFrontendClientModule Include="SharedUi" Specifier="@acme/shared-ui/generated" />
+</ItemGroup>
+```
+
+- The application still generates the C# Bridges of the library's ViewModels
+  and registers the library's Views in `AddRunicViews()`. It writes no client,
+  contract or mock for them: its own modules import their page functions and
+  page references from the specifier, and the copies an earlier build
+  generated are deleted.
+- A package generated from another build of the library fails the frontend's
+  type check with `TS2344` in `runic-client-modules.ts`, naming both contracts.
+  Rebuild the library and its package.
+- A library ViewModel can present only ViewModels of the same library, and a
+  shared client's implementers need one owner (`RUNICBRIDGE081`). Libraries
+  that map other libraries are not supported.
+- A package compiled with `tsc` must copy the `*.contract.d.ts` files and their
+  maps to its output. Otherwise, with `skipLibCheck`, the client types become
+  `any` without an error.
+- Mapping a client library has not been tried in a WPF application that hosts
+  Runic Views (`RunicViewHost`) yet.
 
 Details:
-[Build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#build-properties).
+[Share ViewModels and their clients through a library](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#share-viewmodels-and-their-clients-through-a-library)
+and the
+[shared-library-clients example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.24.0/examples/shared-library-clients).
 
 ## Next steps
 
