@@ -383,6 +383,8 @@ shows. Never block the dispatcher on `DisposeAsync` while it runs.
 
 - [Adopt Runic incrementally in WPF](wpf-incremental.md) is the migration path
   this guide belongs to.
+- [Port a WPF view to a web page](wpf-views.md) maps each habit of a WPF
+  view to the Runic feature that replaces it on the page.
 - [Pages and navigation](../guides/pages-and-navigation.md) explains regions,
   guards and dialog results.
 - The

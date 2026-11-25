@@ -187,6 +187,11 @@ the draft when web mounting fails. Test both presentations against the shared
 validation, save, cancellation and departure behavior before migrating another
 screen.
 
+[Port a WPF view to a web page](wpf-views.md) maps the habits of a WPF view,
+such as `LostFocus` bindings, `Validation.Errors`, command bindings and a
+`DataTemplate` per ViewModel, to the Runic features that replace them on the
+page.
+
 ## Limits
 
 WPF targets .NET 10 on Windows and requires the Microsoft Edge WebView2 Runtime
