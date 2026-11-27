@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "version": "0.23.0",
+  "version": "0.24.0",
   "dynamicData": {
     "repository": "Runic-Artifex/DynamicData",
     "forkRevision": "b407196c31a626627bb86452d09460cb4cc4bc7f",
@@ -99,7 +99,7 @@
     },
     {
       "name": "Runic.Application.Views.CsWebUi",
-      "version": "0.23.0-preview.1",
+      "version": "0.24.0-preview.1",
       "project": "packages/dotnet/Runic.Application.Views.CsWebUi/Runic.Application.Views.CsWebUi.csproj"
     },
     {
@@ -116,7 +116,7 @@
     },
     {
       "name": "Runic.Spelling",
-      "version": "0.23.0-preview.1",
+      "version": "0.24.0-preview.1",
       "project": "packages/dotnet/Runic.Spelling/Runic.Spelling.csproj"
     },
     {
@@ -265,8 +265,17 @@
         "packages/dotnet/Runic.Desktop.Kestrel",
         "packages/dotnet/Runic.Desktop.NativeServer",
         "packages/dotnet/Runic.Desktop.NativeServer.Static",
-        "native",
-        "eng/native",
+        "native/runic-server",
+        "native/Cargo.toml",
+        "native/rust-toolchain.toml",
+        "native/rustfmt.toml",
+        "eng/native/README.md",
+        "eng/native/at-spi2-core-release-embedded-message.patch",
+        "eng/native/build-runic-server.sh",
+        "eng/native/symbols.mjs",
+        "eng/native/collect-libraries.mjs",
+        "eng/native/plan-library-jobs.mjs",
+        "eng/native/verify-native-server-package.mjs",
         "nix/runic-server.nix",
         "eng/ci/windows-dismiss-oobe.ps1",
         "eng/ci/native-musl.sh"
@@ -490,6 +499,8 @@
         "examples/invoice-grid",
         "examples/query-collections",
         "examples/shared",
+        "examples/shared-library-clients",
+        "examples/split-ci",
         "examples/Directory.Build.props",
         "examples/Directory.Build.targets",
         "examples/Directory.Packages.props",
@@ -544,10 +555,45 @@
         "eng/ci/real-portal.sh"
       ]
     },
+    "rust": {
+      "dependsOn": [],
+      "paths": [
+        "native/Cargo.toml",
+        "native/Cargo.lock",
+        "native/rust-toolchain.toml",
+        "native/rustfmt.toml",
+        "native/.gitignore",
+        "native/crates",
+        "eng/native/crates.mjs"
+      ]
+    },
+    "cpp": {
+      "dependsOn": [],
+      "paths": [
+        "native/cpp"
+      ]
+    },
+    "conformance": {
+      "dependsOn": ["application"],
+      "paths": [
+        "specs/application/conformance",
+        "specs/desktop/conformance",
+        "eng/conformance",
+        "tests/dotnet/Runic.Application.Views.Conformance",
+        "tests/dotnet/Runic.Assets.Conformance"
+      ]
+    },
+    "tool-aot": {
+      "dependsOn": [],
+      "paths": [
+        "eng/aot"
+      ]
+    },
     "ci": {
       "dependsOn": [],
       "paths": [
         "eng/ci/plan.mjs",
+        "eng/ci/covered.mjs",
         "eng/ci/platforms.mjs",
         "eng/ci/gate.mjs",
         "eng/ci/flakes.mjs",

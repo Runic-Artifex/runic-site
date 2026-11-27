@@ -258,6 +258,15 @@ The options are those of the controller and `injector`:
   once its writes settled, so a command that depends on the field can follow it
   and skip a failed write:
   `if ((await this.title.commit()).error === undefined) await this.editor.client()?.save();`.
+- `commit: "change"` writes the draft only on `commit()`, which blur calls, so the
+  ViewModel's setter runs once, when the user leaves the field. It is the mode a
+  WPF port wants: WPF binds `TextBox.Text` with `UpdateSourceTrigger=LostFocus`,
+  and its setters often validate, normalize or start work. There is no timer, so
+  pass no `delay`; `[runicField]` still writes each choice of a checkbox, radio or
+  select at once, as WPF's default `PropertyChanged` trigger does for those
+  controls. `injectForm`'s `submit()` and `commit()`, `commitAllFields()` and the
+  runtime's flush before a window close or a departure (`field-flush/1`) write the
+  draft too, and so does destroying the injection context.
 - `checked: true` writes with the member's checked write: a change by another writer
   since the draft started is a conflict instead of being overwritten.
 - `coalesce` and `keepDraftOnError`, as for `injectTextField`.
@@ -378,8 +387,9 @@ export class EditorPage {
 
 Signal Forms does not tell the field when the element loses focus: always bind
 `(blur)="title.commit()"` next to `[formField]`, as above. Without it a
-`commit: "pause"` field writes only after the pause, and a value typed just before
-Save may still wait. `[formField]` also writes during IME composition; prefer
+`commit: "pause"` field writes only after the pause, a `commit: "change"` field
+only when a form or a flush commits it, and a value typed just before Save may
+still wait. `[formField]` also writes during IME composition; prefer
 `[runicField]` where composition matters.
 
 ## Outlet
@@ -513,6 +523,27 @@ handlers need no `try`/`catch`. One command can serve several buttons:
 readonly navigate = injectCommand((name: "showWelcome" | "showCounter") => this.workspace.client()?.[name]());
 // <button (click)="navigate.run('showWelcome')">Welcome</button>
 ```
+
+Those buttons share the handle's one `pending` and `error`.
+
+`injectCommands(view)` makes a handle for each command of a View, so a component
+needs no `injectCommand` per command:
+
+```ts
+readonly orders = injectView(this.page);
+readonly commands = injectCommands(this.orders);
+// <button (click)="commands.refresh.run()" [disabled]="!orders.state()?.canRefresh || commands.refresh.pending()">Refresh</button>
+// <button (click)="commands.archive.run(row.id)">Archive</button>
+```
+
+`commands.<name>` has the same `run`, `pending`, `error`, `failure` and `reset` as
+`injectCommand`, and each handle has its own `pending` and `error`. A handle is made
+when the component first reads its name and kept for the injection context. The
+names and arguments come from the generated client's commands (`{View}CommandName`),
+so setters, `canX(input)`, `startX`, `recoverX`, `upload` and `dispose` are not
+offered, and in explicit publication neither is a command that is not published.
+`run()` calls the client connected when it starts; before the client connected it
+resolves to `undefined`.
 
 For a command that declares a failure (`[RunicFailure]` in .NET), `run` resolves the
 `BridgeOutcome`, and `failure` holds the declared failure of the latest run, typed
@@ -809,6 +840,38 @@ application's own dialog.
   departure before that is answered by the ViewModel's .NET fallback handler, or
   fails closed without one.
 
+### A dialog in the template
+
+A page that renders its dialog in its own template, rather than awaiting a
+dialog service in `handle`, uses `injectInteraction`: the oldest open request as
+the signal `request()`, which the dialog answers with the request's `respond`:
+
+```ts
+@Component({
+  selector: "edit-page",
+  template: `
+    @if (discard.request(); as request) {
+      <app-confirm [text]="request.input.itemName" (yes)="request.respond(true)" (no)="request.respond(false)" />
+    }`,
+})
+export class EditPage {
+  readonly page = input.required<EditPageReference>();
+  readonly view = injectView(this.page);
+  readonly discard = injectInteraction(this.view, "confirmDiscard");
+}
+```
+
+Each open request is one object, `{ input, respond(answer) }`, the same while the
+request is open. Its `respond` answers that request only, and is ignored once
+the request has ended: answered already, as by a double click, or ended by .NET
+(the departure was superseded, the deadline passed, the window closed) or by a
+client change. A late answer therefore never reaches another request. The
+handler is registered while the client is connected and removed when the
+client changes or the injection context is destroyed. Several open requests are answered in order:
+`request()` is the oldest one, and answering it shows the next. An interaction
+whose input is empty (`Unit`) still has a request object while one is open. The
+input and the answer are typed from the generated interaction.
+
 The [ReactiveUI leave confirmation](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#leave-confirmation-in-a-web-view)
 has the .NET side and which View answers which departure. In a frontend test,
 the generated mock's `interactions.<name>.request(input)` resolves with the
@@ -920,6 +983,25 @@ guest page shows in it, and `state()` tells which state the region is in:
 <runic-hosted-region #check="runicHostedRegion" name="check" style="height: 420px" (stateChange)="onState($event)">
   @if (check.state() === "ended") { <button (click)="runAgain()">Run the check again</button> }
   @else { <p>Starting the check…</p> }
+</runic-hosted-region>
+```
+
+While the host waits for the guest's page, a projected element with
+`slot="stalled"` shows in place of the `loading` content once the region is
+stalled, and one with `slot="failed"` shows when the host application gave the
+region up ([loading and failure](../../../docs/hosted-regions.md#the-host)).
+`stalled()` and `failureReason()` are signals, and `retry()` asks the host to load
+a failed region again and returns whether it asked. As with the element, a stalled
+region without `slot="stalled"` content shows the projected content for `loading`,
+and a failed one without `slot="failed"` content the projected content for
+`failed`. `stateChange` also carries `stalled` and `reason`, and is also emitted
+when only those changed.
+
+```html
+<runic-hosted-region #check="runicHostedRegion" name="check" style="height: 420px">
+  <p>Starting the check…</p>
+  <p slot="stalled">The check is taking longer than usual…</p>
+  <p slot="failed">The check could not start ({{ check.failureReason() }}). <button (click)="check.retry()">Try again</button></p>
 </runic-hosted-region>
 ```
 

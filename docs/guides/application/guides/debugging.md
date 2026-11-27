@@ -3,12 +3,12 @@
 A Runic application has two halves to debug: the .NET Window with its
 ViewModels, and the page that renders them in a web engine. This guide shows
 how to debug both under `dotnet runic dev`, from your IDE's .NET debugger to
-the browser's developer tools, and how the development tools of SDK `0.23.0`
+the browser's developer tools, and how the development tools of SDK `0.24.0`
 connect a click in the page to the C# that runs for it.
 
 > Adapted from the SDK's
-> [debugging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/debugging.md)
-> at SDK `0.23.0`. Each section links the README that describes its tool in
+> [debugging guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/debugging.md)
+> at SDK `0.24.0`. Each section links the README that describes its tool in
 > full.
 
 | You want to…                                                                     | Use                                                                        |
@@ -55,7 +55,7 @@ To keep `dev` starting the Window, attach to the process that
 `[dev] Window started: process <pid>` names instead (`--no-dotnet-watch` keeps
 it from restarting).
 
-[Debug the Window in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/dotnet-runic/README.md#debug-the-window-in-your-ide)
+[Debug the Window in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/dotnet-runic/README.md#debug-the-window-in-your-ide)
 has the details and the snippets for a project that did not come from the
 template.
 
@@ -183,7 +183,7 @@ Without `dev`, F5 builds the production frontend and the Window shows that.
 Since 0.22, F5 also builds again after a frontend-only edit and after `dev`
 stops: the Runic Views build targets give Visual Studio's fast up-to-date check
 the frontend's files and `obj/runic/dev-stopped`. See the template README's
-[Debug it in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/Runic.Application.Templates/content/runic-app/README.md#debug-it-in-your-ide).
+[Debug it in your IDE](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/Runic.Application.Templates/content/runic-app/README.md#debug-it-in-your-ide).
 
 ### Rider
 
@@ -244,11 +244,30 @@ reload: while both are installed, both register the same commands and start a
 language server for the same files. See
 [Moving from Runic or Runic MF2 Translations](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/vscode/README.md#moving-from-runic-or-runic-mf2-translations).
 
+### Launch profiles and arguments for Debug builds
+
+Since 0.24, `dotnet runic dev` starts the Window with the first `Project`
+profile of `Properties/launchSettings.json`, as `dotnet run` and the IDEs do,
+so `dev` and F5 run the same command line. `--launch-profile <name>` picks
+another profile and `--no-launch-profile` runs without one, as 0.23 did.
+`[dev] Launch profile:` names the profile and `[dev] Window arguments:` shows
+each argument, also with `--dry-run`.
+
+Put an argument that only Debug builds take, such as `/mock`, in MSBuild's
+`StartArguments` in a Debug-only property group, not in a profile's
+`commandLineArgs`: a profile has no configuration condition, so
+`dotnet run -c Release` would pass it too. When both are set, `dotnet run`
+drops the profile's arguments while Visual Studio passes both. `dev` now
+passes both, the project's first, and warns with `RAPPDEV1020`; the
+`launch-arguments` check of `dotnet runic doctor` lists what each surface
+passes. See
+[Arguments for Debug builds](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/debugging.md#arguments-for-debug-builds).
+
 ### The IDE contract
 
 IDE tasks and extensions read `dotnet runic dev` through stable lines and a
 session file, described in the
-[IDE contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/dotnet-runic/README.md#ide-contract):
+[IDE contract](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/dotnet-runic/README.md#ide-contract):
 
 - **Lines:** `[dev] Window started: process <pid>` (the process to attach to),
   `[dev] Ready`, `[dev] Window exited: process <pid>`, the `[dev] Evaluating`
@@ -291,9 +310,11 @@ session file, described in the
   `devtoolsExtension` and `devtoolsExtensionId` (the
   [Runic DevTools extension](#the-runic-devtools-extension)), and `sourceMap`,
   the Bridge source map that the page's tools read (format
-  `runic.views.bridge-sources/1` since 0.21).
+  `runic.views.bridge-sources/1` since 0.21). Since 0.24, `dependencies`
+  lists the library and workspace packages that the page imports, with their
+  build and watch commands and their `state`.
   See the
-  [session file](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/dotnet-runic/README.md#session-file).
+  [session file](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/dotnet-runic/README.md#session-file).
 
 ### Frontend errors in the Error List
 
@@ -310,7 +331,7 @@ VS Code's `$msCompile`, the template's `.vscode/tasks.json`, Visual Studio's
 Error List and Runic DevKit 0.23 read it like a build error.
 `[vite] [runic] Frontend errors cleared` follows once the modules compile
 again, so an IDE can remove the rows. There is no type check. See
-[`RUNICP008`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/diagnostics.md#runicp008).
+[`RUNICP008`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/diagnostics.md#runicp008).
 
 ## The browser's developer tools per engine
 
@@ -319,7 +340,7 @@ Inspect Element, Safari's Web Inspector) only when `DOTNET_ENVIRONMENT` (or
 else `ASPNETCORE_ENVIRONMENT`) is `Development`, which `dotnet runic dev` and
 the template's launch profiles set. `DesktopWebContentPolicy.DevTools`
 overrides it per window; see
-[links, new windows, downloads and developer tools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools).
+[links, new windows, downloads and developer tools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Desktop/README.md#links-new-windows-downloads-and-developer-tools).
 
 That setting covers only the tools in the window. A **remote debugging
 endpoint** that a variable in the Window process's environment asks for is the
@@ -332,7 +353,7 @@ environment before their first web view, and since 0.21 the WebView2 host
 removes `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` before it creates its WebView2
 environment, also when `DevTools` is `true`, so a release opens no such
 endpoint
-([release builds](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/security.md#release-builds)).
+([release builds](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/security.md#release-builds)).
 Arguments that the application passes in `DesktopWindowOptions.BrowserArguments`
 are not changed. To debug a release build's page that way, run it with
 `DOTNET_ENVIRONMENT=Development`.
@@ -520,7 +541,7 @@ no debugger is attached.
   done.
 
 See the dotnet-runic README's
-[Debug the page's JavaScript on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/dotnet-runic/README.md#debug-the-pages-javascript-on-linux).
+[Debug the page's JavaScript on Linux](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/dotnet-runic/README.md#debug-the-pages-javascript-on-linux).
 
 ### Who can reach the Linux endpoints
 
@@ -542,7 +563,7 @@ and, through it, the Bridge:
 
 **On a machine that you share with other users, run `dev` with
 `--no-debug-endpoint`**, which opens neither. See the
-[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/security.md#development-server).
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/security.md#development-server).
 
 ### The page in Chrome (`dotnet runic dev --browser`)
 
@@ -615,7 +636,7 @@ stays the same across its Window restarts:
   `RAPPDEV1016`.
 
 See the dotnet-runic README's
-[Debug the page in Chrome](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/dotnet-runic/README.md#debug-the-page-in-chrome---browser).
+[Debug the page in Chrome](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/dotnet-runic/README.md#debug-the-page-in-chrome---browser).
 
 ### The development server's source maps
 
@@ -728,9 +749,9 @@ Development with the variable opens the port too. The variable is inherited by
 the processes the application starts, and a browser whose Window process died
 keeps the endpoint open until you close that browser window. **On a shared
 machine, run `dotnet runic dev --no-debug-endpoint`.** See
-[CS-WebUI pages in a JavaScript debugger](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/debugging.md#cs-webui-pages-in-a-javascript-debugger)
+[CS-WebUI pages in a JavaScript debugger](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/debugging.md#cs-webui-pages-in-a-javascript-debugger)
 and the
-[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/security.md#development-server).
+[security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/security.md#development-server).
 
 ## The dock
 
@@ -759,7 +780,7 @@ Its **Runic** panel shows:
 - **Failures**: a failed call shows .NET's exception with a button per stack
   frame in your ViewModels; the **Last failure** card links the same frames.
   .NET sends the detail only in Development; see
-  [failure detail in development](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#failure-detail-in-development).
+  [failure detail in development](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#failure-detail-in-development).
 - **Connection**, each View's **state** as a tree, and **superseded
   commands**.
 
@@ -781,14 +802,14 @@ it still answers 404 for these paths.
 The first time a page opens the dock, it asks for the **one-time code** that
 Vite DevTools prints in the `dotnet runic dev` output. Keep that check on: it
 keeps other pages of this machine out of the dock. See
-[Bridge call timeline in the dock](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/vite-plugin-runic/README.md#bridge-call-timeline-in-the-dock).
+[Bridge call timeline in the dock](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/vite-plugin-runic/README.md#bridge-call-timeline-in-the-dock).
 
 The handlers and locations come from the **development source map** that each
 build writes, `obj/<Configuration>/<TargetFramework>/runic-bridge/sources.json`,
 from the assembly's portable PDB; `dev` passes its path to the development
 server. The generated clients link into it too: Go to Definition on
 `client.increment()` in a tsserver-based editor opens the C# handler. See
-[source map and open in editor](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/vite-plugin-runic/README.md#source-map-and-open-in-editor).
+[source map and open in editor](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/vite-plugin-runic/README.md#source-map-and-open-in-editor).
 
 ## Runic Inspect
 
@@ -849,10 +870,10 @@ editor on the development machine: such a page shows locations without links.
   machine, run it only for projects the other accounts may see.
 
 See
-[Runic Inspect](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/vite-plugin-runic/README.md#runic-inspect),
-[edit a translation on the page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/vite-plugin-runic/README.md#edit-a-translation-on-the-page),
+[Runic Inspect](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/vite-plugin-runic/README.md#runic-inspect),
+[edit a translation on the page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/vite-plugin-runic/README.md#edit-a-translation-on-the-page),
 and
-[Runic Inspect from another machine](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/vite-plugin-runic/README.md#runic-inspect-from-another-machine).
+[Runic Inspect from another machine](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/vite-plugin-runic/README.md#runic-inspect-from-another-machine).
 `runic({ inspect: false })` turns it off.
 
 ## The Runic DevTools extension
@@ -906,7 +927,7 @@ sends nothing anywhere: it reads the page through Runic Inspect's `snapshot()`
 and `describe($0)`, which exist only under the development client, so it shows
 data only where Runic Inspect runs (vite-plugin-runic 0.21 or later), and on a
 production build its panes say so. See
-[the Runic DevTools extension](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/debugging.md#the-runic-devtools-extension).
+[the Runic DevTools extension](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/debugging.md#the-runic-devtools-extension).
 
 ## React DevTools and Vue DevTools
 
@@ -931,7 +952,7 @@ They work wherever the framework's DevTools reach the page: an installed
 browser with the DevTools extension, a WebView2 window in Development with
 [DevTools extensions](#the-browsers-developer-tools-per-engine), and
 `vite-plugin-vue-devtools`, which runs inside the page, in every engine. See
-[React DevTools and Vue DevTools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/debugging.md#react-devtools-and-vue-devtools).
+[React DevTools and Vue DevTools](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/debugging.md#react-devtools-and-vue-devtools).
 
 ## Custom object formatters
 
@@ -950,7 +971,7 @@ WebView2), **Settings** › **Preferences** › **Console** › **Enable custom
 formatters**; in Firefox, **Settings** › **Advanced settings** › **Enable
 custom formatters**. Then reopen DevTools. WebKit's Web Inspector (WKWebView,
 WebKitGTK, Safari) has no custom formatters. See
-[custom object formatters](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/debugging.md#custom-object-formatters).
+[custom object formatters](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/debugging.md#custom-object-formatters).
 
 ## Performance panel, async stacks and traces
 
@@ -978,7 +999,7 @@ Code's C# extension report them as you type, with the generator's ID, message
 and help link, instead of only after a build. Code fixes rename a command (or
 its `[RelayCommand]` method), make a setter private, or make a class public.
 The generator still checks everything at build time. See
-[errors and warnings while you type](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/diagnostics.md#errors-and-warnings-while-you-type),
+[errors and warnings while you type](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/diagnostics.md#errors-and-warnings-while-you-type),
 and [troubleshooting](../../troubleshooting.md) for which product owns a
 diagnostic ID.
 
@@ -999,7 +1020,7 @@ None of this ships:
   development build unless you pass `--production` or set
   `NODE_ENV=production`; the Views MSBuild targets set `NODE_ENV=production`
   for a Release build and `dotnet publish`. See the
-  [development build](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/views/README.md#development-build).
+  [development build](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/views/README.md#development-build).
 - `@runic-artifex/react` and `@runic-artifex/vue` have the same two builds
   (since 0.21): only the development build labels hooks for React DevTools,
   adds the Vue DevTools inspector and imports `@vue/devtools-api`. Custom
@@ -1015,7 +1036,7 @@ None of this ships:
   [the browser's developer tools per engine](#the-browsers-developer-tools-per-engine).
   The Linux CDP adapter and `--browser` exist only in `dotnet runic dev`.
   Do not ship with `DOTNET_ENVIRONMENT=Development`; see the
-  [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/security.md#release-builds)
+  [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/security.md#release-builds)
   and [shipping](../../desktop/shipping.md).
 - Since 0.22 a trimmed or NativeAOT publish turns off three development-only
   feature switches, so the trimmer removes their code:

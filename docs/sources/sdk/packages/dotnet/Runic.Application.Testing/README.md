@@ -120,8 +120,10 @@ template's test project does:
 
 The generated TypeScript clients are still written. In a solution that also builds
 the application itself, MSBuild then builds the application project twice, once
-with each setting; build the test project on its own, or leave the property out and
-let the frontend build's up-to-date check skip unchanged frontends.
+with each setting, at the same time and into the same `bin/` and `obj/` folders,
+which can fail the build with an `IOException`. In such a solution leave the property
+out, as the test project of `dotnet new runic-app --library` does, and let the
+frontend build's up-to-date check skip unchanged frontends.
 
 ### Deterministic time and ids
 
@@ -1080,8 +1082,8 @@ for a blob URL of the state or a result, as `RunicServedBlob`: status, headers
 and content, with `range` for a byte range and `head` for `HEAD`. A replaced or
 released URL answers 404, and `ServedBlobCount` counts the URLs the window
 still serves. `UploadAsync(bytes, fileName, contentType)` simulates a page's
-upload with the window's limits (`RunicWindowTestHostOptions.MaximumUploadBytes` and
-`MaximumPendingUploadBytes`)
+upload with the window's limits (`RunicWindowTestHostOptions.MaximumUploadBytes`,
+`MaximumPendingUploadBytes` and `MaximumPendingUploads`)
 and returns the `RunicUpload` that a command input takes;
 `PendingUploadCount` counts the uploads no command claimed.
 

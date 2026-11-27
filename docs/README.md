@@ -56,7 +56,7 @@ first search, then only its terms' shards, the texts that may still gain the
 phrase bonus and the texts of the results shown, and ranks them in the browser.
 One-character terms match titles, headings and paths only.
 `tests/search.test.mjs` checks representative queries against a full-text
-search and the 864 KiB raw and 224 KiB gzip budget for what one search loads.
+search and the 896 KiB raw and 232 KiB gzip budget for what one search loads.
 `tests/link-check.test.mjs` resolves every
 internal `href`, `src`, `srcset` and social image in `build/`, and every
 fragment against the target page's `id` attributes. It checks the syntax of
@@ -81,7 +81,7 @@ bun docs/scripts/sync-sdk-inputs.mjs <checkout-of-pinned-sdk-revision>
 The script checks the checkout revision and source bytes before replacing the
 snapshot. Guides link SDK sources (`examples/`, `packages/`, `tools/`, `tests/`,
 `specs/`) and the current release notes at the active release tag, such as
-`blob/v0.23.0/`, so the links match the quoted snapshot; move them to
+`blob/v0.24.0/`, so the links match the quoted snapshot; move them to
 the new tag with the catalog. Review the manifest and imported files together. The snapshot is an
 input to the portal, not a second editable template implementation.
 
@@ -187,7 +187,7 @@ direnv exec <runic-sdk-checkout> bun docs/scripts/test-api-extractor.mjs
 
 Site CI has no .NET, so this test runs by hand. Search has one entry per type.
 `tests/api-reference.test.mjs` checks the pins, digest and size budgets: at
-most 4.5 MiB of inputs, 272 KiB of HTML per page, and 10 MiB for all
+most 4.5 MiB of inputs, 288 KiB of HTML per page, and 10.75 MiB for all
 reference pages and their `__data.json` payloads gzipped. The link check covers every
 reference page.
 

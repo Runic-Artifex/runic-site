@@ -1,6 +1,6 @@
 {
-  "version": "0.23.0",
-  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.23.0",
+  "version": "0.24.0",
+  "url": "https://github.com/Runic-Artifex/runic-sdk/releases/tag/v0.24.0",
   "packages": [
     {
       "identity": "Runic.Platform.Administration.Windows",
@@ -82,7 +82,7 @@
     },
     {
       "identity": "Runic.Application.Views.CsWebUi",
-      "version": "0.23.0-preview.1",
+      "version": "0.24.0-preview.1",
       "ecosystem": "nuget",
       "product": "application",
       "installKind": "nuget-package"
@@ -107,7 +107,7 @@
     },
     {
       "identity": "Runic.Spelling",
-      "version": "0.23.0-preview.1",
+      "version": "0.24.0-preview.1",
       "ecosystem": "nuget",
       "product": "spelling",
       "installKind": "nuget-package"
