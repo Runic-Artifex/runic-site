@@ -106,8 +106,8 @@ digest in `sources/translations-schemas.json`. Synchronize a changed pin with:
 bun docs/scripts/sync-translations-schemas.mjs <schema-source-directory> <pinned-revision>
 ```
 
-The pin is Runic Translations 0.15.1, which ships `asset-manifest-v1`,
-`capabilities-v1`, `external-pack-v5`, `interchange-review-v2`,
+The pin is Runic Translations 0.16.0, which ships `asset-manifest-v1`,
+`capabilities-v1`, `capabilities-v2`, `external-pack-v5`, `interchange-review-v2`,
 `locale-artifact-v5`, `message-ast-v5`, `project-v1`, `review-sources-v1`,
 `translations-serve-v1`,
 `translations-status-v1`, `translations-support-v1`, `translations-tool-v1` and
@@ -118,7 +118,7 @@ schema: list it under `retained` in `sources/translations-schemas.json` with
 the revision and file `sha256` that last published it. The sync script keeps
 retained files in place and the content digest covers only the current pin.
 `editor-state-v1` (last shipped at Translations `f160e56`) is retained this way;
-it is not part of Translations 0.15.1.
+it is not part of Translations 0.16.0.
 
 The docs tests verify the checked-in schema digests and published bytes. The
 marketing build deterministically mirrors the current and retained schemas into
