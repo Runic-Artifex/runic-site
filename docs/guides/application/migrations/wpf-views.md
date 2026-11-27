@@ -523,12 +523,16 @@ and
 
 A WPF solution can share a library of ViewModels and their XAML views between
 applications. To share their web clients too, the library declares the Views
-and generates their TypeScript as a module that other frontends import:
+and generates their TypeScript into a frontend package that other frontends
+import. The assembly that declares a ViewModel's Views writes its TypeScript.
+`dotnet new runic-app -n MyApp --library MyApp.Core` creates the whole setup:
+the application, the library, the library's frontend package and a JavaScript
+workspace of both frontends.
 
 ```xml docs-test=skip:illustrative-project-setting
 <PropertyGroup>
   <RunicApplicationFrontendClientLibrary>true</RunicApplicationFrontendClientLibrary>
-  <RunicApplicationFrontendGeneratedDirectory>../shared-ui/src/generated</RunicApplicationFrontendGeneratedDirectory>
+  <RunicApplicationFrontendDirectory>$(MSBuildProjectDirectory)/../shared-ui</RunicApplicationFrontendDirectory>
 </PropertyGroup>
 ```
 
@@ -539,16 +543,20 @@ public sealed partial class AboutDialogView : RunicView<AboutDialogViewModel>;
 
 ```ts docs-test=skip:illustrative-fragment
 // A component in the shared frontend package.
-import type { AboutDialogPageReference } from './generated/runic-clients.js';
+import type { AboutDialogClient } from './generated/runic-clients.js';
 ```
 
 What differs:
 
 - The generated directory gets `runic-clients.ts`, which exports every client,
   shared client and named type and `runicClientContracts`, and `runic-mocks.ts`,
-  which exports the mocks.
-- A client library builds and copies no frontend by default, and an
-  application that references it does not copy its frontend to its web root.
+  which exports the mocks. The package exports them beside its components and
+  lists `@runic-artifex/views` as a peer dependency.
+- A client library copies no frontend, and an application that references it
+  does not copy the library's frontend to its web root. The library's build
+  builds its package when the package has a `build` script, copies the
+  `*.contract.d.ts` files and their maps into a compiled package's output, and
+  reports a missing export as `RUNICBRIDGE088`.
 - A client library without a View is `RUNICBRIDGE006`.
 - An application maps the library next to its project reference and deletes
   its own Views of those ViewModels (`RUNICBRIDGE080` reports one it keeps):
@@ -561,25 +569,29 @@ What differs:
 ```
 
 - The application still generates the C# Bridges of the library's ViewModels
-  and registers the library's Views in `AddRunicViews()`. It writes no client,
-  contract or mock for them: its own modules import their page functions and
-  page references from the specifier, and the copies an earlier build
-  generated are deleted.
+  and registers the library's Views in `AddRunicViews()`; register the
+  ViewModels yourself, as any ViewModel. It writes no client, contract or mock
+  for them: its own modules import their page functions and page references
+  from the specifier, and the copies an earlier build generated are deleted.
+- Install the package as a workspace dependency (`"@acme/shared-ui":
+"workspace:*"`) or a published version, and dedupe `@runic-artifex/views` in
+  Vite (`resolve: { dedupe: ['@runic-artifex/views'] }`) so the page loads one
+  runtime. `dotnet runic doctor` checks both (`views-dedupe`,
+  `client-modules`). An edit to the package rebuilds the application's page.
 - A package generated from another build of the library fails the frontend's
   type check with `TS2344` in `runic-client-modules.ts`, naming both contracts.
   Rebuild the library and its package.
 - A library ViewModel can present only ViewModels of the same library, and a
-  shared client's implementers need one owner (`RUNICBRIDGE081`). Libraries
-  that map other libraries are not supported.
-- A package compiled with `tsc` must copy the `*.contract.d.ts` files and their
-  maps to its output. Otherwise, with `skipLibCheck`, the client types become
-  `any` without an error.
+  shared client's implementers need one owner (`RUNICBRIDGE081`). A library
+  that maps another library leaves the mapped modules out of its own barrel.
 - Mapping a client library has not been tried in a WPF application that hosts
   Runic Views (`RunicViewHost`) yet.
 
 Details:
-[Share ViewModels and their clients through a library](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#share-viewmodels-and-their-clients-through-a-library)
-and the
+[Share ViewModels and their clients through a library](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#share-viewmodels-and-their-clients-through-a-library),
+[Library packages](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#library-packages),
+[A solution with a library](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/Runic.Application.Templates/README.md#a-solution-with-a-library)
+in the template's README, and the
 [shared-library-clients example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.24.0/examples/shared-library-clients).
 
 ## Next steps
