@@ -8,7 +8,7 @@ artifact and publishes from it, without Node.js, a frontend install or a Vite
 build, and the publish stops when the bundle was built from other ViewModels.
 
 The
-[split CI example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/split-ci)
+[split CI example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.24.0/examples/split-ci)
 in runic-sdk is a complete repository with this setup: a Runic Desktop
 application, its headless tests, one workflow for GitHub Actions and Gitea
 Actions, and one for Forgejo Actions. runic-sdk runs it against its packed
@@ -96,11 +96,15 @@ The `web-bundle` job sets up .NET and Node.js, restores the pinned
 `dotnet runic bundle` runs `dotnet build -c Release` with
 `RunicApplicationFrontendBundleDirectory`, so every project that declares
 Views, the application's references included, writes its entry. It then checks
-the bundle and prints one line per project:
+the bundle and prints one line per project: its kind, its Views, and the files,
+size and SHA-256 of its page:
 
 ```text docs-test=skip:sdk-guide-excerpt
-Acme.App (application): 1 View(s), 2 files, 49.9 KiB, SHA-256 38aa10cc89e9; host desktop, NODE_ENV production
+Web bundle (rax.web-bundle/1): /home/runner/work/_temp/web-bundle
+  Acme.App (application): 1 View(s), 2 files, 49.9 KiB, SHA-256 38aa10cc89e9; host desktop, NODE_ENV production
 ```
+
+A client library's line says `no page`.
 
 `--format json` prints the same as `runic.application.tool.bundle/1`, and
 `--property` (`-p:NAME=VALUE`) passes MSBuild properties to the build. Without
@@ -205,8 +209,8 @@ that the .NET generator has just written:
 - The bundle must have an entry for the project whose files hash as recorded,
   so a truncated download does not publish (`RAPPPKG1008` from
   `dotnet runic package`, `RUNICBRIDGE093` from the build).
-- Every View must have the same fingerprint in the bundle as in this build
-  (`RUNICBRIDGE094`).
+- Every View must have the same fingerprint in the bundle as in this build,
+  and both must have the same Views (`RUNICBRIDGE094`).
 - The page must have been built for this build's host (`RUNICBRIDGE095`).
 - An optimized build warns when the page was not built with
   `NODE_ENV=production` (`RUNICBRIDGE096`).
@@ -332,10 +336,14 @@ the frontend on every run.
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RUNICBRIDGE092`                                | A project whose frontend build is off can't write its page to a bundle: bundle the application project, not a solution with the test project, and not during `dotnet runic dev` |
 | `RAPPPKG1008`, `RUNICBRIDGE093`                 | The bundle is missing, has no entry for the project, or its files don't match the manifest, as after a truncated download                                                       |
+| `RAPPPKG1008` (exit code 2)                     | A `-p:` value of `package` sets `Configuration`, `RuntimeIdentifier`, `PublishAot` or the prebuilt directory: use the command's own options                                     |
 | `RUNICBRIDGE094`                                | A View changed after the bundle was written: write the bundle from the commit you package                                                                                       |
 | `RUNICBRIDGE095`                                | The page was built for another host                                                                                                                                             |
 | `RUNICBRIDGE096` (warning)                      | An optimized publish takes a page not built with `NODE_ENV=production`                                                                                                          |
 | `RAPPBUNDLE1001`                                | The output folder of `dotnet runic bundle` has other files                                                                                                                      |
+| `RAPPBUNDLE1002`                                | The build that writes the bundle failed; the output above names the error                                                                                                       |
+| `RAPPBUNDLE1003`                                | The build passed, but the bundle is missing or doesn't check, as `dotnet runic doctor --bundle` checks it                                                                       |
+| `RAPPBUNDLE1004`                                | A `-p:` value of `bundle` isn't `NAME=VALUE`, or sets `Configuration` or one of the two bundle directories                                                                      |
 | `NETSDK1100`                                    | A Windows target framework on Linux without `EnableWindowsTargeting`                                                                                                            |
 | `Cross-OS native compilation is not supported.` | NativeAOT for another OS: package on that OS                                                                                                                                    |
 | `not currently supported on GHES`               | The stock artifact actions on Forgejo: use `.forgejo/workflows/ci.yml`                                                                                                          |
@@ -363,9 +371,9 @@ you are on 0.24.
 
 ## Further reading
 
-- [The split CI example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/split-ci)
+- [The split CI example](https://github.com/Runic-Artifex/runic-sdk/tree/v0.24.0/examples/split-ci)
   and its
-  [README](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/split-ci/README.md).
+  [README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/examples/split-ci/README.md).
 - [Building the frontend in another job](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#building-the-frontend-in-another-job)
   in the `Runic.Application.Views` README: the build properties.
 - [Write a web bundle](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/dotnet-runic/README.md#write-a-web-bundle)
