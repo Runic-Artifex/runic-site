@@ -372,6 +372,13 @@ executable's Explorer icon from `icons/icon.png`
 ([the application icon](#the-application-icon)); before, the template set
 `<ApplicationIcon>icons/icon.ico</ApplicationIcon>`.
 
+Since SDK `0.24.0`, the Windows job can publish from a web bundle that a Linux
+job wrote, with `dotnet runic package windows --frontend-bundle <dir>` or
+`-p:RunicApplicationFrontendPrebuiltDirectory=<dir>`: it then needs neither
+Node.js nor a frontend build, and the publish checks that the page matches the
+ViewModels. [Split CI across Linux and Windows runners](../application/guides/ci-mixed-runners.md)
+shows the whole pipeline, and how much of it a Linux runner can do alone.
+
 ### WebView2 runtime
 
 Runic Desktop uses the installed **evergreen** Microsoft Edge WebView2

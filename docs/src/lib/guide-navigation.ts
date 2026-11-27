@@ -48,6 +48,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'application/guides/frontend-testing.md',
       'application/guides/debugging.md',
       'application/guides/tracing.md',
+      'application/guides/ci-mixed-runners.md',
       'application/reference/README.md',
       'application/reference/reactiveui.md',
       'application/glossary.md',

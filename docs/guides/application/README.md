@@ -35,6 +35,9 @@ package API and build properties are in the
 The package is built from `packages/dotnet/Runic.Application.Views`, and its
 types are in the `Runic.Application.Views` namespace; the
 [reference](reference/README.md) lists every package with its source folder.
+Since SDK `0.24.0`, a build can write its pages to a web bundle that a publish
+on another runner takes without Node.js; see
+[Split CI across Linux and Windows runners](guides/ci-mixed-runners.md).
 
 ## Navigation and model context packages
 

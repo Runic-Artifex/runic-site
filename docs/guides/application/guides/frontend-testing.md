@@ -469,5 +469,8 @@ out throws `TimeoutException` and leaves the application running. See
   in the `@runic-artifex/views` README: every mock option.
 - [The Notes example's frontend tests](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/examples/notes-view-first/Frontend/test/notes.test.ts),
   which run with `bun test`.
+- [Split CI across Linux and Windows runners](ci-mixed-runners.md#test-on-linux):
+  run these tests on Linux from a web bundle's generated clients, without a
+  .NET build.
 - [Upgrading from 0.13 to 0.14](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/migration-1.0.md#from-013-to-014)
   and [from 0.15 to 0.16](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/migration-1.0.md#from-015-to-016).
