@@ -16,13 +16,15 @@ namespace Runic.Application.Testing.Tests;
 // page's own window starts the departure: the shell's Back command from the same browser connection, or the window's
 // guarded close. An interaction never reaches another window or connection, .NET handlers keep ReactiveUI's
 // latest-first order, and a prompt whose View or window goes away fails closed.
+// Runs alone: it installs ReactiveUI's main-thread scheduler (AssemblyInfo.cs).
+[NotInParallel]
 internal sealed class LeaveGuardRoutingTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
     private const string Client = "editor-client";
     private const string Connection = "editor-connection";
-    private static readonly string Contract =
-        $"{BridgeContractShape.Compute(typeof(ReactiveNavEditorViewModel))}:interaction:ConfirmDiscard";
+    private static string Contract =>
+        $"{BridgeRequests.GeneratedFingerprint(typeof(ReactiveNavEditorViewModel))}:interaction:ConfirmDiscard";
 
     // The shell's Back, started in the browser, asks the editor's mounted View: No keeps the editor and its draft,
     // Yes leaves and discards it. The ViewModel's earlier fallback handler is not asked while the View answers.
@@ -428,7 +430,7 @@ internal sealed class LeaveGuardRoutingTests
             writer.WriteString("route", Native.Host.RootRoute);
             writer.WriteString("member", "back");
             writer.WriteString("operation", requestId);
-            writer.WriteString("contract", $"{typeof(ReactiveNavShellViewModel).FullName}:{BridgeContractShape.Compute(typeof(ReactiveNavShellViewModel))}");
+            writer.WriteString("contract", BridgeRequests.OperationContract<ReactiveNavShellViewModel>());
         });
 
         public async ValueTask DisposeAsync()

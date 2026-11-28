@@ -117,9 +117,9 @@ guest. The Analog plugin uses the Angular compiler's internal API, so update
 Angular and the plugin together. `vite build` checks no types, so the
 template's `build` and `typecheck` scripts run `ngc --noEmit`, and its test
 runs on Vitest. See the
-[template guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/tools/Runic.Application.Templates/README.md)
+[template guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/tools/Runic.Application.Templates/README.md)
 and
-[building with the Angular CLI or Vite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/angular/README.md#building-with-the-angular-cli-or-vite).
+[building with the Angular CLI or Vite](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/angular/README.md#building-with-the-angular-cli-or-vite).
 
 ### Debug in your IDE
 
@@ -186,7 +186,7 @@ operation lifetime.
 - The [package catalog](https://docs.runic-artifex.eu/packages/) groups the
   packages by goal.
 - For the smallest source example, see
-  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/examples/first-window/README.md).
+  [First Window](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/examples/first-window/README.md).
 
 The code blocks in these guides are checked against a pinned copy of the SDK
 template and examples by

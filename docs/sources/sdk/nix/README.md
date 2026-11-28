@@ -23,7 +23,7 @@ without a .NET SDK can create a project. Its arguments follow `--`, as they
 do for `dnx Runic.Create`; add `--nix` for the project's `flake.nix`:
 
 ```sh
-nix run github:Runic-Artifex/runic-sdk/v0.22.0#create -- MyApp --frontend react --nix
+nix run github:Runic-Artifex/runic-sdk/v0.23.0#create -- MyApp --frontend react --nix
 cd MyApp
 git init && git add -A
 nix develop              # the .NET SDK, Node and the package manager, from the new flake
@@ -44,7 +44,7 @@ network, and installs the template into `~/.templateengine`, as
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     runic-sdk = {
-      url = "github:Runic-Artifex/runic-sdk/v0.22.0";
+      url = "github:Runic-Artifex/runic-sdk/v0.23.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -543,10 +543,10 @@ the link fails on duplicate symbols. The project's
 and `buildRunicApplication` follows it with the library it builds from source
 (`nativeServer`):
 
-- `Shared`: the source-built `librunic_server.so` is installed beside the
+- `Shared`: the source-built `librax_server.so` is installed beside the
   executable in `lib/<pname>`, where the executable loads it.
 - `Application`: the application's own Rust derivation builds the
-  `runic-server` crate into its static library, and the NativeAOT executable
+  `runic-artifex-server` crate into its static library, and the NativeAOT executable
   takes the server from there. The source-built library still serves the JIT
   builds, such as `testProjectFile`'s tests. The crate is a git dependency of
   the application's `Cargo.lock`, so `rustPlatform.buildRustPackage` needs its
@@ -555,7 +555,7 @@ and `buildRunicApplication` follows it with the library it builds from source
   ```nix
   cargoLock = {
     lockFile = ./native/Cargo.lock;
-    outputHashes."runic-server-0.17.1" = "sha256-…";
+    outputHashes."runic-artifex-server-0.24.0" = "sha256-…";
   };
   ```
 

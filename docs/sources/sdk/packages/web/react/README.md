@@ -162,6 +162,7 @@ export function EditorPage({ page }: { page: EditorPageReference }) {
   const title = useField(editor, EditorFields.title, { commit: "pause", checked: true });
   const step = useField(editor, EditorFields.step);
   const done = useField(editor, EditorFields.done);
+  const size = useField(editor, EditorFields.size);
   return <>
     <input {...title.inputProps} />
     {title.errors.map(message => <p key={message} role="alert">{message}</p>)}
@@ -171,14 +172,17 @@ export function EditorPage({ page }: { page: EditorPageReference }) {
     </p>}
     <input inputMode="decimal" {...step.inputProps} />
     <input type="checkbox" {...done.inputProps} />
+    {["Small", "Large"].map(option => <input key={option} name="size" {...size.radioProps(option)} />)}
   </>;
 }
 ```
 
 It returns the field's state (`value`, `text`, `editing`, `error`, `errors`, `conflict`), `input(value)`,
-`commit()`, `retry()`, `reset()` and `inputProps`. For a boolean field `inputProps` is `checked`, `onChange`,
-`onBlur` and `aria-invalid` for a checkbox; otherwise it is the field's `text` as `value`, `onChange`, the
-composition handlers, `onBlur` and `aria-invalid`. Text inputs of numbers keep `-` and `1.` while the user types: a
+`commit()`, `retry()`, `reset()`, `inputProps` and `radioProps(option)`. For a boolean field `inputProps` is `checked`,
+`onChange`, `onBlur` and `aria-invalid` for a checkbox; otherwise it is the field's `text` as `value`, `onChange`, the
+composition handlers, `onBlur` and `aria-invalid`. For a radio group, spread `radioProps(option)` on each radio: it is
+`type="radio"`, the option's text as `value`, `checked` while that is the field's text, `onChange` (which writes the
+radio that became checked), `onBlur` and `aria-invalid`. Text inputs of numbers keep `-` and `1.` while the user types: a
 text that does not parse stays the draft with an `invalid-text` error and nothing is written. The handlers are the
 same on every render. `aria-invalid` is true while the field has `errors` or an `error`.
 
@@ -190,6 +194,11 @@ same on every render. `aria-invalid` is true while the field has `errors` or an 
   command that depends on the field can follow them and skip a failed write:
   `if ((await title.commit()).error === undefined) await editor.save()`. Read the error from the resolved state: the
   handle is the state of the render that created it.
+- `commit: "change"` writes the draft only on `commit()`, which blur calls, so the ViewModel's setter runs once, when
+  the user leaves the field. It is the mode a WPF port wants: WPF binds `TextBox.Text` with
+  `UpdateSourceTrigger=LostFocus`, and its setters often validate, normalize or start work. There is no timer, so
+  pass no `delay`; `inputProps` and `radioProps` still write each choice of a checkbox, radio or `<select>` at once, as WPF's default `PropertyChanged` trigger does for those controls. A form's `submit()` and `commit()`, `commitAllFields()` and the runtime's flush before a
+  window close or a departure (`field-flush/1`) write the draft too, and so does unmounting.
 - `checked: true` writes with the member's checked write, so a change by another writer while the user edits is a
   conflict instead of being overwritten. A `rejected` receipt keeps the draft and sets `error` to a `FieldError` with
   the setter's message; a `conflict` keeps the draft, sets `conflict` to the producer's `{ value, version }` and
@@ -198,7 +207,7 @@ same on every render. `aria-invalid` is true while the field has `errors` or an 
 
 `errors` holds the member's validation messages from the descriptor (`[]` when valid), `error` why the latest write
 or text failed (a `BridgeError` or a `FieldError`, whose `kind` is `rejected`, `conflict`, `committed-with-error` or
-`invalid-text`). `FieldError`, `FieldOptions`, `FieldState` and `BridgeField` are exported from this package. See the
+`invalid-text`). `FieldError`, `FieldOptions`, `FieldState`, `BridgeField`, `fieldMembers` and `fieldDefinition` are exported from this package. See the
 [field controller](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#fields) for the receipts
 and text forms. An `invalid-text` error has a `reason` and `arguments`: render `useText(name.error)` after
 `configureFieldErrorText` to show your own text for it in the window's language
@@ -410,6 +419,8 @@ const navigate = useCommand((name: "showWelcome" | "showCounter") => client?.[na
 <button onClick={() => void navigate.run("showWelcome")}>Welcome</button>
 ```
 
+Those buttons share the handle's one `pending` and `error`.
+
 `pending` covers only this component's run. Whether .NET can run the command is
 the View's state: a command without an argument publishes `can<Name>`, so a
 button combines both, as in `disabled={!state?.canSave || save.pending}`, and is
@@ -421,6 +432,29 @@ For a command that declares a failure (`[RunicFailure]` in .NET), `run` resolves
 from the outcome, while `error` keeps unexpected failures. Starting a run and
 `reset()` clear both, and a run superseded by a later run or by `reset()` sets
 neither.
+
+## `useCommands(view)`
+
+Makes a `useCommand` handle for each command of a View, so a component needs no
+`useCommand` per command:
+
+```tsx
+const orders = useView(page);
+const commands = useCommands(orders);
+<button disabled={!orders.state?.canRefresh || commands.refresh.pending} onClick={() => void commands.refresh.run()}>Refresh</button>
+<button onClick={() => void commands.archive.run(row.id)}>Archive</button>
+```
+
+`commands.<name>` has the same `run`, `pending`, `error`, `failure` and `reset` as
+`useCommand`, and each handle has its own `pending` and `error`. A handle is made when
+the component first reads its name. It is the same object across renders until its
+own state changes, and its `run` and `reset` stay the same while the component is
+mounted, so pass `commands.refresh` (not `commands`) to a memoized child. The names
+and arguments come from the generated client's commands (`{View}CommandName`), so
+setters, `canX(input)`, `startX`, `recoverX`, `upload` and `dispose` are not offered,
+and in explicit publication neither is a command that is not published. `run()`
+calls the latest client; before the client connected it resolves to `undefined`.
+Unmounting stops the handles' state; a run in flight still resolves.
 
 ## `useOperation(start, options?)`
 
@@ -726,6 +760,33 @@ the application's own dialog.
   such as a close during the page's first render, is answered by the
   ViewModel's .NET fallback handler, or fails closed without one.
 
+### A dialog in the render
+
+A page that renders its dialog itself, rather than awaiting a dialog service in
+`handle`, uses `useInteraction`: the oldest open request as `request`, which the
+dialog answers with the request's `respond`:
+
+```tsx
+export function EditPage({ page }: { page: EditPageReference }) {
+  const view = useView(page);
+  const { request } = useInteraction(view, "confirmDiscard");
+  return request && (
+    <Confirm text={request.input.itemName} onYes={() => request.respond(true)} onNo={() => request.respond(false)} />
+  );
+}
+```
+
+Each open request is one object, `{ input, respond(answer) }`, the same while the
+request is open. Its `respond` answers that request only, and is ignored once
+the request has ended: answered already, as by a double click, or ended by .NET
+(the departure was superseded, the deadline passed, the window closed) or by a
+client change. A late answer therefore never reaches another request. The
+handler is registered while the client is connected and removed when the
+client changes or the page unmounts. Several open requests are answered in order:
+`request` is the oldest one, and answering it shows the next. An interaction
+whose input is empty (`Unit`) still has a request object while one is open. The
+input and the answer are typed from the generated interaction.
+
 The [ReactiveUI leave confirmation](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#leave-confirmation-in-a-web-view)
 has the .NET side and which View answers which departure. In a frontend test,
 the generated mock's `interactions.<name>.request(input)` resolves with the
@@ -822,4 +883,26 @@ import { RunicHostedRegion } from "@runic-artifex/react/experimental";
 <RunicHostedRegion name="check" style={{ height: 420 }}
   fallback={state => state === "ended" ? <RunAgain /> : <p>Starting the check…</p>}
   onStateChange={state => setStep(state)} />
+```
+
+While the host waits for the guest's page, `stalled` content shows in place of the
+`loading` fallback once the region is stalled, and `failed` content shows when the
+host application gave the region up
+([loading and failure](../../../docs/hosted-regions.md#the-host)).
+`failed` is content, or a function of the region's status: `stalled`,
+`failureReason` and `retry()`, which asks the host to load a failed region again
+and returns whether it asked. A `fallback` function gets the same status as its
+second argument. As with the element, a stalled region without `stalled` content
+shows the fallback for `loading`, and a failed one without `failed` content the
+fallback for `failed`. `onStateChange` also receives the event's detail
+(`{state, previous, stalled, reason}`), and is also called when only `stalled` or
+the reason changed.
+
+```tsx
+<RunicHostedRegion name="check" style={{ height: 420 }}
+  fallback={<p>Starting the check…</p>}
+  stalled={<p>The check is taking longer than usual…</p>}
+  failed={({ failureReason, retry }) => (
+    <p>The check could not start ({failureReason}). <button onClick={retry}>Try again</button></p>
+  )} />
 ```

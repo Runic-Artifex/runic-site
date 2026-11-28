@@ -203,7 +203,7 @@ Since SDK `0.16.0`, a ViewModel can ask its page for a presentation action that
 needs no answer: focus a field, scroll a row into view, show a toast. Declare a
 get-only `ViewRequest<T>` property and call `Raise(input)`; nothing waits for
 the page. It works in both MVVM flavors. From the
-[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#asking-the-page-view-requests-and-questions):
+[Runic.Application.Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#asking-the-page-view-requests-and-questions):
 
 ```csharp docs-test=readme:packages/dotnet/Runic.Application.Views/README.md
 public ViewRequest<FocusTarget> Focus { get; } = new(ViewRequestDelivery.NextMounted);
@@ -240,7 +240,7 @@ const stopFocus = editor.requests.focus.handle(({ field }) => document.getElemen
   every connection.
 - A `ViewRequest` or `ViewQuestion` member that is not a get-only property is
   the generator error
-  [`RUNICBRIDGE035`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/diagnostics.md#runicbridge035).
+  [`RUNICBRIDGE035`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/diagnostics.md#runicbridge035).
 - A page of `0.15` receives no requests; it keeps working.
 
 ### How long the page has to answer
@@ -264,7 +264,7 @@ error `RUNICBRIDGE073`, and the attribute on a view question `RUNICBRIDGE074`;
 `ViewQuestion` takes `Timeout.InfiniteTimeSpan` in its constructor instead. A
 page built with `@runic-artifex/views` before 0.23 still aborts its handler
 after ten minutes, so rebuild the frontend with 0.23 for longer questions. See
-[interaction lifetime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#interaction-lifetime).
+[interaction lifetime](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#interaction-lifetime).
 
 ## Ask the page and await its answer
 
@@ -286,7 +286,14 @@ private async Task DiscardAsync(CancellationToken token)
 ```
 
 The page answers it like an interaction, through
-`client.interactions.<name>.handle(...)`. `AskAsync` asks the page in the same
+`client.interactions.<name>.handle(...)`, or, since SDK `0.24.0`, from the
+component's own template: Angular's `injectInteraction(view, "confirmDiscard")`,
+and `useInteraction` in React, Vue and Svelte, hold the oldest open request
+as `{ input, respond(answer) }`, or `undefined`. Its `respond` answers only
+that request and is ignored once .NET stopped waiting, so the dialog closes
+when the command is cancelled, the deadline passes or the window closes. The
+generated mock's `interactions.<name>.request(input)` drives it in tests; see
+[Interactions as state](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/views/README.md#interactions-as-state). `AskAsync` asks the page in the same
 scopes as an interaction. Without a page that answers and without a fallback,
 it throws `RunicInteractionUnhandledException`. The page's cancellation, a
 timeout (two minutes by default; `Timeout.InfiniteTimeSpan` for none since
@@ -357,7 +364,7 @@ calls the View's request handler; see
   WPF windows show a native message box since SDK `0.11.0`:
   `IWindowPlatformServices.MessageBoxes` (`IDesktopMessageBoxes`). Keep
   ordinary prompts in the page; see the
-  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Platform/README.md#message-boxes).
+  [Runic.Platform README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Platform/README.md#message-boxes).
 
 ## Next steps
 
