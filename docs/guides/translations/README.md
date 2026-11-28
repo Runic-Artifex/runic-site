@@ -24,8 +24,8 @@ needs Translations `0.16`. Of the 0.15 line, `0.15.1` fixed how external and
 overlay packs are loaded
 ([advisory GHSA-24g5-pcc5-4fg7](https://github.com/Runic-Artifex/runic-translations-sdk/security/advisories/GHSA-24g5-pcc5-4fg7)). The VS Code and Visual Studio extensions, both named Runic DevKit
 since 0.22, release from
-[runic-editors](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.23.0)
-(0.23.0 with this train), no longer with Translations. Of the 0.9 line, use `0.9.1`, not the deprecated `0.9.0`.
+[runic-editors](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.24.0)
+(0.24.0 with this train), no longer with Translations. Of the 0.9 line, use `0.9.1`, not the deprecated `0.9.0`.
 
 ## How it works
 
@@ -276,9 +276,9 @@ one `runic.commandline/1` response; `--runic-output` is a hidden alias until
 2.0. The tool also reads `@file` response files. Errors carry `RTR` IDs, which
 are the same in the build, the tool,
 the editor extensions for
-[VS Code](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/vscode/README.md)
+[VS Code](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/vscode/README.md)
 and
-[Visual Studio](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/visualstudio/README.md)
+[Visual Studio](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/visualstudio/README.md)
 (both Runic DevKit since runic-editors 0.22), and the Editor; the
 [diagnostics reference](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/diagnostics.md)
 explains each one.
@@ -403,10 +403,10 @@ and in Visual Studio 2026
 [runic-artifex.runic-devkit-vs](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit-vs)
 (Extensions → Manage Extensions, search for "Runic DevKit"). Both VSIX files
 are also on the
-[runic-editors 0.23.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.23.0).
-The [VS Code](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/vscode/README.md)
+[runic-editors 0.24.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.24.0).
+The [VS Code](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/vscode/README.md)
 and
-[Visual Studio](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/visualstudio/README.md)
+[Visual Studio](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/visualstudio/README.md)
 READMEs describe them. Uninstall the former **Runic** (`runic-artifex.runic`) or **Runic
 MF2 Translations** extension: while both are installed, both start a language
 server for the same files. Keep the project's `dotnet-runic-translations` tool

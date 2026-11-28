@@ -990,8 +990,9 @@ applications change nothing else. Check these if they apply:
 - **Toolchain floor: .NET SDK 10.0.404 and Node 24.22.3.** `dotnet runic
 doctor` fails below SDK 10.0.404, and `RUNICBRIDGE033` warns. Rebuild
   self-contained and NativeAOT packages, which embed the runtime.
-- **Runic's editor extensions.** Update Runic DevKit to 0.24.0 once it is
-  published.
+- **Runic's editor extensions.** Update Runic DevKit to
+  [0.24.0](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.24.0)
+  (VS Code Marketplace 0.24.1000, Visual Studio Marketplace 0.24.0.1000).
 
 New in `0.24.0`:
 

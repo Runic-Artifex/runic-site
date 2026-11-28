@@ -75,13 +75,13 @@ Visual Studio lists its profiles next to the Start button:
 
 **Runic DevKit for Visual Studio** (Visual Studio 2026 on Windows x64, without
 the Marketplace Preview label since runic-editors 0.23.0; see its
-[README](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/visualstudio/README.md))
+[README](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/visualstudio/README.md))
 adds the `dotnet runic dev` loop to Visual Studio. Install it from the Visual
 Studio Marketplace: in **Extensions → Manage Extensions**, search for **Runic
 DevKit**, or open
 [runic-artifex.runic-devkit-vs](https://marketplace.visualstudio.com/items?itemName=runic-artifex.runic-devkit-vs),
 and restart Visual Studio. `runic-devkit-vs.vsix` is also on the
-[runic-editors 0.23.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.23.0).
+[runic-editors 0.24.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.24.0).
 Its commands
 are in **Tools → Runic** and in the Runic tool window (**View → Other Windows →
 Runic**):
@@ -163,7 +163,7 @@ DevTools endpoint, and so the JavaScript debugger, and its keyboard and mouse
 input wait until you continue the .NET code. Visual Studio does not hang.
 Break All does not show this, since the page does not have the focus when you
 press it. See the DevKit README's
-[Known limits](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/visualstudio/README.md#known-limits).
+[Known limits](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/visualstudio/README.md#known-limits).
 
 **The `(WebView2 script debugging)` profile is gone** (0.22). Under F5, Visual
 Studio's JavaScript adapter (`jsWebView2Debugging`) started the Window without
@@ -215,7 +215,7 @@ project copies the `problemMatcher` from a new one. VS Code builds from other ve
 Microsoft's .NET debugger; use netcoredbg there.
 
 **Runic DevKit for VS Code** (`runic-artifex.runic-devkit`, from
-[runic-editors](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/vscode/README.md))
+[runic-editors](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/vscode/README.md))
 adds a Dev Session view that follows `dotnet runic dev`, F5 of the Window
 without a `launch.json`, doctor results, and a ViewModels tree that opens the
 C# members. Install it from the VS Code Marketplace
@@ -228,7 +228,7 @@ code --install-extension runic-artifex.runic-devkit
 ```
 
 `runic-devkit.vsix` is also on the
-[runic-editors 0.23.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.23.0);
+[runic-editors 0.24.0 release](https://github.com/Runic-Artifex/runic-editors/releases/tag/v0.24.0);
 VSCodium, Cursor and other editors that use Open VSX install it from there,
 since Runic DevKit is not on Open VSX. With `dotnet-runic` 0.22, its `dev` task passes
 `--debug-endpoint` to a `dev` with its Window, and **Stop dotnet runic dev**
@@ -242,7 +242,7 @@ Runic DevKit installs next to it and to the older Runic MF2 Translations
 extension, offers to uninstall both on activation, and then needs a window
 reload: while both are installed, both register the same commands and start a
 language server for the same files. See
-[Moving from Runic or Runic MF2 Translations](https://github.com/Runic-Artifex/runic-editors/blob/v0.23.0/vscode/README.md#moving-from-runic-or-runic-mf2-translations).
+[Moving from Runic or Runic MF2 Translations](https://github.com/Runic-Artifex/runic-editors/blob/v0.24.0/vscode/README.md#moving-from-runic-or-runic-mf2-translations).
 
 ### Launch profiles and arguments for Debug builds
 
@@ -328,7 +328,7 @@ position:
 ```
 
 VS Code's `$msCompile`, the template's `.vscode/tasks.json`, Visual Studio's
-Error List and Runic DevKit 0.23 read it like a build error.
+Error List and Runic DevKit (since 0.23) read it like a build error.
 `[vite] [runic] Frontend errors cleared` follows once the modules compile
 again, so an IDE can remove the rows. There is no type check. See
 [`RUNICP008`](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/diagnostics.md#runicp008).
