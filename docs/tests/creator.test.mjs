@@ -88,12 +88,21 @@ test('picker toggles are the template Boolean parameters', () => {
   assert.equal(defaultSelection().tests, 'false');
 });
 
-test('picker text options are the template text parameters', () => {
+test('picker text options are the template text parameters it previews', () => {
   assert.deepEqual(
     creatorTexts.map((text) => text.flag),
     ['--application-id'],
   );
   assert.equal(defaultSelection().applicationId, '');
+  // --library makes a two-project solution, which the preview does not show;
+  // the template's conditions see it as left out.
+  const symbols = templateSymbols(defaultSelection());
+  assert.equal(symbols.library, '');
+  assert.equal(symbols.hasLibrary, 'false');
+  assert.equal(
+    templateSymbols({ ...defaultSelection(), nix: 'true' }).withNix,
+    'true',
+  );
 });
 
 test('a given application ID follows the toggles and replaces the default', () => {
@@ -279,6 +288,14 @@ test('conditions support the template engine operators', () => {
     evaluate('(enabled) && host != "cswebui"', { ...symbols, enabled: 'true' }),
   );
   assert.ok(!evaluate('enabled', { ...symbols, enabled: 'false' }));
+  assert.ok(
+    evaluate('(!enabled && host == "desktop")', {
+      ...symbols,
+      enabled: 'false',
+    }),
+  );
+  assert.ok(!evaluate('!(host == "desktop")', symbols));
+  assert.ok(evaluate("library != ''", { ...symbols, library: 'Notes.Core' }));
   assert.throws(
     () => evaluate('missing == "x"', symbols),
     /Unknown template symbol/,

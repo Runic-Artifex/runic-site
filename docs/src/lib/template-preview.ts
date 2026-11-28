@@ -108,8 +108,8 @@ export function previewFiles(
           },
         ]
       : []),
-    // The optional Nix flake, added by --nix.
-    ...(symbols.nix === 'true'
+    // The optional Nix flake, added by --nix (withNix: not with --library).
+    ...(symbols.withNix === 'true'
       ? [{ path: 'flake.nix', language: 'nix', content: render(flake) }]
       : []),
   ];

@@ -1672,6 +1672,201 @@ The [First Window](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples
 [Reactive Notes](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/notes-reactive-views)
 examples exercise the packaged graph and generated client.
 
+## Share ViewModels and their clients through a library
+
+When several applications present the same ViewModels, such as an about dialog
+or a support menu, and share a frontend package of components for them, the
+library that holds the ViewModels can generate their TypeScript clients once,
+into that package (since 0.24). The applications import the clients from the
+package instead of generating their own copies, and a component in the package
+is typed by the same clients. One rule decides which side writes a ViewModel's
+TypeScript: **the assembly that declares its Views.**
+[`examples/shared-library-clients`](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/shared-library-clients)
+is a library, a package and an application that maps both.
+
+To start with one, `dotnet new runic-app -n MyApp --library MyApp.Core`
+creates the whole setup for any frontend and package manager: a solution of
+the application and the library, the library's frontend package with a `build`
+script, and a JavaScript workspace of both frontends with its lock file at the
+root. A fresh clone builds and runs with `dotnet build` and `dotnet runic dev`
+alone ([the template's README](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/Runic.Application.Templates/README.md#a-solution-with-a-library)).
+
+### The library
+
+Set `RunicApplicationFrontendClientLibrary` and point the frontend directory at
+the package, or set `RunicApplicationFrontendGeneratedDirectory` to a folder
+inside it. Declare the Views of the ViewModels the library shares; applications
+that map the library declare none of their own:
+
+```xml
+<!-- SharedUi/SharedUi.csproj -->
+<PropertyGroup>
+  <RunicApplicationFrontendClientLibrary>true</RunicApplicationFrontendClientLibrary>
+  <RunicApplicationFrontendDirectory>$(MSBuildProjectDirectory)/../shared-ui</RunicApplicationFrontendDirectory>
+</PropertyGroup>
+<ItemGroup>
+  <PackageReference Include="Runic.Application.Views" Version="<VERSION>" />
+</ItemGroup>
+```
+
+```csharp
+public sealed partial class AboutView : RunicView<AboutViewModel>;
+public sealed partial class SupportView : RunicView<SupportViewModel>;
+```
+
+The build writes the usual client, contract (`.contract.d.ts` with its map) and
+mock of each ViewModel to `shared-ui/src/generated/`, with `types.ts`, plus
+`runic-clients.ts`, which exports every client, shared client and named type and
+`runicClientContracts`, and `runic-mocks.ts`, which exports the mocks. A client
+library builds its package when the package has a `build` script and copies no
+frontend (see [Library packages](#library-packages)), an application that
+references it does not copy its frontend to the application's web root, and a
+library without a View is `RUNICBRIDGE006`.
+
+### Its frontend package
+
+The package exports the generated barrel beside its own components, and lists
+`@runic-artifex/views` as a **peer** dependency, so the page loads one copy of
+the runtime, the application's:
+
+```json
+{
+  "name": "@acme/shared-ui",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated": "./src/generated/runic-clients.ts",
+    "./generated/mocks": "./src/generated/runic-mocks.ts"
+  },
+  "peerDependencies": { "@runic-artifex/views": "0.24.x" }
+}
+```
+
+A component imports the clients from its own generated folder, so a changed
+ViewModel is a type error in the package:
+
+```ts
+import type { AboutClient, AboutState } from "./generated/runic-clients.js";
+
+export function mountAboutPanel(host: HTMLElement, about: AboutClient): () => void { ... }
+```
+
+A component that writes a property and then runs a command should wait for the
+write: called without `await`, the command can reach .NET first and see the old
+value. Chain the command on the write's promise, or await pending field writes
+as a form does before Save.
+
+**A compiled package.** A package that ships TypeScript source, as above, needs
+nothing more. A package compiled to `dist/`, with a `build` script such as
+`tsc -p tsconfig.build.json` and `exports` that point into `dist/`, is built by
+the library's build (since 0.24, [Library packages](#library-packages)). After
+it, the build copies each `src/generated/*.contract.d.ts` and its
+`.contract.d.ts.map` to the folder of the `./generated` export (its `types`,
+else `default`), such as `dist/generated/`, because `tsc` does not copy `.d.ts`
+files to its output directory; without them every client's `.d.ts` would fail
+to resolve its contract. Keep the two folders at the same depth, so that the
+maps' relative paths to the C# sources still resolve.
+
+### The application
+
+Reference the library and map its assembly to the specifier that the frontend
+imports its barrel by:
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="../SharedUi/SharedUi.csproj" />
+  <RunicApplicationFrontendClientModule Include="SharedUi" Specifier="@acme/shared-ui/generated" />
+</ItemGroup>
+```
+
+- **What it still generates:** the C# Bridges of the library's ViewModels,
+  because its own ViewModels present them and its content switches construct
+  their Bridges, and `AddRunicViews()` registers the library's Views. Register
+  the library's ViewModels yourself, as any ViewModel.
+- **What it imports:** its generated folder has no client, contract or mock of
+  the library's ViewModels, and the first build with the item deletes the copies
+  an earlier build generated. Its own modules import the page functions and page
+  references from the specifier, in the client and in its `.contract.d.ts`:
+  ```ts
+  import { pageAbout } from "@acme/shared-ui/generated";
+  ```
+  The page imports the library's client types from there too, such as
+  `import type { SupportClient } from "@acme/shared-ui/generated"`. `types.ts`
+  declares only the named types of the application's own modules.
+- **Delete its own Views** of the library's ViewModels: a ViewModel's Views must
+  be in one assembly
+  ([`RUNICBRIDGE080`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge080)).
+  A mapped assembly that is not referenced or not built as a client library is
+  [`RUNICBRIDGE079`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge079),
+  a malformed item
+  [`RUNICBRIDGE082`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge082),
+  and a mapped library without a View the warning
+  [`RUNICBRIDGE083`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge083).
+
+### A stale package
+
+The application's generated folder also gets `runic-client-modules.ts`, which
+compares each library client's contract in the package that the frontend
+resolves with the one of the library build that the application compiles
+against. The application's modules that import the library bring it into the
+frontend's type check, so a package generated from another build of the library
+fails the build's type check:
+
+```text
+src/generated/runic-client-modules.ts(11,21): error TS2344: Type '"SharedUi.AboutViewModel:07B2…"' does not satisfy the constraint '"SharedUi.AboutViewModel:F1CA…"'.
+```
+
+The first contract is the package's, the second the library's. Rebuild the
+library, which regenerates the package's `generated/` folder, and then the
+package wherever the frontend gets it: a workspace link sees it at once; a
+compiled or published package needs its build, the copy step above and a new
+install. A ViewModel missing from the package is `TS2339` in the same file.
+
+At run time the production build of `@runic-artifex/views` does not compare a
+page's contract with the application's Bridge when the page connects, so the
+type check is the guard for a release build. The development build does compare
+them since 0.24 and fails the View's connection with a `contract` diagnostic
+([Development build](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/web/views/README.md#development-build)).
+
+### Resolving the package
+
+Install the package in the application's frontend, normally as a workspace
+dependency (`"@acme/shared-ui": "workspace:*"` in a Bun, pnpm or npm
+workspace) or as a published version. The specifier is any module specifier the
+frontend resolves, so a folder that is not a package also works through
+tsconfig `paths` and a matching Vite `resolve.alias`; the example does that,
+because nothing installs the examples' frontends inside the SDK repository.
+
+- A linked workspace package can resolve its own copy of
+  `@runic-artifex/views`, which would give the page two runtimes. Dedupe it in
+  Vite:
+  ```ts
+  export default defineConfig({ resolve: { dedupe: ["@runic-artifex/views"] } });
+  ```
+  `dotnet runic doctor` asks for it (its `views-dedupe` check), and its
+  `client-modules` check resolves each `Specifier` from the frontend.
+- The application's frontend build reruns when its generated files change, which
+  covers a rebuilt library, and when a file of a package that its frontend
+  depends on changes: the build adds the folder of each referenced client
+  library's package, and of each workspace package the frontend depends on, as
+  frontend inputs (since 0.24; before, the page's own
+  `RunicApplicationFrontendInput` item had to list them).
+
+### Not supported
+
+- **Transitive mapping.** A library ViewModel can present only ViewModels whose
+  Views the same library declares, because the library's client types its
+  pages; presenting the application's or another library's ViewModel is
+  [`RUNICBRIDGE081`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge081).
+  A client library that itself maps another library leaves the mapped modules
+  out of its own barrel.
+- **Shared clients with mixed owners.** A `[RunicSharedClient]` interface whose
+  implementers are owned by different assemblies, such as the application and a
+  library, is `RUNICBRIDGE081` too.
+- The application names the specifier with the item; it is not inferred from
+  the library.
+
 ## Threading: state after await
 
 A Window's ViewModels belong to its model context. The bridge reads state,
@@ -1766,6 +1961,65 @@ const document = shell.snapshot.documents.at(-1); // includes what load added
 The rules are in the protocol's
 [reply order](../../../specs/application/README.md#reply-order) and
 [client resolution](../../../specs/application/README.md#client-resolution).
+
+## Which members are published
+
+By default a ViewModel's Bridge publishes every public instance property that
+the ViewModel class itself declares: state, commands, interactions and view
+requests. Indexers are not published, and neither are the properties that a
+base class declares. `[RunicIgnore]` keeps a property on .NET.
+
+That default suits a ViewModel written for its page. A ViewModel ported from
+WPF still has the members its XAML bound to, while its page may read one
+computed record. Explicit publication turns the rule around: only the members
+marked `[RunicInclude]` are published, so a member added later stays on .NET
+until someone marks it. Declare it for every ViewModel of the assembly that
+declares them, or on a ViewModel class:
+
+```csharp
+using Runic.Application.Views;
+
+[assembly: RunicPublication(RunicPublicationMode.Explicit)]
+
+public sealed partial class ImportResultViewModel : ReactiveObject
+{
+    [RunicInclude] public ResultPage Page => BuildPage();
+
+    // Kept for the native view and the tests; not published.
+    public IReadOnlyList<ImportRow> Imported { get; }
+    public ReactiveCommand<Unit, Unit> ShowHelp { get; }
+}
+```
+
+- **Commands** are published only when marked, with all their client members:
+  `x()`, `canX`, `isXExecuting`, and `startX()` and `recoverX()` of an
+  asynchronous command. On a CommunityToolkit `[RelayCommand]` method or
+  `[ObservableProperty]` field, write `[property: RunicInclude]`, which the
+  toolkit puts on the generated property; mark a partial property, such as a
+  ReactiveUI `[Reactive]` one, directly.
+- **Shared clients.** The properties that implement a member of a
+  [`[RunicSharedClient]`](#shared-clients) interface the ViewModel implements
+  count as included, so they need no attribute.
+- **The class wins.** `[RunicPublication]` on a ViewModel class, or the nearest
+  one on a base class, wins over the assembly's:
+  `[RunicPublication(RunicPublicationMode.Implicit)]` returns a ViewModel in an
+  explicit assembly to the default.
+- **Left-out members are never inspected or sent.** The generator does not
+  check them, so a WPF-typed member needs no `[RunicIgnore]`, the Bridge never
+  puts them in a snapshot, and the analyzer and Hot Reload's contract shape
+  hash select the same members. A `[RunicFailure]`, `[RunicCommandKey]`
+  or `[RunicPresentationScoped]` declaration on a command that is not published
+  is reported as on any member the Bridge does not expose.
+- **Contradictions.** `[RunicInclude]` with `[RunicIgnore]` is error
+  [`RUNICBRIDGE077`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge077),
+  in either mode. `[RunicInclude]` on a member that the Bridge cannot publish,
+  such as a field, a private or static property, or a property a base class
+  declares, is warning
+  [`RUNICBRIDGE078`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge078).
+  In the default mode `[RunicInclude]` on a published property has no effect.
+
+Changing the mode changes the generated contract, so rebuild the .NET
+application and the generated frontend together.
 
 ## Read-only and settable state
 
@@ -1899,7 +2153,8 @@ export type DocumentPane = "Editor" | "Preview";
   declaring part in source, found through the assembly's PDB (source paths
   that a CI or deterministic build maps, such as `/_/`, resolve through the
   project's source roots), because the XML
-  documentation file keeps the generated part's `<inheritdoc/>`. The bootstrap
+  documentation file keeps the generated part's `<inheritdoc/>`. Without a PDB
+  the client has no such summary; see [Commit generated clients](#commit-generated-clients). The bootstrap
   pass writes the XML documentation file for this; a project that already writes one keeps
   its own. Set `RunicApplicationFrontendDocumentationEnabled=false` to skip it. A separate model
   assembly (`RunicApplicationFrontendModelAssembly`) needs its XML documentation file beside
@@ -2126,7 +2381,8 @@ publish each of its properties alike, or the build fails with
 
 - through a public property that the ViewModel class declares, which the Bridge
   publishes: not an explicit implementation, an inherited property or a
-  `[RunicIgnore]` one;
+  `[RunicIgnore]` one. In [explicit publication](#which-members-are-published)
+  such a property counts as included without `[RunicInclude]`;
 - with the interface's nullability, including type arguments;
 - with the same generated TypeScript as the other implementing ViewModels: the
   same wire name, value type, command input, key and declared failure. Only
@@ -2170,8 +2426,8 @@ own code, while you type and in the build, so `#pragma warning disable` and
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#errors-and-warnings-while-you-type)
 lists them.
 
-`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039`, `053`, `072` and `075` are warnings; the ones the generator
-reports itself (`020`, `072`, and the analyzer's when analyzers are off) repeat on builds that reuse the cached generation. Every other
+`RUNICBRIDGE013`, `015`, `019`, `020`, `028`, `029`, `030`, `031`, `032`, `033`, `034`, `039`, `053`, `072`, `075`, `076`, `078`, `083`, `089`, `091` and `096` are warnings; the ones the generator
+reports itself (`020`, `072`, `076`, `078`, `083`, and the analyzer's when analyzers are off) repeat on builds that reuse the cached generation. Every other
 code fails the build. The
 [diagnostics catalog](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#bridge-code-generator)
 lists every code with its severity, what reports it, its cause and its fix.
@@ -2230,7 +2486,8 @@ The map's locations are those of the [development source map](#development-sourc
 its `sources` are relative to the map, so a client committed to source control
 is the same on every machine. A member without a location (no PDB, or a source
 on another drive than the generated directory) stays in the `.d.ts`, and a
-client without any gets no map. Everything else, such as `connectEditor` or the
+client without any gets no map, so a committed client needs a PDB in every
+configuration ([Commit generated clients](#commit-generated-clients)). Everything else, such as `connectEditor` or the
 page reference's `connect`, stays in the generated TypeScript.
 
 Imports don't change: `import { connectEditor, type EditorState } from "./generated/editor.js"`
@@ -2240,6 +2497,31 @@ the built JavaScript is unchanged. Commit the `.contract.d.ts` and its map with
 the client. A library that compiles the generated directory with `tsc
 --declaration` into another directory copies the `.contract.d.ts` files there
 too, since `tsc` does not copy `.d.ts` inputs.
+
+### Commit generated clients
+
+You can commit the generated clients (`<view>.ts`, `<view>.mock.ts`, the named
+types module, `<view>.contract.d.ts` and `<view>.contract.d.ts.map`), so that a
+review shows when a ViewModel's contract changes. They are the same on every
+machine and for every configuration of the same source, with one condition:
+every assembly whose ViewModels the application presents, its own and each
+referenced ViewModel library, needs a portable or embedded PDB in every
+configuration. The generator finds member locations for the declaration map,
+and the `<summary>` of partial properties such as `[Reactive]` and
+`[ObservableProperty]` ones, through that PDB. A configuration without one, such
+as Release with `<DebugType>none</DebugType>`, writes clients without the map,
+its `sourceMappingURL` comment and those summaries. The contract and its hash
+are the same, so the application still works, but the committed files change.
+
+When a build writes a client with fewer mapped members or documentation lines
+than the file it replaces, and an assembly of the client's ViewModel has no PDB,
+the generator warns with
+[`RUNICBRIDGE076`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge076),
+which names the file and the assembly. Set `<DebugType>portable</DebugType>` (or
+`embedded`) in that project for every configuration, for example in a
+`Directory.Build.props`, and build again. The warning repeats on builds that
+reuse the cached generation; a project that does not commit its clients can
+suppress it with `NoWarn`.
 
 ## Ship the frontend inside the executable
 
@@ -2295,22 +2577,29 @@ which the host adapters set, are not settings.
 are extension points: a project may run its own targets before or after them
 (`BeforeTargets`/`AfterTargets`), and they keep their names and order. Other
 `RunicViews*` target names are implementation details and may change in any
-release. `RunicViewsGetFrontendFiles`, which an application calls on the
-projects it references, is a protocol between Runic packages of one release, not
-an extension point.
+release. `RunicViewsGetFrontendFiles` and `RunicViewsGetFrontendPackage`, which
+an application calls on the projects it references, are a protocol between Runic
+packages of one release, not extension points. `RunicViewsGetFrontendDependencies`
+returns an application's frontend packages as data ([Library packages](#library-packages)).
 
 | Property | Default | Purpose |
 | --- | --- | --- |
 | `RunicApplicationFrontendDirectory` | `$(MSBuildProjectDirectory)/Frontend` | Frontend package directory. |
 | `RunicApplicationFrontendGeneratedDirectory` | `<frontend>/src/generated` | Generated TypeScript clients. |
-| `RunicApplicationFrontendPackageManager` | `packageManager` in `package.json`, then `pnpm-lock.yaml`, `bun.lock`, else `npm` | `npm`, `pnpm` or `bun`: selects the default build and install commands. Another value, such as `yarn`, uses the npm commands and warns with [`RUNICBRIDGE029`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge029) unless the project sets both commands. |
+| `RunicApplicationFrontendCodegenRuntime` | the first of `node` and `bun` on `PATH` (`bun` first with the `bun` package manager) | The Node.js or Bun command that runs the TypeScript emitter (since 0.24, [Incremental generation](#incremental-generation)). |
+| `RunicApplicationFrontendPackageManager` | in a [JavaScript workspace](#javascript-workspaces) the root's `packageManager`, then its lock file; else `packageManager` in the frontend's `package.json`, then `pnpm-lock.yaml`, `bun.lock` or `bun.lockb`, else `npm` | `npm`, `pnpm` or `bun`: selects the default build and install commands. Another value, such as `yarn`, uses the npm commands and warns with [`RUNICBRIDGE029`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge029) unless the project sets both commands. |
 | `RunicApplicationFrontendBuildCommand` | `npm run build`, `pnpm run build`, or `bun run --bun build` | Production frontend build. |
-| `RunicApplicationFrontendInstallCommand` | `npm ci`, `pnpm install --frozen-lockfile`, or `bun install --frozen-lockfile`, each with `--ignore-scripts` | Runs before the frontend build when `package.json` or a lock file changed since the last install (stamp: `obj/runic-bridge-frontend-install.stamp`), or when declared dependencies have no `node_modules`. A `package.json` without dependencies needs no `node_modules`. |
+| `RunicApplicationFrontendInstallCommand` | `npm ci`, `pnpm install --frozen-lockfile`, or `bun install --frozen-lockfile`, each with `--ignore-scripts` | Runs before the frontend build, in the frontend directory or, for a member of a [JavaScript workspace](#javascript-workspaces), once at the workspace root. It runs when the command, the lock file or a `package.json` changed since the last install (their hash is `node_modules/.runic-install`), or when `node_modules` is gone. A `package.json` without dependencies needs no `node_modules`. The package manager's `--version` runs first: one that does not run is [`RUNICBRIDGE090`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge090). |
 | `RunicApplicationFrontendAllowUnlockedInstall` | `false` | The default install is locked: when `package.json` declares dependencies and the package manager's lock file (`package-lock.json` or `npm-shrinkwrap.json`, `pnpm-lock.yaml`, `bun.lock` or `bun.lockb`) is missing, the build fails with [`RUNICBRIDGE026`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge026) before installing. Set `true` to run `npm install`, `pnpm install` or `bun install` (with `--ignore-scripts`) without one instead. |
-| `RunicApplicationFrontendInstallEnabled` | `true` | Set `false` when a workspace install owns the frontend packages. |
+| `RunicApplicationFrontendInstallEnabled` | `true` | Set `false` when something else installs the frontend packages, such as a CI step; the build then also leaves the workspace alone and selects the package manager from the frontend's folder. A JavaScript workspace needs no `false`: the build installs it at its root. |
+| `RunicApplicationFrontendInstallMode` | `Auto` | When the build installs the frontend packages (since 0.24): `Auto` when the install's hash changed, `Always` on every build, `Never` not at all, as `RunicApplicationFrontendInstallEnabled=false`. See [Fast iteration](#fast-iteration). Another value is [`RUNICBRIDGE091`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge091). |
+| `RunicApplicationFrontendWorkspaceRoot` | the nearest folder above the frontend with `workspaces` in its `package.json` or a `pnpm-workspace.yaml` | The [JavaScript workspace](#javascript-workspaces) root where a frontend without its own lock file installs (since 0.24). `none` makes the frontend its own root. |
 | `RunicApplicationFrontendNodeModulesDirectory` | none | A `node_modules` installed by something else, such as the [Nix builder](https://github.com/Runic-Artifex/runic-sdk/blob/main/nix/README.md) from the lock file. The install does not run, and the frontend's `node_modules` becomes a symbolic link (a junction on Windows) to it; an existing `node_modules` that is not a link is `RUNICBRIDGE021`. |
-| `RunicApplicationFrontendBuildEnabled` | `true` | Set `false` when another tool owns the frontend build. TypeScript is still generated. |
-| `RunicApplicationFrontendCopyEnabled` | `true` | Mirrors the frontend's output directory to the web root in the build output: a file that an earlier copy wrote and the output directory no longer has is deleted. Publish always mirrors it. |
+| `RunicApplicationFrontendBuildEnabled` | `true`, `auto` in a client library | Set `false` when another tool owns the frontend build. TypeScript is still generated. `auto` (since 0.24) builds when the frontend's `package.json` has a `build` script and not otherwise; see [Library packages](#library-packages). |
+| `RunicApplicationFrontendBundleDirectory` | none | Writes a web bundle there after the build (since 0.24): each project's page, generated clients and View fingerprints, for a publish on another machine. See [Building the frontend in another job](#building-the-frontend-in-another-job). |
+| `RunicApplicationFrontendPrebuiltDirectory` | none | Takes each project's page from a web bundle there (since 0.24), after checking its Views' fingerprints against this build's contract IR; the build runs no install, frontend build or client emission, so it needs neither Node.js nor Bun. See [Building the frontend in another job](#building-the-frontend-in-another-job). |
+| `RunicApplicationFrontendPrebuiltCheck` | `error` | `warning` reports a prebuilt frontend built from other Views (`RUNICBRIDGE094`) or for another host (`RUNICBRIDGE095`) as a warning and publishes it. |
+| `RunicApplicationFrontendCopyEnabled` | `true`, `false` in a client library | Mirrors the frontend's output directory to the web root in the build output: a file that an earlier copy wrote and the output directory no longer has is deleted. Publish always mirrors it, except in a client library that leaves this `false`. |
 | `RunicApplicationFrontendOutputDirectory` | `dist` | The frontend build's output directory, relative to the frontend directory, which build and publish copy and `dotnet runic dev` serves from. |
 | `RunicApplicationFrontendTranslations` | `false` | `true` keeps `RunicApplicationFrontendTranslationsDirectory` equal to the ESM that `Runic.Translations.Build` writes for the project's catalog (`RunicTranslationsEmitEsm=true`), before the frontend builds: changed files are copied, and the files of removed or renamed messages are deleted. For a page that imports the generated files itself instead of through the Translations Vite plugin, such as an Angular CLI page (the `runic-app` template's `--frontend angular --translations`) or a Bun page. No ESM, or a directory that holds other files, is [`RUNICBRIDGE037`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge037). See [Translated text](#translated-text). |
 | `RunicApplicationFrontendTranslationsDirectory` | `<frontend>/.runic/translations` | Where `RunicApplicationFrontendTranslations` mirrors the ESM; the page imports `messages.js`, `runtime.js` and `transport.js` from it. Keep it out of version control. |
@@ -2319,10 +2608,152 @@ an extension point.
 | `RunicApplicationHost` | the only host adapter referenced | `desktop` or `cswebui`: whose Views client the build copies to `runic-views.js` in the web root. Set it when a project references both hosts. The frontend build receives it as `RUNIC_APPLICATION_HOST`. |
 | `RunicApplicationFrontendCompositionType` | `<RootNamespace>.RunicViewsComposition` (host adapters), with the namespace made a valid C# name | Generated composition class. |
 | `RunicApplicationFrontendModelAssembly` | the project itself | Inspect a separately built ViewModel assembly instead of a bootstrap build. |
+| `RunicApplicationFrontendClientLibrary` | `false` | `true` makes the project a client library (since 0.24): it generates its Views' TypeScript as a module that other frontends import. Besides the usual output, the generated directory, normally a frontend package's folder such as `../shared-ui/src/generated`, gets `runic-clients.ts`, which exports every client, shared client and named type and `runicClientContracts` (each client's ViewModel and contract fingerprint), and `runic-mocks.ts`, which exports the mocks. The assembly gets the metadata `Runic.Application.Views.ClientLibrary`. Generation is required, so a client library without a View is `RUNICBRIDGE006`. `RunicApplicationFrontendBuildEnabled` defaults to `auto`, which builds the package when it has a `build` script ([Library packages](#library-packages)), and `RunicApplicationFrontendCopyEnabled` to `false`; an application that references the library does not copy its frontend to its web root. |
 | `RunicApplicationFrontendGenerationEnabled` | see below | `true` requires Bridge generation, `false` turns it off. |
 | `RunicApplicationFrontendDocumentationEnabled` | `true` | `false` skips the XML documentation file that the bootstrap pass writes for comments in the generated TypeScript. |
 | `RunicApplicationFrontendWindowProject` | `false` | `true` marks a Window project that `dotnet runic dev` and `doctor` run. |
+| `RunicApplicationFrontendDevSessionProject` | none | Set by `dotnet runic dev` (since 0.24), as a global property: the project whose frontend its development server serves. Only that project skips its production frontend build and copy; it still installs the frontend packages and builds the [packages its frontend depends on](#library-packages). |
 | `RunicApplicationFrontendBootstrap` | set by the targets (read-only) | `true` only in the bootstrap pass (see below). A project reads it, for example to leave a reference out of that pass; it does not set it. |
+
+### JavaScript workspaces
+
+A frontend can be a member of a Bun, npm or pnpm workspace, for example with the
+frontend package of a [client library](#share-viewmodels-and-their-clients-through-a-library)
+beside it (since 0.24):
+
+```json
+{ "private": true, "workspaces": ["shared-ui", "App/Frontend"], "packageManager": "bun@1.4.4" }
+```
+
+The build finds the workspace root, the nearest folder above the frontend whose
+`package.json` has `workspaces` or that has `pnpm-workspace.yaml`, unless the
+frontend has a lock file of its own. Then:
+
+- **The install runs once, at the root**, with the root's lock file
+  (`--frozen-lockfile` or `npm ci`, with `--ignore-scripts`), for every member.
+  A library and an application of the workspace that build at the same time
+  wait for each other's install instead of installing twice, and a build with
+  nothing changed runs no install (the hash in `node_modules/.runic-install`).
+  npm installs every member's packages into the root's `node_modules` only,
+  which the build accepts.
+- **The package manager is the workspace's**: the root's `packageManager`, then
+  its lock file. A member that declares another manager is the warning
+  [`RUNICBRIDGE089`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge089).
+- **The lock file is the root's.** Create it with the manager's install at the
+  root and commit it; without it the build stops with
+  [`RUNICBRIDGE026`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge026),
+  which names the root.
+- **The workspace must list the frontend.** A frontend below a workspace root
+  whose patterns do not include it is
+  [`RUNICBRIDGE087`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge087).
+  The build expands the patterns with the workspace resolver
+  `runic-frontend-graph.mjs`, which writes `obj/runic/frontend-graph.json`
+  (`rax.frontend-graph/1`). The same script is the `@runic-artifex/views/frontend-graph`
+  export for other build tools.
+
+Set `RunicApplicationFrontendWorkspaceRoot` to another folder to name the root
+yourself, or to `none` to install the frontend on its own with its own lock
+file. With `RunicApplicationFrontendInstallEnabled=false` the build looks for no
+workspace, as before 0.24: whoever installs owns it.
+
+### Library packages
+
+A frontend package that an application's frontend depends on is built before
+the application's frontend (since 0.24), so a fresh clone needs no manual step:
+
+- **A client library builds its own package** when the package's
+  `package.json` has a `build` script: `RunicApplicationFrontendBuildEnabled`
+  is `auto` in a client library. A package without one, such as the example's
+  source package (`exports` into `src/`), stays unbuilt. Set
+  `RunicApplicationFrontendBuildEnabled=false` in the library to build the
+  package yourself, or `true` to run `RunicApplicationFrontendBuildCommand`
+  without a script. The build runs after the library generates its clients,
+  copies the contract declarations into a compiled package's output (see
+  [Its frontend package](#its-frontend-package)), and checks that every file
+  that the package's `exports`, `main`, `module` and `types` name exists:
+  a missing one is
+  [`RUNICBRIDGE088`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge088),
+  which names the library, instead of a bundler error in the application.
+- **A workspace package that no .NET project owns**, such as a component or
+  tokens package, is built by the project whose frontend depends on it, when it
+  has a `build` script, dependencies first. A dependency counts when it names a
+  workspace member (by `workspace:`, or by name in an npm workspace) or a folder
+  (`file:`, `link:`, `portal:`); with the install off, only the protocols do.
+  Its build runs with the workspace's package manager (`bun run --bun build`,
+  `pnpm run build` or `npm run build`) when one of its files (without
+  `node_modules`, `bin`, `obj`, hidden folders and the folders its exports
+  point into, such as `dist/`), its command or the install changed, or when an
+  export is missing. Its stamp is in the workspace's
+  `node_modules/.runic-builds`, so the projects of a workspace build it once.
+- **Before its own frontend build**, a project checks the exports of every
+  package its frontend depends on, and names the package and its owner
+  (`RUNICBRIDGE088`): a library whose package build is off, or that did not
+  write the file. A frontend build that fails on an import of one of these
+  packages names it in `RUNICBRIDGE016` too.
+- **Inputs.** The folder of each package becomes a frontend input of the
+  application (without `node_modules`, `bin`, `obj` and hidden folders), so an
+  edit to a package, or its rebuilt output, rebuilds the page. The folders are
+  recorded in `obj/runic/frontend-dependencies.txt`, from which Visual Studio's
+  fast up-to-date check reads them, so F5 after an edit to a library's package
+  builds the application even though the library's assembly is unchanged. The
+  record is read when Visual Studio loads the project, so it applies from the
+  first build after that.
+- **As data.** `dotnet msbuild App.csproj
+  -getTargetResult:RunicViewsGetFrontendDependencies` returns the packages,
+  dependencies first, then the application's own frontend (`Kind`
+  `application`), without building: `PackageName`, `Kind` (`compiled` with a
+  `build` script, else `source`), `Owner` and `OwnerName` (the library
+  project; empty for a workspace package), `BuildEnabled`, `BuildCommand`,
+  `WatchCommand`, `GeneratedDirectory`, `WorkspaceRoot`, and the `Specifier`
+  that a `RunicApplicationFrontendClientModule` maps. The JavaScript side of
+  the graph is in `obj/runic/frontend-graph.json` (`rax.frontend-graph/1`), whose
+  `packages` list each package's `kind`, `build`, `watch`, `exports` and
+  `outputs`.
+
+A rebuild with nothing changed builds no package and starts no JavaScript
+process.
+
+### Fast iteration
+
+A rebuild after a C# or frontend edit runs no package manager: the build installs
+the frontend packages only when what they depend on changed, and builds the
+frontend only when one of its inputs changed.
+
+- **The install** (`RunicApplicationFrontendInstallMode=Auto`, the default)
+  hashes the install command, the lock file, every `package.json` of the
+  workspace and the package manager's executable on `PATH` (its path, size and
+  time, read without starting it). It runs when that hash differs from the one
+  in `node_modules/.runic-install`, when `node_modules` is gone, or when the
+  manager's own record of a complete install is missing (npm's
+  `node_modules/.package-lock.json`, pnpm's `node_modules/.modules.yaml`), as
+  after an install that stopped halfway. A touched but unchanged lock file
+  installs nothing. `Always` installs on every build and `Never` never, as
+  `RunicApplicationFrontendInstallEnabled=false` does; the mode wins when both
+  are set. Whenever the default install runs it is the locked one (`npm ci`,
+  `--frozen-lockfile`), with `--ignore-scripts`.
+- **The frontend build** runs when a file of the frontend folder, the generated
+  clients, `RunicApplicationFrontendInput`, the project file or its build state
+  changed, when an install installed something else, or when a file it wrote to
+  its output directory is gone. A C#-only edit that changes no contract leaves
+  the generated clients, and so the frontend, alone. `-t:Rebuild` builds it
+  again. The [packages it depends on](#library-packages) are built the same
+  way, each only when its own files changed.
+- **`dotnet runic dev`** leaves the install to the build since 0.24, so its
+  second start with nothing changed installs nothing; before, it ran the
+  package manager's install (`npm ci`, which reinstalls everything) on every
+  start.
+- **Library packages under `dev`.** While `dotnet runic dev` runs, it watches
+  the compiled packages that the page depends on (since 0.24). It runs a
+  package's `watch` script, or else reruns its `build` when one of its files
+  changes, and Vite reloads the page. A rebuild that fails prints `RAPPDEV1018`,
+  and `dev` puts the package's last good output back, so the page keeps working. A
+  package that fails at the start stops `dev` with its build's error. See
+  [Library packages under dev](https://github.com/Runic-Artifex/runic-sdk/blob/main/tools/dotnet-runic/README.md#library-packages-under-dev).
+- **CI.** A fresh checkout has no `node_modules`, so `Auto` installs there, and a
+  restored `node_modules` cache is reused only when its hash matches the
+  checkout's lock file and `package.json` files. `ContinuousIntegrationBuild`
+  therefore does not switch to `Always`; set it yourself to install on every
+  build.
 
 The ReactiveUI flavor of the generated code is not a setting. The build infers it
 from the Runic ReactiveUI adapter the project compiles against, by package or
@@ -2381,6 +2812,37 @@ directory are inputs already (see [Incremental generation](#incremental-generati
 </ItemGroup>
 ```
 
+`RunicApplicationFrontendClientModule` (since 0.24) maps a referenced client
+library (`RunicApplicationFrontendClientLibrary`) to the module specifier of its
+generated `runic-clients.ts`. `Include` is the library's assembly name, and
+`Specifier` is required and not relative:
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="../SharedUi/SharedUi.csproj" />
+  <RunicApplicationFrontendClientModule Include="SharedUi" Specifier="@acme/shared-ui/generated" />
+</ItemGroup>
+```
+
+The library owns the generated TypeScript of the ViewModels whose Views it
+declares. The application adds those Views to its own generation: it still
+generates their Bridges, which its content slots construct, and registers the
+Views in `AddRunicViews()`, but it writes no client, contract or mock module for
+them. Its own modules import their page functions and page references from the
+specifier, and the copies an earlier build generated are deleted. `types.ts`
+declares only the named types of the application's own modules. The application
+must not declare Views of the library's ViewModels itself
+([`RUNICBRIDGE080`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge080)),
+and a library ViewModel can present only the library's ViewModels
+([`RUNICBRIDGE081`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge081)).
+The generated directory also gets `runic-client-modules.ts`, which the modules
+that import the library bring into the frontend's type check: when the package
+the frontend resolves was generated from another build of the library than the
+application compiles against, its contract differs and the type check fails
+with `TS2344`, naming both contracts. Rebuild the library and its package.
+[Share ViewModels and their clients through a library](#share-viewmodels-and-their-clients-through-a-library)
+is the full guide.
+
 Bridge generation turns on by default for a project that references
 `Runic.Application.Views` directly, references a host adapter
 (`Runic.Application.Views.Desktop`, `Runic.Application.Views.CsWebUi` or
@@ -2405,7 +2867,8 @@ Generation is required, and `RUNICBRIDGE006` stays an error for an assembly
 without a Window, when the project sets `RunicApplicationFrontendGenerationEnabled` to `true`, or
 when it shows that it expects output: a `package.json` in
 `RunicApplicationFrontendDirectory`, `RunicApplicationFrontendInput` items,
-`RunicApplicationFrontendCompositionType` or `RunicApplicationFrontendModelAssembly`. Projects that
+`RunicApplicationFrontendCompositionType` or `RunicApplicationFrontendModelAssembly`, and
+in a client library (`RunicApplicationFrontendClientLibrary`). Projects that
 reference `Runic.Application.Views.CsWebUi` or `Runic.Application.Views.Desktop`, other than
 those test projects, always require generation, because the adapter sets
 `RunicApplicationFrontendCompositionType`. WPF projects (`UseWPF`) stay optional, because a
@@ -2417,7 +2880,9 @@ build, which optional mode still pays for.
 When the Views live in a referenced project, the application copies that
 project's built `<frontend>/dist` to its own `www/` on build and publish, so the
 application itself can set `RunicApplicationFrontendGenerationEnabled` to `false`. The
-application's own frontend wins over a referenced one with the same file. WPF's
+application's own frontend wins over a referenced one with the same file. A
+client library's frontend (`RunicApplicationFrontendClientLibrary`) is a package that
+other frontends import, not a page, so it is not copied. WPF's
 temporary markup-compile project (`*_wpftmp`) never runs the generator; it
 compiles the code that the real project generated.
 
@@ -2467,6 +2932,86 @@ replies and pushes are data: JSON text that the client parses with
 in a `<meta>` element. APIs that run your own script in the page, such as
 `DesktopSurface.ExecuteJavaScriptAsync`, still need `'unsafe-eval'`. See the
 [security guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/security.md#framing-and-content-security-policy).
+
+### Building the frontend in another job
+
+A team with many Linux runners and few of its target OS, such as one Windows
+runner, can build and test everything web on Linux and run only the publish on
+the target OS (since 0.24, D082). The .NET build, the Bridge generator, the
+TypeScript clients, the frontend install and build, the headless tests and a
+framework-dependent `win-x64` publish all run on Linux; NativeAOT, MSIX,
+signing and running WPF or WebView2 code need the target OS.
+
+`RunicApplicationFrontendBundleDirectory` makes a build write a **web bundle**:
+
+```sh
+dotnet build -c Release -p:RunicApplicationFrontendBundleDirectory=$RUNNER_TEMP/web-bundle
+```
+
+After its build, every project that declares Views writes its entry there:
+its frontend build's output in `projects/<assembly>/www/` (none for a [client
+library](#share-viewmodels-and-their-clients-through-a-library)), its generated
+clients in `projects/<assembly>/clients/`, and its part of `web-bundle.json`
+(format `rax.web-bundle/1`). The manifest records each project's View
+fingerprints from the contract IR, its host (`RUNIC_APPLICATION_HOST`), its
+`NODE_ENV`, its lock file's hash and the `@runic-artifex/views` it resolved, the
+.NET SDK and Node.js versions, and the commit. The projects of a solution build,
+such as a WPF application's model project and the application, write their
+entries side by side. The format is in
+[specs/application/web-bundle.md](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/application/web-bundle.md).
+Upload the folder as the job's artifact. A job that tests the frontend alone
+copies an entry's `clients/` into the frontend's `src/generated` and needs no
+.NET build.
+
+A relative directory is relative to the directory the build starts in. Start
+from an empty folder: a project's entry replaces only its own. A project whose
+frontend build is off (`RunicApplicationFrontendBuildEnabled=false`, or a page
+that `dotnet runic dev` serves) cannot write its page, and the build fails with
+`RUNICBRIDGE092`.
+
+On the target OS, `RunicApplicationFrontendPrebuiltDirectory` takes the pages
+from the downloaded bundle:
+
+```sh
+dotnet publish App -c Release -r win-x64 -p:RunicApplicationFrontendPrebuiltDirectory=web-bundle
+```
+
+Every project that declares Views finds its entry by assembly name and uses its
+`www/` as its frontend output: build and publish copy it to `www/`, and
+`RunicApplicationFrontendDelivery=Embedded` packs it into the assembly. The
+build runs no frontend install, no package or frontend build and no client
+emission, so it needs neither Node.js nor Bun on the runner. A WPF
+application's model project takes its own entry, and the application copies it
+as usual.
+
+Before it uses a page, right after the generator has written this build's
+contract IR, the build checks the entry:
+
+- The entry must exist and its `www/` must have the files the bundle recorded
+  (`RUNICBRIDGE093`), so a truncated download does not publish.
+- Every View must have the same fingerprint in the bundle as in this build
+  (`RUNICBRIDGE094`). A View that changed, or that only one side has, is an
+  error that names it and both fingerprints: the page was built from other
+  ViewModels, and would fail at run time.
+- The page must have been built for this build's host (`RUNICBRIDGE095`).
+- An optimized build that takes a page not built with `NODE_ENV=production`
+  warns (`RUNICBRIDGE096`).
+
+`RunicApplicationFrontendPrebuiltCheck=warning` reports `RUNICBRIDGE094` and
+`RUNICBRIDGE095` as warnings and publishes anyway; there is no value that skips
+the check. Both directory properties are also read from environment variables,
+so `RunicApplicationFrontendPrebuiltDirectory=web-bundle dotnet runic package
+windows` publishes the MSIX from a bundle. Write the bundle with the same
+commit, configuration and Runic release as the publish.
+
+`dotnet runic bundle` builds and checks the bundle in one step, and
+`dotnet runic package <target> --frontend-bundle <dir>` publishes from it; see
+[Write a web bundle](../../../tools/dotnet-runic/README.md#write-a-web-bundle).
+`dotnet runic doctor --bundle <dir>` checks a downloaded bundle offline.
+
+The [split CI example](https://github.com/Runic-Artifex/runic-sdk/blob/main/examples/split-ci/README.md) is a
+complete application with this pipeline. It has a workflow for GitHub Actions and Gitea, a variant for Forgejo, and a
+script that runs both halves on one Linux machine.
 
 ## Adding a Window to an existing web app
 
@@ -2584,9 +3129,9 @@ shared code or the Vite configuration reads as a
   declarations, and can report errors in them that the app's own check does
   not. Check the shared files in the app that owns them.
 - **Lock files.** The frontend has its own `package.json` and lock file unless
-  it joins the app's package manager workspace. In a workspace, set
-  `RunicApplicationFrontendInstallEnabled` to `false`, because the workspace
-  install owns `node_modules`.
+  it joins the app's package manager workspace. A workspace member has no lock
+  file of its own: the build installs the workspace once at its root, with the
+  root's lock file; see [JavaScript workspaces](#javascript-workspaces).
 - **Lists.** Tailwind removes list markers from every list, and Runic Desktop's
   WebKitGTK then no longer reports such a list as a list to a screen reader;
   see [Runic.Desktop accessibility](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/dotnet/Runic.Desktop#accessibility).
@@ -2685,6 +3230,10 @@ const quantity = useField(invoice, InvoiceFields.lines.at(line.id).quantity, { c
   `Clone()`, cannot be copied exactly and has no fields below it; as rows it is
   `RUNICBRIDGE052`, as an object inside a row warning `RUNICBRIDGE053`.
   `[RunicNoField]` leaves a member of a row or object without a field.
+- **Blobs.** A member that holds a `RunicBlob` has no field, since the page
+  never sends a blob; the other members of its object or row do, and their
+  copy keeps the blob. A sealed class copied through its codec cannot copy a
+  blob, so an object or row of such a class that holds one has no fields.
 - **Rows.** A `[RunicCollection]` with a `[RunicRowEditor]` method has a field
   for each row member except the key: `InvoiceFields.lines.at(key).quantity`.
   The method takes the row's key and the row with the one cell changed, and
@@ -3547,27 +4096,27 @@ tests, `RunicViewState.IsValidating(vm => vm.UserName)` and
 Text that a ViewModel produces, such as a status line or a validation
 message, can follow the window's language without a call per string. The
 ViewModel produces a text reference of
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/transport.md)
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/transport.md)
 (a message key, typed arguments and a fallback text) instead of a sentence, and
 the page formats it with its Translations runtime (the `translation-text/1`
 feature). When the language changes, the page formats the references it has
 again.
 
-The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/runic-views.md)
+The guide [Translate a Runic Views app](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/runic-views.md)
 walks through one catalog for the page and C#, the application's language,
 native text and tests, step by step. This section is the reference. It needs
-Runic Translations 0.15.1 or later. `dotnet new runic-app --translations` starts
+Runic Translations 0.16.0 or later. `dotnet new runic-app --translations` starts
 an application with all of it, and the
 [multi-window example](https://github.com/Runic-Artifex/runic-sdk/tree/main/examples/multi-window)
 shows it in English, German and Arabic.
 
 **One catalog.** Keep the catalog with the frontend and name its `runic.json`
 in the .NET project, which then gets the generated C# API for every message
-([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
+([Strings outside the Views](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/runic-desktop.md#strings-outside-the-views)):
 
 ```xml
-<PackageReference Include="Runic.Translations" Version="0.15.1" />
-<PackageReference Include="Runic.Translations.Build" Version="0.15.1" PrivateAssets="all" />
+<PackageReference Include="Runic.Translations" Version="0.16.0" />
+<PackageReference Include="Runic.Translations.Build" Version="0.16.0" PrivateAssets="all" />
 <RunicTranslationProject Include="Frontend/translations/runic.json" />
 ```
 
@@ -3977,7 +4526,7 @@ validation text, resolve them by catalog with the generated transport's
 one of a catalog the page does not list shows its fallback text. One written
 against another release of a catalog is checked key by key: it translates while
 its key and arguments still match, and shows its fallback text otherwise
-([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/transport.md)):
+([Runic Translations' rules](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/transport.md)):
 
 ```ts
 import * as appTransport from "virtual:runic-translations/app/transport";
@@ -3998,7 +4547,7 @@ configureTranslatedText({
 With the Vite plugin's `dependencies: "auto"`, the page's copy of a library
 catalog is regenerated with the application's `overrides`, so a reference
 resolves to the same text as in C#
-([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/libraries.md)).
+([Ship translations in a library](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/libraries.md)).
 
 **Right-to-left text.** Since Runic Translations 0.9, a catalog that declares a
 right-to-left locale, such as `ar` or `he`, isolates the placeholders of its
@@ -4009,7 +4558,7 @@ them correctly; compare such text in tests after the runtime's
 in `runic.json` turns it on or off. The runtime's `localeDirection`, passed as
 `direction`, gives `syncDocumentLocale` and `textDirection()` the direction of
 each locale; see
-[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/bidi.md).
+[Bidirectional text](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/bidi.md).
 
 `syncDocumentLocale()` sets `lang` and `dir` on `<html>` (direction from the
 runtime's `direction`, such as `localeDirection`, else the locale's script) and
@@ -4139,7 +4688,7 @@ System.Text.Json's unconditional ignores apply too: a DTO property with
 `[JsonExtensionData]` is not part of the contract, as it is not part of the JSON,
 throughout the ViewModel's DTO graphs, including nested DTOs, collections,
 command values, interactions and declared failures. Generated codecs, TypeScript,
-validation traversal and the Hot Reload fingerprint use the same exclusions.
+validation traversal and Hot Reload's contract shape hash use the same exclusions.
 
 For example, a separate Core assembly can keep its DTO free of Runic dependencies:
 
@@ -4182,7 +4731,8 @@ public sealed record SavedRequest(string Kind)
 fields have a fixed contract and are emitted even when null or default.
 `[RunicIgnore]` always excludes a property, including one also marked
 `[JsonIgnore(Condition = JsonIgnoreCondition.Never)]`. Root ViewModel properties
-still use `[RunicIgnore]`; System.Text.Json's ignores apply to DTO properties only.
+still use `[RunicIgnore]`, or [explicit publication](#which-members-are-published);
+System.Text.Json's ignores apply to DTO properties only.
 Adding or removing the opt-out changes the DTO wire contract and requires
 rebuilding the .NET application and generated frontend together.
 
@@ -4334,12 +4884,14 @@ await client.attach(ref);
   it as a path.
 - An upload whose body sends nothing for 30 seconds is dropped (HTTP 408), on
   every host.
-- Limits: `RunicWindowOptions.MaximumUploadBytes` (per upload, default 256 MiB)
-  and `MaximumPendingUploadBytes` (unclaimed uploads of a Window at once, default
-  1 GiB), with host defaults of the same names on `RunicDesktopHostOptions`,
-  `RunicCsWebUiHostOptions` and `RunicWindowTestHostOptions`, and
-  `WindowContentSessionOptions` for a session you create. The WPF host uses the
-  defaults.
+- Limits: `RunicWindowOptions.MaximumUploadBytes` (per upload, default 256 MiB),
+  `MaximumPendingUploadBytes` (the bytes of a Window's unclaimed uploads at once,
+  default 1 GiB) and `MaximumPendingUploads` (their number, also of empty
+  uploads, counting those still being received, default 256); an upload beyond
+  either is refused with HTTP 507. `RunicDesktopHostOptions`,
+  `RunicCsWebUiHostOptions` and `RunicWindowTestHostOptions` have host defaults
+  of the same names, and `WindowContentSessionOptions` has them for a session
+  you create. The WPF host uses the defaults.
 - Uploads are stored in a new folder of each Window, `runic-uploads-{random}`
   with mode 0700, below the temporary directory when no other user can change
   it (it is the user's own, or sticky such as `/tmp`), otherwise below
@@ -5003,8 +5555,9 @@ trace id; correlate them with the host's spans by time and route.
 | 2028 | `DesktopHostedRegionFailed` | Warning | Handling a region of a hosted application failed, such as a push to the host page. | `ErrorType` |
 | 2029 | `DesktopHostedPeerRefused` | Warning | An elevated hosted application (the elevated pair) refused a connection to one of its listeners from a loopback peer that does not run elevated, or whose process it cannot look up, before it read the request (`elevated-peer-refused`). At most ten a minute. | `Peer` |
 | 2030 | `DesktopHostedRegionAppearanceUnavailable` | Warning | The host gave a region window an appearance override (`RunicHostedRegionOptions.Appearance`, `RunicHostedRegion.SetAppearanceAsync`), but the guest does not implement `region-appearance/1`, such as a 0.18 guest: the window shows the desktop's appearance. Once per window. | `Name`, `Region` |
+| 2031 | `DesktopHostedRegionRetryRefused` | Warning | The host page asked for a failed region again (`hosted-region-retry`) more than 3 times within a minute; the region stays failed until the application calls `RunicHostedRegion.RetryAsync`. | `Region` |
 | 2100 | `CsWebUiWindowShowFailed` | Error | CS-WebUI cannot show a window: it finds no browser, the selected browser does not exist or start, its page does not connect in time, or the WebView does not start. `OpenWindowAsync` fails with a `RunicWindowConfigurationException`. | `Window`, `Code`, `Browser`, `BrowserPath`, `DiagnosticMessage` |
-| 2101 | `CsWebUiNativeLibraryUnchecked` | Warning | CS-WebUI loads a WebUI library that the application selected through `CSWEBUI_NATIVE_LIBRARY` or `WebUiNativeLibrary.SetLibraryPath`, whose version Runic cannot check; it needs WebUI commit `efac0e24` or later and is tested with `24c7d196e` (CsWebUi 2.5.0-beta.4.10). Once per process, before the first window opens. | `Path` |
+| 2101 | `CsWebUiNativeLibraryUnchecked` | Warning | CS-WebUI loads a WebUI library that the application selected through `CSWEBUI_NATIVE_LIBRARY` or `WebUiNativeLibrary.SetLibraryPath`, whose version Runic cannot check; it needs WebUI commit `efac0e24` or later and is tested with `8a55352c2` (CsWebUi 2.5.0-beta.4.11). Once per process, before the first window opens. | `Path` |
 | 2102 | `CsWebUiMenuCommandFailed` | Error | A menu bar command of a CS-WebUI Window's root ViewModel (`IRunicMenuCommandSource`, `RunicCsWebUiHostOptions.MenuBar`) threw, or binding the menu bar's ids failed. | `CommandId`, `ErrorType` |
 | 2103 | `CsWebUiBlobEndpointPortsHeld` | Warning | Another process held, or answered on, one loopback address of `localhost` (`Address`) on `Count` of the `Tried` ports a CS-WebUI Window's blob endpoint tried, so the endpoint gave up `Host`. On Windows, where http.sys refuses to listen on a port that another socket holds, `Address` is `localhost` when no single address shows which socket holds it. Its URLs then fall back to `127.0.0.1`, whose loads the page makes cross-site and the endpoint refuses; on Windows, which has no fallback, the Window opens without blobs and uploads (event 1207). | `Address`, `Count`, `Tried`, `Host` |
 | 2104 | `CsWebUiBlobEndpointPortsReserved` | Warning | On Windows, URL reservations of http.sys (`Reservations`, the reserved URL prefixes) named `Count` of the `Tried` ports a CS-WebUI Window's blob endpoint tried for `Host`, so the endpoint gave up `Host`. A reservation lets the users that its access list names register URLs under the endpoint's, so the endpoint does not use a port that one names, whatever its host or path. The Window then opens without blobs and uploads (event 1207). | `Reservations`, `Count`, `Tried`, `Host` |
@@ -5138,6 +5691,27 @@ directory. It hashes the model/dependency assemblies, generator assemblies,
 output-affecting options, and generated output contents. Missing or edited
 outputs invalidate the cache; unchanged generated files keep their timestamps.
 Set `RUNIC_BRIDGE_CODEGEN_FORCE=1` or `RUNIC_BRIDGE_CODEGEN_CACHE=0` to bypass it.
+
+Since 0.24 the generator writes the C# Bridges, the development source map and the
+contract IR (`runic-bridge/contract.ir.json`, see the
+[contract IR](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/application/contract-ir.md)),
+and the TypeScript emitter writes the clients from the IR: `@runic-artifex/views/codegen`,
+which Node.js or Bun runs after the generator (`RunicViewsGenerateClients`), so building a
+project that generates clients needs `node` or `bun` on `PATH`
+(`RunicApplicationFrontendCodegenRuntime` names another). The emitter is the one of the
+frontend's `@runic-artifex/views` when it is installed, resolved from
+`RunicApplicationFrontendDirectory` like an import, so the clients match the runtime they
+import, and the build installs the frontend before it runs. Otherwise the build uses the copy
+bundled with this package, which matches the generator's version: without a frontend (no
+`package.json`), such as a library or a test project, when the frontend's `package.json` declares
+no `@runic-artifex/views`, and with `RunicApplicationFrontendBuildEnabled=false`. A frontend that
+declares `@runic-artifex/views` without having it installed after the install step, and a build
+without either runtime, fail with
+[`RUNICBRIDGE084`](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/diagnostics.md#runicbridge084).
+The emitter runs when the IR, the emitter, the frontend's `package.json` or lock file, or the
+generation settings changed, or when a client it wrote was removed or edited since
+(`runic-bridge/typescript.outputs` records each file's SHA-256); it rewrites only the files whose
+content changed, and removes the generated files it no longer writes.
 
 The configured frontend build command (`RunicApplicationFrontendBuildCommand`) runs
 when one of its inputs is newer than
@@ -5301,9 +5875,14 @@ each watched entry, so a link replaced by a rename is seen in its parent, and
 shares one watcher per directory across the process. It also watches that
 directory's parent: inotify and FSEvents keep a watch on a deleted directory
 and report nothing for a new directory of the same name, so the watcher
-compares the directory's identity (device, inode and birth time, since ext4
-reuses a freed inode at once, or volume and file index on Windows) when the parent reports it, on each read and when another watcher
-joins, and starts a new watch when it was replaced. `PathWatcherTests` run the
+compares the directory's identity when the parent reports it, on each read
+and when another watcher joins, and starts a new watch when it was replaced.
+The identity is the device, inode and birth time on Linux and macOS (ext4
+reuses a freed inode at once; Linux reads the birth time with `statx`), and
+the volume and file index on Windows. Writes inside the directory leave it
+unchanged. On a Linux file system that records no birth time, the identity
+takes the change time instead. A replacement is still found, but each entry
+created, renamed or deleted in the directory then restarts its watch. `PathWatcherTests` run the
 first five rows on Linux, Windows and macOS in CI, and check that an event,
 not a poll, reported each change; the network and limit rows follow the
 platforms' documentation.
@@ -5421,9 +6000,11 @@ and must return a task that covers all work requiring its resources.
   when `package.json` or a lock file changed since the last install, and when
   declared dependencies have no `node_modules`. If that install did not run or
   failed, install them with the frontend's package manager, or run
-  `dotnet runic doctor` to check the package manager and lock file. Set
-  `RunicApplicationFrontendInstallEnabled=false` when a workspace install owns
-  them.
+  `dotnet runic doctor` to check the package manager and lock file. In a
+  JavaScript workspace the install runs at the workspace root; see
+  [JavaScript workspaces](#javascript-workspaces). Set
+  `RunicApplicationFrontendInstallEnabled=false` only when something else
+  installs them.
 - **The build says only one ReactiveUI flavor can be used.**
   `Runic.Application.Views.ReactiveUI` and `Runic.Application.Views.ReactiveUI.Reactive`
   cannot both be referenced, and the `.Reactive` adapter needs

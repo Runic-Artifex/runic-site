@@ -111,15 +111,23 @@ export const creatorToggles: readonly CreatorToggle[] = Object.entries(symbols)
     defaultValue: symbol.defaultValue === 'true',
   }));
 
+/**
+ * Text parameters the creator leaves out: `--library` makes a solution of two
+ * projects, which the preview of the single-project layout does not show.
+ */
+const previewlessTexts = new Set(['library']);
+
 // Runic.Create offers the template's text parameters, such as
 // `--application-id`, as options and appends those given a value after the
-// toggles (TemplateText in TemplateOptionModel.cs).
+// toggles (TemplateText in TemplateOptionModel.cs). The creator offers those
+// it can preview.
 export const creatorTexts: readonly CreatorText[] = Object.entries(symbols)
   .filter(
     ([name, symbol]) =>
       symbol.type === 'parameter' &&
       symbol.datatype === 'text' &&
-      !symbolInfo[name]?.isHidden,
+      !symbolInfo[name]?.isHidden &&
+      !previewlessTexts.has(name),
   )
   .map(([name, symbol]) => ({
     symbol: name,
@@ -212,7 +220,7 @@ function optionPrinted(
 
 /**
  * Adds the template's Boolean and choice parameters that the selection leaves
- * out, such as `tests` or `angularBuild`, at their defaults, its computed symbols, such as `desktopHost`,
+ * out, such as `tests`, `angularBuild` or `library`, at their defaults, its computed symbols, such as `desktopHost`,
  * as `true` or `false`, and its `switch` generated symbols, such as
  * `nixHost`, in declaration order like the template engine.
  */
@@ -233,6 +241,12 @@ export function templateSymbols(
       !(name in result)
     )
       result[name] = symbol.defaultValue ?? symbol.choices![0].choice;
+    else if (
+      symbol.type === 'parameter' &&
+      symbol.datatype === 'text' &&
+      !(name in result)
+    )
+      result[name] = symbol.defaultValue ?? '';
     else if (symbol.type === 'computed')
       result[name] = String(evaluate(symbol.value ?? '', result));
     else if (symbol.type === 'generated' && symbol.generator === 'switch') {

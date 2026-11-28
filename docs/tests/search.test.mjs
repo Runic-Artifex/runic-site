@@ -164,8 +164,11 @@ const queries = {
 // and 212 KiB gzipped with the 0.22.0 guides (Runic DevKit for Visual Studio,
 // CS-WebUI pages in a JavaScript debugger, publish modes and their sizes, the
 // smallest executable, development-only views and Translations 0.14), which
-// need about 827 KiB raw and 213 KiB gzipped with the 0.22.0 API types.
-const budget = { raw: 864 * 1024, gzip: 224 * 1024 };
+// need about 827 KiB raw and 213 KiB gzipped with the 0.22.0 API types, and
+// from 864 KiB raw and 224 KiB gzipped with the 0.24.0 API types (the Views
+// codegen entry, command handles, interaction controllers and field members)
+// and guides, which need about 875 KiB raw and 225 KiB gzipped.
+const budget = { raw: 896 * 1024, gzip: 232 * 1024 };
 
 test('representative queries keep their top results within the budget', async () => {
   for (const [query, top] of Object.entries(queries)) {
