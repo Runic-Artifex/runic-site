@@ -36,6 +36,7 @@ export const guideNavigation: readonly GuideNavigationGroup[] = [
       'application/package-consumer.md',
       'application/migrations/wpf-incremental.md',
       'application/migrations/wpf-hybrid.md',
+      'application/migrations/wpf-views.md',
       'application/README.md',
       'application/guides/README.md',
       'application/guides/pages-and-navigation.md',
