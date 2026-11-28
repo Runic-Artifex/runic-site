@@ -187,6 +187,10 @@ packs the frontend into the application assembly instead of `www/`, and a host
 without `ContentRoot` serves it from there. The
 [Runic.Application.Views build properties](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md)
 change the frontend folder, the package manager and the build command.
+Since SDK `0.24.0`, a Linux CI job can build both projects with
+`EnableWindowsTargeting` and write their pages to a web bundle, from which the
+Windows job publishes without Node.js; see
+[Split CI across Linux and Windows runners](../guides/ci-mixed-runners.md#wpf-projects-on-linux).
 
 ## Place a `RunicViewHost`
 
