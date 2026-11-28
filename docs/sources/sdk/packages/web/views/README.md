@@ -276,6 +276,20 @@ The framework packages `@runic-artifex/react`, `@runic-artifex/vue`,
 clients with the component lifecycle. They are thin bindings over the
 controllers in [Framework bindings](#framework-bindings).
 
+### Clients from a ViewModel library
+
+A .NET library built with `RunicApplicationFrontendClientLibrary` generates its
+ViewModels' clients once, into a frontend package, with `runic-clients.ts`
+(every client, shared client and named type) and `runic-mocks.ts` (the mocks)
+as entries the package exports, such as `@acme/shared-ui/generated` (since
+0.24). An application that maps the library with
+`RunicApplicationFrontendClientModule` imports their page functions and types
+from that specifier instead of generating copies, and the package lists
+`@runic-artifex/views` as a peer dependency so the page loads one runtime.
+[Share ViewModels and their clients through a library](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#share-viewmodels-and-their-clients-through-a-library)
+covers the package, the application and the type check that catches a stale
+package.
+
 ### Package entries
 
 | Entry | For |
@@ -287,6 +301,7 @@ controllers in [Framework bindings](#framework-bindings).
 | `@runic-artifex/views/generated/wire` | Generated modules and generated `*.mock.ts` files: the wire decoders, imported as `import * as bridgeWire` |
 | `@runic-artifex/views/generated/mock` | Generated `*.mock.ts` files: `mockTypedView` and its spec types |
 | `@runic-artifex/views/experimental` | Experimental APIs ([docs/experimental.md](../../../docs/experimental.md#npm-packages)): [hosted regions](#hosted-regions-experimental), [components](#components-experimental). `onBridgeDraining` is a root export; 0.23 removed its deprecated re-export here |
+| `@runic-artifex/views/codegen` | Internal: the TypeScript emitter that writes generated clients from the [Views contract IR](../../../specs/application/contract-ir.md), version-locked to this runtime. The `Runic.Application.Views` build runs the frontend's copy with Node.js or Bun (since 0.24); this entry is not for application code |
 
 Every entry has `types`, `development`, `import` and `default` conditions (see
 [Development build](#development-build)); the package is ESM only. Application code imports the root entry and `/mock`. The `/experimental`
@@ -298,8 +313,9 @@ component mode from the `/component` entry, which it removed, to `/experimental`
 .NET packages: code that a release generated keeps working with the runtime of
 any later release of the same major, but their shape is not for hand-written
 code. A framework binding depends on the exact same release. Use the .NET and
-npm packages of one release together: a .NET host of another release is
-reported as a diagnostic with code `version`, and a client does not connect to a
+npm packages of one release together: a producer of another Runic release,
+which its `hello` reply names, is reported as a diagnostic with code `version`
+(see [Handshake](../../../specs/application/README.md#handshake)), and a client does not connect to a
 host of another Views protocol version (see
 [Errors and diagnostics](#errors-and-diagnostics)). A generated module passes the interaction, view request, operation and keyed
 collection runtimes to `connectView` only when its ViewModel has them, and
@@ -315,12 +331,20 @@ export condition) has the development tools that would otherwise run on every
 page: [Bridge-call reports and async stack tagging](#bridge-calls-in-the-browsers-developer-tools),
 with the C# handler timing and trace context that a followed call asks for and
 carries (the Views protocol features `handler-timing/1` and `trace-context/1`),
-and the Runic Translations [text channel](#translated-text) that updates an
-edited message in place, and the descriptions of connected clients that the
-bindings' DevTools labels show. The **production build** (`dist/`, the `import` and
+the Runic Translations [text channel](#translated-text) that updates an
+edited message in place, the descriptions of connected clients that the
+bindings' DevTools labels show, and (since 0.24) the **contract check**: with a
+.NET host of 0.24 or later (the Views protocol feature `view-contract/1`), a
+View whose generated client comes from another build of its ViewModel than the
+application's Bridge, such as a stale `generated/` folder or a frontend package
+built from an earlier library, fails to connect with a `BridgeError` that says
+the page and the application were generated from different builds, and one
+`contract` diagnostic that names the View and both contract fingerprints, before
+its state is decoded with the wrong members. The **production build** (`dist/`, the `import` and
 `default` conditions) leaves them out: a production bundle contains no
 call-reporting code, tags no call, creates no global for them, and its `hello`
-lists neither feature, so no request carries their members. Everything
+lists none of these features, so no request or reply carries their members, and
+a page connects without comparing contracts, as before 0.24. Everything
 else, including the development state inspector that Runic Inspect reads, is
 the same in both.
 
@@ -560,6 +584,9 @@ change, and `subscribe(listener)`, which returns an unsubscribe function.
   `failure` is the declared failure of the latest run; `error` stays the
   unexpected failure. Starting a run and `reset()` clear both, and a run
   superseded by a later run or by `reset()` sets neither.
+- `createCommandHandles({ client, handle, snapshots? })` makes the command handles of
+  a View on demand, which Angular's `injectCommands` and `useCommands` in React, Vue
+  and Svelte wrap; see [Command handles](#command-handles).
 - `createCollectionViewportController({ totalCount, rowHeight, overscan? })` has
   `attach(element)`, which follows the element's scroll position (once per
   animation frame) and size, and `update(options)`. `current` is the
@@ -638,10 +665,17 @@ How a field stays correct depends on what it calls:
 The generator emits a descriptor for each settable member of a View, `{View}Fields`:
 
 ```ts
+import { fieldMembers } from "@runic-artifex/views";
 import { EditorFields } from "./generated/editor.js";
-EditorFields.title; // { name: "title", kind: "text", read, write, checked, baseline, errors? }
-EditorFields.step;  // { name: "step", kind: "number", integer: true, … }
+EditorFields.title[fieldMembers]; // { name: "title", kind: "text", read, write, checked, baseline, errors? }
+EditorFields.step[fieldMembers];  // { name: "step", kind: "number", integer: true, … }
 ```
+
+A descriptor keeps what it knows of its member under the `fieldMembers` symbol, a key no field name can take, so the
+descriptors of the fields below a member keep their own names (`InvoiceFields.billing.name` is the field of
+`billing`'s `name`). `fieldDefinition(field)` returns those members, or a hand-written definition as it is. The
+bindings read them for you: pass the descriptor itself to `useField`, `injectField`, `bindField` and
+`createFieldController`.
 
 `kind` selects the field's text form:
 
@@ -671,7 +705,7 @@ without aliases, which `choices` repeats: `export const LayoutValues = ["List", 
 | `[RegularExpression]` | `pattern`, for the patterns a browser's `pattern` attribute (which compiles with the `v` flag) reads as .NET does: no inline options, named groups, lookbehind, `\A`/`\Z`/`\z`/`\G`, `\p`, `\d`/`\w`/`\b` (Unicode in .NET, ASCII in JavaScript), and in a character class no unescaped `( ) [ { } / \|`, lone `-` or doubled punctuators such as `&&`. Other patterns are left out; .NET still validates them |
 
 ```tsx
-const { maxLength, required } = EditorFields.title.constraints ?? {};
+const { maxLength, required } = fieldDefinition(EditorFields.title).constraints ?? {};
 <input {...title.inputProps} maxLength={maxLength} required={required} />
 ```
 
@@ -695,7 +729,7 @@ function constraintMessage(field: { readonly constraints?: BridgeFieldConstraint
 A page check is a hint: .NET still validates, and its errors still arrive in `errors`. For a member checked on the
 page, show the page's message in place of `errors`, so the same problem does not show twice.
 
-`read` and `write` are the member and its setter; `checked` and `baseline` its
+Of the members, `read` and `write` are the member and its setter; `checked` and `baseline` its
 checked write and `fieldBaseline`. A View with validation adds `errors(state)`: the member's messages from
 `{name}Errors`, or from `validation` at the member's path, followed by the messages below it, such as those of an
 object's members.
@@ -717,9 +751,10 @@ input.addEventListener("blur", () => title.commit());
 ```
 
 Without a framework, `bindField(element, client, field, options?)` does that wiring for an `<input>`, `<textarea>` or
-`<select>` (a checkbox for a boolean field): it creates the controller, follows the client's state, writes on `input`
-(`change` for a `<select>` or checkbox), nothing during IME composition, commits on blur and sets `aria-invalid`. It
-returns the controller; `dispose()` unwires it. `attachField(element, controller)` wires an element to a controller
+`<select>` (a checkbox for a boolean field), or for the radios of a group passed together: it creates the controller,
+follows the client's state, writes on `input` (`change` for a `<select>`, a checkbox or the radio that became
+checked), nothing during IME composition, commits on blur and sets `aria-invalid`. Each radio keeps its own `value`,
+its option, and is checked while that is the field's text. It returns the controller; `dispose()` unwires it. `attachField(element, controller)` wires an element to a controller
 that the page feeds itself, and `commitFields(...fields)` commits fields and rejects with the first failed field's
 error, so Save can follow:
 
@@ -727,6 +762,8 @@ error, so Save can follow:
 const title = bindField(document.querySelector("#title")!, editor, EditorFields.title, { commit: "pause" });
 const body = bindField(document.querySelector("#body")!, editor, EditorFields.body, { commit: "pause" });
 save.onclick = async () => { await commitFields(title, body); await editor.save(); };
+// <input type="radio" name="size" value="Small"> <input type="radio" name="size" value="Large">
+const size = bindField(document.querySelectorAll<HTMLInputElement>("input[name=size]"), editor, EditorFields.size);
 ```
 
 `current` has:
@@ -768,6 +805,11 @@ Options:
   written yet is written when the field is disposed. Use it where each write is an undo step or starts work in .NET.
   `commit()` resolves with the field's state once its writes settled, so a command that depends on the field can
   follow them and skip a failed write: `if ((await title.commit()).error === undefined) await editor.save()`.
+- `commit: "change"` writes the draft only on `commit()`, which blur calls, so the ViewModel's setter runs once, when
+  the user leaves the field. It is the mode a WPF port wants: WPF binds `TextBox.Text` with
+  `UpdateSourceTrigger=LostFocus`, and its setters often validate, normalize or start work. There is no timer, so
+  pass no `delay`; `bindField` and the framework bindings still write each choice of a checkbox, radio or `<select>` at once, as WPF's default `PropertyChanged` trigger does for those controls. A form's `submit()` and `commit()`, `commitAllFields()` and the runtime's flush before a
+  window close or a departure (`field-flush/1`) write the draft too, and so does disposing the field.
 - `checked: true` writes with the member's checked write instead of its setter. The write is checked against the
   value and version the field showed when the draft started and then against each receipt, so a change by another
   writer meanwhile is a conflict instead of being overwritten. Checked writes are one at a time.
@@ -879,6 +921,9 @@ InvoiceFields.address.street;          // a field of address's street, beside In
 InvoiceFields.lines.at(line.id).quantity; // a cell: the quantity of the row with that key
 ```
 
+A field or cell may have any name, also that of a descriptor member such as `name`, `read` or `errors`: since 0.24
+those members are under `fieldMembers`, so `InvoiceFields.billing.name` is the field of `billing`'s `name`.
+
 They are fields like the others, with every binding: `useField(invoice, InvoiceFields.lines.at(line.id).quantity)`,
 `injectField`, `bindField`, `createFieldController` and forms. `lines.at(key)` returns the same descriptors for the
 same key, so a binding keeps its field across renders, also when the row moves. Each such field:
@@ -980,6 +1025,60 @@ sign of a command per key or of an application-side copy of the state. See
 [the plugin guide](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/vite-plugin-runic)
 to turn it off. To test a field, type into it key by key against a slow mock
 ([Typing in tests](#typing-in-tests)).
+
+## Command handles
+
+A generated `<Name>Client` lists its commands, the ViewModel's published commands,
+as `<Name>CommandName`, such as `"refresh" | "archive"`. The list is type-only: the
+client's type carries it under the `viewCommands` key, which no client has at run
+time, and setters, `canX(input)`, `startX`, `recoverX`, `upload` and `dispose` are
+not in it. `CommandName<TClient>`, `CommandArguments<TClient, TName>` and
+`CommandResult<TClient, TName>` read it.
+
+The bindings make one command handle per name from it, so a component needs no
+`useCommand` or `injectCommand` per command:
+
+```ts
+// Angular
+readonly orders = injectView(this.page);
+readonly commands = injectCommands(this.orders);
+// <button (click)="commands.refresh.run()">Refresh</button>  <button (click)="commands.archive.run(row.id)">Archive</button>
+```
+
+`useCommands(view)` in React, Vue and Svelte does the same. A handle is made when the
+page first reads its name and kept for the component's lifetime, with the same `run`,
+`pending`, `error`, `failure` and `reset` as `useCommand`; each handle has its own
+`pending` and `error`. `run()` calls the client connected when it starts, and before
+the client connected it resolves to `undefined`. It never rejects: a failed run ends
+in `error`. A binding for another framework uses `createCommandHandles`: `handles.<name>`
+is `handle(controller, name)` for a `createCommandController` that runs
+`client()?.<name>(...args)`; `subscribe` reports each change of a handle's state, and
+`snapshots: true` makes a handle again after its state changed, as React's are.
+
+## Interactions as state
+
+`client.interactions.<name>.handle((input, { signal }) => answer)` suits a dialog service that returns a promise. A
+page that renders its dialog from state uses `createInteractionController`, which the bindings wrap as Angular's
+`injectInteraction` and `useInteraction` in React, Vue and Svelte:
+
+```ts
+const discard = createInteractionController<DiscardNoteRequest, boolean>();
+discard.setSurface(interactionSurface(editor, "confirmDiscard"));
+discard.subscribe(() => {
+  const request = discard.request;
+  dialog.hidden = request === undefined;
+  yes.onclick = () => request?.respond(true);
+});
+```
+
+`request` is the oldest open request, `{ input, respond(answer) }` (an `InteractionRequest`), or `undefined`; the
+same object while the request is open. Its `respond` answers that request only, and the next open request becomes
+`request`. It is ignored once the request has ended, so a double click or an answer that arrives after .NET stopped
+waiting never answers another request. A request ends when .NET stops waiting for it: its `signal` aborts when the
+command that asked was cancelled, the deadline passed, the window closed or the client disconnected. `setSurface`
+with another client, or `undefined`, removes the handler and ends the open requests, as `dispose()` does; .NET
+receives them as cancelled. `InteractionName<TClient>`, `InteractionInput<TClient, TName>` and
+`InteractionOutput<TClient, TName>` read the names and types from a generated client.
 
 ## Operation feedback and latest selection
 
@@ -1664,8 +1763,10 @@ reads it fails) and `version` for a .NET
 host whose `Runic.Application.Views` is of another release than this package
 (each once per Bridge; no other producer is compared), `revision-timeout` for a
 reply whose revision the route did not reach within five seconds (a producer bug;
-the client then reads a snapshot), and `stale-input`, which only
-`@runic-artifex/vite-plugin-runic` reports in development
+the client then reads a snapshot), `contract` for a View whose generated client
+comes from another build than the application's Bridge (the
+[development build](#development-build) only; the connection fails), and
+`stale-input`, which only `@runic-artifex/vite-plugin-runic` reports in development
 ([Text inputs](#text-inputs)). Each failure is delivered once. `@runic-artifex/vite-plugin-runic`
 forwards them to its DevTools dock during development. A call of a released
 View is expected around every navigation, so its `released` rejection reaches
@@ -2093,15 +2194,28 @@ entries, which define the element themselves.
   loopback origin, inside the element's closed shadow root. The page never gets a
   reference to the frame and cannot read or script it; style its border with
   `::part(frame)`. Children with `slot="fallback"` show while no guest page shows; a
-  child whose `slot` names a state (`waiting`, `loading`, `detached`, `ended`,
-  `unsupported`) shows instead in that state.
+  child whose `slot` names a state (`waiting`, `loading`, `failed`, `detached`, `ended`,
+  `unsupported`) shows instead in that state, and one with `slot="stalled"` in place of
+  the `loading` one while the region is stalled. A `failed` region without
+  `slot="failed"` content shows its `slot="fallback"` content.
+- **Loading.** The element shows its fallback content over the hidden frame until the
+  host says the guest's page connected (`hosted-region-loading/1`), then the frame
+  (`attached`): an engine also fires the frame's `load` for a navigation that failed,
+  and would show its error page. One second after a `load` without that word the region
+  is `stalled` (an attribute and a property; still `loading`). The host application
+  may give the region up (`failed`, with its reason as `failureReason`); `retry()` asks
+  it to load the region again, which it decides, and returns whether it asked: only a
+  `failed` region asks. A host of an earlier release says nothing of the guest's page:
+  the frame's `load` attaches the region, as before
+  ([loading and failure](../../../specs/application/README.md#loading-and-failure)).
 - **Attributes.** `name` (required, 1 to 64 ASCII letters, digits, `.`, `_` or `-`),
   `sizing` (`fill`, the default, where the page's layout sets the height and the guest
   scrolls inside, or `content-height`, where the guest's content sets it) and `label`,
   the region's accessible name, which overrides the guest page's title. Give a `fill`
-  region a height. The element reflects `state` and `focused` as attributes, and
-  dispatches `runicregionstatechange` (`detail: {state, previous}`) and
-  `runicregiontitlechange` (`detail: {title}`).
+  region a height. The element reflects `state`, `stalled` and `focused` as attributes,
+  and dispatches `runicregionstatechange` (`detail: {state, previous, stalled, reason}`,
+  also when only `stalled` or `reason` changed) and `runicregiontitlechange`
+  (`detail: {title}`).
 - **What it tells the host.** Its size, device pixel ratio, place in the viewport,
   visibility and focus, over the page's own Bridge (`hosted-regions/1`), never to the
   guest. Its place stays with the host, which uses it for context menus.

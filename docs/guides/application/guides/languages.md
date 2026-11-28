@@ -7,8 +7,8 @@ messages. This guide shows the application locale, the translated template,
 Runic's own text in English and German, and how to test the language.
 
 The text itself comes from
-[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.15.1/docs/guides/translations/runic-views.md)
-0.15.1 (SDK `0.22` used 0.14.0, SDK `0.21` 0.13.0, SDK `0.20` 0.12.0, SDK `0.19` 0.11.0, SDK `0.18` 0.10.0, SDK `0.17` 0.9.1). The core Runic packages don't depend on it: without a catalog, nothing
+[Runic Translations](https://github.com/Runic-Artifex/runic-translations-sdk/blob/v0.16.0/docs/guides/translations/runic-views.md)
+0.16.0 (SDK `0.23` used 0.15.1, SDK `0.22` 0.14.0, SDK `0.21` 0.13.0, SDK `0.20` 0.12.0, SDK `0.19` 0.11.0, SDK `0.18` 0.10.0, SDK `0.17` 0.9.1). The core Runic packages don't depend on it: without a catalog, nothing
 changes, and Runic's own text stays English.
 
 ## Start from the template
@@ -86,8 +86,8 @@ Since SDK `0.21.0` and Translations `0.13.0`, both check `Host` themselves
 under `server.allowedHosts: true`, and on Linux a write or an open from
 loopback is accepted only from the user who runs the dev server; macOS and
 Windows cannot tell local users apart. See
-[edit a translation on the page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/vite-plugin-runic/README.md#edit-a-translation-on-the-page),
-[Runic Inspect from another machine](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/web/vite-plugin-runic/README.md#runic-inspect-from-another-machine)
+[edit a translation on the page](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/vite-plugin-runic/README.md#edit-a-translation-on-the-page),
+[Runic Inspect from another machine](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/web/vite-plugin-runic/README.md#runic-inspect-from-another-machine)
 and [debugging](debugging.md#runic-inspect).
 
 ## One locale for the application
@@ -97,7 +97,7 @@ language for every Window. Windows that set none of their own switch with it,
 and Windows opened later start in it. `Follow` binds anything with a
 `SetLocaleAsync(locale, cancellationToken)`, such as a Runic Translations
 `TranslationContext`, so the C# catalog switches first. The
-[multi-window example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/examples/multi-window/README.md)
+[multi-window example](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/examples/multi-window/README.md)
 registers its catalog that way:
 
 ```csharp docs-test=source:examples/multi-window/ProjectServices.cs
@@ -193,7 +193,7 @@ export function startTranslations(initialLocale = navigator.language): () => voi
 }
 ```
 
-[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
+[Translated text](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#translated-text)
 in the Views README has the table for each framework, references of several
 catalogs and server rendering.
 
@@ -256,7 +256,7 @@ const resolveReference = transport.createReferenceResolver([{ transport, message
   English.
 
 The
-[Runic.Application.Views.Translations README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views.Translations/README.md)
+[Runic.Application.Views.Translations README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views.Translations/README.md)
 covers your own validation texts, the standard macOS menus, use without
 dependency injection, and the keys.
 

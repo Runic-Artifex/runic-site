@@ -9,8 +9,8 @@ traces in a local viewer. The [debugging guide](debugging.md) covers the other
 development tools.
 
 > Adapted from the SDK's
-> [tracing guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/docs/tracing.md)
-> at SDK `0.23.0`.
+> [tracing guide](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/docs/tracing.md)
+> at SDK `0.24.0`.
 
 Everything here is for development. The page side is in the development build
 of `@runic-artifex/views`, which `vite dev` resolves; a production build
@@ -40,7 +40,7 @@ the request and receiving its reply, which assumes both took equally long on
 the way. The custom tracks are Chromium's (installed Chrome or Edge, and
 WebView2); other engines get the same call reports in the development client,
 and the dock lists them, without the Performance track. The
-[Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/specs/application/README.md#handler-timing)
+[Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/specs/application/README.md#handler-timing)
 describes the `handler-timing/1` feature.
 
 ## One trace from the page to .NET
@@ -165,9 +165,9 @@ pages still get the C# handler timing.
   moment the page reached the reply's revision. The .NET span is a server span
   inside it.
 - The
-  [Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/specs/application/README.md#trace-context)
+  [Views protocol](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/specs/application/README.md#trace-context)
   describes the feature, and the
-  [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.23.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
+  [Views README](https://github.com/Runic-Artifex/runic-sdk/blob/v0.24.0/packages/dotnet/Runic.Application.Views/README.md#logging-and-telemetry)
   lists the spans and their tags.
 
 ## Troubleshooting

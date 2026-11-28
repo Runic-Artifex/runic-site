@@ -9,7 +9,20 @@ dotnet runic dev
 ```
 
 All commands find the single `.csproj` in the current directory; pass
-`--project path/to/App.csproj` (`-p`) otherwise. `--configuration` (`-c`)
+`--project path/to/App.csproj` (`-p`) otherwise. `dev`, `doctor`, `size` and
+`package` also start from a solution root: in a directory without one `.csproj`
+but with one solution (`.sln` or `.slnx`), or with `--project` naming a solution
+or its directory, they evaluate the solution's projects and take its one Window
+project (`RunicApplicationFrontendWindowProject=true`), and `dev`, `size` and
+`package` print `Solution: …/Acme.slnx, whose one Window project is
+Acme.App/Acme.App.csproj`. With several Window projects they list them and stop
+(`RAPPDEV1002`); choose one with `--project`. At a solution root, `dotnet runic`
+needs a tool manifest there: the template writes `.config/dotnet-tools.json`
+into the project folder, and `dotnet` looks for one in the current folder and
+its parents only. Move it to the solution root, or run
+`dotnet new tool-manifest` and `dotnet tool install dotnet-runic`
+there, so `dotnet runic` works from the root and from each project folder.
+`--configuration` (`-c`)
 selects the build configuration. `dotnet runic <command> --help` describes
 every option.
 
@@ -18,19 +31,30 @@ every option.
 host. It restores the .NET and JavaScript dependencies, builds the project, and
 runs the native Window alongside the frontend's Vite or Angular development
 server. While the development server runs, the build skips the production
-frontend build and leaves the development document in `www/`
-(`RunicApplicationFrontendBuildEnabled=false`, `RunicApplicationFrontendCopyEnabled=false`); the Views
-MSBuild targets still generate the typed TypeScript clients. `dotnet watch`
+frontend build of the project it serves and leaves the development document in
+`www/`: `dev` passes `RunicApplicationFrontendDevSessionProject` with the
+project's path, and only that project skips its frontend build and copy. The
+Views MSBuild targets still generate the typed TypeScript clients, and the
+projects it references, such as a client library, build their frontend packages,
+so a page that imports a compiled library package works from a fresh clone
+(since 0.24). While it runs, `dev` rebuilds those packages when they change, and
+keeps the page's last good build when one fails
+([Library packages under dev](#library-packages-under-dev)). `dotnet watch`
 restarts the Window after C# edits. `--no-restore`, `--no-frontend-watch`,
 `--no-dotnet-watch`, and `--dry-run` select parts of that loop; `--no-window`
 runs only the frontend, for a Window that your IDE starts under its debugger
-([Debug the Window in your IDE](#debug-the-window-in-your-ide)). `dev` installs
-the frontend packages itself and passes
-`RunicApplicationFrontendInstallEnabled=false`, so the build does not install
-them a second time (and `RunicApplicationFrontendDelivery=Files`, so a project
-that embeds its frontend serves it live while developing); with `--no-restore` nothing
-installs them, and a frontend that declares dependencies but has no
-`node_modules` stops with `RAPPDEV1008`. When `dotnet watch` restarts or `dev`
+([Debug the Window in your IDE](#debug-the-window-in-your-ide)). The build
+installs the frontend packages, at the JavaScript workspace root for a workspace
+member, only when the lock file, a `package.json` or the package manager changed,
+so a second `dev` start runs no install
+([Fast iteration](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#fast-iteration)).
+`dev` also passes `RunicApplicationFrontendDelivery=Files`, so a project that
+embeds its frontend serves it live while developing. With `--no-restore` nothing
+installs them (`RunicApplicationFrontendInstallMode=Never`), and with
+`--no-build` no build runs to install them; then a frontend that declares
+dependencies but has no `node_modules`, in its folder or at its workspace root,
+stops with `RAPPDEV1008`. With Views targets older than the tool, `dev` warns
+with `RAPPDEV1019` and installs the packages itself, as before 0.24. When `dotnet watch` restarts or `dev`
 stops the Window, the application's expected exit code after SIGTERM or Ctrl+C
 (143, 130) is not reported; any other exit code still is. Application
 arguments after `--` are passed to the Window process. When a restore, install
@@ -93,6 +117,11 @@ its own server process is still running. The plugin and the tool must come from
 the same release; an older plugin does not answer, and readiness times out with
 `RAPPDEV1007`.
 
+Readiness also requires the entry module to come back as JavaScript. Vite answers
+a path that is not below its root with its `index.html` fallback; `dev` then
+stops with `RAPPDEV1007`, naming the entry and Vite's root, instead of giving the
+window an HTML page as its entry module.
+
 A Vite or Angular development server also gets `RUNIC_APPLICATION_DEV_SOURCE_MAP`
 (0.20): the path of the development source map that the Bridge generator writes
 to the project's intermediate directory (`obj/<Configuration>/<TargetFramework>/runic-bridge/sources.json`),
@@ -134,7 +163,8 @@ Since 0.11, `dev` takes these options of `dotnet run` and `dotnet build`:
 
 | Option | Effect |
 | --- | --- |
-| `--launch-profile <name>` | Runs the Window with that profile from `Properties/launchSettings.json`, so its `environmentVariables` and `commandLineArgs` apply, under `dotnet watch` too. Without it the Window runs with `--no-launch-profile`, as before. A profile's variables replace `dev`'s defaults and `-e` values of the same name. |
+| `--launch-profile <name>` | Runs the Window with that profile from `Properties/launchSettings.json`, so its `environmentVariables` and `commandLineArgs` apply, under `dotnet watch` too. Since 0.24 `dev` uses the first `Project` profile without it, as `dotnet run` does, and prints `[dev] Launch profile: <name> (the first Project profile; …)`. A profile's variables replace `dev`'s defaults; a `-e` value of a name the profile sets is passed to `dotnet run -e`, so it wins. |
+| `--no-launch-profile` | Runs the Window without a launch profile, as `dev` did before 0.24. Cannot be combined with `--launch-profile` or `--no-window`. Since 0.24. |
 | `--no-build` | Skips `dev`'s own .NET restore and build, as `dotnet run --no-build` does, and starts from the existing build output; build the project with the same `--configuration` first. The frontend packages are still installed unless you pass `--no-restore`. `dotnet watch` still builds after C# edits. |
 | `-e`, `--environment NAME=VALUE` | Sets an environment variable for the Window process, as `dotnet run -e` does; repeat it for several. It wins over the defaults in the table below, so `-e DOTNET_ENVIRONMENT=Staging` runs the Window in `Staging`. The variables `dev` uses to describe the development server (`RUNIC_APPLICATION_*` below) are refused with `RAPPDEV1012`, and a value without `=` with `RAPPDEV1011`. `--dry-run` prints the names, never the values. |
 | `-v`, `--verbosity <level>` | Passes the MSBuild verbosity (`q[uiet]`, `m[inimal]`, `n[ormal]`, `d[etailed]` or `diag[nostic]`) to the restore, the build and `dotnet watch`. |
@@ -184,9 +214,9 @@ tells you to run `dotnet runic dev` or `dotnet restore`. The browser check
 follows the referenced host: a Runic Desktop project needs no browser, and a
 missing browser is only a warning for a CS-WebUI project because CS-WebUI falls
 back to the platform WebView. Only browser smoke checks require Chromium.
-The .NET SDK passes at a certified version: SDK 10.0.403, or SDK 11.0.100,
+The .NET SDK passes at a certified version: SDK 10.0.404, or SDK 11.0.100,
 which builds `net10.0` applications too (0.18). It warns for any other SDK from
-10.0.403 on, such as a newer patch or an uncertified newer major version, and
+10.0.404 on, such as a newer patch or an uncertified newer major version, and
 fails for an older SDK or one that cannot build the target framework. A newer
 major SDK does not bring the runtime that a `net10.0` application runs on, so
 `dotnet-runtime` checks with `dotnet --list-runtimes` that the .NET 10 runtime
@@ -274,6 +304,20 @@ Since 0.11, two more checks warn without failing:
   The template's packaging script applies the same rule. Another value warns;
   a project without `ApplicationId` passes.
 
+`dotnet runic doctor --bundle <dir>` (since 0.24) also checks a web bundle that
+a publish with `package --frontend-bundle` would use, as its
+[`web-bundle`](#web-bundle) check. A build that takes its pages from a web
+bundle runs no install, frontend build or client emission, so it needs neither
+Node.js nor Bun. With `--bundle`, or when the project builds with
+`RunicApplicationFrontendPrebuiltDirectory` (from the project or the
+environment), doctor therefore reports `javascript-runtime`, `package-manager`,
+`lock-file`, `frontend-workspace`, `package-manager-agreement`,
+`frontend-dependencies`, `client-modules` and `views-dedupe` as not needed
+(`SKIP` with the reason, status `skip` in JSON) and checks the bundle. Skipped
+checks never reach a `--fail-on` threshold, so on a target-OS publish runner
+without Node.js the exit code follows the other checks and `web-bundle`
+(#1421). Without either, doctor runs those checks as before.
+
 ### Deployment checks for a target
 
 `dotnet runic doctor --runtime <rid>` (also `--rid` or `-r`) adds checks for
@@ -347,7 +391,8 @@ The payload type is `runic.application.tool.doctor/1`:
       "properties": {
         "passed": { "type": "integer", "minimum": 0 },
         "warnings": { "type": "integer", "minimum": 0 },
-        "failed": { "type": "integer", "minimum": 0 }
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0, "description": "Checks with status skip. Added in 0.24." }
       }
     },
     "checks": {
@@ -358,7 +403,7 @@ The payload type is `runic.application.tool.doctor/1`:
         "required": ["id", "status", "message", "remediation", "helpUri"],
         "properties": {
           "id": { "type": "string", "description": "Stable check identifier, for example dotnet-sdk, lock-file or browser." },
-          "status": { "enum": ["pass", "warn", "fail"] },
+          "status": { "enum": ["pass", "warn", "fail", "skip"], "description": "skip (added in 0.24): the check does not apply, such as the JavaScript checks with a prebuilt frontend; the message says why." },
           "message": { "type": "string" },
           "remediation": { "type": ["string", "null"], "description": "How to fix a warn or fail check; null when nothing is needed." },
           "helpUri": { "type": "string", "format": "uri", "description": "The check's section of this README at the release, under Doctor checks; its anchor is the check identifier. Added in 0.20." }
@@ -378,12 +423,15 @@ diagnostics are warnings. The envelope replaces the message and drops the
 `arguments` (`[id]`) of a diagnostic whose text contains a path, but it never
 redacts the message key, which always names the check. `payload.checks` is the
 complete list.
-Check identifiers are `dotnet-sdk`, `dotnet-runtime`, `views-window`, `javascript-runtime`,
-`package-manager`, `lock-file`, `compatibility-set`, `views-package-versions`,
+Check identifiers are `dotnet-sdk`, `dotnet-runtime`, `windows-targeting`, `views-window`, `javascript-runtime`,
+`package-manager`, `lock-file`, `frontend-workspace`, `package-manager-agreement`,
+`frontend-dependencies`, `client-modules`, `views-dedupe`, `web-bundle`, `compatibility-set`, `views-package-versions`,
+`launch-arguments`,
 `application-id`, `frontend-dev-server`, `vite-config`, `vite-entry`,
 `browser`, `views-hosts`, `desktop-runtime`, `wpf-runtime`, `gtk4-profile` and
 `platform-services`; `views-package-versions` and `application-id` were added
-in 0.11, and `dotnet-runtime` in 0.18. New identifiers may appear in later releases. With `--runtime`, the payload also lists
+in 0.11, `dotnet-runtime` in 0.18, and `windows-targeting`, `frontend-workspace`,
+`package-manager-agreement`, `frontend-dependencies`, `client-modules`, `views-dedupe`, `web-bundle` and `launch-arguments` in 0.24. New identifiers may appear in later releases. With `--runtime`, the payload also lists
 `target-rid`, `target-runtime-identifiers`, `target-publish` and
 `target-presentation`.
 
@@ -391,6 +439,19 @@ in 0.11, and `dotnet-runtime` in 0.18. New identifiers may appear in later relea
 
 Each check has a section here; `helpUri` in the JSON payload links it at the
 release, with the check identifier as the anchor.
+
+#### `windows-targeting`
+
+Only for a project of a Windows target framework, such as a WPF project on
+`net10.0-windows`, when doctor runs on Linux or macOS. The .NET SDK builds such
+a project there only with `EnableWindowsTargeting=true`; without it the restore
+fails with `NETSDK1100`. Fails without the property, with this line for the
+application's `Directory.Build.props` (or its project file) as the fix, and
+passes with it. Either way the application runs only on Windows. Added in 0.24.
+
+```xml
+<EnableWindowsTargeting Condition="'$(EnableWindowsTargeting)' == '' and !$([MSBuild]::IsOSPlatform('Windows'))">true</EnableWindowsTargeting>
+```
 
 #### `views-window`
 
@@ -400,7 +461,7 @@ Views Window opt-in that `dev` needs too.
 #### `dotnet-sdk`
 
 The .NET SDK that builds the project: passes at a certified version, warns for
-another one from 10.0.403 on, and fails for an older SDK or one that cannot
+another one from 10.0.404 on, and fails for an older SDK or one that cannot
 build the project's target framework. See the paragraph on the .NET SDK above.
 
 #### `dotnet-runtime`
@@ -412,21 +473,122 @@ project is self-contained or rolls forward to a newer major version. Added in
 
 #### `javascript-runtime`
 
-Node.js, or Bun for a Bun frontend: fails when it is missing or older than the
-certified version, and warns for a newer release, Node 26 included.
+Node.js, or Bun for a Bun frontend or workspace: fails when it is missing or
+older than the certified version, and warns for a newer release, Node 26
+included.
 
 #### `package-manager`
 
-The package manager that the frontend's `packageManager` field or lock file
-selects (npm, pnpm or Bun): fails when it is unavailable or outside the
-supported range, and warns for another supported version. The supported range
+The package manager that installs and builds the frontend (npm, pnpm or Bun),
+chosen as the build chooses it: `RunicApplicationFrontendPackageManager`, then
+the JavaScript workspace root's `packageManager` field or lock file, then the
+frontend's own, then npm. Before 0.24 doctor read only the frontend's folder,
+so a member of a Bun workspace was checked for npm. Fails when the manager is
+unavailable or outside the supported range, and warns for another supported
+version or one other than the version that `packageManager` declares. The supported range
 is the certified version or a later release of its major version; for npm also
 npm 11.12.1 or a later npm 11, the npm that Node 24 and 26 ship (0.22).
 
 #### `lock-file`
 
 Fails when the frontend has no lock file of its package manager, which
-reproducible installs need.
+reproducible installs need. In a JavaScript workspace the lock file is the
+root's, where the build's install runs.
+
+#### `frontend-workspace`
+
+The JavaScript workspace that installs the frontend: the nearest folder above
+it whose `package.json` has `workspaces`, or that has `pnpm-workspace.yaml`, or
+`RunicApplicationFrontendWorkspaceRoot`, as the build finds it (see
+[JavaScript workspaces](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#javascript-workspaces)).
+Passes for a member of the workspace, and for a frontend that is its own root.
+Fails when the root's workspaces leave the frontend out, which the build
+reports as `RUNICBRIDGE087`. Warns for a frontend with its own lock file below
+a workspace, which installs on its own (unless
+`RunicApplicationFrontendWorkspaceRoot=none` says so), and when doctor could
+not read the workspace, for example before the first restore of a project that
+takes the Views targets from its packages. Added in 0.24.
+
+#### `package-manager-agreement`
+
+That one package manager is named throughout: the workspace root's
+`packageManager` and its lock files, `RunicApplicationFrontendPackageManager`,
+and the `packageManager` of the frontend, the workspace's members and the
+packages that the page depends on. Fails when `packageManager` names another
+manager than the root's only lock file, and when a member declares another
+manager than the workspace's (the build's `RUNICBRIDGE089`). Warns for lock
+files of several managers at the root, for a property that differs from the
+workspace's manager, and for a member with a lock file of its own, which the
+workspace's install does not read. Added in 0.24.
+
+#### `frontend-dependencies`
+
+The frontend packages that the page depends on: client libraries' packages and
+workspace packages that no .NET project owns, read without a build from
+`RunicViewsGetFrontendDependencies` and the frontend graph it resolves, as
+`dev` reads them. Passes when every compiled package's `exports` exist and
+every source package's do. Warns for a compiled package (one with a `build`
+script) that is not built yet, since `dotnet build` and `dev` build it. Fails
+when a compiled package is missing its exports and its build is off
+(`RunicApplicationFrontendBuildEnabled=false`) or has no command, and when a
+source package exports a file that does not exist, since nothing writes it.
+Warns when doctor could not read the packages. Added in 0.24.
+
+#### `client-modules`
+
+Each specifier that the page imports from a library or workspace package
+resolves from the frontend, as Vite resolves it: the `Specifier` of every
+`RunicApplicationFrontendClientModule`, and every package of
+`frontend-dependencies` that the frontend's `package.json` declares. Only for a
+page that imports such a package. Doctor follows `node_modules` from the
+frontend up to the workspace root and the package's `exports` (with Vite's
+`import`, `module`, `browser`, `development`, `production` and `default`
+conditions), or its `main` without `exports`.
+
+- Passes when each resolves to a file that exists, and lists them. A specifier
+  that no installed package has passes through a tsconfig `paths` alias
+  (`tsconfig.json` or `tsconfig.app.json`) when the Vite configuration has an
+  alias for the package, as in the shared library clients example.
+- Fails when the package is not in `node_modules` (the fix runs the install at
+  the root, or adds `"@acme/shared-ui": "workspace:*"` to the frontend's
+  dependencies), when its `exports` don't name the subpath (the fix adds it), when
+  the file the package names does not exist and no build writes it, and for a
+  relative `Specifier` (`RUNICBRIDGE082`).
+- Warns before the first install, while the package's build has not written
+  the file yet, for a `paths` alias that the Vite configuration lacks, and when
+  `node_modules` holds another copy of the package than the workspace's, such
+  as a published version.
+
+Added in 0.24.
+
+#### `views-dedupe`
+
+Only when a package that the page depends on is linked into the frontend (a
+workspace or folder package) and its `package.json` lists
+`@runic-artifex/views`. Vite resolves the package's imports from its own
+folder, which can hold another copy of the runtime than the frontend's.
+Passes when the Vite configuration lists `@runic-artifex/views` in
+`resolve.dedupe`, and warns otherwise, naming both copies when the install has
+two. Doctor reads the configuration's text, so a `dedupe` list that the
+configuration builds elsewhere is not seen. The fix:
+
+```ts
+export default defineConfig({ resolve: { dedupe: ["@runic-artifex/views"] } });
+```
+
+Added in 0.24.
+
+#### `web-bundle`
+
+Only with `doctor --bundle <dir>`, or for the bundle that
+`RunicApplicationFrontendPrebuiltDirectory` names (since 0.24). Checks a web bundle offline, as
+`package --frontend-bundle` and the publishing build use it: the manifest's
+format (`rax.web-bundle/1`) and required members, that each entry's folders
+exist inside the bundle, that each page hashes to the files the manifest
+records (a truncated download), and that the bundle has an entry for the
+project's assembly. Fails otherwise; the fix writes the bundle again with
+`dotnet runic bundle`. The View fingerprints need this build's contract IR, so
+the publish checks them (`RUNICBRIDGE094`).
 
 #### `compatibility-set`
 
@@ -440,6 +602,34 @@ their own between trains, so a version older than the train's or of another
 line (minor version before 1.0) only warns. Every other package is not
 checked, whatever its name, such as `RunicArtifex.DynamicData` and
 `RunicArtifex.ReactiveUI.Validation` (0.22). Warns before the first restore.
+
+#### `extensions`
+
+Checks the tool extensions that `dotnet runic <name>` runs (see
+[Tool extensions](#tool-extensions)), found from the project directory as
+dispatch finds them. Each one reports its name, version and protocol with `--extension-info`,
+or only its version with `--version` when it predates that option. Fails for
+another extension protocol or a release line older than the compatibility
+set's Translations release (minor version before 1.0). Warns for an older
+release of that line, for a later line (Translations releases between trains),
+or for a tool that reports no version. The remediation is the
+`dotnet tool update` command. Passes when no extension is installed.
+Added in 0.24.
+
+#### `launch-arguments`
+
+Compares the Window's arguments of the evaluated configuration (`--configuration`,
+Debug by default) on each surface: the project's `StartArguments` and the
+`commandLineArgs` of the `Project` profiles in `Properties/launchSettings.json`.
+Warns when both are set, naming each such profile with what `dotnet run` passes
+(the project's only) and what `dotnet runic dev`, Visual Studio and Runic DevKit
+pass (both, the project's first), as `dev`'s `RAPPDEV1020` does. Also warns
+when `launchSettings.json` cannot be read, and when a profile's `rax` object
+has a key or value that Runic DevKit does not read: `dev` is `"no-window"` or
+`"off"`, `page` is `true` or `false`, and `devArguments` is an array of
+strings. Otherwise passes, with the arguments and the first profile. See
+[Arguments for Debug builds](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/debugging.md#arguments-for-debug-builds).
+Added in 0.24.
 
 #### `views-package-versions`
 
@@ -464,8 +654,10 @@ file is missing.
 
 #### `vite-entry`
 
-With a Vite development server, fails when the configured entry module is
-missing or not a root-relative path.
+With a Vite development server, fails when the configured entry module does not
+start with `/` or does not exist below Vite's root, which doctor takes from
+`RunicApplicationFrontendViteRoot` (default: the frontend directory; see
+[project properties](#project-properties)).
 
 #### `browser`
 
@@ -520,6 +712,66 @@ toolchain that a Native AOT publish needs.
 With `--runtime`: the native runtime that target machines need for the host's
 window.
 
+## Library packages under dev
+
+A page can import frontend packages of other projects: a client library's package
+(`RunicApplicationFrontendClientLibrary`) or a JavaScript workspace package that
+no .NET project owns. `dev`'s build builds them, as `dotnet build` does
+([Library packages](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#library-packages)).
+After the build, `dev` reads them with `dotnet msbuild <project>
+-getTargetResult:RunicViewsGetFrontendDependencies` and the build's
+`obj/runic/frontend-graph.json`. It runs that query only when the build listed
+packages in `obj/runic/frontend-dependencies.txt`. Since 0.24:
+
+- **At the start**, a package build that fails stops `dev` with `RAPPDEV1018` and the
+  build's error, such as `shared-ui/src/index.ts(3,1): error TS1005`. So does a
+  compiled package whose exported files are missing after the build. The message
+  names the missing file and why it is missing: the package's build is off
+  (`RunicApplicationFrontendBuildEnabled=false`), its build didn't write the file,
+  or `--no-build` ran no build.
+- **While `dev` runs**, it watches each compiled package whose build is on:
+  - A package with a `watch` script runs it (`bun run --bun watch`), with its
+    output prefixed by the package's folder name (`[shared-ui]`).
+  - Otherwise, `dev` reruns the package's build (`bun run --bun build`). It runs
+    300 ms after a file of the package stops changing. `node_modules`, `bin`, `obj`,
+    hidden folders, the package's output folders and `*.tsbuildinfo` files don't
+    count.
+
+  Vite sees the new output and reloads the page. A source package (no `build`
+  script) needs no watcher, because Vite follows the workspace link and watches its
+  sources.
+- **A failed rebuild keeps the page.** `dev` copies the package's output folders
+  (its `exports` outside `src/`, such as `dist/`) aside before a rebuild. When the
+  build fails or doesn't write an exported file, `dev` prints
+  `<owner project> : error RAPPDEV1018: [shared-ui] …` and puts that copy back, so
+  the page keeps the last good build. The next change rebuilds the package. A watch
+  script writes its own output, so `dev` can only report it: a located error in
+  its output (`src/x.ts(3,1): error TS1005: …`) is a `RAPPDEV1018` line. The
+  package counts as built again once its outputs change with no new error. With
+  `tsc -w`, set `noEmitOnError` to keep its last good output. A watch script that
+  exits is reported the same way, and `dev` then reruns the package's build on
+  changes instead.
+- **Fail fast.** When the Vite development server answers the application entry
+  with HTTP 500 twice, `dev` stops at once with `RAPPDEV1007` and Vite's error, for
+  example `[vite:import-analysis] Failed to resolve import "@acme/shared-ui" from
+  "src/main.ts"`. When the import names a dependency package, `dev` adds the
+  package's state: "@acme/shared-ui is the frontend package of SharedUi: it has not
+  been built (shared-ui/dist/index.js is missing)". A development server that exits
+  reports the first error line of its output.
+- **Repeated lines.** The development server's output and the package watchers'
+  output show each line once per 10 s, ignoring a leading clock time and colours.
+  Every 2 s, `dev` prints how often each held-back line came, for example
+  `[vite] (repeated 1,106 more times) [vite] Internal server error: …`.
+- **The package manager** of the development server is the workspace's, as in the
+  build: `RunicApplicationFrontendPackageManager`, else the `packageManager` of
+  the workspace root (the nearest folder above the frontend whose `package.json` has
+  `workspaces`, or that has `pnpm-workspace.yaml`), then the root's lock file, then
+  the frontend's own. A frontend with a lock file of its own, or
+  `RunicApplicationFrontendWorkspaceRoot=none`, is its own root.
+
+The [session file](#session-file) lists the packages and their state as
+`dependencies`.
+
 ## Debug the Window in your IDE
 
 Since 0.20, `dotnet runic dev --no-window` runs only the frontend (its Vite or
@@ -552,6 +804,17 @@ the options that describe how `dev` starts the Window (`RAPPDEV1014`).
    IDE task. It prints `[dev] Ready` when the frontend is served.
 2. Start the Window with the IDE's debugger (F5) from a launch profile with
    `DOTNET_ENVIRONMENT=Development`.
+
+The Window gets the project's arguments and those of its launch profile, which
+each IDE combines in its own way. `dev` passes both too, the project's first:
+when the project sets `StartArguments` and the profile `commandLineArgs`,
+`dotnet run` alone would drop the profile's, so `dev` passes them after `--`
+itself, before the arguments of `dev -- <args>`, and warns with `RAPPDEV1020`.
+`[dev] Window arguments:` lists each part, also with `--dry-run`, and doctor's
+[`launch-arguments`](#launch-arguments) check compares the surfaces. Set an argument for Debug builds only, such as
+`/mock`, in a Debug-conditioned `StartArguments`, which every IDE and `dev`
+read; [Arguments for Debug builds](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/debugging.md#arguments-for-debug-builds)
+shows how and lists which surface reads which.
 
 Since 0.20, projects from the `runic-app` template have that launch profile,
 named after the project, and with `--editor vscode` VS Code tasks and
@@ -1073,7 +1336,10 @@ stays), deletes `dev-frontend` and `dev-pages/`, touches `dev-stopped` and
 exits with 130. The next build copies the frontend's pages back. A process
 killed by force does none of this: its development pages stay until the next
 build, a build within 30 seconds still keeps them, and the session file keeps
-its state.
+its state. The next `dev` checks the session file when it starts (see
+[Session file](#session-file)) and, before its first build, removes the
+`dev-frontend` and `dev-pages/` of a `dev` that no longer runs, so its own build
+installs and builds the frontend (since 0.24).
 On Windows, the frontend's development server or watcher runs in a Job object
 with everything it starts (the package manager, Node.js below it and the
 `runic-translations serve` that the Vite plugin starts), so the stop ends all of
@@ -1126,9 +1392,15 @@ process it started: the shallowest process that runs the project's program
 250 ms (every second on macOS, which runs `ps`), so the line follows the start
 by up to that long.
 
-A VS Code background task can wait for `Ready`, and the same task gets `dev`'s
-failures and the errors of the first build and of each rebuild in the Problems
-panel, as the template's `.vscode/tasks.json` does:
+A VS Code background task can wait for `Ready`, and while `dev` runs the same
+task gets `dev`'s failures and the errors of each build in the Problems panel,
+as the template's `.vscode/tasks.json` does. VS Code removes a background
+task's problems when its process ends, so a failure that ends `dev` (a failed
+first build, `RAPPDEV1018`) would leave Problems empty. Since 0.24 `dev` writes
+that failure into the [session file](#session-file) (`failure`) before it
+exits, and Runic DevKit shows it in Problems and its dependency tree, however
+the task was started (F5's `preLaunchTask`, Terminal > Run Task or DevKit's
+**Start dotnet runic dev**). Without DevKit it stays in the task's terminal:
 
 ```jsonc
 // .vscode/tasks.json
@@ -1142,12 +1414,13 @@ panel, as the template's `.vscode/tasks.json` does:
       "args": ["runic", "dev"],
       "isBackground": true,
       "problemMatcher": {
-        // $msCompile's pattern after dev's optional child-process label
+        // $msCompile's pattern after dev's optional child-process label; the file holds
+        // no ": " and the subcategory no colon, so a failure sentence is not a file
         "owner": "msCompile",
         "applyTo": "allDocuments",
         "fileLocation": "absolute",
         "pattern": {
-          "regexp": "^(?:\\[(?:host|app|vite)\\] )?\\s*(?:\\s*\\d+>)?(\\S.*?)(?:\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\))?\\s*:\\s+(?:(\\S+)\\s+)?((?:fatal +)?error|warning|info)\\s+(\\w+\\d+)?\\s*:\\s*(.*)$",
+          "regexp": "^(?:\\[(?:host|app|vite)\\] )?\\s*(?:\\s*\\d+>)?(\\S(?:(?!:\\s).)*?)(?:\\((\\d+|\\d+,\\d+|\\d+,\\d+,\\d+,\\d+)\\))?\\s*:\\s+(?:([^\\s:]+)\\s+)?((?:fatal +)?error|warning|info)\\s+(\\w+\\d+)?\\s*:\\s*(.*)$",
           "file": 1, "location": 2, "severity": 4, "code": 5, "message": 6
         },
         "background": {
@@ -1177,7 +1450,10 @@ first build's lines come as the build prints them. The lines of a process that
 `[host] /path/to/App/CounterViewModel.cs(18,5): error CS1002: ; expected`
 (`[app] ` with `--no-dotnet-watch`; the Vite development server's lines follow
 `[vite] `). VS Code's built-in `$msCompile` takes `[host] /path/…` for the
-file, so the task above uses its pattern after an optional label.
+file, so the task above uses its pattern after an optional label. `dev` also
+prints a failure as a sentence (`…, so dev did not start: /path/to/index.ts(12,14): error TS2322: …`),
+which `$msCompile` would file under the sentence. So in the task's pattern the
+file holds no `": "` and the subcategory before `error` no colon.
 
 Since 0.23, a frontend module that Vite cannot compile (a TSX syntax error, an
 import that does not resolve) is also one such line per error, from the Runic
@@ -1195,7 +1471,7 @@ type check: a type error that Vite compiles is not one. This pattern matches
 all of them, for other tools:
 
 ```text
-^(?:\[(?:host|app|vite)\] )?\s*(?:\d+>)?(?<file>\S.*?)(?:\((?<line>\d+)(?:,(?<column>\d+))?(?:,\d+,\d+)?\))?\s*:\s+(?:\S+\s+)?(?<severity>error|warning)\s+(?<code>[A-Za-z]+\d+)\s*:\s*(?<message>.*?)(?:\s+\[[^\]]+\])?$
+^(?:\[(?:host|app|vite)\] )?\s*(?:\d+>)?(?<file>\S(?:(?!:\s).)*?)(?:\((?<line>\d+)(?:,(?<column>\d+))?(?:,\d+,\d+)?\))?\s*:\s+(?:[^\s:]+\s+)?(?<severity>error|warning)\s+(?<code>[A-Za-z]+\d+)\s*:\s*(?<message>.*?)(?:\s+\[[^\]]+\])?$
 ```
 
 ### Session file
@@ -1207,7 +1483,11 @@ file by default. A project that sets `BaseIntermediateOutputPath` (for example i
 `dotnet msbuild <project> -getProperty:BaseIntermediateOutputPath` prints that
 folder. `dev` writes the file when it starts, and rewrites it when the
 development server is ready and each time the Window process starts or exits.
-When `dev` ends, the file stays with `"state": "stopped"`. A `dev` that is
+When `dev` ends, the file stays with `"state": "stopped"`; since 0.24, when a
+failure stopped it, the same write records that failure in `failure`, so an IDE
+can show it after `dev` has exited (a failure before `dev` evaluated the
+project, such as a project that does not exist, has no session file to go
+into). A `dev` that is
 killed (an IDE that quits while its task runs, `kill -9`, a closed terminal)
 can't write that, so the file keeps its last state. Before trusting `"starting"`
 or `"ready"`, a reader checks that `dev` still runs. A process with the
@@ -1298,7 +1578,43 @@ same project write the same file; the later one wins. `--dry-run` writes none.
   // The unpacked Runic DevTools extension beside this tool, for Load unpacked or a browser's --load-extension;
   // null when the tool has none. Since 0.21.
   "devtoolsExtension": "/home/me/.nuget/packages/dotnet-runic/0.21.0/tools/net10.0/any/devtools-extension",
-  "devtoolsExtensionId": "cddbfcinbkaindmfgcfdgapddkjeadgh" // its fixed id, null without the extension; since 0.21
+  "devtoolsExtensionId": "cddbfcinbkaindmfgcfdgapddkjeadgh", // its fixed id, null without the extension; since 0.21
+  // Since 0.24: the frontend packages that the page depends on, dependencies first (Library packages under dev).
+  // Empty until dev has read them after the build, and for a page that imports none.
+  "dependencies": [
+    {
+      "package": "@acme/shared-ui",          // its package.json name, or null
+      "directory": "/path/to/shared-ui",
+      "kind": "compiled",                    // "compiled" (it has a build script) or "source"
+      "owner": "/path/to/SharedUi/SharedUi.csproj", // the .NET project that owns it, or null for a workspace package
+      "ownerName": "SharedUi",
+      "specifier": "@acme/shared-ui/generated", // what a RunicApplicationFrontendClientModule maps to it, or null
+      "buildCommand": "bun run --bun build", // null when dev does not build it
+      "watchCommand": null,                  // its watch script's command, when dev runs it
+      "exports": ["/path/to/shared-ui/dist/index.js"],
+      "state": "built",   // "built", "building", "failed", "missing-output", "source" or "not-built" (its build is off)
+      "watch": "rebuild", // "script" (its watch script), "rebuild" (dev reruns its build), "vite" (a source package) or "none"
+      "message": null     // the last failure while state is "failed"
+    }
+  ],
+  // Since 0.24: why dev stopped, when a failure stopped it (D087), written with "state": "stopped" in the same write;
+  // null while dev runs and after a stop without a failure (Ctrl+C, the IDE's stop, a Window that exited normally).
+  // The next dev's file starts with null again.
+  "failure": {
+    "code": "RAPPDEV1018",   // dev's code, as in its diagnostic line and the JSON fault
+    "message": "A frontend package that the page depends on failed to build, so dev did not start: /path/to/shared-ui/src/index.ts(12,14): error TS2322: Type 'string' is not assignable to type 'number'.",
+    "project": "/path/to/SharedUi/SharedUi.csproj", // the .NET project that failed: the one that reported the first error, else the served project
+    "package": "/path/to/shared-ui",                // the frontend package that failed, or null; dependencies[] lists it as "failed"
+    // The errors and then the warnings of the step that failed (the build, the restore or the install), each once, and
+    // dev's own line last, on the served project. At most 100 entries; each message is one line of at most 2,000
+    // characters. line and column are 1-based, null when the diagnostic names no position.
+    "diagnostics": [
+      { "file": "/path/to/shared-ui/src/index.ts", "line": 12, "column": 14, "severity": "error", "code": "TS2322",
+        "message": "Type 'string' is not assignable to type 'number'." },
+      { "file": "/path/to/App/App.csproj", "line": null, "column": null, "severity": "error", "code": "RAPPDEV1018",
+        "message": "A frontend package that the page depends on failed to build, so dev did not start: …" }
+    ]
+  }
 }
 ```
 
@@ -1308,7 +1624,7 @@ gets a new schema name. 0.20 added `processStartedAt`, `sourceMap` and
 `unavailableDebugEndpoints` within `runic.application.tool.dev-session/1`; 0.21
 added the `webkitgtk` endpoints, `devtoolsExtension`, `devtoolsExtensionId`, `browser` and, with
 `--no-window` on Linux, `WEBKIT_INSPECTOR_SERVER` in `window.environment`; 0.22 added the `chromium` endpoint and
-`RUNIC_WEBUI_REMOTE_DEBUGGING_PORT` in `window.environment`. 0.23 added `browser.codeFile` and is the one exception
+`RUNIC_WEBUI_REMOTE_DEBUGGING_PORT` in `window.environment`; 0.24 added `dependencies` and `failure`. 0.23 added `browser.codeFile` and is the one exception
 to the rule: within `/1` it changed `browser.url` and `browser.windows[].url` from addresses
 (`http://127.0.0.1:9224/`) to `*` patterns of the per-session origin (`http://*.localhost:9224/`, D077.15). The address
 is secret since 0.23, so the file cannot hold it, and the old value would no longer open the page: a reader opens
@@ -1426,10 +1742,17 @@ serves (see its
 | `RunicApplicationFrontendOutputDirectory` | `dist`, relative to the frontend directory |
 | `RunicApplicationFrontendWebRoot` | `www`, relative to the build output |
 | `RunicApplicationFrontendDevServerKind` | `angular` with `angular.json`, `vite` with a `vite.config.*`, otherwise none |
-| `RunicApplicationFrontendViteDevServerEntry` | the first of `/src/main.ts`, `/src/main.tsx`, `/src/main.js`, `/src/main.jsx`; for SvelteKit, which has no main module, its root route: `/src/routes/+page.svelte`, `+layout.svelte`, `+layout.ts` or `+layout.js` |
+| `RunicApplicationFrontendViteDevServerEntry` | the first of `/src/main.ts`, `/src/main.tsx`, `/src/main.js`, `/src/main.jsx` below Vite's root; for SvelteKit, which has no main module, its root route: `/src/routes/+page.svelte`, `+layout.svelte`, `+layout.ts` or `+layout.js`. The path is the module's URL path, below Vite's root as Vite serves it |
 | `RunicApplicationFrontendViteConfiguration` | the frontend's `vite.config.*` |
+| `RunicApplicationFrontendViteRoot` | the frontend directory; set it, relative to the frontend directory, when `vite.config.*` sets `root`, for example `projects/app/src` in an Angular workspace |
 | `RunicApplicationFrontendDevServerDocument` | every HTML build input with Vite, `index.html` with Angular and with SvelteKit, whose development server renders it from its routes; set it to override the list and separate several documents with `;` |
 | `RunicApplicationFrontendDevWatchTarget` | none; an MSBuild target to run as the frontend watcher without a development server |
+
+Vite resolves the entry module against its `root`, and so does `dev`: with
+`root: 'projects/app/src'` and the module `projects/app/src/main.ts`, the entry is
+`/main.ts`. `dev` reads the root from the resolved Vite configuration and warns
+when it differs from `RunicApplicationFrontendViteRoot`; `doctor`, which does not
+run the Vite configuration, checks the entry below `RunicApplicationFrontendViteRoot`.
 
 The package manager comes from `packageManager` in the frontend `package.json`,
 then from its lock file.
@@ -1579,6 +1902,50 @@ a usage error, exit code 2. An existing `--report` (`RAPPSIZE1003`), a project
 whose publish settings MSBuild cannot evaluate (`RAPPSIZE1004`), a failed
 publish or a failed verification exits 1.
 
+## Write a web bundle
+
+`bundle` (since 0.24, split CI, D082) builds the frontends into a **web bundle**
+(`rax.web-bundle/1`) that a publish on another machine takes with
+`package <target> --frontend-bundle`, for a CI whose Linux jobs build and test
+everything web and whose Windows or macOS job only publishes:
+
+```bash
+dotnet runic bundle --output-directory artifacts/web-bundle   # on Linux, with Node.js or Bun
+dotnet runic package windows --frontend-bundle artifacts/web-bundle   # on Windows, without them
+```
+
+It runs `dotnet build -c Release` with
+`RunicApplicationFrontendBundleDirectory`, so every project that declares
+Views, the application's references included, writes its entry. Then it checks
+the bundle and prints one line per project: its kind, its Views, and the
+files, size and SHA-256 of its page. `--project` (`-p`) takes a project, a
+solution (`.sln`, `.slnx`) or a directory with one; `--configuration` (`-c`)
+is `Release` by default; `--property` (`-p:NAME=VALUE`) passes MSBuild
+properties to the build. `--output-directory` (`-o`, `artifacts/web-bundle`
+beside the project or solution by default) must be new, empty, or an earlier
+bundle, whose entries `bundle` deletes so that none stays in the manifest. A
+folder with other files is refused (`RAPPBUNDLE1001`). A failed build is
+`RAPPBUNDLE1002`, and a bundle that does not check is `RAPPBUNDLE1003`, for
+example when a project's frontend build is off (`RUNICBRIDGE092`). The payload
+of `--format json` is `runic.application.tool.bundle/1`:
+
+```json
+{
+  "directory": "/repo/artifacts/web-bundle",
+  "format": "rax.web-bundle/1",
+  "projects": [
+    { "assembly": "Acme.App", "kind": "application", "views": 2, "files": 12, "bytes": 184320,
+      "sha256": "7f3c…", "host": "desktop", "nodeEnv": "production" }
+  ]
+}
+```
+
+`sha256`, `host` and `nodeEnv` are null when the entry has none, as for a client
+library, which has no page. The format of the bundle is in
+[specs/application/web-bundle.md](https://github.com/Runic-Artifex/runic-sdk/blob/main/specs/application/web-bundle.md),
+and the build properties in
+[Building the frontend in another job](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views/README.md#building-the-frontend-in-another-job).
+
 ## Package the application
 
 `package <target>` (since 0.11) publishes the application with Native AOT and
@@ -1598,7 +1965,8 @@ dotnet runic package flathub --git-url https://github.com/example/notes.git --gi
 The [packaging guide](https://github.com/Runic-Artifex/runic-sdk/blob/main/docs/packaging.md)
 lists each format's tools and how to sign with your own credentials.
 
-Every target takes `--project` (`-p`), `--configuration` (`-c`, `Release` by
+Every target takes `--project` (`-p`: a project, or a solution whose one Window
+project it packages, as described at the top), `--configuration` (`-c`, `Release` by
 default), `--runtime` (`--rid`, `-r`; the host's architecture by default) and
 `--output-directory` (`-o`; `artifacts/package/<target>` beside the project by
 default). The output directory is not `--output`, which stays the hidden alias
@@ -1606,6 +1974,29 @@ of `--format`. A target of another operating system, or a runtime identifier of
 another operating system, several runtime identifiers, or a runtime identifier
 that Runic does not support (`osx-x64`), is refused with `RAPPPKG1004` before
 anything is built.
+
+Since 0.24 every target except `flathub` also takes:
+
+- `--property NAME=VALUE`, or `-p:NAME=VALUE` as for `dotnet publish` (also
+  `-property:` and `/p:`), repeated for several properties. The identity's
+  evaluation and the publish receive them, so a CI job can set `ApplicationId`,
+  `Version` or `RunicApplicationHost` without editing the project. `-p` with a
+  separate value stays `--project`, as for `dotnet run`. `Configuration`,
+  `RuntimeIdentifier` and `PublishAot` have their own options, and
+  `RunicApplicationFrontendPrebuiltDirectory` is `--frontend-bundle`
+  (`RAPPPKG1008`, exit code 2).
+- `--frontend-bundle <dir>`: publish with the pages of a web bundle that
+  [`dotnet runic bundle`](#write-a-web-bundle) wrote on another machine,
+  through `RunicApplicationFrontendPrebuiltDirectory`. The publish runs no
+  frontend install or build, so the runner needs neither Node.js nor Bun.
+  Before it publishes, `package` checks the bundle as `doctor --bundle` does
+  (`RAPPPKG1008` for a missing or truncated one). The build then compares each
+  View's fingerprint with its own (`RUNICBRIDGE094`) and the host
+  (`RUNICBRIDGE095`).
+
+```bash
+dotnet runic package windows --frontend-bundle web-bundle -p:Version=1.4.0
+```
 
 The package's identity comes from the project file:
 
@@ -1771,6 +2162,38 @@ missing packaging tool (`RAPPPKG1002`), a failed publish (`RAPPPKG1003`), a
 failing packaging tool (`RAPPPKG1005`), a failed validation (`RAPPPKG1006`) or
 Flathub sources that cannot be generated (`RAPPPKG1007`) exits 1.
 
+## Tool extensions
+
+`dotnet runic translations …` runs the Runic Translations tool,
+`runic-translations …`, with the arguments unchanged, and exits with its exit
+code: `dotnet runic translations compile` is `runic-translations compile`, and
+`dotnet runic translations --help` is the Translations tool's help. A leading
+`--format` (or its alias `--output`) is passed on as `--format`. Added in 0.24.
+
+`dotnet runic` finds the tool in this order:
+
+1. `RAX_TRANSLATIONS_TOOL`, the path of a `runic-translations` program, for
+   example a local build. It is not checked first: a wrong path fails with
+   `RAPPCLI1014` instead of running another installation.
+2. The nearest .NET tool manifest (`.config/dotnet-tools.json` or
+   `dotnet-tools.json`, up to the one marked `isRoot`) that lists
+   `dotnet-runic-translations` or the command `runic-translations`: it runs
+   `dotnet tool run runic-translations -- …`.
+3. `node_modules/.bin/runic-translations` in the current directory or above.
+4. `runic-translations` on `PATH`: a global tool or a tool path.
+
+Without one, the command fails with `RAPPCLI1013` and prints the command that
+installs the Translations release of this compatibility set, with `--local`
+when a tool manifest exists, for example:
+
+```text
+dotnet tool install dotnet-runic-translations --version 0.16.0 --local
+```
+
+It never installs anything itself. `doctor` checks the version of the installed
+tool ([`extensions`](#extensions)). Only first-party extensions dispatch: any
+other word after `dotnet runic` is still an application argument of `dev`.
+
 ## Support envelopes
 
 The local support envelope of the Translations editor moved to the
@@ -1782,8 +2205,8 @@ runic-translations support preview --editor-diagnostics /path/to/editor-diagnost
 
 `dotnet runic support --mode preview|collect|remove`, its former spelling, is a
 hidden alias until 2.0. It forwards its arguments to `runic-translations
-support <mode>`, run from `PATH` or from a local tool manifest that lists
-`dotnet-runic-translations`, which then writes the output and decides the exit
-code. Without that tool it fails with `RAPPCLI1012`.
+support <mode>`, found as `dotnet runic translations` finds it
+([Tool extensions](#tool-extensions)), which then writes the output and
+decides the exit code. Without that tool it fails with `RAPPCLI1012`.
 
 Preview tool; [MIT licensed](https://github.com/Runic-Artifex/runic-sdk/blob/main/LICENSE).

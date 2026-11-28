@@ -150,7 +150,7 @@ the member's kind, setter, checked write and validation. The handle is `reactive
 
 ```vue
 <script setup lang="ts">
-import { useField, useView } from "@runic-artifex/vue";
+import { fieldDefinition, useField, useView } from "@runic-artifex/vue";
 import { EditorFields, type EditorPageReference } from "./generated/editor.js";
 
 const props = defineProps<{ page: EditorPageReference }>();
@@ -159,6 +159,7 @@ const title = useField(editor, EditorFields.title, { commit: "pause", checked: t
 const step = useField(editor, EditorFields.step);
 const done = useField(editor, EditorFields.done);
 const mode = useField(editor, EditorFields.mode);
+const modes = fieldDefinition(EditorFields.mode).choices ?? [];
 </script>
 
 <template>
@@ -170,7 +171,7 @@ const mode = useField(editor, EditorFields.mode);
   </p>
   <input type="number" v-model="step.text" @blur="step.commit">
   <input type="checkbox" v-model="done.value">
-  <select v-model="mode.value"><option v-for="choice in EditorFields.mode.choices" :key="choice">{{ choice }}</option></select>
+  <select v-model="mode.value"><option v-for="choice in modes" :key="choice">{{ choice }}</option></select>
 </template>
 ```
 
@@ -187,6 +188,11 @@ is written. A string set on `value` of a field that is not text is taken as its 
   `commit: "input"`, writes each input. `commit()` resolves with the field's state once its writes settled, so a
   command that depends on the field can follow them and skip a failed write:
   `if ((await title.commit()).error === undefined) await editor.save()`.
+- `commit: "change"` writes the draft only on `commit()`, which blur calls, so the ViewModel's setter runs once, when
+  the user leaves the field. It is the mode a WPF port wants: WPF binds `TextBox.Text` with
+  `UpdateSourceTrigger=LostFocus`, and its setters often validate, normalize or start work. There is no timer, so
+  pass no `delay`; a value `v-model` sets on a boolean field (a checkbox) or a field with `choices` (a `<select>` or radios of an enum) is still written at once, as WPF's default `PropertyChanged` trigger does for those controls; for a `<select>` of another field, add `@change="field.commit"`. A form's `submit()` and `commit()`, `commitAllFields()` and the runtime's flush before a
+  window close or a departure (`field-flush/1`) write the draft too, and so does leaving the scope.
 - `checked: true` writes with the member's checked write, so a change by another writer while the user edits is a
   conflict instead of being overwritten. A `rejected` receipt keeps the draft and sets `error` to a `FieldError` with
   the setter's message; a `conflict` keeps the draft, sets `conflict` to the producer's `{ value, version }` and
@@ -195,7 +201,7 @@ is written. A string set on `value` of a field that is not text is taken as its 
 
 `errors` holds the member's validation messages from the descriptor (`[]` when valid), `error` why the latest write
 or text failed (a `BridgeError` or a `FieldError`, whose `kind` is `rejected`, `conflict`, `committed-with-error` or
-`invalid-text`). `FieldError`, `FieldOptions`, `FieldState` and `BridgeField` are exported from this package. See the
+`invalid-text`). `FieldError`, `FieldOptions`, `FieldState`, `BridgeField`, `fieldMembers` and `fieldDefinition` are exported from this package. See the
 [field controller](https://github.com/Runic-Artifex/runic-sdk/tree/main/packages/web/views#fields) for the receipts
 and text forms. An `invalid-text` error has a `reason` and `arguments`: render `useText(() => title.error)` after
 `configureFieldErrorText` to show your own text for it in the window's language
@@ -382,6 +388,8 @@ const { run: navigate } = useCommand((name: "showWelcome" | "showCounter") => cl
 // <button @click="navigate('showWelcome')">Welcome</button>
 ```
 
+Those buttons share the handle's one `pending` and `error`.
+
 `pending` covers only this component's run. Whether .NET can run the command is
 the View's state: a command without an argument publishes `can<Name>` (such as
 `state.canSave`), so disable a button while either says no. A command with an
@@ -393,6 +401,29 @@ from the outcome, while `error` keeps unexpected failures. Starting a run and
 `reset()` clear both, and a run superseded by a later run or by `reset()` sets
 neither.
 
+
+## `useCommands(view)`
+
+Makes a command handle for each command of a View, so a component needs no
+`useCommand` per command. Call it in `setup()` or `effectScope().run()`:
+
+```ts
+const { state, client } = useView(() => props.page);
+const commands = useCommands({ client });
+// <button :disabled="!state?.canRefresh || commands.refresh.pending" @click="commands.refresh.run()">Refresh</button>
+// <button @click="commands.archive.run(row.id)">Archive</button>
+```
+
+`commands.<name>` has `run`, `pending`, `error`, `failure` and `reset`, and each
+handle has its own `pending` and `error`. Unlike `useCommand`'s refs, `pending`,
+`error` and `failure` are getters that templates and effects track, so a template
+reads `commands.refresh.pending` without `.value`. A handle is made when the
+component first reads its name and kept while the scope is active. The names and
+arguments come from the generated client's commands (`{View}CommandName`), so setters,
+`canX(input)`, `startX`, `recoverX`, `upload` and `dispose` are not offered, and in
+explicit publication neither is a command that is not published. `run()` calls the
+client connected when it starts; before the client connected it resolves to
+`undefined`. Scope disposal stops the handles' state; a run in flight still resolves.
 ## `useOperation(start, options?)`
 
 Observes a generated `start<Command>()` operation through the framework-neutral
@@ -702,6 +733,38 @@ application's own dialog.
   departure before that is answered by the ViewModel's .NET fallback handler, or
   fails closed without one.
 
+### A dialog in the template
+
+A page that renders its dialog in its own template, rather than awaiting a
+dialog service in `handle`, uses `useInteraction`: the oldest open request as
+`request`, which the dialog answers with the request's `respond`:
+
+```vue
+<script setup lang="ts">
+import { useInteraction, useView } from "@runic-artifex/vue";
+
+const props = defineProps<{ page: EditPageReference }>();
+const view = useView(() => props.page);
+const discard = useInteraction(view, "confirmDiscard");
+</script>
+
+<template>
+  <Confirm v-if="discard.request" :text="discard.request.input.itemName"
+    @yes="discard.request.respond(true)" @no="discard.request.respond(false)" />
+</template>
+```
+
+Each open request is one object, `{ input, respond(answer) }`, the same while the
+request is open. Its `respond` answers that request only, and is ignored once
+the request has ended: answered already, as by a double click, or ended by .NET
+(the departure was superseded, the deadline passed, the window closed) or by a
+client change. A late answer therefore never reaches another request. The
+handler is registered while the client is connected and removed when the
+client changes or the effect scope ends. Several open requests are answered in order:
+`request` is the oldest one, and answering it shows the next. An interaction
+whose input is empty (`Unit`) still has a request object while one is open. The
+input and the answer are typed from the generated interaction.
+
 The [ReactiveUI leave confirmation](https://github.com/Runic-Artifex/runic-sdk/blob/main/packages/dotnet/Runic.Application.Views.ReactiveUI/README.md#leave-confirmation-in-a-web-view)
 has the .NET side and which View answers which departure. In a frontend test,
 the generated mock's `interactions.<name>.request(input)` resolves with the
@@ -812,6 +875,29 @@ Window ([hosted regions](../views/README.md#hosted-regions-experimental)). Its `
 <RunicHostedRegion name="check" style="height: 420px" @state-change="onState">
   <template #fallback="{ state }">
     <RunAgain v-if="state === 'ended'" /><p v-else>Starting the check…</p>
+  </template>
+</RunicHostedRegion>
+```
+
+While the host waits for the guest's page, the `stalled` slot shows in place of the
+`loading` fallback once the region is stalled, and the `failed` slot shows when the
+host application gave the region up
+([loading and failure](../../../docs/hosted-regions.md#the-host)). The
+`failed` slot's props, and the `fallback` slot's with `state`, are the region's
+`stalled`, `failureReason` and `retry()`, which asks the host to load a failed
+region again and returns whether it asked. As with the element, a stalled region
+without a `stalled` slot shows the `fallback` slot for `loading`, and a failed one
+without a `failed` slot the `fallback` slot for `failed`. A template ref reads
+`state`, `stalled` and `failureReason` and calls `retry()`. `stateChange` also
+carries the event's detail (`{state, previous, stalled, reason}`), and is also
+emitted when only `stalled` or the reason changed.
+
+```vue
+<RunicHostedRegion name="check" style="height: 420px">
+  <template #fallback><p>Starting the check…</p></template>
+  <template #stalled><p>The check is taking longer than usual…</p></template>
+  <template #failed="{ failureReason, retry }">
+    <p>The check could not start ({{ failureReason }}). <button @click="retry()">Try again</button></p>
   </template>
 </RunicHostedRegion>
 ```

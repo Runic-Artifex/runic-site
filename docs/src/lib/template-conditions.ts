@@ -51,15 +51,16 @@ export function renderTemplate(
 }
 
 /**
- * Evaluates `==`, `!=`, `&&`, `||`, parentheses, and bare boolean symbols such
- * as `(gtk4)`, which hold when the symbol's value is `true`.
+ * Evaluates `==`, `!=`, `&&`, `||`, `!`, parentheses, and bare boolean
+ * symbols such as `(gtk4)`, which hold when the symbol's value is `true`.
  */
 export function evaluate(
   expression: string,
   selection: TemplateSymbols,
 ): boolean {
   const tokens =
-    expression.match(/"[^"]*"|'[^']*'|==|!=|&&|\|\||[()]|[A-Za-z_]\w*/g) ?? [];
+    expression.match(/"[^"]*"|'[^']*'|==|!=|&&|\|\||!|[()]|[A-Za-z_]\w*/g) ??
+    [];
   let index = 0;
   const next = () => tokens[index++];
   const peek = () => tokens[index];
@@ -75,6 +76,10 @@ export function evaluate(
   }
 
   function comparison(): boolean {
+    if (peek() === '!') {
+      next();
+      return !comparison();
+    }
     if (peek() === '(') {
       next();
       const result = or();

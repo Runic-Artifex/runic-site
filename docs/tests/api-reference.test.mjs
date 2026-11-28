@@ -115,8 +115,10 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // 2.75 MiB since 0.14.0 and 2.5 MiB since 0.12.0.
   assert.ok(inputs <= 4.5 * 1024 * 1024, `inputs are ${inputs} bytes`);
   // Each page, and the whole reference as served compressed, including the
-  // __data.json payloads that client-side navigation loads. 272 KiB per page
-  // since 0.23.0, whose Runic.Desktop.DesktopWindow page with the developer
+  // __data.json payloads that client-side navigation loads. 288 KiB per page
+  // since 0.24.0, whose @runic-artifex/views package page with the codegen
+  // entry, command handles, interaction controllers and field members needs
+  // about 275 KiB; 272 KiB since 0.23.0, whose Runic.Desktop.DesktopWindow page with the developer
   // tools command, side panel drops and window icon needs about 257 KiB;
   // 256 KiB (Runic.Desktop.DesktopWindow needs about 249 KiB at 0.19.0) since 0.18.0, whose @runic-artifex/views package page with the hosted
   // regions, component and instance APIs needs about 241 KiB; 224 KiB
@@ -131,10 +133,12 @@ test('API inputs and rendered pages stay within their size budgets', () => {
     if (!file.endsWith('.html') && !file.endsWith('__data.json')) continue;
     const bytes = readFileSync(file);
     if (file.endsWith('.html'))
-      assert.ok(bytes.length <= 272 * 1024, `${file} is ${bytes.length} bytes`);
+      assert.ok(bytes.length <= 288 * 1024, `${file} is ${bytes.length} bytes`);
     compressed += gzipSync(bytes).length;
   }
-  // 10 MiB since 0.20.0, whose Bridge analyzers, development source map,
+  // 10.75 MiB since 0.24.0, whose Views codegen entry, command handles,
+  // interaction controllers, field members and hosted region loading need
+  // about 10.40 MiB; 10 MiB since 0.20.0, whose Bridge analyzers, development source map,
   // handler timing, trace context and Angular component mode need about
   // 9.80 MiB; 9.75 MiB since 0.19.0, which needed about 9.57 MiB; 9.5 MiB since 0.18.0,
   // which needs about 9.38 MiB; 9.25 MiB since 0.17.0,
@@ -144,7 +148,7 @@ test('API inputs and rendered pages stay within their size budgets', () => {
   // since 0.16.0, 6 MiB since 0.15.0, 5.75 MiB since 0.14.0, 5.5 MiB since
   // 0.13.0 and 5.25 MiB since the platform services of 0.11.0.
   assert.ok(
-    compressed <= 10 * 1024 * 1024,
+    compressed <= 10.75 * 1024 * 1024,
     `the reference is ${compressed} bytes gzipped`,
   );
 });
